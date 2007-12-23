@@ -1,0 +1,499 @@
+# vi:set ts=8 sts=4 sw=4 et tw=80:
+#
+# Copyright (C) 2007 Xavier de Gaye.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program (see the file COPYING); if not, write to the
+# Free Software Foundation, Inc.,
+# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
+#
+# $Id: simple.py 202 2007-12-20 19:16:45Z xavier $
+
+"""The Simple class implements a simple debugger used for testing pyclewn and
+for giving an example of a simple debugger.
+
+The debuggee is running in another thread as a Target instance. To display the
+frame sign, add a breakpoint first and then run the step command, or run the
+continue command and send an interrupt.  One can step into the current buffer
+from the first line up to the first enabled breakpoint. There is no run
+command, use continue instead.
+
+The quit command removes all the signs set by pyclewn in gvim. After the quit
+command, the dispatcher instantiates a new instance of Simple.
+
+"""
+import sys
+import threading
+import time
+import pprint
+
+import clewn
+import clewn.misc
+import clewn.application as application
+
+# set the logging methods
+(critical, error, warning, info, debug) = clewn.misc.logmethods('simp')
+
+
+class Target(threading.Thread):
+    """Simulate the debuggee behaviour in another thread."""
+
+    TARGET_TIMEOUT = 0.100  # interruptible loop timer
+
+    def __init__(self, daemon):
+        threading.Thread.__init__(self)
+        self.daemon = daemon
+        self.bp = threading.Event()
+        self.closed = False
+        self.running = False
+        self.cnt = 0
+
+        # do not print on stdout when running unittests
+        self.testrun = reduce(lambda x, y: x or (y == 'unittest'),
+                                        [False] + sys.modules.keys())
+
+    def close(self):
+        self.closed = True
+
+    def interrupt(self):
+        """Interrupt the debuggee."""
+        if not self.running:
+            return False
+        self.running = False
+        self.bp.clear()
+        return True
+
+    def run_continue(self):
+        """Start or continue the debuggee."""
+        if self.running:
+            return False
+        self.running = True
+        self.bp.set()
+        return True
+
+    def step(self):
+        """Do a single step."""
+        if self.running:
+            return False
+        self.bp.set()
+        return True
+
+    def __repr__(self):
+        state = {'running': self.running, 'closed': self.closed}
+        return 'Target: %s' % pprint.pformat(state)
+
+    def run(self):
+        while not self.closed:
+            if self.bp.isSet():
+                if self.cnt == 0 and not self.daemon and not self.testrun:
+                    print('Inferior starting.\n')
+                self.cnt += 1
+                if not self.daemon and not self.testrun:
+                    print('value %d\n' % self.cnt)
+
+                # end the step command, when not running
+                if not self.running:
+                    self.bp.clear()
+                else:
+                    time.sleep(1)
+
+            self.bp.wait(self.TARGET_TIMEOUT)
+
+class Varobj(object):
+    """The Simple varobj class.
+
+    Instance attributes:
+        var: dict
+            dictionary of {name:value}, name: str, value: int
+        current: str
+            the currently hilited name
+        hilite: boolean
+            when True, current is hilited
+
+    """
+
+    def __init__(self):
+        self.var = {}
+        self.current = None
+        self.hilite = False
+
+    def add(self, name):
+        """Add a varobj."""
+        self.var[name] = 1
+        self.current = name
+        self.hilite = True
+
+    def _next(self):
+        """Return the next candidate for hilite."""
+        size = len(self.var)
+        if size == 0:
+            return None
+        l = self.var.keys()
+        try:
+            i = (l.index(self.current) + 1) % size
+            return l[i]
+        except ValueError:
+            return l[0]
+
+    def next(self):
+        """Set next name to hilite and increment its value."""
+        self.current = self._next()
+        if self.current is not None:
+            self.var[self.current] += 1
+            self.hilite = True
+
+    def delete(self, name):
+        """Delete a varobj."""
+        try:
+            del self.var[name]
+            if name == self.current:
+                self.current = None
+                self.hilite = False
+        except KeyError:
+            return False
+        return True
+
+    def stale(self):
+        """Make all varobjs stale."""
+        self.hilite = False
+
+    def clear(self):
+        """Clear all varobjs."""
+        self.var.clear()
+        self.current = None
+        self.hilite = False
+
+    def __str__(self):
+        varstr = ''
+        for (name, value) in self.var.iteritems():
+            if name == self.current and self.hilite:
+                type = '*'
+            else:
+                type = '='
+            varstr += '%12s ={%s} %d\n' % (name, type, value)
+        return varstr
+
+class Simple(application.Application):
+    """The Simple application is a concrete subclass of Application.
+
+    Instance attributes:
+        bp_id: int
+            breakpoint number
+        inferior: Target
+            the debuggee
+        step_bufname: string
+            name of the buffer we are stepping into, this is the first buffer
+            where a breakpoint has been set
+        lnum: int
+            frame lnum
+        varobj: Varobj
+            the list of varobjs
+
+    """
+
+    # command line options
+    opt = '-s'
+    long_opt = '--simple'
+    help = 'select the simple application'
+
+    # list of the simple commands mapped to vim user commands C<command>
+    # command completion:
+    #   () or [] = no completion,
+    #   True = file name completion,
+    #   non empty tuple or list = first argument completion list
+    simple_cmds = {
+        'break'     : True,   # file name completion
+        'clear'     : True,   # file name completion
+        'continue'  : (),
+        'disable'   : (),
+        'enable'    : (),
+        'interrupt' : (),
+        'print'     : (),
+        'quit'      : (),
+        'step'      : (),
+    }
+
+    # list of key mappings, used to build the .pyclewn_keys.simple file
+    #     key : (mapping, comment)
+    mapkeys = {
+        'C-B' : ('break ${fname}:${lnum}',
+                    'set breakpoint at current line'),
+        'C-E' : ('clear ${fname}:${lnum}',
+                    'clear breakpoint at current line'),
+        'C-P' : ('print ${text}',
+                    'print value of selection at mouse position'),
+        'C-Z' : ('interrupt',
+                    'interrupt the execution of the target'),
+        'S-C' : ('continue',),
+        'S-Q' : ('quit',),
+        'S-S' : ('step',),
+    }
+
+    def __init__(self, nbsock, daemon, pgm, arglist):
+        """Constructor."""
+        application.Application.__init__(self, nbsock, daemon)
+        application.Application.cmds.update(self.simple_cmds)
+        self.bp_id = 0
+        self.inferior = None
+        self.step_bufname = None
+        self.lnum = 0
+        self.varobj = Varobj()
+
+    def start(self):
+        """Start the application."""
+        application.Application.start(self)
+        self.prompt()
+
+        # start the debuggee
+        if self.inferior is None:
+            self.inferior = Target(self.daemon)
+            self.inferior.start()
+
+    def close(self):
+        """Close the application."""
+        application.Application.close(self)
+
+        # close the debuggee
+        if self.inferior is not None:
+            self.inferior.close()
+            self.inferior = None
+
+    def move_frame(self, show):
+        """Show the frame sign or hide it when show is False.
+
+        The frame sign is displayed from the first line (lnum 1), to the
+        first enabled breakpoint in the stepping buffer.
+
+        """
+        # a stepping buffer is required
+        if show and self.step_bufname:
+            lnum_list = self.get_lnum_list(self.step_bufname)
+            assert lnum_list
+            self.show_frame(self.step_bufname, self.lnum + 1)
+            self.lnum += 1
+            self.lnum %= min(lnum_list)
+            self.varobj.next()
+        else:
+            # hide frame
+            self.show_frame()
+
+    #-----------------------------------------------------------------------
+    #   commands
+    #-----------------------------------------------------------------------
+
+    def pre_cmd(self, cmd, args):
+        """The method called before each invocation of a 'cmd_xxx' method."""
+        if args:
+            cmd = '%s %s' % (cmd, args)
+        self.console_print('%s\n', cmd)
+
+        # turn off all hilited variables
+        self.varobj.stale()
+
+    def post_cmd(self, cmd, args):
+        """The method called after each invocation of a 'cmd_xxx' method."""
+        # although it may seem tempting, do not call prompt() here because
+        # to preserve window order appearance, all the writing to the
+        # console must be done before starting to handle the (clewn)_dbgvar
+        # buffer when processing Cdbgvar
+
+        # update the vim debugger variable buffer with the variables values
+        self.nbsock.dbgvarbuf.update(str(self.varobj))
+
+    def default_cmd_processing(self, buf, cmd, args):
+        """Process any command whose cmd_xxx method does not exist."""
+        self.console_print('Command ignored.\n')
+        self.prompt()
+
+    def cmd_break(self, buf, cmd, args):
+        """Set a breakpoint at a specified line.
+
+        The required argument of the vim user command is 'fname:lnum'.
+
+        """
+        result = 'Invalid arguments.\n'
+
+        name, lnum = self.name_lnum(args)
+        if name is None:
+            return
+        if name:
+            self.bp_id += 1
+            self.add_bp(self.bp_id, name, lnum)
+            result = 'Breakpoint %d at file %s, line %d.\n' % \
+                                            (self.bp_id, name, lnum)
+
+            # initialize the name of the stepping buffer
+            if not self.step_bufname:
+                self.step_bufname = name
+                self.lnum = 0
+
+        self.console_print(result)
+        self.prompt()
+
+    def cmd_clear(self, buf, cmd, args):
+        """Clear all breakpoints at a specified line.
+
+        The required argument of the vim user command is 'fname:lnum'.
+
+        """
+        result = 'Invalid arguments.\n'
+
+        name, lnum = self.name_lnum(args)
+        if name is None:
+            return
+        if name:
+            deleted  = self.delete_all(name, lnum)
+            if not deleted:
+                result = 'No breakpoint at %s:%d.\n'    \
+                                % (name, lnum)
+            else:
+                result = 'Deleted breakpoints %s\n'     \
+                                % ' '.join([str(id) for id in deleted])
+
+                # disable stepping when no enabled breakpoints
+                if name == self.step_bufname \
+                        and not self.get_lnum_list(name):
+                    self.step_bufname = None
+                    self.lnum = 0
+
+        self.console_print(result)
+        self.prompt()
+
+    def cmd_dbgvar(self, buf, cmd, args):
+        """Add a variable to the debugger variable buffer."""
+        args = args.split()
+        # two arguments are required
+        if len(args) != 2:
+            self.console_print('Invalid arguments.\n')
+        self.prompt()
+
+        # (clewn)_dbgvar vim buffer is loaded after after the last
+        # console_print so as to preserve the window order appearance
+        registered = False
+        if not self.nbsock.dbgvarbuf.buf.registered:
+            self.nbsock.dbgvarbuf.register()
+            registered = True
+
+        # the second argument is ignored by Simple
+        if len(args) == 2:
+            self.varobj.add(args[0])
+        elif registered:
+            self.nbsock.goto_last()
+
+    def cmd_delvar(self, buf, cmd, args):
+        """Delete a variable from the debugger variable buffer."""
+        args = args.split()
+        # one argument is required
+        if len(args) != 1:
+            self.console_print('Invalid arguments.\n')
+        elif not self.varobj.delete(args[0]):
+            self.console_print('"%s" not found.\n' % args[0])
+        self.prompt()
+
+    def cmd_help(self, *args):
+        """Print help on the simple commands."""
+        application.Application.cmd_help(self, *args)
+        self.prompt()
+
+    def set_bpstate(self, cmd, args, enable):
+        """Change the state of one breakpoint."""
+        args = args.split()
+        result = 'Invalid arguments.\n'
+
+        # accept only one argument, for now
+        if len(args) == 1:
+            try:
+                bp_id = int(args[0])
+            except ValueError:
+                pass
+            else:
+                result = ''
+                if not self.update_bp(bp_id, not enable):
+                    result = 'No breakpoint number %d.\n' % bp_id
+
+        self.console_print(result)
+        self.prompt()
+
+    def cmd_disable(self, buf, cmd, args):
+        """Disable one breakpoint.
+
+        The required argument of the vim user command is the breakpoint number.
+
+        """
+        self.set_bpstate(cmd, args, False)
+
+    def cmd_enable(self, buf, cmd, args):
+        """Enable one breakpoint.
+
+        The required argument of the vim user command is the breakpoint number.
+
+        """
+        self.set_bpstate(cmd, args, True)
+
+    def cmd_print(self, buf, cmd, args):
+        """Print a value."""
+        if args:
+            self.console_print('%s\n', args)
+        self.prompt()
+
+    def cmd_step(self, *args):
+        """Step program until it reaches a different source line."""
+        assert self.inferior is not None
+        if not self.get_lnum_list(self.step_bufname):
+            self.console_print('No breakpoint enabled at %s.\n', self.step_bufname)
+            self.move_frame(False)
+        else:
+            if self.inferior.step():
+                self.move_frame(True)
+            else:
+                self.console_print('The inferior progam is running.\n')
+        self.prompt()
+
+    def cmd_continue(self, *args):
+        """Continue the program being debugged, also used to start the program."""
+        assert self.inferior is not None
+        if not self.get_lnum_list(self.step_bufname):
+            self.console_print('No breakpoint enabled at %s.\n', self.step_bufname)
+        else:
+            if not self.inferior.run_continue():
+                self.console_print('The inferior progam is running.\n')
+        self.move_frame(False)
+        self.prompt()
+
+    def cmd_interrupt(self, *args):
+        """Interrupt the execution of the debugged program."""
+        assert self.inferior is not None
+        if self.inferior.interrupt():
+            self.move_frame(True)
+        self.prompt()
+
+    def cmd_quit(self, *args):
+        """Quit the current simple session."""
+        self.varobj.clear()
+        self.close()
+
+    #-----------------------------------------------------------------------
+    #   netbeans events
+    #-----------------------------------------------------------------------
+
+    def balloon_text(self, text):
+        """Process a netbeans balloonText event.
+
+        Used when 'ballooneval' is set and the mouse pointer rests on
+        some text for a moment. "text" is a string, the text under
+        the mouse pointer. Here we just show the text in a balloon.
+
+        """
+        application.Application.balloon_text(self, text)
+        self.show_balloon('value: "%s"' % text)
+

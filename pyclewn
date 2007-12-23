@@ -1,0 +1,7 @@
+#! /usr/bin/env python
+
+# import all the debuggers (except gdb, the default one)
+import clewn.debugger.simple
+
+import clewn.dispatcher
+clewn.dispatcher.main()

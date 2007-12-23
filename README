@@ -1,0 +1,49 @@
+README - Pyclewn
+
+Pyclewn is a python program that allows the use of gvim as a front end to a
+debugger. Pyclewn currently supports gdb.
+
+The debugger output is redirected to a vim window, the pyclewn console. The
+debugger commands are mapped to vim user-defined commands with a common letter
+prefix, and with completion available on the commands and their first
+argument.
+
+The controlling terminal of the program to debug is the terminal used to
+launch pyclewn, or any other terminal when the debugger allows it (for
+example, gdb with the attach and tty commands).
+
+
+INSTALLATION:
+------------
+See INSTALL
+
+
+DOCUMENTATION:
+-------------
+Read the user manual in runtime/doc/pyclewn.txt, or type the vim command
+":help pyclewn" in vim once pyclewn has been installed.
+
+
+FEATURES:
+--------
+* A debugger command can be mapped in vim to a key sequence using vim key
+  mappings. This allows, for example, to set/clear a breakpoint or print a
+  variable value at the current cursor or mouse position by just hitting a
+  key.
+
+* Breakpoints and the line in the current frame, are highlighted in the source
+  code. Disabled breakpoints are noted with a different highlighting color.
+  Pyclewn automatically finds the source file for the breakpoint if it exists,
+  and tells vim to load and display the file and highlight the line.
+
+* An expression value or a variable value is displayed in a balloon in vim,
+  when the mouse pointer is hovering over the selected expression or the
+  variable.
+
+* Variables can be watched in a vim window. The variable value is updated and
+  highlighted whenever changed.
+
+* Vim command completion on the commands and their first argument.
+
+
+vim:tw=78:ts=8:et:

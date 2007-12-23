@@ -1,0 +1,12 @@
+$Id: ChangeLog 157 2007-08-04 17:38:10Z xavier $
+
+===============================================================================
+
+2007-08-04  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* application.py dispatcher.py gdb.py netbeans.py simple.py:
+	Implementation of the Simple application without watched variables.
+
+2007-05-04  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* pyclewn development start
