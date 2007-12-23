@@ -17,7 +17,7 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id: __init__.py 196 2007-12-09 10:47:59Z xavier $
+# $Id$
 
 import os
 import os.path
@@ -29,7 +29,7 @@ import inspect as _inspect
 import clewn.application as _application
 
 __version__ = '0.2'
-__svn__ = '.' + '$Revision: 196 $'.strip('$').split()[1]
+__svn__ = '.' + '$Revision$'.strip('$').split()[1]
 VIM_PGM = ['gvim',  '-u', 'NONE', '-esX', '-c', 'set cpo&vim']
 
 def run_vim_cmd(cmd_list):
