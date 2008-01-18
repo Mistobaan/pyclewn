@@ -17,7 +17,7 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id: misc.py 201 2007-12-18 20:03:13Z xavier $
+# $Id$
 
 """Pyclewn miscellaneous classes and functions."""
 
@@ -59,6 +59,13 @@ def logmethods(name):
 
 # set the logging methods
 (critical, error, warning, info, debug) = logmethods('misc')
+
+def any(iterable):
+    """Return True if any element of the iterable is true."""
+    for element in iterable:
+        if element:
+            return True
+    return False
 
 def specialchar(matchobj):
     """Substitute special characters in string."""
@@ -126,37 +133,31 @@ def check_call(*popenargs, **kwargs):
     return retcode
 
 def smallest_prefix(word, other):
-    """Return the smallest prefix of word, not prefix of other.
-
-    Assert when 'word' is prefix of 'other'.
-
-    """
+    """Return the smallest prefix of 'word', not prefix of 'other'."""
     assert word
+    if other.startswith(word):
+        return ''
     for i in range(len(word)):
         p = word[0:i+1]
         if p != other[0:i+1]:
             break
-    else:
-        assert False, 'word is prefix of other'
     return p
 
 def smallpref_inlist(word, strlist):
-    """Search the list and return the smallest prefix of word, not prefix in the list.
+    """Return the smallest prefix of 'word' that allows completion in 'strlist'.
 
-    Assert when 'word' is in 'strlist' or the prefix of one of the members of
-    'strlist'.
+    Return 'word', when it is a prefix of one of the keywords in 'strlist'.
 
     """
-    assert word
     assert strlist
     assert word not in strlist
     s = sorted(strlist + [word])
     i = s.index(word)
     previous = next = ''
     if i > 0:
-        previous = smallest_prefix(word, s[i - 1])
+        previous = smallest_prefix(word, s[i - 1]) or word
     if i < len(s) - 1:
-        next = smallest_prefix(word, s[i + 1])
+        next = smallest_prefix(word, s[i + 1]) or word
     return max(previous, next)
 
 def unlink(filename):

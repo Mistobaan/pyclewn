@@ -17,24 +17,29 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id: gdbmi.py 204 2007-12-21 20:55:44Z xavier $
+# $Id$
 
 """Contain the classes used to implement the oob commands.
 
 The oob commands are run in sequence, in the background and at the gdb prompt.
-The oob commands fetch from gdb, using gdb/mi, the infomation required to
+The oob commands fetch from gdb, using gdb/mi, the information required to
 maintain the state of the breakpoints table, the varobj data, ...
 The instance of the Info class contains all this data.
 
-The sequence of oob commands is sorted in alphabetical order in class Mi. The
-names of the subclasses of MiCommand are chosen so that class instances that
-depend on the result of the processing of other class instances, are last in
-alphabetical order.
+The oob commands also perform actions such as: source the project file, update
+the breakpoints and frame sign, update the varobj window.
+
+The sequence of oob commands is sorted in alphabetical order in class OobList.
+The names of the subclasses of OobCommand are chosen so that class instances
+that depend on the result of the processing of other class instances, are last
+in alphabetical order.
 
 """
 
 import sys
+import re
 import inspect
+import pprint
 
 import gdb
 import misc
@@ -42,19 +47,77 @@ import misc
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('mi')
 
+# gdb commands ordered as in the gdb manual
+FRAME_CMDS = (
+    'attach', 'd', 'kill',
+    'r', 'start', 'c', 'fg', 's', 'n', 'finish', 'u', 'advance',
+    'up', 'up-silently', 'down', 'down-silently', 'f', 'select-frame'
+    'j', 'signal', 'return',
+    'source')
+SOURCE_CMDS = (
+    'r', 'start',
+    'file', 'exec-file', 'core-file', 'symbol-file', 'add-symbol-file',
+    'source')
+
+# regexp
+RE_DICT_LIST = r'{[^}]+}'                                                   \
+               r'# a gdb list'
+
+RE_DIRECTORIES = r'(?P<path>[^:^\n]+)'                                      \
+                 r'# /path/to/foobar:$cdir:$cwd\n'
+
+RE_FILE = r'(line|file|fullname)="([^"]+)"'                                 \
+          r'# line="1",file="foobar.c",fullname="/home/xdg/foobar.c"'
+
+RE_FRAME = r'(level|func|file|line)="([^"]+)"'                              \
+           r'# frame={level="0",func="main",args=[{name="argc",value="1"},' \
+           r'{name="argv",value="0xbfde84a4"}],file="foobar.c",line="12"}'
+
+RE_SOURCES = r'(file|fullname)="([^"]+)"'                                   \
+             r'# files=[{file="foobar.c",fullname="/home/xdg/foobar.c"},'   \
+             r'{file="foo.c",fullname="/home/xdg/foo.c"}]'
+
+# compile regexps
+re_dict_list = re.compile(RE_DICT_LIST, re.VERBOSE)
+re_directories = re.compile(RE_DIRECTORIES, re.VERBOSE)
+re_file = re.compile(RE_FILE, re.VERBOSE)
+re_frame = re.compile(RE_FRAME, re.VERBOSE)
+re_sources = re.compile(RE_SOURCES, re.VERBOSE)
+
 class Info(object):
     """Container for the debuggee state information.
 
-    This includes the breakpoints table, the varobj data, ...
+    It includes the breakpoints table, the varobj data, etc.
+    This class is named after the gdb "info" command.
+
+    Instance attributes:
+        directories:
+            list of gdb directories
+        file:
+            current gdb source attributes
+        frame:
+            gdb frame attributes
+        sources:
+            list of gdb sources
 
     """
+    def __init__(self):
+        self.directories = []
+        self.file = []
+        self.frame = []
+        self.sources = []
 
-    pass
+    def __repr__(self):
+        return pprint.pformat(self.__dict__)
 
 class Result(dict):
     """Storage for Command objects whose command has been sent to gdb.
 
     A dictionary: {token:command}
+
+    Instance attributes:
+        token: str
+            gdb/mi token number; range 100..199
 
     """
 
@@ -63,6 +126,7 @@ class Result(dict):
 
     def add(self, command):
         """Add a command object to the dictionary."""
+        assert isinstance(command, Command)
         t = str(self.token)
         if self.has_key(t):
             error('token "%s" already exists as an expected pending result', t)
@@ -79,26 +143,21 @@ class Result(dict):
         del self[token]
         return command
 
-class Mi(object):
-    """The list of instances of all MiCommand subclasses.
-
-    An instance of Mi is a callable that returns an iterator over this list.
-
-    """
+class OobList(list):
+    """List of instances of all OobCommand subclasses."""
 
     def __init__(self, gdb):
-        """Instantiate and build the MiCommand list."""
-        self.l = []
+        """Build the OobCommand list."""
         for clss in sys.modules[self.__module__].__dict__.values():
-            if inspect.isclass(clss)                \
-                    and issubclass(clss, MiCommand) \
-                    and clss is not MiCommand:
-                self.l.append(clss(gdb))
-        self.l.sort()
-
-    def __call__(self):
-        for e in self.l:
-            yield e
+            if inspect.isclass(clss) and issubclass(clss, OobCommand):
+                try:
+                    obj = clss(gdb)
+                except AssertionError:
+                    # skip abstract classes
+                    pass
+                else:
+                    self.append(obj)
+        self.sort()
 
 class Command(object):
     """Abstract class to send gdb command and process the result.
@@ -198,19 +257,171 @@ class CompleteBreakCommand(CliCommand):
             else:
                 self.gdb.console_print('Failed to fetch symbols completion.\n')
 
-class MiCommand(Command):
-    """Abstract class for mi commands."""
-    pass
+class OobCommand(Command):
+    """Base abstract class for oob commands.
 
-class SourceFiles(MiCommand):
-    """List the source files for the current executable."""
+    All subclasses of OobCommand that are abstract classes, must raise an
+    AssertionError in their constructor.
+
+    """
+    def __init__(self, gdb):
+        Command.__init__(self, gdb)
+        assert self.__class__ is not OobCommand
+
+    def notify(self, cmd, args):
+        """Notify of the current command being processed by pyclewn."""
+        raise NotImplementedError('must be implemented in subclass')
+
+class OobGetter(OobCommand):
+    """Abstract class for oob getter commands.
+
+    Instance attributes:
+        mi: bool
+            True when the gdb command is a mi command
+        gdb_cmd: str
+            new line terminated command to send to gdb
+        info_attribute: str
+            gdb.info attribute name, this is where the result of the
+            command is stored, after parsing the result
+        prefix: str
+            prefix in the result or stream_record string
+        regexp: a compiled regular expression
+            gdb.info.info_attribute is set with list of regexp groups tuples
+        gdblist: bool
+            True when the result is a gdb list
+        trigger: tuple
+            list of commands that trigger the reset of the info_attribute and
+            subsequently, the invocation of sendcmd()
+        trigger_prefix: set
+            set of the trigger command prefixes built from the trigger list
+            and the list of gdb commands
+
+    """
+
+    def __init__(self, gdb):
+        OobCommand.__init__(self, gdb)
+        assert self.__class__ is not OobGetter
+        assert hasattr(self, 'gdb_cmd') and isinstance(self.gdb_cmd, str)
+        self.mi = not self.gdb_cmd.startswith('-interpreter-exec console')
+        assert hasattr(self, 'info_attribute')              \
+                and isinstance(self.info_attribute, str)    \
+                and hasattr(self.gdb.info, self.info_attribute)
+        assert hasattr(self, 'prefix')                      \
+                and isinstance(self.prefix, str)
+        assert hasattr(self, 'regexp')                      \
+                and hasattr(self.regexp, 'findall')
+        assert hasattr(self, 'gdblist')                     \
+                and isinstance(self.gdblist, bool)
+        assert hasattr(self, 'trigger')                     \
+                and isinstance(self.trigger, tuple)
+
+        # build prefix list that triggers the command after being notified
+        keys = list(set(self.gdb.cmds.keys()).difference(set(self.trigger)))
+        self.trigger_prefix = set([misc.smallpref_inlist(x, keys)
+                                                for x in self.trigger])
+
+    def notify(self, cmd):
+        """Notify of the current command being processed by pyclewn.
+
+        Set the info attribute to an empty list when the command matches one
+        of the commands in the trigger list.
+
+        """
+        if misc.any([cmd.startswith(x) for x in self.trigger_prefix]):
+            setattr(self.gdb.info, self.info_attribute, [])
 
     def sendcmd(self):
-        self.send('-file-list-exec-source-files\n')
+        """Send the gdb command if the info attribute is empty.
+
+        Return True when the command was sent, False otherwise.
+
+        """
+        if not getattr(self.gdb.info, self.info_attribute):
+            self.send(self.gdb_cmd)
+            return True
+        return False
+
+    def parse(self, string):
+        """Parse a string with the regexp after removing prefix.
+
+        When successful, set the info_attribute.
+
+        """
+        try:
+            remain = string[string.index(self.prefix) + len(self.prefix):]
+        except ValueError:
+            debug('bad prefix in oob parsing of "%s",'
+                    ' requested prefix: "%s"', string.strip(), self.prefix)
+        else:
+            if self.gdblist:
+                # a list of dictionaries
+                parsed = [dict(self.regexp.findall(item))
+                                for item in re_dict_list.findall(remain)]
+            else:
+                parsed = self.regexp.findall(remain)
+                if parsed                                   \
+                        and isinstance(parsed[0], tuple)    \
+                        and len(parsed[0]) == 2:
+                    # a dictionary
+                    parsed = dict(parsed)
+            if parsed:
+                setattr(self.gdb.info, self.info_attribute, parsed)
+            else:
+                debug('no regexp match for "%s"', remain)
 
     def handle_result(self, result):
-        pass # XXX
+        """Process the result of the mi command."""
+        if self.mi:
+            self.parse(result)
 
     def handle_strrecord(self, stream_record):
-        pass
+        """Process the stream records output by the cli command."""
+        if not self.mi:
+            self.parse(stream_record)
+
+# instantiate the OobGetter subclasses
+# listed in alphabetic order to remind they are run in alphabetic order
+Directories =    \
+    type('Directories', (OobGetter,),
+            {
+                'gdb_cmd': '-interpreter-exec console "show directories"\n',
+                'info_attribute': 'directories',
+                'prefix': 'Source directories searched: ',
+                'regexp': re_directories,
+                'gdblist': False,
+                'trigger': ('directory', 'source'),
+            })
+
+File =    \
+    type('File', (OobGetter,),
+            {
+                'gdb_cmd': '-file-list-exec-source-file\n',
+                'info_attribute': 'file',
+                'prefix': 'done,',
+                'regexp': re_file,
+                'gdblist': False,
+                'trigger': FRAME_CMDS,
+            })
+
+Frame =    \
+    type('Frame', (OobGetter,),
+            {
+                'gdb_cmd': 'frame\n',
+                'info_attribute': 'frame',
+                'prefix': 'done,',
+                'regexp': re_frame,
+                'gdblist': False,
+                'trigger': FRAME_CMDS,
+            })
+
+Sources =   \
+    type('Sources', (OobGetter,),
+            {
+                'gdb_cmd': '-file-list-exec-source-files\n',
+                'info_attribute': 'sources',
+                'prefix': 'done,',
+                'regexp': re_sources,
+                'gdblist': True,
+                'trigger': SOURCE_CMDS,
+            })
 

@@ -17,7 +17,7 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id: gdb.py 204 2007-12-21 20:55:44Z xavier $
+# $Id$
 
 """The Gdb application is a frontend to GDB/MI.
 """
@@ -45,12 +45,8 @@ RE_VERSION = r'^GNU\s*gdb\s*(?P<version>[0-9.]+)\s*$'       \
              r'# RE: gdb version'
 RE_COMPLETION = r'^(?P<cmd>\S+)\s*(?P<arg>\S+)(?P<rest>.*)$'\
                 r'# RE: cmd 1st_arg_completion'
-# ignore corrupted characters at start
-# with the 'edit' command (illegal now), we get:
-# 11 chars instead of 8: "103^done" (^[[m at start)
-# Ox1bOx5bOx6dOx31Ox30Ox33Ox5eOx64Ox6fOx6eOx65
-RE_MIRECORD = r'^.*(?P<token>\d\d\d)[^*+=](?P<result>.*)$'  \
-                r'# RE: gdb/mi record'
+RE_MIRECORD = r'^(?P<token>\d\d\d)[\^*+=](?P<result>.*)$'   \
+              r'# gdb/mi record'
 
 # compile regexps
 re_version = re.compile(RE_VERSION, re.VERBOSE)
@@ -314,11 +310,9 @@ class GlobalSetup(misc.Singleton):
             if cmd and cmd != 'help':
                 self.cmds[cmd] = ()
 
-        self.illegal_cmds_prefix = []
-        for illegal in self.illegal_cmds:
-            prefix = misc.smallpref_inlist(illegal, self.cmds.keys())
-            if prefix not in self.illegal_cmds_prefix:
-                self.illegal_cmds_prefix.append(prefix)
+        keys = self.cmds.keys()
+        self.illegal_cmds_prefix = set([misc.smallpref_inlist(x, keys)
+                                            for x in self.illegal_cmds])
 
         self.illegal_setargs_prefix = []
         if self.cmds.has_key('set') and self.cmds['set']:
@@ -326,10 +320,10 @@ class GlobalSetup(misc.Singleton):
             self.cmds['set'] = list(
                                     set(self.cmds['set'])
                                     .difference(set(self.illegal_setargs)))
-            for illegal in self.illegal_setargs:
-                prefix = misc.smallpref_inlist(illegal, self.cmds['set'])
-                if prefix not in self.illegal_setargs_prefix:
-                    self.illegal_setargs_prefix.append(prefix)
+            setargs = self.cmds['set']
+            self.illegal_setargs_prefix = set(
+                                        [misc.smallpref_inlist(x, setargs)
+                                            for x in self.illegal_setargs])
 
 class Gdb(application.Application, misc.ProcessChannel):
     """The Gdb application is a frontend to GDB/MI.
@@ -339,8 +333,8 @@ class Gdb(application.Application, misc.ProcessChannel):
             gdb global data
         results: gdbmi.Result
             storage for expected pending command results
-        mi: gdbmi.Mi
-            list of MiCommand instances
+        oob_list: gdbmi.OobList
+            list of OobCommand instances
         cli: gdbmi.CliCommand
             the CliCommand instance
         info: gdbmi.Info
@@ -348,11 +342,13 @@ class Gdb(application.Application, misc.ProcessChannel):
         gotprmpt: boolean
             True after receiving the prompt from gdb/mi
         oob: iterator
-            iterator over the list of MiCommand instances
+            iterator over the list of OobCommand instances
         stream_record: list
             list of gdb/mi stream records output by a command
         lastcmd: gdbmi.Command
             the last Command instance whose result has been processed
+        token: string
+            the token of the last gdb/mi result or out of band record
         curcmdline: str
             the current gdb command line
         firstcmdline: None, str or ''
@@ -404,17 +400,18 @@ class Gdb(application.Application, misc.ProcessChannel):
         self.f_init = None
         misc.ProcessChannel.__init__(self, self.getargv())
 
+        self.info = gdbmi.Info()
         self.globaal = GlobalSetup(self.pgm)
         self.__class__.cmds = self.globaal.cmds
         self.__class__.pyclewn_cmds = application.Application.pyclewn_cmds
         self.results = gdbmi.Result()
-        self.mi = gdbmi.Mi(self)
+        self.oob_list = gdbmi.OobList(self)
         self.cli = gdbmi.CliCommand(self)
-        self.info = gdbmi.Info()
         self.gotprmpt = False
         self.oob = None
         self.stream_record = []
         self.lastcmd = None
+        self.token = ''
         self.curcmdline = ''
         self.firstcmdline = None
 
@@ -490,9 +487,13 @@ class Gdb(application.Application, misc.ProcessChannel):
                 result = matchobj.group('result')
                 cmd = self.results.remove(token)
                 if cmd is None:
-                    # ignore received duplicate token
-                    pass
+                    if token == self.token:
+                        # ignore received duplicate token
+                        pass
+                    else:
+                        raise misc.Error('invalid token "%s"' % token)
                 else:
+                    self.token = token
                     self.lastcmd = cmd
                     cmd.handle_result(result)
 
@@ -505,13 +506,14 @@ class Gdb(application.Application, misc.ProcessChannel):
 
                 # got the cli prompt
                 if isinstance(self.lastcmd, gdbmi.CliCommand)   \
-                                    or self.lastcmd is None:
+                                            or self.lastcmd is None:
                     # prepare the next sequence of oob commands
                     if self.lastcmd is self.cli or self.lastcmd is None:
                         self.time = _timer()
-                        self.oob = self.mi()
+                        self.oob = self.oob_list.__iter__()
                         if len(self.results):
                             error('all cmds have not been processed in results')
+                            self.results.clear()
                     self.gotprmpt = True
                     self.prompt()
 
@@ -519,7 +521,10 @@ class Gdb(application.Application, misc.ProcessChannel):
                 assert self.gotprmpt
                 if self.oob is not None:
                     try:
-                        self.oob.next().sendcmd()
+                        # loop over oob commands that don't send anything
+                        while True:
+                            if self.oob.next().sendcmd():
+                                break
                     except StopIteration:
                         self.oob = None
                         t = _timer()
@@ -573,23 +578,26 @@ class Gdb(application.Application, misc.ProcessChannel):
 
     def default_cmd_processing(self, buf, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""
-        for e in self.globaal.illegal_cmds_prefix:
-            if cmd.startswith(e):
-                self.console_print('Illegal command in pyclewn.\n')
-                self.prompt()
-                return
+        if misc.any([cmd.startswith(x)
+                for x in self.globaal.illegal_cmds_prefix]):
+            self.console_print('Illegal command in pyclewn.\n')
+            self.prompt()
+            return
 
         if cmd == 'set' and args:
             firstarg = args.split()[0]
-            for e in self.globaal.illegal_setargs_prefix:
-                if args and firstarg.startswith(e):
-                    self.console_print('Illegal argument in pyclewn.\n')
-                    self.prompt()
-                    return
+            if misc.any([firstarg.startswith(x)
+                    for x in self.globaal.illegal_setargs_prefix]):
+                self.console_print('Illegal argument in pyclewn.\n')
+                self.prompt()
+                return
 
         if self.firstcmdline is None:
             self.firstcmdline = self.curcmdline
         else:
+            # notify each OobCommand instance of the cmd being processed
+            for oob in self.oob_list:
+                oob.notify(cmd)
             self.cli.sendcmd(self.curcmdline)
 
     def cmd_help(self, *args):
