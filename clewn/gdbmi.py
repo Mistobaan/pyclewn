@@ -91,6 +91,8 @@ class Info(object):
     This class is named after the gdb "info" command.
 
     Instance attributes:
+        gdb: gdb.Gdb
+            the Gdb application instance
         directories:
             list of gdb directories
         file:
@@ -101,11 +103,27 @@ class Info(object):
             list of gdb sources
 
     """
-    def __init__(self):
+    def __init__(self, gdb):
+        self.gdb = gdb
         self.directories = []
         self.file = []
         self.frame = []
         self.sources = []
+
+    def frame_sign(self):
+        """Update the frame sign."""
+        if self.frame and isinstance(self.frame, dict):
+            try:
+                fullname = self.file['fullname']
+                line = int(self.frame['line'])
+            except KeyError:
+                debug('key error in Info.frame dictionary')
+            except ValueError:
+                error('not an integer in Info.frame["line"]')
+            else:
+                self.gdb.show_frame(fullname, line)
+                return
+        self.gdb.show_frame()
 
     def __repr__(self):
         return pprint.pformat(self.__dict__)
@@ -263,18 +281,6 @@ class OobCommand(Command):
     All subclasses of OobCommand that are abstract classes, must raise an
     AssertionError in their constructor.
 
-    """
-    def __init__(self, gdb):
-        Command.__init__(self, gdb)
-        assert self.__class__ is not OobCommand
-
-    def notify(self, cmd, args):
-        """Notify of the current command being processed by pyclewn."""
-        raise NotImplementedError('must be implemented in subclass')
-
-class OobGetter(OobCommand):
-    """Abstract class for oob getter commands.
-
     Instance attributes:
         mi: bool
             True when the gdb command is a mi command
@@ -289,6 +295,9 @@ class OobGetter(OobCommand):
             gdb.info.info_attribute is set with list of regexp groups tuples
         gdblist: bool
             True when the result is a gdb list
+        action: str
+            optional: not present in all subclasses
+            name of the gdb.info method that is called after parsing the result
         trigger: tuple
             list of commands that trigger the reset of the info_attribute and
             subsequently, the invocation of sendcmd()
@@ -299,8 +308,8 @@ class OobGetter(OobCommand):
     """
 
     def __init__(self, gdb):
-        OobCommand.__init__(self, gdb)
-        assert self.__class__ is not OobGetter
+        Command.__init__(self, gdb)
+        assert self.__class__ is not OobCommand
         assert hasattr(self, 'gdb_cmd') and isinstance(self.gdb_cmd, str)
         self.mi = not self.gdb_cmd.startswith('-interpreter-exec console')
         assert hasattr(self, 'info_attribute')              \
@@ -312,6 +321,8 @@ class OobGetter(OobCommand):
                 and hasattr(self.regexp, 'findall')
         assert hasattr(self, 'gdblist')                     \
                 and isinstance(self.gdblist, bool)
+        if hasattr(self, 'action'):
+            assert hasattr(self.gdb.info, self.action)
         assert hasattr(self, 'trigger')                     \
                 and isinstance(self.trigger, tuple)
 
@@ -373,16 +384,19 @@ class OobGetter(OobCommand):
         """Process the result of the mi command."""
         if self.mi:
             self.parse(result)
+            # call the gdb.info method
+            if hasattr(self, 'action'):
+                getattr(self.gdb.info, self.action)()
 
     def handle_strrecord(self, stream_record):
         """Process the stream records output by the cli command."""
         if not self.mi:
             self.parse(stream_record)
 
-# instantiate the OobGetter subclasses
+# instantiate the OobCommand subclasses
 # listed in alphabetic order to remind they are run in alphabetic order
 Directories =    \
-    type('Directories', (OobGetter,),
+    type('Directories', (OobCommand,),
             {
                 'gdb_cmd': '-interpreter-exec console "show directories"\n',
                 'info_attribute': 'directories',
@@ -393,7 +407,7 @@ Directories =    \
             })
 
 File =    \
-    type('File', (OobGetter,),
+    type('File', (OobCommand,),
             {
                 'gdb_cmd': '-file-list-exec-source-file\n',
                 'info_attribute': 'file',
@@ -403,19 +417,21 @@ File =    \
                 'trigger': FRAME_CMDS,
             })
 
+# Frame depends on, and is after File
 Frame =    \
-    type('Frame', (OobGetter,),
+    type('Frame', (OobCommand,),
             {
                 'gdb_cmd': 'frame\n',
                 'info_attribute': 'frame',
                 'prefix': 'done,',
                 'regexp': re_frame,
                 'gdblist': False,
+                'action': 'frame_sign',
                 'trigger': FRAME_CMDS,
             })
 
 Sources =   \
-    type('Sources', (OobGetter,),
+    type('Sources', (OobCommand,),
             {
                 'gdb_cmd': '-file-list-exec-source-files\n',
                 'info_attribute': 'sources',

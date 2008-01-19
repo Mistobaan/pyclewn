@@ -206,17 +206,10 @@ class GdbTestCase(ClewnTestCase):
             ":edit (clewn)_console | $$ | ?'info'?,/'last_balloon'/w!  ${test_out}\n"
             ':qa!\n',
 
-            "'info': {'directories': ['$$cdir', '$$cwd'],\n"
             "'file': {'file': 'foobar.c',\n"
             "         'fullname': '${cwd}testsuite/foobar.c',\n"
             "         'line': '4'},\n"
             "'frame': {'line': '9', 'file': 'foobar.c', 'func': 'main', 'level': '0'},\n"
-            "'sources': [{'file': 'foobar.c',\n"
-            "             'fullname': '${cwd}testsuite/foobar.c'},\n"
-            "            {'file': 'bar.c',\n"
-            "             'fullname': '${cwd}testsuite/bar.c'},\n"
-            "            {'file': 'foo.c',\n"
-            "             'fullname': '${cwd}testsuite/foo.c'}]},\n"
             )
 
 def test_main():

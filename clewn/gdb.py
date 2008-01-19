@@ -400,7 +400,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         self.f_init = None
         misc.ProcessChannel.__init__(self, self.getargv())
 
-        self.info = gdbmi.Info()
+        self.info = gdbmi.Info(self)
         self.globaal = GlobalSetup(self.pgm)
         self.__class__.cmds = self.globaal.cmds
         self.__class__.pyclewn_cmds = application.Application.pyclewn_cmds
