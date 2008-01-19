@@ -17,7 +17,7 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id: test_gdb.py 202 2007-12-20 19:16:45Z xavier $
+# $Id$
 
 import sys
 import os
@@ -191,6 +191,34 @@ class GdbTestCase(ClewnTestCase):
             'symbols fetched for break and clear completion\n'
             )
 
+    def test_oob_command(self):
+        """Checking result of oob commands"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':sleep ${time}\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Crun\n'
+            ':sleep ${time}\n'
+            ':Cdumprepr\n'
+            ':sleep ${time}\n'
+            ":edit (clewn)_console | $$ | ?'info'?,/'last_balloon'/w!  ${test_out}\n"
+            ':qa!\n',
+
+            "'info': {'directories': ['$$cdir', '$$cwd'],\n"
+            "'file': {'file': 'foobar.c',\n"
+            "         'fullname': '${cwd}testsuite/foobar.c',\n"
+            "         'line': '4'},\n"
+            "'frame': {'line': '9', 'file': 'foobar.c', 'func': 'main', 'level': '0'},\n"
+            "'sources': [{'file': 'foobar.c',\n"
+            "             'fullname': '${cwd}testsuite/foobar.c'},\n"
+            "            {'file': 'bar.c',\n"
+            "             'fullname': '${cwd}testsuite/bar.c'},\n"
+            "            {'file': 'foo.c',\n"
+            "             'fullname': '${cwd}testsuite/foo.c'}]},\n"
+            )
+
 def test_main():
     # run make on the testsuite
     check_call(['make', '-C', 'testsuite'])
@@ -205,6 +233,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_gdb_arglist'))
     suite.addTest(GdbTestCase('test_gdb_illegal'))
     suite.addTest(GdbTestCase('test_symbols_completion'))
+    suite.addTest(GdbTestCase('test_oob_command'))
     run_unittest(suite)
 
 if __name__ == '__main__':
