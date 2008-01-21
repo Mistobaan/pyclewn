@@ -37,6 +37,7 @@ in alphabetical order.
 """
 
 import sys
+import os.path
 import re
 import inspect
 import pprint
@@ -89,6 +90,15 @@ re_file = re.compile(RE_FILE, re.VERBOSE)
 re_frame = re.compile(RE_FRAME, re.VERBOSE)
 re_sources = re.compile(RE_SOURCES, re.VERBOSE)
 
+def fullname(name, file):
+    """Return 'fullname' value, matching name in the file dictionary."""
+    try:
+        if file['file'] == name:
+            return file['fullname']
+    except KeyError:
+        pass
+    return ''
+
 class Info(object):
     """Container for the debuggee state information.
 
@@ -118,23 +128,64 @@ class Info(object):
         self.frameloc = {}
         self.sources = []
 
+    def get_fullpath(self, name):
+        """Get the full path name for the file named 'name' and return it.
+
+        If name is an absolute path, just stat it. Otherwise, add name to
+        each directory in gdb source directories and stat the result.
+        """
+
+        # an absolute path name
+        if os.path.isabs(name):
+            if os.path.exists(name):
+                return name
+            else:
+                # strip off the directory part and continue
+                name = os.path.split(name)[1]
+
+        if not name:
+            return None
+
+        # proceed with each directory in gdb source directories
+        for dir in self.directories:
+            if dir == '$cdir':
+                pathname = fullname(name, self.file)
+                if not pathname:
+                    for file in self.sources:
+                        pathname = fullname(name, file)
+                        if pathname:
+                            break
+                    else:
+                        continue # main loop
+            elif dir == '$cwd':
+                pathname = os.path.abspath(name)
+            else:
+                pathname = os.path.normpath(dir, path)
+
+            if os.path.exists(pathname):
+                return pathname
+
+        return None
+
     def frame_sign(self):
         """Update the frame sign."""
         if self.frame and isinstance(self.frame, dict):
             try:
-                fullname = self.file['fullname']
+                pathname = self.get_fullpath(self.file['fullname'])
                 line = int(self.frame['line'])
             except KeyError:
                 debug('key error in Info.frame dictionary')
             except ValueError:
                 error('not an integer in Info.frame["line"]')
             else:
-                frameloc = {'pathname':fullname, 'lnum':line}
-                # do it only when frame location has changed
-                if self.frameloc != frameloc:
-                    self.gdb.show_frame(**frameloc)
-                    self.frameloc = frameloc
-                return
+                if pathname is not None:
+                    frameloc = {'pathname':pathname, 'lnum':line}
+                    # do it only when frame location has changed
+                    if self.frameloc != frameloc:
+                        self.gdb.show_frame(**frameloc)
+                        self.frameloc = frameloc
+                    return
+        # hide frame sign
         self.gdb.show_frame()
         self.frameloc = {}
 
