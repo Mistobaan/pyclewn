@@ -48,12 +48,17 @@ import misc
 (critical, error, warning, info, debug) = misc.logmethods('mi')
 
 # gdb commands ordered as in the gdb manual
-FRAME_CMDS = (
-    'attach', 'd', 'kill',
-    'r', 'start', 'c', 'fg', 's', 'n', 'finish', 'u', 'advance',
-    'up', 'up-silently', 'down', 'down-silently', 'f', 'select-frame'
-    'j', 'signal', 'return',
-    'source')
+#FRAME_CMDS = (
+#    'attach', 'd', 'kill',
+#    'r', 'start', 'c', 'fg', 's', 'n', 'finish', 'u', 'advance',
+#    'up', 'up-silently', 'down', 'down-silently', 'f', 'select-frame'
+#    'j', 'signal', 'return',
+#    'source')
+# All commands trigger a frame oob command. For example a plain gdb print
+# command may call a debuggee function and stop at a breakpoint set
+# inside this function.
+FRAME_CMDS = ()
+
 SOURCE_CMDS = (
     'r', 'start',
     'file', 'exec-file', 'core-file', 'symbol-file', 'add-symbol-file',
@@ -93,21 +98,24 @@ class Info(object):
     Instance attributes:
         gdb: gdb.Gdb
             the Gdb application instance
-        directories:
+        directories: list
             list of gdb directories
-        file:
+        file: dict
             current gdb source attributes
-        frame:
+        frame: dict
             gdb frame attributes
-        sources:
+        frameloc: dict
+            current frame location
+        sources: list
             list of gdb sources
 
     """
     def __init__(self, gdb):
         self.gdb = gdb
         self.directories = []
-        self.file = []
-        self.frame = []
+        self.file = {}
+        self.frame = {}
+        self.frameloc = {}
         self.sources = []
 
     def frame_sign(self):
@@ -121,9 +129,14 @@ class Info(object):
             except ValueError:
                 error('not an integer in Info.frame["line"]')
             else:
-                self.gdb.show_frame(fullname, line)
+                frameloc = {'pathname':fullname, 'lnum':line}
+                # do it only when frame location has changed
+                if self.frameloc != frameloc:
+                    self.gdb.show_frame(**frameloc)
+                    self.frameloc = frameloc
                 return
         self.gdb.show_frame()
+        self.frameloc = {}
 
     def __repr__(self):
         return pprint.pformat(self.__dict__)
@@ -300,7 +313,8 @@ class OobCommand(Command):
             name of the gdb.info method that is called after parsing the result
         trigger: tuple
             list of commands that trigger the reset of the info_attribute and
-            subsequently, the invocation of sendcmd()
+            subsequently, the invocation of sendcmd(); an empty tuple triggers
+            a notification on the processing of any command
         trigger_prefix: set
             set of the trigger command prefixes built from the trigger list
             and the list of gdb commands
@@ -335,10 +349,12 @@ class OobCommand(Command):
         """Notify of the current command being processed by pyclewn.
 
         Set the info attribute to an empty list when the command matches one
-        of the commands in the trigger list.
+        of the commands in the trigger list. When the trigger list is empty,
+        do it for all commands.
 
         """
-        if misc.any([cmd.startswith(x) for x in self.trigger_prefix]):
+        if not self.trigger or          \
+                misc.any([cmd.startswith(x) for x in self.trigger_prefix]):
             setattr(self.gdb.info, self.info_attribute, [])
 
     def sendcmd(self):
