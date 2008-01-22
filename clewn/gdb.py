@@ -38,20 +38,25 @@ GDB_INIT = """
 set confirm off
 set height 0
 set width 0
+set annotate 1
 """
 SYMBOL_COMPLETION_TIMEOUT = 20 # seconds
 
-RE_VERSION = r'^GNU\s*gdb\s*(?P<version>[0-9.]+)\s*$'       \
+RE_VERSION = r'^GNU\s*gdb\s*(?P<version>[0-9.]+)\s*$'           \
              r'# RE: gdb version'
-RE_COMPLETION = r'^(?P<cmd>\S+)\s*(?P<arg>\S+)(?P<rest>.*)$'\
+RE_COMPLETION = r'^(?P<cmd>\S+)\s*(?P<arg>\S+)(?P<rest>.*)$'    \
                 r'# RE: cmd 1st_arg_completion'
-RE_MIRECORD = r'^(?P<token>\d\d\d)[\^*+=](?P<result>.*)$'   \
+RE_MIRECORD = r'^(?P<token>\d\d\d)[\^*+=](?P<result>.*)$'       \
               r'# gdb/mi record'
+RE_ANNO_1 = r'^[~@&]"\\032\\032[^:]+:[^:]+:[^:]+:[^:]+:[^:]+$'  \
+            r'# annotation level 1'                             \
+            r'# ^Z^ZFILENAME:LINE:CHARACTER:MIDDLE:ADDR'
 
 # compile regexps
 re_version = re.compile(RE_VERSION, re.VERBOSE)
 re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_mirecord = re.compile(RE_MIRECORD, re.VERBOSE)
+re_anno_1 = re.compile(RE_ANNO_1, re.VERBOSE)
 
 SYMCOMPLETION = """
 " print a warning message on vim command line
@@ -474,10 +479,11 @@ class Gdb(application.Application, misc.ProcessChannel):
 
         # gdb/mi stream record
         elif line[0] in '~@&':
-            size = len(line)
-            if size > 1:
-                self.stream_record.append(misc.re_escape.sub(misc.escapedchar,
-                                                    line[1:size].strip('"')))
+            # ignore annotations level 1
+            if re_anno_1.match(line) is None:
+                self.stream_record.append(
+                            misc.re_escape.sub(misc.escapedchar,
+                                        line[1:].strip('"')))
         else:
             matchobj = re_mirecord.match(line)
 
