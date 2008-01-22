@@ -48,6 +48,8 @@ RE_COMPLETION = r'^(?P<cmd>\S+)\s*(?P<arg>\S+)(?P<rest>.*)$'    \
                 r'# RE: cmd 1st_arg_completion'
 RE_MIRECORD = r'^(?P<token>\d\d\d)[\^*+=](?P<result>.*)$'       \
               r'# gdb/mi record'
+RE_QUOTED = r'^"(?P<quoted>.+)"$'                               \
+            r'# a quoted string'
 RE_ANNO_1 = r'^[~@&]"\\032\\032[^:]+:[^:]+:[^:]+:[^:]+:[^:]+$'  \
             r'# annotation level 1'                             \
             r'# ^Z^ZFILENAME:LINE:CHARACTER:MIDDLE:ADDR'
@@ -56,6 +58,7 @@ RE_ANNO_1 = r'^[~@&]"\\032\\032[^:]+:[^:]+:[^:]+:[^:]+:[^:]+$'  \
 re_version = re.compile(RE_VERSION, re.VERBOSE)
 re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_mirecord = re.compile(RE_MIRECORD, re.VERBOSE)
+re_quoted = re.compile(RE_QUOTED, re.VERBOSE)
 re_anno_1 = re.compile(RE_ANNO_1, re.VERBOSE)
 
 SYMCOMPLETION = """
@@ -479,11 +482,14 @@ class Gdb(application.Application, misc.ProcessChannel):
 
         # gdb/mi stream record
         elif line[0] in '~@&':
-            # ignore annotations level 1
-            if re_anno_1.match(line) is None:
+            matchobj = re_quoted.match(line[1:])
+            if matchobj and re_anno_1.match(line) is None:
                 self.stream_record.append(
                             misc.re_escape.sub(misc.escapedchar,
-                                        line[1:].strip('"')))
+                                matchobj.group('quoted')))
+            # ignore annotations level 1 and bad format
+            else:
+                pass
         else:
             matchobj = re_mirecord.match(line)
 
