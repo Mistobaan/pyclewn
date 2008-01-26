@@ -48,6 +48,16 @@ import misc
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('mi')
 
+BREAKPOINT_CMDS = (
+    'b', 'tbreak', 'hbreak', 'thbreak', 'rbreak',
+    'clear', 'delete',
+    'disable', 'enable',
+    'source')
+
+DIRECTORY_CMDS = (
+    'directory',
+    'source')
+
 # gdb commands ordered as in the gdb manual
 #FRAME_CMDS = (
 #    'attach', 'd', 'kill',
@@ -69,6 +79,9 @@ SOURCE_CMDS = (
 RE_DICT_LIST = r'{[^}]+}'                                                   \
                r'# a gdb list'
 
+RE_BREAKPOINTS = r'(number|type|enabled|file|line)="([^"]+)"'               \
+                 r'# a breakpoint'
+
 RE_DIRECTORIES = r'(?P<path>[^:^\n]+)'                                      \
                  r'# /path/to/foobar:$cdir:$cwd\n'
 
@@ -85,6 +98,7 @@ RE_SOURCES = r'(file|fullname)="([^"]+)"'                                   \
 
 # compile regexps
 re_dict_list = re.compile(RE_DICT_LIST, re.VERBOSE)
+re_breakpoints = re.compile(RE_BREAKPOINTS, re.VERBOSE)
 re_directories = re.compile(RE_DIRECTORIES, re.VERBOSE)
 re_file = re.compile(RE_FILE, re.VERBOSE)
 re_frame = re.compile(RE_FRAME, re.VERBOSE)
@@ -93,7 +107,7 @@ re_sources = re.compile(RE_SOURCES, re.VERBOSE)
 def fullname(name, file):
     """Return 'fullname' value, matching name in the file dictionary."""
     try:
-        if file['file'] == name:
+        if file and file['file'] == name:
             return file['fullname']
     except KeyError:
         pass
@@ -108,6 +122,10 @@ class Info(object):
     Instance attributes:
         gdb: gdb.Gdb
             the Gdb application instance
+        breakpoints: list
+            list of breakpoints
+        bp_dictionary: dict
+            breakpoints dictionary
         directories: list
             list of gdb directories
         file: dict
@@ -122,7 +140,9 @@ class Info(object):
     """
     def __init__(self, gdb):
         self.gdb = gdb
-        self.directories = []
+        self.breakpoints = []
+        self.bp_dictionary = {}
+        self.directories = ['$cdir', '$cwd']
         self.file = {}
         self.frame = {}
         self.frameloc = {}
@@ -167,24 +187,52 @@ class Info(object):
 
         return None
 
-    def frame_sign(self):
+    def update_breakpoints(self):
+        """Update the breakpoints."""
+        # build the breakpoints dictionary
+        bp_dictionary = {}
+        for bp in self.breakpoints:
+            if 'breakpoint' in bp['type']:
+                bp_dictionary[bp['number']] = bp
+
+        nset = set(bp_dictionary.keys())
+        oldset = set(self.bp_dictionary.keys())
+        # update sign status of common breakpoints
+        for num in (nset & oldset):
+            state = bp_dictionary[num]['enabled']
+            if state != self.bp_dictionary[num]['enabled']:
+                enabled = (state == 'y')
+                self.gdb.update_bp(int(num), not enabled)
+
+        # delete signs for non-existent breakpoints
+        for num in (oldset - nset):
+            pathname = self.get_fullpath(self.bp_dictionary[num]['file'])
+            if pathname is not None:
+                lnum = int(self.bp_dictionary[num]['line'])
+                self.gdb.delete_all(pathname, lnum)
+
+        # create signs for new breakpoints
+        for num in (nset - oldset):
+            pathname = self.get_fullpath(bp_dictionary[num]['file'])
+            if pathname is not None:
+                lnum = int(bp_dictionary[num]['line'])
+                self.gdb.add_bp(int(num), pathname, lnum)
+
+        self.bp_dictionary = bp_dictionary
+
+    def update_frame(self):
         """Update the frame sign."""
         if self.frame and isinstance(self.frame, dict):
-            try:
-                pathname = self.get_fullpath(self.file['fullname'])
-                line = int(self.frame['line'])
-            except KeyError:
-                debug('key error in Info.frame dictionary')
-            except ValueError:
-                error('not an integer in Info.frame["line"]')
-            else:
-                if pathname is not None:
-                    frameloc = {'pathname':pathname, 'lnum':line}
-                    # do it only when frame location has changed
-                    if self.frameloc != frameloc:
-                        self.gdb.show_frame(**frameloc)
-                        self.frameloc = frameloc
-                    return
+            pathname = self.get_fullpath(self.file['fullname'])
+            line = int(self.frame['line'])
+            if pathname is not None:
+                frameloc = {'pathname':pathname, 'lnum':line}
+                # do it only when frame location has changed
+                if self.frameloc != frameloc:
+                    self.gdb.show_frame(**frameloc)
+                    self.frameloc = frameloc
+                return
+
         # hide frame sign
         self.gdb.show_frame()
         self.frameloc = {}
@@ -362,13 +410,13 @@ class OobCommand(Command):
         action: str
             optional: not present in all subclasses
             name of the gdb.info method that is called after parsing the result
-        trigger: tuple
-            list of commands that trigger the reset of the info_attribute and
-            subsequently, the invocation of sendcmd(); an empty tuple triggers
-            a notification on the processing of any command
+        trigger: boolean
+            when True, invoke sendcmd()
+        trigger_list: tuple
+            list of commands that trigger the invocation of sendcmd()
         trigger_prefix: set
-            set of the trigger command prefixes built from the trigger list
-            and the list of gdb commands
+            set of the trigger_list command prefixes built from the
+            trigger_list and the list of gdb commands
 
     """
 
@@ -388,33 +436,30 @@ class OobCommand(Command):
                 and isinstance(self.gdblist, bool)
         if hasattr(self, 'action'):
             assert hasattr(self.gdb.info, self.action)
-        assert hasattr(self, 'trigger')                     \
-                and isinstance(self.trigger, tuple)
+        assert hasattr(self, 'trigger_list')                     \
+                and isinstance(self.trigger_list, tuple)
+        self.trigger = False
 
         # build prefix list that triggers the command after being notified
-        keys = list(set(self.gdb.cmds.keys()).difference(set(self.trigger)))
+        keys = list(set(self.gdb.cmds.keys()).difference(set(self.trigger_list)))
         self.trigger_prefix = set([misc.smallpref_inlist(x, keys)
-                                                for x in self.trigger])
+                                                for x in self.trigger_list])
 
     def notify(self, cmd):
-        """Notify of the current command being processed by pyclewn.
-
-        Set the info attribute to an empty list when the command matches one
-        of the commands in the trigger list. When the trigger list is empty,
-        do it for all commands.
-
-        """
-        if not self.trigger or          \
+        """Notify of the current command being processed by pyclewn."""
+        if not self.trigger_list or          \
                 misc.any([cmd.startswith(x) for x in self.trigger_prefix]):
-            setattr(self.gdb.info, self.info_attribute, [])
+            self.trigger = True
 
     def sendcmd(self):
-        """Send the gdb command if the info attribute is empty.
+        """Send the gdb command.
 
         Return True when the command was sent, False otherwise.
 
         """
-        if not getattr(self.gdb.info, self.info_attribute):
+        if self.trigger:
+            setattr(self.gdb.info, self.info_attribute, [])
+            self.trigger = False
             self.send(self.gdb_cmd)
             return True
         return False
@@ -433,8 +478,10 @@ class OobCommand(Command):
         else:
             if self.gdblist:
                 # a list of dictionaries
-                parsed = [dict(self.regexp.findall(item))
-                                for item in re_dict_list.findall(remain)]
+                parsed = [x for x in
+                            [dict(self.regexp.findall(map))
+                                for map in re_dict_list.findall(remain)]
+                                                                if x]
             else:
                 parsed = self.regexp.findall(remain)
                 if parsed                                   \
@@ -453,7 +500,13 @@ class OobCommand(Command):
             self.parse(result)
             # call the gdb.info method
             if hasattr(self, 'action'):
-                getattr(self.gdb.info, self.action)()
+                try:
+                    getattr(self.gdb.info, self.action)()
+                except (KeyError, ValueError):
+                    info_attribute = getattr(self.gdb.info,
+                                            self.info_attribute)
+                    if info_attribute:
+                        error('bad format: %s', info_attribute)
 
     def handle_strrecord(self, stream_record):
         """Process the stream records output by the cli command."""
@@ -462,6 +515,18 @@ class OobCommand(Command):
 
 # instantiate the OobCommand subclasses
 # listed in alphabetic order to remind they are run in alphabetic order
+Breakpoints =   \
+    type('Breakpoints', (OobCommand,),
+            {
+                'gdb_cmd': '-break-list\n',
+                'info_attribute': 'breakpoints',
+                'prefix': 'done,',
+                'regexp': re_breakpoints,
+                'gdblist': True,
+                'action': 'update_breakpoints',
+                'trigger_list': BREAKPOINT_CMDS,
+            })
+
 Directories =    \
     type('Directories', (OobCommand,),
             {
@@ -470,7 +535,7 @@ Directories =    \
                 'prefix': 'Source directories searched: ',
                 'regexp': re_directories,
                 'gdblist': False,
-                'trigger': ('directory', 'source'),
+                'trigger_list': DIRECTORY_CMDS,
             })
 
 File =    \
@@ -481,7 +546,7 @@ File =    \
                 'prefix': 'done,',
                 'regexp': re_file,
                 'gdblist': False,
-                'trigger': FRAME_CMDS,
+                'trigger_list': FRAME_CMDS,
             })
 
 # Frame depends on, and is after File
@@ -493,8 +558,8 @@ Frame =    \
                 'prefix': 'done,',
                 'regexp': re_frame,
                 'gdblist': False,
-                'action': 'frame_sign',
-                'trigger': FRAME_CMDS,
+                'action': 'update_frame',
+                'trigger_list': FRAME_CMDS,
             })
 
 Sources =   \
@@ -505,6 +570,6 @@ Sources =   \
                 'prefix': 'done,',
                 'regexp': re_sources,
                 'gdblist': True,
-                'trigger': SOURCE_CMDS,
+                'trigger_list': SOURCE_CMDS,
             })
 

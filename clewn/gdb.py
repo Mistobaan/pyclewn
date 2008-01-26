@@ -546,6 +546,9 @@ class Gdb(application.Application, misc.ProcessChannel):
                         # send the first cli command line
                         if self.firstcmdline:
                             self.console_print("%s\n", self.firstcmdline)
+                            # notify each OobCommand instance
+                            for oob in self.oob_list:
+                                oob.notify(self.firstcmdline)
                             self.cli.sendcmd(self.firstcmdline)
                         self.firstcmdline = ''
             else:
