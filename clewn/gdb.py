@@ -479,80 +479,96 @@ class Gdb(application.Application, misc.ProcessChannel):
         debug(line)
         if not line:
             error('handle_line: processing an empty line')
+            return
 
         # gdb/mi stream record
-        elif line[0] in '~@&':
-            matchobj = re_quoted.match(line[1:])
-            if matchobj and re_anno_1.match(line) is None:
-                self.stream_record.append(
-                            misc.re_escape.sub(misc.escapedchar,
-                                matchobj.group('quoted')))
-            # ignore annotations level 1 and bad format
-            else:
-                pass
+        if line[0] in '~@&':
+            self.process_stream_record(line)
         else:
             matchobj = re_mirecord.match(line)
-
             # a gdb/mi result or out of band record
             if matchobj:
-                token = matchobj.group('token')
-                result = matchobj.group('result')
-                cmd = self.results.remove(token)
-                if cmd is None:
-                    if token == self.token:
-                        # ignore received duplicate token
-                        pass
-                    else:
-                        raise misc.Error('invalid token "%s"' % token)
-                else:
-                    self.token = token
-                    self.lastcmd = cmd
-                    cmd.handle_result(result)
-
+                self.process_mi_record(matchobj)
             # gdb/mi prompt
             elif line == '(gdb) ':
-                # process all the stream records
-                cmd = self.lastcmd or self.cli
-                cmd.handle_strrecord(''.join(self.stream_record))
-                self.stream_record = []
-
-                # got the cli prompt
-                if isinstance(self.lastcmd, gdbmi.CliCommand)   \
-                                            or self.lastcmd is None:
-                    # prepare the next sequence of oob commands
-                    if self.lastcmd is self.cli or self.lastcmd is None:
-                        self.time = _timer()
-                        self.oob = self.oob_list.__iter__()
-                        if len(self.results):
-                            error('all cmds have not been processed in results')
-                            self.results.clear()
-                    self.gotprmpt = True
-                    self.prompt()
-
-                # send the next oob command
-                assert self.gotprmpt
-                if self.oob is not None:
-                    try:
-                        # loop over oob commands that don't send anything
-                        while True:
-                            if self.oob.next().sendcmd():
-                                break
-                    except StopIteration:
-                        self.oob = None
-                        t = _timer()
-                        info('oob commands execution: %f second'
-                                                    % (t - self.time))
-                        self.time = t
-                        # send the first cli command line
-                        if self.firstcmdline:
-                            self.console_print("%s\n", self.firstcmdline)
-                            # notify each OobCommand instance
-                            for oob in self.oob_list:
-                                oob.notify(self.firstcmdline)
-                            self.cli.sendcmd(self.firstcmdline)
-                        self.firstcmdline = ''
+                self.process_prompt()
             else:
                 error('handle_line: bad format of "%s"', line)
+
+    def process_stream_record(self, line):
+        matchobj = re_quoted.match(line[1:])
+        annotation_lvl1 = re_anno_1.match(line)
+        if matchobj and annotation_lvl1 is None:
+            self.stream_record.append(
+                        misc.re_escape.sub(misc.escapedchar,
+                            matchobj.group('quoted')))
+        else:
+            # notify the frame event
+            if annotation_lvl1 is not None:
+                # when processing the output of a non oob command
+                if self.oob is None:
+                    for oob in self.oob_list:
+                        oob.notify(frame=True)
+            else:
+                # ignore bad format
+                pass
+
+    def process_mi_record(self, matchobj):
+        token = matchobj.group('token')
+        result = matchobj.group('result')
+        cmd = self.results.remove(token)
+        if cmd is None:
+            if token == self.token:
+                # ignore received duplicate token
+                pass
+            else:
+                raise misc.Error('invalid token "%s"' % token)
+        else:
+            self.token = token
+            self.lastcmd = cmd
+            cmd.handle_result(result)
+
+    def process_prompt(self):
+        cmd = self.lastcmd or self.cli
+        # process all the stream records
+        cmd.handle_strrecord(''.join(self.stream_record))
+        self.stream_record = []
+
+        # got the cli prompt
+        if isinstance(self.lastcmd, gdbmi.CliCommand)   \
+                                    or self.lastcmd is None:
+            # prepare the next sequence of oob commands
+            if self.lastcmd is self.cli or self.lastcmd is None:
+                self.time = _timer()
+                self.oob = self.oob_list.__iter__()
+                if len(self.results):
+                    error('all cmds have not been processed in results')
+                    self.results.clear()
+            self.gotprmpt = True
+            self.prompt()
+
+        # send the next oob command
+        assert self.gotprmpt
+        if self.oob is not None:
+            try:
+                # loop over oob commands that don't send anything
+                while True:
+                    if self.oob.next().sendcmd():
+                        break
+            except StopIteration:
+                self.oob = None
+                t = _timer()
+                info('oob commands execution: %f second'
+                                            % (t - self.time))
+                self.time = t
+                # send the first cli command line
+                if self.firstcmdline:
+                    self.console_print("%s\n", self.firstcmdline)
+                    # notify each OobCommand instance
+                    for oob in self.oob_list:
+                        oob.notify(cmd=self.firstcmdline)
+                    self.cli.sendcmd(self.firstcmdline)
+                self.firstcmdline = ''
 
     def write(self, data):
         misc.ProcessChannel.write(self, data)
@@ -612,7 +628,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         else:
             # notify each OobCommand instance of the cmd being processed
             for oob in self.oob_list:
-                oob.notify(cmd)
+                oob.notify(cmd=cmd)
             self.cli.sendcmd(self.curcmdline)
 
     def cmd_help(self, *args):

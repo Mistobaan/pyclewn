@@ -48,6 +48,7 @@ import misc
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('mi')
 
+# beakpoint commands are also triggered on a frame event
 BREAKPOINT_CMDS = (
     'b', 'tbreak', 'hbreak', 'thbreak', 'rbreak',
     'clear', 'delete',
@@ -58,16 +59,7 @@ DIRECTORY_CMDS = (
     'directory',
     'source')
 
-# gdb commands ordered as in the gdb manual
-#FRAME_CMDS = (
-#    'attach', 'd', 'kill',
-#    'r', 'start', 'c', 'fg', 's', 'n', 'finish', 'u', 'advance',
-#    'up', 'up-silently', 'down', 'down-silently', 'f', 'select-frame'
-#    'j', 'signal', 'return',
-#    'source')
-# All commands trigger a frame oob command. For example a plain gdb print
-# command may call a debuggee function and stop at a breakpoint set
-# inside this function.
+# frame commands are triggered on a frame event
 FRAME_CMDS = ()
 
 SOURCE_CMDS = (
@@ -417,6 +409,8 @@ class OobCommand(Command):
         trigger_prefix: set
             set of the trigger_list command prefixes built from the
             trigger_list and the list of gdb commands
+        frame_trigger: boolean
+            True when a frame event triggers the oob command
 
     """
 
@@ -436,8 +430,10 @@ class OobCommand(Command):
                 and isinstance(self.gdblist, bool)
         if hasattr(self, 'action'):
             assert hasattr(self.gdb.info, self.action)
-        assert hasattr(self, 'trigger_list')                     \
+        assert hasattr(self, 'trigger_list')                \
                 and isinstance(self.trigger_list, tuple)
+        assert hasattr(self, 'frame_trigger')               \
+                and isinstance(self.frame_trigger, bool)
         self.trigger = False
 
         # build prefix list that triggers the command after being notified
@@ -445,10 +441,11 @@ class OobCommand(Command):
         self.trigger_prefix = set([misc.smallpref_inlist(x, keys)
                                                 for x in self.trigger_list])
 
-    def notify(self, cmd):
-        """Notify of the current command being processed by pyclewn."""
-        if not self.trigger_list or          \
-                misc.any([cmd.startswith(x) for x in self.trigger_prefix]):
+    def notify(self, cmd='', frame=False):
+        """Notify of the cmd being processed / of a frame event."""
+        if frame and self.frame_trigger:
+            self.trigger = True
+        if cmd and misc.any([cmd.startswith(x) for x in self.trigger_prefix]):
             self.trigger = True
 
     def sendcmd(self):
@@ -525,6 +522,7 @@ Breakpoints =   \
                 'gdblist': True,
                 'action': 'update_breakpoints',
                 'trigger_list': BREAKPOINT_CMDS,
+                'frame_trigger': True,
             })
 
 Directories =    \
@@ -536,6 +534,7 @@ Directories =    \
                 'regexp': re_directories,
                 'gdblist': False,
                 'trigger_list': DIRECTORY_CMDS,
+                'frame_trigger': False,
             })
 
 File =    \
@@ -547,6 +546,7 @@ File =    \
                 'regexp': re_file,
                 'gdblist': False,
                 'trigger_list': FRAME_CMDS,
+                'frame_trigger': True,
             })
 
 # Frame depends on, and is after File
@@ -560,6 +560,7 @@ Frame =    \
                 'gdblist': False,
                 'action': 'update_frame',
                 'trigger_list': FRAME_CMDS,
+                'frame_trigger': True,
             })
 
 Sources =   \
@@ -571,5 +572,6 @@ Sources =   \
                 'regexp': re_sources,
                 'gdblist': True,
                 'trigger_list': SOURCE_CMDS,
+                'frame_trigger': False,
             })
 
