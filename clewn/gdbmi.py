@@ -212,8 +212,10 @@ class Info(object):
 
         self.bp_dictionary = bp_dictionary
 
-    def update_frame(self):
+    def update_frame(self, hide=False):
         """Update the frame sign."""
+        if hide:
+            self.frame = {}
         if self.frame and isinstance(self.frame, dict):
             pathname = self.get_fullpath(self.file['fullname'])
             line = int(self.frame['line'])

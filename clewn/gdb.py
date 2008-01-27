@@ -188,6 +188,8 @@ class GlobalSetup(misc.Singleton):
             list of gdb commands with file name completion
         illegal_cmds: tuple
             list of gdb illegal commands
+        run_cmds: tuple
+            list of gdb commands that cause the frame sign to be turned off
         illegal_setargs: tuple
             list of illegal arguments to the gdb set command
         symbol_complt: tuple
@@ -210,6 +212,9 @@ class GlobalSetup(misc.Singleton):
             temporary file containing the symbols completion list
         illegal_cmds_prefix: list
             List of the illegal command prefix built from illegal_cmds and the
+            list of commands
+        run_cmds_prefix: list
+            List of the run command prefix built from run_cmds and the
             list of commands
         illegal_setargs_prefix: list
             List of the illegal arguments to the set command, built from
@@ -238,6 +243,11 @@ class GlobalSetup(misc.Singleton):
         'end',
         'shell',
         )
+    run_cmds = (
+        'attach', 'detach', 'kill',
+        'run', 'start', 'continue', 'fg', 'step', 'next', 'finish', 'until', 'advance',
+        'jump', 'signal', 'return',
+        )
     illegal_setargs = (
         'annotate',
         'confirm',
@@ -265,6 +275,7 @@ class GlobalSetup(misc.Singleton):
         Build the following lists:
             cmds: gdb commands
             illegal_cmds_prefix
+            run_cmds_prefix
             illegal_setargs_prefix
 
         """
@@ -321,6 +332,10 @@ class GlobalSetup(misc.Singleton):
         keys = self.cmds.keys()
         self.illegal_cmds_prefix = set([misc.smallpref_inlist(x, keys)
                                             for x in self.illegal_cmds])
+
+        keys = list(set(keys).difference(set(self.run_cmds)))
+        self.run_cmds_prefix = set([misc.smallpref_inlist(x, keys)
+                                            for x in self.run_cmds])
 
         self.illegal_setargs_prefix = []
         if self.cmds.has_key('set') and self.cmds['set']:
@@ -622,6 +637,13 @@ class Gdb(application.Application, misc.ProcessChannel):
                 self.console_print('Illegal argument in pyclewn.\n')
                 self.prompt()
                 return
+
+        # turn off the frame sign after a run command
+        if misc.any([cmd.startswith(x)
+                    for x in self.globaal.run_cmds_prefix])     \
+                or misc.any([cmd == x
+                    for x in ('d', 'r', 'c', 's', 'n', 'u', 'j')]):
+            self.info.update_frame(hide=True)
 
         if self.firstcmdline is None:
             self.firstcmdline = self.curcmdline
