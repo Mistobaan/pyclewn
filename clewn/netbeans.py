@@ -17,7 +17,7 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id: netbeans.py 202 2007-12-20 19:16:45Z xavier $
+# $Id$
 """The netbeans protocol implementation."""
 
 import sys
@@ -916,6 +916,7 @@ class Netbeans(asynchat.async_chat):
          return self.__str__()
 
     def __str__(self):
+        status = ''
         if self.ready:
             status = 'ready, netbeans version "%s", remote ' % self.nbversion
         elif not self.connected and self.addr:

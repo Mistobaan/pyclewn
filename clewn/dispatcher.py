@@ -17,7 +17,7 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id: dispatcher.py 202 2007-12-20 19:16:45Z xavier $
+# $Id$
 
 """
 The Dispatcher instance runs an Application instance (debugger) and
@@ -97,7 +97,6 @@ def main():
                                     % (str(t), str(v), info)
             critical(except_str)
             proc.nbsock.show_balloon(except_str)
-            logging.exception('in main')
     finally:
         debug('Dispatcher instance: ' + str(proc))
         proc.shutdown()
