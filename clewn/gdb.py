@@ -237,6 +237,7 @@ class GlobalSetup(misc.Singleton):
         )
     illegal_cmds = (
         '-', '+', '<', '>',
+        'commands',
         'complete',
         'define',
         'edit',
