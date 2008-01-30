@@ -212,6 +212,102 @@ class GdbTestCase(ClewnTestCase):
             "'frame': {'line': '9', 'file': 'foobar.c', 'func': 'main', 'level': '0'},\n"
             )
 
+    def test_frame_sign(self):
+        """Check frame sign"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':sleep ${time}\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Crun\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            "Signs for testsuite/foobar.c:\n"
+            "    line=9  id=2  name=3\n"
+            "    line=9  id=1  name=1\n"
+            )
+
+    def test_annotation_lvl1(self):
+        """Check annotations level 1 are removed"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':sleep ${time}\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Crun\n'
+            ':sleep ${time}\n'
+            ':Cstep\n'
+            ':sleep ${time}\n'
+            ':Cstep\n'
+            ':sleep ${time}\n'
+            ":edit (clewn)_console | $$ | /(gdb) step/,$$w!  ${test_out}\n"
+            ':qa!\n',
+
+            "(gdb) step\n"
+            "(gdb) step\n"
+            )
+
+    def test_disable_bp(self):
+        """Check disable breakpoint"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':sleep ${time}\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Cdisable 1\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            "Signs for testsuite/foobar.c:\n"
+            "line=9  id=1  name=2\n"
+            )
+
+    def test_delete_once(self):
+        """Check breakpoint delete once"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':sleep ${time}\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Cenable delete 1\n'
+            ':sleep ${time}\n'
+            ':Crun\n'
+            ':sleep ${time}\n'
+            ':Cstep\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            "Signs for testsuite/foobar.c:\n"
+            "line=10  id=2  name=3\n"
+            )
+
+    def test_breakpoint_open_file(self):
+        """Check setting a breakpoint open the source file"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':sleep ${time}\n'
+            ':Cbreak foo\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            "Signs for ${cwd}testsuite/foo.c:\n"
+            "line=23  id=1  name=1\n"
+            )
+
 def test_main():
     # run make on the testsuite
     check_call(['make', '-C', 'testsuite'])
@@ -227,6 +323,11 @@ def test_main():
     suite.addTest(GdbTestCase('test_gdb_illegal'))
     suite.addTest(GdbTestCase('test_symbols_completion'))
     suite.addTest(GdbTestCase('test_oob_command'))
+    suite.addTest(GdbTestCase('test_frame_sign'))
+    suite.addTest(GdbTestCase('test_annotation_lvl1'))
+    suite.addTest(GdbTestCase('test_disable_bp'))
+    suite.addTest(GdbTestCase('test_delete_once'))
+    suite.addTest(GdbTestCase('test_breakpoint_open_file'))
     run_unittest(suite)
 
 if __name__ == '__main__':
