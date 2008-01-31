@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 January 30
+*pyclewn.txt*                                   Last change: 2008 January 31
 
 
                             PYCLEWN USER MANUAL
@@ -231,18 +231,28 @@ The first method provides completion on the file name while the second one
 does not.
 
 The second method is useful when the command is a user defined command in the
-debugger (macros built by <define> in gdb), and for command names that cannot
-be mapped to a vim command because vim does not accept non alphanumeric
-characters within command names (for example <core-file> in gdb).
+debugger (user defined commands built by <define> in gdb), and therefore not a
+vim command. It is also needed for gdb command names that cannot be mapped to
+a vim command because vim does not accept non alphanumeric characters within
+command names (for example <core-file> in gdb).
 
 To get help on the pyclewn commands, use Chelp.
 
 Pyclewn commands can be mapped to keys, or called within a Vim script or a
 menu. When two pyclewn commands are invoked in a row, a sleep time must be
 inserted between both commands when the debugger cannot handle requests
-asynchronously (as it is the case with gdb).  For example: >
+asynchronously (as this is the case with gdb).  For example: >
 
     :Cfile /path/to/foobar | sleep 200m | Cbreak main
+
+Quotes and backslashes must be escaped on vim command line. For example, to
+print a string in gdb: >
+
+    :Cprint \"foobar\"
+
+And to print a string including a new line: >
+
+    :Cprint \"foobar\\n\"
 
 
 Completion:
@@ -272,7 +282,7 @@ the|C|): >
 
 Command line search:
 --------------------
-Use the command line search capabilities of the Vim command line.
+Use the powerful command line search capabilities of the Vim command line.
 For example, you want to type again, possibly after a little editing, one of
 the commands previously entered: >
 
@@ -338,10 +348,15 @@ Note: One particularly useful tutorial on gdb is Peter Jay Salzman's, at
 http://www.dirac.org/linux/gdb/.
 
 
+When gdb is started, it automatically executes commands from its
+init files, normally called '.gdbinit'. See gdb documentation.
+
+
 List of illegal gdb commands:
 -----------------------------
 The following gdb commands cannot be run from pyclewn:
 
+        commands
         complete
         define
         edit
@@ -352,9 +367,14 @@ The following gdb commands cannot be run from pyclewn:
         set width
         shell
 
-As the <define> command is not allowed, to use gdb user-defined commands in
-pyclewn, the commands can be written to a file and the commands loaded into
-gdb by using the <source> command on this file. This can be done from vim.
+The <define> command is not allowed. To build gdb user-defined commands in
+pyclewn, edit the commands in a temporary file with vim, and load the
+commands into gdb by using the gdb <source> command on this file.
+
+The <commands> command is not allowed. To give a breakpoint a series of
+commands to execute when the debuggee stops due to that breakpoint, edit the
+commands in a temporary file with vim, and load the commands into gdb by using
+the gdb <source> command on this file.
 
 
 Debuggee standard input and output:
@@ -435,6 +455,12 @@ libraries symbols, run the Csymcompletion command after the file is loaded
 with the gdb <file> command, and before the program is run.
 
 
+Known limitations:
+------------------
+    * The frame sign is not turned off after a user-defined command, when the
+      command includes a continue statement for example.
+
+
 ==============================================================================
 5. Key mappings                                 *pyclewn-mappings* *Cmapkeys*
 
@@ -443,7 +469,8 @@ All|Ccommand|can be mapped to vim keys using the vim|:map-commands|.
 
 This section describes another mapping mechanism where pyclewn maps vim keys
 by reading a configuration file. This is done when the|Cmapkeys|vim command is
-run. When the configuration file cannot be found, pyclewn sets the default key
+run. The pyclewn keys mapping is mostly useful for the pyclewn casual user.
+When the configuration file cannot be found, pyclewn sets the default key
 mappings.|gdb-keys|lists the default key mappings for gdb.
 
 The configuration file is named .pyclewn_keys.{debugger}, where debugger is
