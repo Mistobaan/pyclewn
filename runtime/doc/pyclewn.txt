@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2007 December 22
+*pyclewn.txt*                                   Last change: 2008 January 30
 
 
                             PYCLEWN USER MANUAL
@@ -502,6 +502,7 @@ application.py for the documentation):
 console_print       print on the pyclewn gvim console
 show_balloon        display a balloon in gvim
 add_bp              add a breakpoint sign
+delete_bp           delete a breakpoint sign
 update_bp           change the state of a breakpoint sign
 delete_all          remove signs
 show_frame          show the sign of the line in the current frame
@@ -536,5 +537,5 @@ implemented (the simple.py module can be used as an example):
 
 
 ==============================================================================
-$Id: pyclewn.txt 205 2007-12-22 20:49:59Z xavier $
+$Id$
 vim:tw=78:ts=8:ft=help:norl:et:

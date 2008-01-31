@@ -308,6 +308,46 @@ class GdbTestCase(ClewnTestCase):
             "line=23  id=1  name=1\n"
             )
 
+    def test_delete_bp(self):
+        """Check delete breakpoint"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':sleep ${time}\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Cdelete 1\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            "Signs for testsuite/foobar.c:\n"
+            "line=9  id=2  name=1\n"
+            )
+
+    def test_clear_on_frame(self):
+        """Check clearing breakpoints on the frame sign line"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':sleep ${time}\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Crun\n'
+            ':sleep ${time}\n'
+            ':Cclear\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            "Signs for testsuite/foobar.c:\n"
+            "line=9  id=2  name=3\n"
+            )
+
 def test_main():
     # run make on the testsuite
     check_call(['make', '-C', 'testsuite'])
@@ -328,6 +368,8 @@ def test_main():
     suite.addTest(GdbTestCase('test_disable_bp'))
     suite.addTest(GdbTestCase('test_delete_once'))
     suite.addTest(GdbTestCase('test_breakpoint_open_file'))
+    suite.addTest(GdbTestCase('test_delete_bp'))
+    suite.addTest(GdbTestCase('test_clear_on_frame'))
     run_unittest(suite)
 
 if __name__ == '__main__':

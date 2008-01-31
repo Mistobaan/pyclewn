@@ -198,10 +198,8 @@ class Info(object):
 
         # delete signs for non-existent breakpoints
         for num in (oldset - nset):
-            pathname = self.get_fullpath(self.bp_dictionary[num]['file'])
-            if pathname is not None:
-                lnum = int(self.bp_dictionary[num]['line'])
-                self.gdb.delete_all(pathname, lnum)
+            number = int(self.bp_dictionary[num]['number'])
+            self.gdb.delete_bp(number)
 
         # create signs for new breakpoints
         for num in (nset - oldset):

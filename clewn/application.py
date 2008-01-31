@@ -17,7 +17,7 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id: application.py 202 2007-12-20 19:16:45Z xavier $
+# $Id$
 """Pyclewn is a program that allows the use of gvim as a front end to a
 debugger.
 
@@ -28,6 +28,7 @@ class Application provides the following methods to control gvim:
 console_print       print on the pyclewn gvim console
 show_balloon        display a balloon in gvim
 add_bp              add a breakpoint sign
+delete_bp           delete a breakpoint sign
 update_bp           change the state of a breakpoint sign
 delete_all          remove signs on one line, all lines
 show_frame          show the sign of the line in the current frame
@@ -648,6 +649,10 @@ class Application(object):
     def add_bp(self, bp_id, pathname, lnum):
         """Add a breakpoint to pathname at lnum."""
         self._bset.add_bp(bp_id, pathname, lnum)
+
+    def delete_bp(self, bp_id):
+        """Delete the breakpoint."""
+        self._bset.delete_anno(bp_id)
 
     def delete_all(self, pathname=None, lnum=None):
         """Delete all breakpoints.
