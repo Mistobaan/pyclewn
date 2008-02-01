@@ -9,5 +9,6 @@ include runtime/syntax/dbgvar.vim
 include regrtest.py
 include testsuite/*.py
 include testsuite/*.c
+include testsuite/*.cc
 include testsuite/Makefile
 include testsuite/README

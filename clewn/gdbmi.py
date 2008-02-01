@@ -68,6 +68,8 @@ SOURCE_CMDS = (
     'source')
 
 # regexp
+RE_COMPLETION = r'^break\s*(?P<sym>[\w:]*)(?P<sig>\(.*\))?(?P<rest>.*)$'    \
+                r'# break symbol completion'
 RE_DICT_LIST = r'{[^}]+}'                                                   \
                r'# a gdb list'
 
@@ -89,6 +91,7 @@ RE_SOURCES = r'(file|fullname)="([^"]+)"'                                   \
              r'{file="foo.c",fullname="/home/xdg/foo.c"}]'
 
 # compile regexps
+re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_dict_list = re.compile(RE_DICT_LIST, re.VERBOSE)
 re_breakpoints = re.compile(RE_BREAKPOINTS, re.VERBOSE)
 re_directories = re.compile(RE_DIRECTORIES, re.VERBOSE)
@@ -354,12 +357,15 @@ class CompleteBreakCommand(CliCommand):
                 f_clist = open(self.gdb.globaal.f_clist.name, 'w')
                 completion_list = stream_record.splitlines()
                 for result in completion_list:
-                    matchobj = gdb.re_completion.match(result)
+                    matchobj = re_completion.match(result)
                     if matchobj:
-                        arg = matchobj.group('arg')
+                        symbol = matchobj.group('sym')
+                        signature = matchobj.group('sig')
                         rest = matchobj.group('rest')
-                        if not rest:
-                            f_clist.write('%s\n' % arg)
+                        if symbol and not rest:
+                            if signature:
+                                symbol += signature
+                            f_clist.write('%s\n' % symbol)
                         else:
                             invalid += 1
                             warning('invalid symbol completion: %s', result)

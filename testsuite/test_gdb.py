@@ -348,6 +348,23 @@ class GdbTestCase(ClewnTestCase):
             "line=9  id=2  name=3\n"
             )
 
+    def test_break_completion(self):
+        """Check break completion on overloaded functions"""
+        self.cltest_logfile(
+            ':edit testsuite/overloaded.cc\n'
+            ':Cfile testsuite/overloaded\n'
+            ':sleep ${time}\n'
+            ':Csymcompletion\n'
+            ':\n\n'
+            ':qa!\n',
+
+            'gdb  DEBUG   ~"break test()\\n"\n'
+            'gdb  DEBUG   ~"break test(int)\\n"\n'
+            'gdb  DEBUG   ~"break test(int, int)\\n"\n',
+
+            'debug'
+            )
+
 def test_main():
     # run make on the testsuite
     check_call(['make', '-C', 'testsuite'])
@@ -370,6 +387,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_breakpoint_open_file'))
     suite.addTest(GdbTestCase('test_delete_bp'))
     suite.addTest(GdbTestCase('test_clear_on_frame'))
+    suite.addTest(GdbTestCase('test_break_completion'))
     run_unittest(suite)
 
 if __name__ == '__main__':
