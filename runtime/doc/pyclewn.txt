@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 January 31
+*pyclewn.txt*                                   Last change: 2008 February 5
 
 
                             PYCLEWN USER MANUAL
@@ -458,7 +458,14 @@ with the gdb <file> command, and before the program is run.
 Known limitations:
 ------------------
     * The frame sign is not turned off after a user-defined command, when the
-      command includes a continue statement for example.
+      command includes a <continue> statement for example.
+
+    * When the program being debugged stops while in a function called from
+      gdb (for example after using the gdb <print> command on the function
+      (foo) where a breakpoint is set). When the function (foo) is done
+      executing, pyclewn incorrectly does not show the frame sign.
+      In this case, to display the frame sign, one must run the gdb <frame>
+      command.
 
 
 ==============================================================================

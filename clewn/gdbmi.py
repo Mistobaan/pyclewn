@@ -70,6 +70,8 @@ SOURCE_CMDS = (
 # regexp
 RE_COMPLETION = r'^break\s*(?P<sym>[\w:]*)(?P<sig>\(.*\))?(?P<rest>.*)$'    \
                 r'# break symbol completion'
+RE_EVALUATE = r'^done,value="(?P<value>.*)"$'                               \
+              r'# result of -data-evaluate-expression'
 RE_DICT_LIST = r'{[^}]+}'                                                   \
                r'# a gdb list'
 
@@ -92,6 +94,7 @@ RE_SOURCES = r'(file|fullname)="([^"]+)"'                                   \
 
 # compile regexps
 re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
+re_evaluate = re.compile(RE_EVALUATE, re.VERBOSE)
 re_dict_list = re.compile(RE_DICT_LIST, re.VERBOSE)
 re_breakpoints = re.compile(RE_BREAKPOINTS, re.VERBOSE)
 re_directories = re.compile(RE_DIRECTORIES, re.VERBOSE)
@@ -252,6 +255,10 @@ class Result(dict):
     def add(self, command):
         """Add a command object to the dictionary."""
         assert isinstance(command, Command)
+        # do not add if the dictionary contains an object of the same class
+        if misc.any([command.__class__ is obj.__class__
+                    for obj in self.values()]):
+            return None
         t = str(self.token)
         if self.has_key(t):
             error('token "%s" already exists as an expected pending result', t)
@@ -297,7 +304,11 @@ class Command(object):
         self.gdb = gdb
 
     def sendcmd(self):
-        """Send a gdb command."""
+        """Send a gdb command.
+
+        Return True when the command was successfully sent.
+        """
+
         raise NotImplementedError('must be implemented in subclass')
 
     def handle_result(self, result):
@@ -311,9 +322,12 @@ class Command(object):
     def send(self, fmt, *args):
         """Send the command and add oneself to the expected pending results."""
         token = self.gdb.results.add(self)
-        if args:
-            fmt = fmt % args
-        self.gdb.write(token + fmt)
+        if token is not None:
+            if args:
+                fmt = fmt % args
+            self.gdb.write(token + fmt)
+            return True
+        return False
 
 class CliCommand(Command):
     """All cli commands."""
@@ -326,8 +340,7 @@ class CliCommand(Command):
             return False
 
         self.gdb.gotprmpt = False
-        self.send('-interpreter-exec console %s\n', misc.quote(cmd))
-        return True
+        return self.send('-interpreter-exec console %s\n', misc.quote(cmd))
 
     def handle_result(self, line):
         """Ignore the result."""
@@ -343,6 +356,8 @@ class CompleteBreakCommand(CliCommand):
     def sendcmd(self):
         if not CliCommand.sendcmd(self, 'complete break '):
             self.handle_strrecord('')
+            return False
+        return True
 
     def handle_strrecord(self, stream_record):
         f_clist = f_ack = None
@@ -384,6 +399,41 @@ class CompleteBreakCommand(CliCommand):
                 f_ack.close()
             else:
                 self.gdb.console_print('Failed to fetch symbols completion.\n')
+
+class ShowBalloon(Command):
+    """The ShowBalloon command.
+
+    Instance attributes:
+        gdb: Gdb
+            the Gdb instance
+        text: str
+            the selected text under the mouse as an expression to evaluate
+        result: str
+            the parsed result of the evaluated expression
+    """
+
+    def __init__(self, gdb, text):
+        self.gdb = gdb
+        self.text = text
+        self.result = ''
+
+    def sendcmd(self):
+        if self.gdb.gotprmpt and self.gdb.oob is None:
+            self.result = ''
+            return self.send('-data-evaluate-expression %s\n',
+                                                misc.quote(self.text))
+        return False
+
+    def handle_result(self, line):
+        matchobj = re_evaluate.match(line)
+        if matchobj:
+            self.result = matchobj.group('value')
+            if self.result:
+                self.gdb.show_balloon('%s = "%s"' % (self.text, self.result))
+
+    def handle_strrecord(self, stream_record):
+        if not self.result and stream_record:
+            self.gdb.show_balloon(stream_record)
 
 class OobCommand(Command):
     """Base abstract class for oob commands.
@@ -463,8 +513,7 @@ class OobCommand(Command):
         if self.trigger:
             setattr(self.gdb.info, self.info_attribute, [])
             self.trigger = False
-            self.send(self.gdb_cmd)
-            return True
+            return self.send(self.gdb_cmd)
         return False
 
     def parse(self, string):
