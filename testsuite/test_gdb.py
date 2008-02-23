@@ -365,6 +365,65 @@ class GdbTestCase(ClewnTestCase):
             'debug'
             )
 
+    def test_varobj(self):
+        """Check varobj creation, folding and deletion"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':sleep ${time}\n'
+            ':Cbreak foo\n'
+            ':sleep ${time}\n'
+            ':Crun\n'
+            ':sleep ${time}\n'
+            ':Cstep\n'
+            ':sleep ${time}\n'
+            ':Cstep\n'
+            ':sleep ${time}\n'
+            ':Cstep\n'
+            ':sleep ${time}\n'
+            ':Cdbgvar map\n'
+            ':sleep ${time}\n'
+            ':Cfoldvar 1\n'
+            ':sleep ${time}\n'
+            ':Cdelvar var1.value\n'
+            ':sleep ${time}\n'
+            ":edit (clewn)_dbgvar | 1,$$w!  ${test_out}\n"
+            ':qa!\n',
+
+            "[-] var1: (map_t) map ={=} {...}\n"
+            "   *  var1.key: (int) key ={=} 1\n"
+            )
+
+    def test_varobj_hilite(self):
+        """Check varobj hiliting"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':sleep ${time}\n'
+            ':Cbreak bar\n'
+            ':sleep ${time}\n'
+            ':Crun\n'
+            ':sleep ${time}\n'
+            ':Cstep\n'
+            ':sleep ${time}\n'
+            ':Cdbgvar i\n'
+            ':sleep ${time}\n'
+            ":edit (clewn)_dbgvar | 1,$$w!  ${test_out}\n"
+            ':Cstep\n'
+            ':sleep ${time}\n'
+            ':Cstep\n'
+            ':sleep ${time}\n'
+            ":edit (clewn)_dbgvar | 1,$$w! >> ${test_out}\n"
+            ':Cfinish\n'
+            ':sleep ${time}\n'
+            ":edit (clewn)_dbgvar | 1,$$w! >> ${test_out}\n"
+            ':qa!\n',
+
+            " *  var1: (int) i ={*} 0\n"
+            " *  var1: (int) i ={=} 1\n"
+            " *  var1: (int) i ={-} 1\n"
+            )
+
 def test_main():
     # run make on the testsuite
     check_call(['make', '-C', 'testsuite'])
@@ -388,6 +447,8 @@ def test_main():
     suite.addTest(GdbTestCase('test_delete_bp'))
     suite.addTest(GdbTestCase('test_clear_on_frame'))
     suite.addTest(GdbTestCase('test_break_completion'))
+    suite.addTest(GdbTestCase('test_varobj'))
+    suite.addTest(GdbTestCase('test_varobj_hilite'))
     run_unittest(suite)
 
 if __name__ == '__main__':
