@@ -31,6 +31,10 @@ from timeit import default_timer as _timer
 
 import gdbmi
 import misc
+from misc import (
+        any as _any,
+        unquote as _unquote,
+        )
 import clewn.application as application
 
 # gdb initial settings
@@ -366,7 +370,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         gotprmpt: boolean
             True after receiving the prompt from gdb/mi
         oob: iterator
-            iterator over the list of OobCommand instances
+            iterator over the list of OobCommand and VarObjCmd instances
         stream_record: list
             list of gdb/mi stream records output by a command
         lastcmd: gdbmi.Command
@@ -425,6 +429,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         misc.ProcessChannel.__init__(self, self.getargv())
 
         self.info = gdbmi.Info(self)
+        application.Application.pyclewn_cmds.update({'foldvar':()})
         self.globaal = GlobalSetup(self.pgm)
         self.__class__.cmds = self.globaal.cmds
         self.__class__.pyclewn_cmds = application.Application.pyclewn_cmds
@@ -515,9 +520,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         matchobj = re_quoted.match(line[1:])
         annotation_lvl1 = re_anno_1.match(line)
         if matchobj and annotation_lvl1 is None:
-            self.stream_record.append(
-                        misc.re_escape.sub(misc.escapedchar,
-                            matchobj.group('quoted')))
+            self.stream_record.append(_unquote(matchobj.group('quoted')))
         else:
             # notify the frame event
             if annotation_lvl1 is not None:
@@ -550,16 +553,16 @@ class Gdb(application.Application, misc.ProcessChannel):
         cmd.handle_strrecord(''.join(self.stream_record))
         self.stream_record = []
 
-        # got the cli prompt
-        if isinstance(self.lastcmd, gdbmi.CliCommand)   \
-                                    or self.lastcmd is None:
+        # got the prompt for a user command
+        if isinstance(self.lastcmd, gdbmi.CliCommand)               \
+                or isinstance(self.lastcmd, gdbmi.MiCommand)        \
+                or self.lastcmd is None:
             # prepare the next sequence of oob commands
-            if self.lastcmd is self.cli or self.lastcmd is None:
-                self.time = _timer()
-                self.oob = self.oob_list.__iter__()
-                if len(self.results):
-                    error('all cmds have not been processed in results')
-                    self.results.clear()
+            self.time = _timer()
+            self.oob = self.oob_list.iterator()
+            if len(self.results):
+                error('all cmds have not been processed in results')
+                self.results.clear()
             self.gotprmpt = True
             self.prompt()
 
@@ -573,6 +576,11 @@ class Gdb(application.Application, misc.ProcessChannel):
                         break
             except StopIteration:
                 self.oob = None
+
+                # update the var buffer
+                if self.info.varobj.dirty:
+                    self.nbsock.dbgvarbuf.update(self.info.varobj.collect())
+
                 t = _timer()
                 info('oob commands execution: %f second'
                                             % (t - self.time))
@@ -625,7 +633,7 @@ class Gdb(application.Application, misc.ProcessChannel):
 
     def default_cmd_processing(self, buf, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""
-        if misc.any([cmd.startswith(x)
+        if _any([cmd.startswith(x)
                 for x in self.globaal.illegal_cmds_prefix]):
             self.console_print('Illegal command in pyclewn.\n')
             self.prompt()
@@ -633,16 +641,16 @@ class Gdb(application.Application, misc.ProcessChannel):
 
         if cmd == 'set' and args:
             firstarg = args.split()[0]
-            if misc.any([firstarg.startswith(x)
+            if _any([firstarg.startswith(x)
                     for x in self.globaal.illegal_setargs_prefix]):
                 self.console_print('Illegal argument in pyclewn.\n')
                 self.prompt()
                 return
 
         # turn off the frame sign after a run command
-        if misc.any([cmd.startswith(x)
+        if _any([cmd.startswith(x)
                     for x in self.globaal.run_cmds_prefix])     \
-                or misc.any([cmd == x
+                or _any([cmd == x
                     for x in ('d', 'r', 'c', 's', 'n', 'u', 'j')]):
             self.info.update_frame(hide=True)
 
@@ -664,6 +672,62 @@ class Gdb(application.Application, misc.ProcessChannel):
     def cmd_symcompletion(self, *args):
         """Populate the break and clear commands with symbols completion."""
         gdbmi.CompleteBreakCommand(self).sendcmd()
+
+    def cmd_dbgvar(self, buf, cmd, args):
+        """Add a variable to the debugger variable buffer."""
+        registering = False
+        if not self.nbsock.dbgvarbuf.buf.registered:
+            self.nbsock.dbgvarbuf.register()
+            registering = True
+        varobj = gdbmi.VarObj({'exp': args})
+        gdbmi.VarCreateCommand(self, varobj).sendcmd()
+        self.oob_list.push(gdbmi.VarObjCmdEvaluate(self, varobj))
+        if registering:
+            self.nbsock.goto_last()
+
+    def cmd_delvar(self, buf, cmd, args):
+        """Delete a variable from the debugger variable buffer."""
+        args = args.split()
+        # one argument is required
+        if len(args) != 1:
+            self.console_print('Invalid arguments.\n')
+        else:
+            name = args[0]
+            (varobj, varlist) = self.info.varobj.leaf(name)
+            if varobj:
+                gdbmi.VarDeleteCommand(self, varobj).sendcmd()
+                return
+            self.console_print('"%s" not found.\n' % name)
+        self.prompt()
+
+    def cmd_foldvar(self, buf, cmd, args):
+        """Collapse/expand a variable from the debugger variable buffer."""
+        args = args.split()
+        error = ''
+        # one argument is required
+        if len(args) != 1:
+            error = 'Invalid arguments.'
+        else:
+            try:
+                lnum = int(args[0])
+            except ValueError:
+                error = 'Not a line number.'
+        if not error:
+            rootvarobj = self.info.varobj
+            if rootvarobj.parents.has_key(lnum):
+                varobj = rootvarobj.parents[lnum]
+                if varobj['children']:
+                    varobj['children'].clear()
+                    rootvarobj.dirty = True
+                    self.nbsock.dbgvarbuf.update(self.info.varobj.collect())
+                else:
+                    gdbmi.ListChildrenCommand(self, varobj).sendcmd()
+                    return
+            else:
+                error = 'Not a valid line number.'
+        if error:
+            self.console_print('%s\n' % error)
+        self.prompt()
 
     def cmd_sigint(self, *args):
         """Send a <C-C> character to the debugger."""

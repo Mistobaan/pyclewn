@@ -30,7 +30,11 @@ import asynchat
 import difflib
 
 import misc
-from misc import quote as _quote
+from misc import (
+        quote as _quote,
+        unquote as _unquote,
+        DOUBLEQUOTE as _DOUBLEQUOTE,
+        )
 
 NETBEANS_VERSION = '2.3'
 FRAME_ANNO_ID = 'frame'
@@ -108,11 +112,11 @@ def parse_msg(msg):
 
     # a netbeans string
     string = ''
-    if args and args[0] == misc.DOUBLEQUOTE:
-        end = args.rfind(misc.DOUBLEQUOTE)
+    if args and args[0] == _DOUBLEQUOTE:
+        end = args.rfind(_DOUBLEQUOTE)
         if end != -1 and end != 0:
             string = args[1:end]
-            string = misc.re_escape.sub(misc.escapedchar, string)
+            string = _unquote(string)
         else:
             end = -1
     else:

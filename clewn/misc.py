@@ -37,14 +37,14 @@ NBDEBUG = 5
 NBDEBUG_LEVEL_NAME = 'nbdebug'
 LOG_LEVELS = 'critical, error, warning, info, debug or ' + NBDEBUG_LEVEL_NAME
 
-RE_ESCAPE = r'\\["ntr\\]'                                       \
-            r'# RE: escaped characters in a quoted string'
-RE_SPECIAL = r'["\n\t\r\\]'                                     \
-             r'# RE: special characters in a string'
+RE_ESCAPE = r'["\n\t\r\\]'                                      \
+            r'# RE: escaped characters in a string'
+RE_UNESCAPE = r'\\["ntr\\]'                                     \
+              r'# RE: escaped characters in a quoted string'
 
 # compile regexps
 re_escape = re.compile(RE_ESCAPE, re.VERBOSE)
-re_special = re.compile(RE_SPECIAL, re.VERBOSE)
+re_unescape = re.compile(RE_UNESCAPE, re.VERBOSE)
 
 def logmethods(name):
     """Return the set of logging methods for the 'name' logger."""
@@ -67,8 +67,8 @@ def any(iterable):
             return True
     return False
 
-def specialchar(matchobj):
-    """Substitute special characters in string."""
+def escape_char(matchobj):
+    """Escape special characters in string."""
     if matchobj.group(0) == '"': return r'\"'
     if matchobj.group(0) == '\n': return r'\n'
     if matchobj.group(0) == '\t': return r'\t'
@@ -77,9 +77,9 @@ def specialchar(matchobj):
     assert False
 
 def quote(string):
-    return '"%s"' % re_special.sub(specialchar, string)
+    return '"%s"' % re_escape.sub(escape_char, string)
 
-def unquote(string):
+def dequote(string):
     """Return the list of whitespace separated tokens from string, handling
     double quoted substrings as a token.
 
@@ -103,14 +103,17 @@ def unquote(string):
                 tok_list.append(token)
     return tok_list
 
-def escapedchar(matchobj):
-    """Substitute escaped characters in string."""
+def unescape_char(matchobj):
+    """Remove escape on special characters in quoted string."""
     if matchobj.group(0) == r'\"': return '"'
     if matchobj.group(0) == r'\n': return '\n'
     if matchobj.group(0) == r'\t': return '\t'
     if matchobj.group(0) == r'\r': return '\r'
     if matchobj.group(0) == r'\\': return '\\'
     assert False
+
+def unquote(string):
+    return '%s' % re_unescape.sub(unescape_char, string)
 
 # subprocess.check_call does not exist in Python 2.4
 def check_call(*popenargs, **kwargs):

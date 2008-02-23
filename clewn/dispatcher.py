@@ -273,7 +273,7 @@ class Dispatcher(object):
                         % (str(value), misc.LOG_LEVELS))
         def args_callback(option, opt_str, value, parser):
             try:
-                args = misc.unquote(value)
+                args = misc.dequote(value)
             except misc.Error, e:
                 raise optparse.OptionValueError(e)
             if option._short_opts[0] == '-c':

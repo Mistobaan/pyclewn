@@ -19,20 +19,32 @@
 #
 # $Id$
 
-"""Contain the classes used to implement the oob commands.
+"""Contain classes that implement the gdb commands.
 
-The oob commands are run in sequence, in the background and at the gdb prompt.
+A Gdb command may be an:
+    * instance of CliCommand
+    * instance of MiCommand
+    * instance of ShowBalloon
+The first two types trigger execution of out of band (oob) commands.
+
+An oob command may be an:
+    * instance of OobCommand
+    * instance of VarObjCmd
+The difference between both types is that OobCommand instances are part of a
+static list in OobList, while VarObjCmd instances are pushed into this list
+dynamically.
+
 The oob commands fetch from gdb, using gdb/mi, the information required to
 maintain the state of the breakpoints table, the varobj data, ...
 The instance of the Info class contains all this data.
 
 The oob commands also perform actions such as: source the project file, update
-the breakpoints and frame sign, update the varobj window.
+the breakpoints and frame sign, create/delete/update the varobj objects.
 
-The sequence of oob commands is sorted in alphabetical order in class OobList.
-The names of the subclasses of OobCommand are chosen so that class instances
-that depend on the result of the processing of other class instances, are last
-in alphabetical order.
+The sequence of instances of OobCommand commands is sorted in alphabetical order
+in class OobList.  The names of the subclasses of OobCommand are chosen so that
+class instances that depend on the result of the processing of other class
+instances, are last in alphabetical order.
 
 """
 
@@ -41,12 +53,21 @@ import os.path
 import re
 import inspect
 import pprint
+import cStringIO
+from collections import deque
 
 import gdb
 import misc
+from misc import (
+        any as _any,
+        quote as _quote,
+        unquote as _unquote,
+        )
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('mi')
+
+VAROBJ_FMT = '%%(name)-%ds: (%%(type)-%ds) %%(exp)-%ds %%(chged)s %%(value)s\n'
 
 # beakpoint commands are also triggered on a frame event
 BREAKPOINT_CMDS = (
@@ -68,39 +89,60 @@ SOURCE_CMDS = (
     'source')
 
 # regexp
+QUOTED_STRING = r'"((?:\\"|[^"])+)"'
+
 RE_COMPLETION = r'^break\s*(?P<sym>[\w:]*)(?P<sig>\(.*\))?(?P<rest>.*)$'    \
                 r'# break symbol completion'
+
 RE_EVALUATE = r'^done,value="(?P<value>.*)"$'                               \
               r'# result of -data-evaluate-expression'
+
 RE_DICT_LIST = r'{[^}]+}'                                                   \
                r'# a gdb list'
 
-RE_BREAKPOINTS = r'(number|type|enabled|file|line)="([^"]+)"'               \
+RE_VARCREATE = r'(name|exp|numchild|value|type)=%s'                         \
+               r'# done,name="var1",numchild="0",type="int"'
+
+RE_VARDELETE = r'^done,ndeleted="(?P<ndeleted>\d+)"$'                       \
+               r'# done,ndeleted="1"'
+
+RE_VAREVALUATE = r'(value)=%s'                                              \
+                 r'# done,value="14"'
+
+RE_BREAKPOINTS = r'(number|type|enabled|file|line)=%s'                      \
                  r'# a breakpoint'
 
 RE_DIRECTORIES = r'(?P<path>[^:^\n]+)'                                      \
                  r'# /path/to/foobar:$cdir:$cwd\n'
 
-RE_FILE = r'(line|file|fullname)="([^"]+)"'                                 \
+RE_FILE = r'(line|file|fullname)=%s'                                        \
           r'# line="1",file="foobar.c",fullname="/home/xdg/foobar.c"'
 
-RE_FRAME = r'(level|func|file|line)="([^"]+)"'                              \
+RE_FRAME = r'(level|func|file|line)=%s'                                     \
            r'# frame={level="0",func="main",args=[{name="argc",value="1"},' \
            r'{name="argv",value="0xbfde84a4"}],file="foobar.c",line="12"}'
 
-RE_SOURCES = r'(file|fullname)="([^"]+)"'                                   \
+RE_SOURCES = r'(file|fullname)=%s'                                          \
              r'# files=[{file="foobar.c",fullname="/home/xdg/foobar.c"},'   \
              r'{file="foo.c",fullname="/home/xdg/foo.c"}]'
+
+RE_VARUPDATE = r'(name|in_scope)=%s'                                        \
+               r'# changelist='                                             \
+               r'[{name="var3.key",in_scope="true",type_changed="false"}]'
 
 # compile regexps
 re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_evaluate = re.compile(RE_EVALUATE, re.VERBOSE)
 re_dict_list = re.compile(RE_DICT_LIST, re.VERBOSE)
-re_breakpoints = re.compile(RE_BREAKPOINTS, re.VERBOSE)
+re_varcreate = re.compile(RE_VARCREATE % QUOTED_STRING, re.VERBOSE)
+re_vardelete = re.compile(RE_VARDELETE, re.VERBOSE)
+re_varevaluate = re.compile(RE_VAREVALUATE % QUOTED_STRING, re.VERBOSE)
+re_breakpoints = re.compile(RE_BREAKPOINTS % QUOTED_STRING, re.VERBOSE)
 re_directories = re.compile(RE_DIRECTORIES, re.VERBOSE)
-re_file = re.compile(RE_FILE, re.VERBOSE)
-re_frame = re.compile(RE_FRAME, re.VERBOSE)
-re_sources = re.compile(RE_SOURCES, re.VERBOSE)
+re_file = re.compile(RE_FILE % QUOTED_STRING, re.VERBOSE)
+re_frame = re.compile(RE_FRAME % QUOTED_STRING, re.VERBOSE)
+re_sources = re.compile(RE_SOURCES % QUOTED_STRING, re.VERBOSE)
+re_varupdate = re.compile(RE_VARUPDATE % QUOTED_STRING, re.VERBOSE)
 
 def fullname(name, file):
     """Return 'fullname' value, matching name in the file dictionary."""
@@ -110,6 +152,125 @@ def fullname(name, file):
     except KeyError:
         pass
     return ''
+
+def parse_vardict(regexp, line):
+    """Return a dictionary of varobj elements."""
+    parsed = regexp.findall(line)
+    if parsed and isinstance(parsed[0], tuple) and len(parsed[0]) == 2:
+        vardict = {}
+        for (key, value) in parsed:
+            vardict[key] = _unquote(value)
+        return vardict
+    debug('not an iterable of key/value pairs: "%s"', line)
+    return None
+
+class VarObjList(dict):
+    """A dictionary of {name:VarObj instance}."""
+
+    def collect(self, parents, lnum, stream, indent=0):
+        if not self: return
+        # follow positional parameters in VAROBJ_FMT
+        tab = [(len(x['name']), len(x['type']), len(x['exp']))
+                                            for x in self.values()]
+        tab = (max([x[0] for x in tab]),
+                        max([x[1] for x in tab]),
+                        max([x[2] for x in tab]))
+        for name in sorted(self.keys()):
+            self[name].collect(parents, lnum, stream, indent, tab)
+
+class RootVarObj(object):
+    """The root of the tree of varobj objects.
+
+    Instance attributes:
+        root: VarObjList
+            the root of all varobj objects
+        parents: dict
+            dictionary {lnum:varobj parent}
+        dirty: boolean
+            True when there is a change in the varobj objects
+        str_content: str
+            string reprentation of the varobj objects
+
+    """
+
+    def __init__(self):
+        self.root = VarObjList()
+        self.parents = {}
+        self.dirty = False
+        self.str_content = ''
+
+    def leaf(self, childname):
+        """Return childname VarObj and the VarObjList of the parent of childname.
+
+        'childname' is a string with format: varNNN.child_1.child_2....
+
+        """
+        branch = childname.split('.')
+        l = len(branch)
+        assert l
+        curlist = self.root
+        try:
+            for i in range(l):
+                name = '.'.join(branch[:i+1])
+                if i == l - 1:
+                    return (curlist[name], curlist)
+                curlist = curlist[name]['children']
+        except KeyError:
+            warning('bad key: "%s", cannot find "%s" varobj'
+                                                % (name, childname))
+        return (None, None)
+
+    def collect(self):
+        """Return the string representation of the varobj objects.
+
+        This method has the side-effect of building the parents dictionary.
+
+        """
+        if self.dirty:
+            self.dirty = False
+            self.parents = {}
+            self.lnum = [0]
+            output = cStringIO.StringIO()
+            self.root.collect(self.parents, self.lnum, output)
+            self.str_content = output.getvalue()
+            output.close()
+        return self.str_content
+
+class VarObj(dict):
+    def __init__(self, vardict={}):
+        self['name'] = ''
+        self['exp'] = ''
+        self['type'] = ''
+        self['value'] = ''
+        self['in_scope'] = 'true'
+        self['numchild'] = 0
+        self['children'] = VarObjList()
+        self.chged = True
+        self.update(vardict)
+
+    def collect(self, parents, lnum, stream, indent, tab):
+        if self.chged:
+            self['chged'] = '={*}'
+            self.chged = False
+        elif self['in_scope'] != 'true':
+            self['chged'] = '={-}'
+        else:
+            self['chged'] = '={=}'
+
+        lnum[0] += 1
+        if self['numchild'] != '0':
+            parents[lnum[0]] = self
+            if self['children']:
+                fold = '[-] '
+            else:
+                fold = '[+] '
+        else:
+            fold = ' *  '
+        format = VAROBJ_FMT % tab
+        stream.write(' ' * indent + fold + format % self)
+        if self['children']:
+            assert self['numchild'] != 0
+            self['children'].collect(parents, lnum, stream, indent + 2)
 
 class Info(object):
     """Container for the debuggee state information.
@@ -134,8 +295,15 @@ class Info(object):
             current frame location
         sources: list
             list of gdb sources
+        varobj: RootVarObj
+            root of the tree of varobj objects
+        changelist: list
+            list of changed varobjs
+        setnext_dirty: boolean
+            when True, set varobj to dirty on next run
 
     """
+
     def __init__(self, gdb):
         self.gdb = gdb
         self.breakpoints = []
@@ -145,6 +313,11 @@ class Info(object):
         self.frame = {}
         self.frameloc = {}
         self.sources = []
+        self.varobj = RootVarObj()
+        self.changelist = []
+        self.setnext_dirty = False
+        # _root_varobj is only used for pretty printing with Cdumprepr
+        self._root_varobj = self.varobj.root
 
     def get_fullpath(self, name):
         """Get the full path name for the file named 'name' and return it.
@@ -235,6 +408,19 @@ class Info(object):
         self.gdb.show_frame()
         self.frameloc = {}
 
+    def update_changelist(self):
+        for vardict in self.changelist:
+            (varobj, varlist) = self.varobj.leaf(vardict['name'])
+            varobj['in_scope'] = vardict['in_scope']
+            self.gdb.oob_list.push(VarObjCmdEvaluate(self.gdb, varobj))
+        if self.changelist:
+            self.varobj.dirty = True
+            self.changelist = []
+            self.setnext_dirty = True
+        elif self.setnext_dirty:
+            self.setnext_dirty = False
+            self.varobj.dirty = True
+
     def __repr__(self):
         return pprint.pformat(self.__dict__)
 
@@ -255,9 +441,11 @@ class Result(dict):
     def add(self, command):
         """Add a command object to the dictionary."""
         assert isinstance(command, Command)
-        # do not add if the dictionary contains an object of the same class
-        if misc.any([command.__class__ is obj.__class__
-                    for obj in self.values()]):
+        # do not add an OobCommand if the dictionary contains
+        # an object of the same class
+        if isinstance(command, OobCommand)  \
+                and _any([command.__class__ is obj.__class__
+                        for obj in self.values()]):
             return None
         t = str(self.token)
         if self.has_key(t):
@@ -275,11 +463,33 @@ class Result(dict):
         del self[token]
         return command
 
-class OobList(list):
-    """List of instances of all OobCommand subclasses."""
+class OobList(object):
+    """List of instances of OobCommand subclasses.
+
+    An instance of OobList return two different types of iterator:
+        * implicit: iterator over the list of OobCommand objects
+        * through the call to iterator: list of OobCommand objects
+          and VarObjCmd objects
+
+    Instance attributes:
+        gdb: Gdb
+            the Gdb instance
+        static_list: list
+            list of OobCommand objects
+        running_list: list
+            list of VarObjCmd objects
+        fifo: deque
+            fifo of OobCommand and VarObjCmd objects.
+            VarObjCmd objects may be pushed into the fifo while
+            the fifo iterator is being run.
+    """
 
     def __init__(self, gdb):
-        """Build the OobCommand list."""
+        self.running_list = []
+        self.fifo = None
+
+        # build the OobCommand list
+        self.static_list = []
         for clss in sys.modules[self.__module__].__dict__.values():
             if inspect.isclass(clss) and issubclass(clss, OobCommand):
                 try:
@@ -288,8 +498,37 @@ class OobList(list):
                     # skip abstract classes
                     pass
                 else:
-                    self.append(obj)
-        self.sort()
+                    self.static_list.append(obj)
+        self.static_list.sort()
+
+    def __iter__(self):
+        """Return an iterator over the list of OobCommand objects."""
+        return self.static_list.__iter__()
+
+    def iterator(self):
+        """Return an iterator over OobCommand and VarObjCmd objects."""
+        self.fifo = deque(self.static_list + self.running_list)
+        self.running_list = []
+        return self
+
+    def next(self):
+        if self.fifo is not None and len(self.fifo):
+            return self.fifo.popleft()
+        else:
+            self.fifo = None
+            raise StopIteration
+
+    def push(self, obj):
+        """Push a VarObjCmd object.
+
+        When the iterator is not running, push the object to the
+        running_list (as a result of a dbgvar, delvar or foldvar command).
+        """
+        assert isinstance(obj, VarObjCmd)
+        if self.fifo is not None:
+            self.fifo.append(obj)
+        else:
+            self.running_list.append(obj)
 
 class Command(object):
     """Abstract class to send gdb command and process the result.
@@ -340,7 +579,7 @@ class CliCommand(Command):
             return False
 
         self.gdb.gotprmpt = False
-        return self.send('-interpreter-exec console %s\n', misc.quote(cmd))
+        return self.send('-interpreter-exec console %s\n', _quote(cmd))
 
     def handle_result(self, line):
         """Ignore the result."""
@@ -400,6 +639,86 @@ class CompleteBreakCommand(CliCommand):
             else:
                 self.gdb.console_print('Failed to fetch symbols completion.\n')
 
+class MiCommand(Command):
+    """The MiCommand abstract class.
+
+    Instance attributes:
+        gdb: Gdb
+            the Gdb instance
+        varobj: VarObj
+            the VarObj instance
+        result: str
+            the result of the mi command
+
+    """
+
+    def __init__(self, gdb, varobj):
+        self.gdb = gdb
+        self.varobj = varobj
+        self.result = ''
+
+    def sendcmd(self, fmt, *args):
+        if self.gdb.gotprmpt and self.gdb.oob is None:
+            self.result = ''
+            return self.send(fmt, *args)
+        return False
+
+    def handle_strrecord(self, stream_record):
+        if not self.result and stream_record:
+            self.gdb.console_print(stream_record)
+
+class VarCreateCommand(MiCommand):
+    def sendcmd(self):
+        return MiCommand.sendcmd(self, '-var-create - * %s\n',
+                                        _quote(self.varobj['exp']))
+
+    def handle_result(self, line):
+        parsed = parse_vardict(re_varcreate, line)
+        if parsed is not None:
+            rootvarobj = self.gdb.info.varobj
+            varobj = self.varobj
+            varobj.update(parsed)
+            try:
+                rootvarobj.root[varobj['name']] = varobj
+                rootvarobj.dirty = True
+                self.result = line
+            except KeyError:
+                error('in varobj creation of %s', str(parsed))
+
+class VarDeleteCommand(MiCommand):
+    def sendcmd(self):
+        return MiCommand.sendcmd(self, '-var-delete %s\n',
+                                            self.varobj['name'])
+
+    def handle_result(self, line):
+        matchobj = re_vardelete.match(line)
+        if matchobj:
+            self.result = matchobj.group('ndeleted')
+            if self.result:
+                name = self.varobj['name']
+                rootvarobj = self.gdb.info.varobj
+                (varobj, varlist) = rootvarobj.leaf(name)
+                del varlist[name]
+                rootvarobj.dirty = True
+                self.gdb.console_print(
+                            '%s watched variables have been deleted\n',
+                                                            self.result)
+
+class ListChildrenCommand(MiCommand):
+    def sendcmd(self):
+        return MiCommand.sendcmd(self, '-var-list-children --all-values %s\n',
+                                                        self.varobj['name'])
+
+    def handle_result(self, line):
+        varlist = [VarObj(x) for x in
+                        [parse_vardict(re_varcreate, map)
+                            for map in re_dict_list.findall(line)]
+                                                    if x is not None]
+        for varobj in varlist:
+            self.varobj['children'][varobj['name']] = varobj
+            varobj['value'] = _unquote(varobj['value'])
+        self.gdb.info.varobj.dirty = True
+
 class ShowBalloon(Command):
     """The ShowBalloon command.
 
@@ -409,7 +728,8 @@ class ShowBalloon(Command):
         text: str
             the selected text under the mouse as an expression to evaluate
         result: str
-            the parsed result of the evaluated expression
+            the result of the mi command
+
     """
 
     def __init__(self, gdb, text):
@@ -421,7 +741,7 @@ class ShowBalloon(Command):
         if self.gdb.gotprmpt and self.gdb.oob is None:
             self.result = ''
             return self.send('-data-evaluate-expression %s\n',
-                                                misc.quote(self.text))
+                                            _quote(self.text))
         return False
 
     def handle_result(self, line):
@@ -434,6 +754,47 @@ class ShowBalloon(Command):
     def handle_strrecord(self, stream_record):
         if not self.result and stream_record:
             self.gdb.show_balloon(stream_record)
+
+class VarObjCmd(Command):
+    """The VarObjCmd abstract class.
+
+    Instance attributes:
+        gdb: Gdb
+            the Gdb instance
+        varobj: VarObj
+            the VarObj instance
+        result: str
+            the result of the mi command
+
+    """
+
+    def __init__(self, gdb, varobj):
+        self.gdb = gdb
+        self.varobj = varobj
+        self.result = ''
+
+    def handle_strrecord(self, stream_record):
+        if not self.result and stream_record:
+            self.gdb.console_print(stream_record)
+
+class VarObjCmdEvaluate(VarObjCmd):
+    """The VarObjCmdEvaluate class."""
+
+    def sendcmd(self):
+        name = self.varobj['name']
+        if not name:
+            return False
+        self.result = ''
+        return self.send('-var-evaluate-expression %s\n', name)
+
+    def handle_result(self, line):
+        parsed = parse_vardict(re_varevaluate, line)
+        if parsed is not None:
+            self.result = line
+            value = _unquote(parsed['value'])
+            if value != self.varobj['value']:
+                self.varobj.chged = True
+                self.varobj['value'] = value
 
 class OobCommand(Command):
     """Base abstract class for oob commands.
@@ -501,7 +862,7 @@ class OobCommand(Command):
         """Notify of the cmd being processed / of a frame event."""
         if frame and self.frame_trigger:
             self.trigger = True
-        if cmd and misc.any([cmd.startswith(x) for x in self.trigger_prefix]):
+        if cmd and _any([cmd.startswith(x) for x in self.trigger_prefix]):
             self.trigger = True
 
     def sendcmd(self):
@@ -531,16 +892,11 @@ class OobCommand(Command):
             if self.gdblist:
                 # a list of dictionaries
                 parsed = [x for x in
-                            [dict(self.regexp.findall(map))
+                            [parse_vardict(self.regexp, map)
                                 for map in re_dict_list.findall(remain)]
-                                                                if x]
+                                                        if x is not None]
             else:
-                parsed = self.regexp.findall(remain)
-                if parsed                                   \
-                        and isinstance(parsed[0], tuple)    \
-                        and len(parsed[0]) == 2:
-                    # a dictionary
-                    parsed = dict(parsed)
+                parsed = parse_vardict(self.regexp, remain)
             if parsed:
                 setattr(self.gdb.info, self.info_attribute, parsed)
             else:
@@ -628,5 +984,18 @@ Sources =   \
                 'gdblist': True,
                 'trigger_list': SOURCE_CMDS,
                 'frame_trigger': False,
+            })
+
+VarUpdate =    \
+    type('VarUpdate', (OobCommand,),
+            {
+                'gdb_cmd': '-var-update *\n',
+                'info_attribute': 'changelist',
+                'prefix': 'done,',
+                'regexp': re_varupdate,
+                'gdblist': True,
+                'action': 'update_changelist',
+                'trigger_list': FRAME_CMDS,
+                'frame_trigger': True,
             })
 

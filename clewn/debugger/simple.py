@@ -17,7 +17,7 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id: simple.py 202 2007-12-20 19:16:45Z xavier $
+# $Id$
 
 """The Simple class implements a simple debugger used for testing pyclewn and
 for giving an example of a simple debugger.
