@@ -800,6 +800,7 @@ class VarObjCmdEvaluate(VarObjCmd):
             value = parsed['value']
             if value != self.varobj['value']:
                 self.varobj.chged = True
+                self.gdb.info.setnext_dirty = True # XXX
                 self.varobj['value'] = value
 
 class OobCommand(Command):
