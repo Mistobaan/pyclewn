@@ -697,7 +697,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         else:
             name = args[0]
             (varobj, varlist) = self.info.varobj.leaf(name)
-            if varobj:
+            if varobj is not None:
                 gdbmi.VarDeleteCommand(self, varobj).sendcmd()
                 return
             self.console_print('"%s" not found.\n' % name)
@@ -719,13 +719,16 @@ class Gdb(application.Application, misc.ProcessChannel):
             rootvarobj = self.info.varobj
             if rootvarobj.parents.has_key(lnum):
                 varobj = rootvarobj.parents[lnum]
+                # collapse
                 if varobj['children']:
-                    varobj['children'].clear()
-                    rootvarobj.dirty = True
-                    self.nbsock.dbgvarbuf.update(rootvarobj.collect())
+                    for child in varobj['children'].values():
+                        self.oob_list.push(gdbmi.VarObjCmdDelete(self, child))
+                    # nop command used to trigger execution of the oob_list
+                    gdbmi.NumChildrenCommand(self, varobj).sendcmd()
+                # expand
                 else:
                     gdbmi.ListChildrenCommand(self, varobj).sendcmd()
-                    return
+                return
             else:
                 error = 'Not a valid line number.'
         if error:

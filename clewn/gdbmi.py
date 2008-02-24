@@ -418,8 +418,9 @@ class Info(object):
     def update_changelist(self):
         for vardict in self.changelist:
             (varobj, varlist) = self.varobj.leaf(vardict['name'])
-            varobj['in_scope'] = vardict['in_scope']
-            self.gdb.oob_list.push(VarObjCmdEvaluate(self.gdb, varobj))
+            if varobj is not None:
+                varobj['in_scope'] = vardict['in_scope']
+                self.gdb.oob_list.push(VarObjCmdEvaluate(self.gdb, varobj))
         if self.changelist:
             self.varobj.dirty = True
             self.changelist = []
@@ -704,11 +705,21 @@ class VarDeleteCommand(MiCommand):
                 name = self.varobj['name']
                 rootvarobj = self.gdb.info.varobj
                 (varobj, varlist) = rootvarobj.leaf(name)
-                del varlist[name]
-                rootvarobj.dirty = True
-                self.gdb.console_print(
-                            '%s watched variables have been deleted\n',
-                                                            self.result)
+                if varlist is not None:
+                    del varlist[name]
+                    rootvarobj.dirty = True
+                    self.gdb.console_print(
+                                '%s watched variables have been deleted\n',
+                                                                self.result)
+
+class NumChildrenCommand(MiCommand):
+    def sendcmd(self):
+        return MiCommand.sendcmd(self, '-var-info-num-children %s\n',
+                                                        self.varobj['name'])
+
+    def handle_result(self, line):
+        # used as a nop command by the foldvar command
+        pass
 
 class ListChildrenCommand(MiCommand):
     def sendcmd(self):
@@ -801,6 +812,28 @@ class VarObjCmdEvaluate(VarObjCmd):
                 self.varobj.chged = True
                 self.gdb.info.setnext_dirty = True
                 self.varobj['value'] = value
+
+class VarObjCmdDelete(VarObjCmd):
+    """The VarObjCmdDelete class."""
+
+    def sendcmd(self):
+        name = self.varobj['name']
+        if not name:
+            return False
+        self.result = ''
+        return self.send('-var-delete %s\n', name)
+
+    def handle_result(self, line):
+        matchobj = re_vardelete.match(line)
+        if matchobj:
+            self.result = matchobj.group('ndeleted')
+            if self.result:
+                name = self.varobj['name']
+                rootvarobj = self.gdb.info.varobj
+                (varobj, varlist) = rootvarobj.leaf(name)
+                if varlist is not None:
+                    del varlist[name]
+                    rootvarobj.dirty = True
 
 class OobCommand(Command):
     """Base abstract class for oob commands.
