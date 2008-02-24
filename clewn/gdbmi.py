@@ -88,6 +88,19 @@ SOURCE_CMDS = (
     'file', 'exec-file', 'core-file', 'symbol-file', 'add-symbol-file',
     'source')
 
+# gdb objects attributes
+BREAKPOINT_ATTRIBUTES = set(('number', 'type', 'enabled', 'file', 'line'))
+FILE_ATTRIBUTES = set(('line', 'file', 'fullname'))
+FRAME_ATTRIBUTES = set(('level', 'func', 'file', 'line',))
+SOURCES_ATTRIBUTES = set(('file', 'fullname'))
+VARUPDATE_ATTRIBUTES = set(('name', 'in_scope'))
+VARCREATE_ATTRIBUTES = set(('name', 'numchild', 'type'))
+VARLISTCHILDREN_ATTRIBUTES = set(('name', 'exp', 'numchild', 'value', 'type'))
+VAREVALUATE_ATTRIBUTES = set(('value',))
+
+def keyval_pattern(attributes, comment=''):
+    return '(' + '|'.join(attributes) + ')=' + misc.QUOTED_STRING
+
 # regexp
 RE_COMPLETION = r'^break\s*(?P<sym>[\w:]*)(?P<sig>\(.*\))?(?P<rest>.*)$'    \
                 r'# break symbol completion'
@@ -98,49 +111,50 @@ RE_EVALUATE = r'^done,value="(?P<value>.*)"$'                               \
 RE_DICT_LIST = r'{[^}]+}'                                                   \
                r'# a gdb list'
 
-RE_VARCREATE = r'(name|exp|numchild|value|type)=%s'                         \
-               r'# done,name="var1",numchild="0",type="int"'
+RE_VARCREATE = keyval_pattern(VARCREATE_ATTRIBUTES,
+            'done,name="var1",numchild="0",type="int"')
 
 RE_VARDELETE = r'^done,ndeleted="(?P<ndeleted>\d+)"$'                       \
                r'# done,ndeleted="1"'
 
-RE_VAREVALUATE = r'(value)=%s'                                              \
-                 r'# done,value="14"'
+RE_VARLISTCHILDREN = keyval_pattern(VARLISTCHILDREN_ATTRIBUTES)
 
-RE_BREAKPOINTS = r'(number|type|enabled|file|line)=%s'                      \
-                 r'# a breakpoint'
+RE_VAREVALUATE = keyval_pattern(VAREVALUATE_ATTRIBUTES, 'done,value="14"')
+
+RE_BREAKPOINTS = keyval_pattern(BREAKPOINT_ATTRIBUTES, 'a breakpoint')
 
 RE_DIRECTORIES = r'(?P<path>[^:^\n]+)'                                      \
                  r'# /path/to/foobar:$cdir:$cwd\n'
 
-RE_FILE = r'(line|file|fullname)=%s'                                        \
-          r'# line="1",file="foobar.c",fullname="/home/xdg/foobar.c"'
+RE_FILE = keyval_pattern(FILE_ATTRIBUTES,
+            'line="1",file="foobar.c",fullname="/home/xdg/foobar.c"')
 
-RE_FRAME = r'(level|func|file|line)=%s'                                     \
-           r'# frame={level="0",func="main",args=[{name="argc",value="1"},' \
-           r'{name="argv",value="0xbfde84a4"}],file="foobar.c",line="12"}'
+RE_FRAME = keyval_pattern(FRAME_ATTRIBUTES,
+            'frame={level="0",func="main",args=[{name="argc",value="1"},'
+            '{name="argv",value="0xbfde84a4"}],file="foobar.c",line="12"}')
 
-RE_SOURCES = r'(file|fullname)=%s'                                          \
-             r'# files=[{file="foobar.c",fullname="/home/xdg/foobar.c"},'   \
-             r'{file="foo.c",fullname="/home/xdg/foo.c"}]'
+RE_SOURCES = keyval_pattern(SOURCES_ATTRIBUTES,
+            'files=[{file="foobar.c",fullname="/home/xdg/foobar.c"},'
+            '{file="foo.c",fullname="/home/xdg/foo.c"}]')
 
-RE_VARUPDATE = r'(name|in_scope)=%s'                                        \
-               r'# changelist='                                             \
-               r'[{name="var3.key",in_scope="true",type_changed="false"}]'
+RE_VARUPDATE = keyval_pattern(VARUPDATE_ATTRIBUTES,
+            'changelist='
+            '[{name="var3.key",in_scope="true",type_changed="false"}]')
 
 # compile regexps
 re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_evaluate = re.compile(RE_EVALUATE, re.VERBOSE)
 re_dict_list = re.compile(RE_DICT_LIST, re.VERBOSE)
-re_varcreate = re.compile(RE_VARCREATE % misc.QUOTED_STRING, re.VERBOSE)
+re_varcreate = re.compile(RE_VARCREATE, re.VERBOSE)
 re_vardelete = re.compile(RE_VARDELETE, re.VERBOSE)
-re_varevaluate = re.compile(RE_VAREVALUATE % misc.QUOTED_STRING, re.VERBOSE)
-re_breakpoints = re.compile(RE_BREAKPOINTS % misc.QUOTED_STRING, re.VERBOSE)
+re_varlistchildren = re.compile(RE_VARLISTCHILDREN, re.VERBOSE)
+re_varevaluate = re.compile(RE_VAREVALUATE, re.VERBOSE)
+re_breakpoints = re.compile(RE_BREAKPOINTS, re.VERBOSE)
 re_directories = re.compile(RE_DIRECTORIES, re.VERBOSE)
-re_file = re.compile(RE_FILE % misc.QUOTED_STRING, re.VERBOSE)
-re_frame = re.compile(RE_FRAME % misc.QUOTED_STRING, re.VERBOSE)
-re_sources = re.compile(RE_SOURCES % misc.QUOTED_STRING, re.VERBOSE)
-re_varupdate = re.compile(RE_VARUPDATE % misc.QUOTED_STRING, re.VERBOSE)
+re_file = re.compile(RE_FILE, re.VERBOSE)
+re_frame = re.compile(RE_FRAME, re.VERBOSE)
+re_sources = re.compile(RE_SOURCES, re.VERBOSE)
+re_varupdate = re.compile(RE_VARUPDATE, re.VERBOSE)
 
 def fullname(name, file):
     """Return 'fullname' value, matching name in the file dictionary."""
@@ -667,7 +681,7 @@ class VarCreateCommand(MiCommand):
 
     def handle_result(self, line):
         parsed = _parse_keyval(re_varcreate, line)
-        if parsed is not None:
+        if parsed is not None and VARCREATE_ATTRIBUTES.issubset(parsed):
             rootvarobj = self.gdb.info.varobj
             varobj = self.varobj
             varobj.update(parsed)
@@ -704,9 +718,9 @@ class ListChildrenCommand(MiCommand):
 
     def handle_result(self, line):
         varlist = [VarObj(x) for x in
-                        [_parse_keyval(re_varcreate, map)
+                        [_parse_keyval(re_varlistchildren, map)
                             for map in re_dict_list.findall(line)]
-                                                    if x is not None]
+                if x is not None and VARLISTCHILDREN_ATTRIBUTES.issubset(x)]
         for varobj in varlist:
             self.varobj['children'][varobj['name']] = varobj
         self.gdb.info.varobj.dirty = True
@@ -781,7 +795,7 @@ class VarObjCmdEvaluate(VarObjCmd):
 
     def handle_result(self, line):
         parsed = _parse_keyval(re_varevaluate, line)
-        if parsed is not None:
+        if parsed is not None and VAREVALUATE_ATTRIBUTES.issubset(parsed):
             self.result = line
             value = parsed['value']
             if value != self.varobj['value']:
@@ -926,7 +940,7 @@ Breakpoints =   \
                 'info_attribute': 'breakpoints',
                 'prefix': 'done,',
                 'regexp': re_breakpoints,
-                'reqkeys': set(('type', 'number', 'enabled', 'file', 'line')),
+                'reqkeys': BREAKPOINT_ATTRIBUTES,
                 'gdblist': True,
                 'action': 'update_breakpoints',
                 'trigger_list': BREAKPOINT_CMDS,
@@ -953,7 +967,7 @@ File =    \
                 'info_attribute': 'file',
                 'prefix': 'done,',
                 'regexp': re_file,
-                'reqkeys': set(('file', 'fullname')),
+                'reqkeys': FILE_ATTRIBUTES,
                 'gdblist': False,
                 'trigger_list': FRAME_CMDS,
                 'frame_trigger': True,
@@ -967,7 +981,7 @@ Frame =    \
                 'info_attribute': 'frame',
                 'prefix': 'done,',
                 'regexp': re_frame,
-                'reqkeys': set(('line',)),
+                'reqkeys': FRAME_ATTRIBUTES,
                 'gdblist': False,
                 'action': 'update_frame',
                 'trigger_list': FRAME_CMDS,
@@ -981,7 +995,7 @@ Sources =   \
                 'info_attribute': 'sources',
                 'prefix': 'done,',
                 'regexp': re_sources,
-                'reqkeys': set(('file', 'fullname')),
+                'reqkeys': SOURCES_ATTRIBUTES,
                 'gdblist': True,
                 'trigger_list': SOURCE_CMDS,
                 'frame_trigger': False,
@@ -994,7 +1008,7 @@ VarUpdate =    \
                 'info_attribute': 'changelist',
                 'prefix': 'done,',
                 'regexp': re_varupdate,
-                'reqkeys': set(('name', 'in_scope')),
+                'reqkeys': VARUPDATE_ATTRIBUTES,
                 'gdblist': True,
                 'action': 'update_changelist',
                 'trigger_list': FRAME_CMDS,
