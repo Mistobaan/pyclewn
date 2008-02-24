@@ -841,6 +841,8 @@ class OobCommand(Command):
             assert hasattr(self.gdb.info, self.action)
         assert hasattr(self, 'trigger_list')                \
                 and isinstance(self.trigger_list, tuple)
+        assert hasattr(self, 'reqkeys')                     \
+                and isinstance(self.reqkeys, set)
         assert hasattr(self, 'frame_trigger')               \
                 and isinstance(self.frame_trigger, bool)
         self.trigger = False
@@ -886,13 +888,15 @@ class OobCommand(Command):
                 parsed = [x for x in
                             [_parse_keyval(self.regexp, map)
                                 for map in re_dict_list.findall(remain)]
-                                                        if x is not None]
+                            if x is not None and self.reqkeys.issubset(x)]
             else:
                 parsed = _parse_keyval(self.regexp, remain)
+                if parsed is not None and not self.reqkeys.issubset(parsed):
+                    parsed = None
             if parsed:
                 setattr(self.gdb.info, self.info_attribute, parsed)
             else:
-                debug('no regexp match for "%s"', remain)
+                debug('no match for "%s"', remain)
 
     def handle_result(self, result):
         """Process the result of the mi command."""
@@ -922,6 +926,7 @@ Breakpoints =   \
                 'info_attribute': 'breakpoints',
                 'prefix': 'done,',
                 'regexp': re_breakpoints,
+                'reqkeys': set(('type', 'number', 'enabled', 'file', 'line')),
                 'gdblist': True,
                 'action': 'update_breakpoints',
                 'trigger_list': BREAKPOINT_CMDS,
@@ -935,6 +940,7 @@ Directories =    \
                 'info_attribute': 'directories',
                 'prefix': 'Source directories searched: ',
                 'regexp': re_directories,
+                'reqkeys': set(),
                 'gdblist': False,
                 'trigger_list': DIRECTORY_CMDS,
                 'frame_trigger': False,
@@ -947,6 +953,7 @@ File =    \
                 'info_attribute': 'file',
                 'prefix': 'done,',
                 'regexp': re_file,
+                'reqkeys': set(('file', 'fullname')),
                 'gdblist': False,
                 'trigger_list': FRAME_CMDS,
                 'frame_trigger': True,
@@ -960,6 +967,7 @@ Frame =    \
                 'info_attribute': 'frame',
                 'prefix': 'done,',
                 'regexp': re_frame,
+                'reqkeys': set(('line',)),
                 'gdblist': False,
                 'action': 'update_frame',
                 'trigger_list': FRAME_CMDS,
@@ -973,6 +981,7 @@ Sources =   \
                 'info_attribute': 'sources',
                 'prefix': 'done,',
                 'regexp': re_sources,
+                'reqkeys': set(('file', 'fullname')),
                 'gdblist': True,
                 'trigger_list': SOURCE_CMDS,
                 'frame_trigger': False,
@@ -985,6 +994,7 @@ VarUpdate =    \
                 'info_attribute': 'changelist',
                 'prefix': 'done,',
                 'regexp': re_varupdate,
+                'reqkeys': set(('name', 'in_scope')),
                 'gdblist': True,
                 'action': 'update_changelist',
                 'trigger_list': FRAME_CMDS,
