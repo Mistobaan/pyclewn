@@ -607,6 +607,11 @@ class Gdb(application.Application, misc.ProcessChannel):
             self.console_print('\n===========\n')
             misc.ProcessChannel.close(self)
 
+            # clear varobj
+            rootvarobj = self.info.varobj
+            rootvarobj.clear()
+            self.nbsock.dbgvarbuf.update(rootvarobj.collect())
+
             # remove temporary files
             del self.f_init
 
@@ -717,7 +722,7 @@ class Gdb(application.Application, misc.ProcessChannel):
                 if varobj['children']:
                     varobj['children'].clear()
                     rootvarobj.dirty = True
-                    self.nbsock.dbgvarbuf.update(self.info.varobj.collect())
+                    self.nbsock.dbgvarbuf.update(rootvarobj.collect())
                 else:
                     gdbmi.ListChildrenCommand(self, varobj).sendcmd()
                     return

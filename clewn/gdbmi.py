@@ -186,6 +186,12 @@ class RootVarObj(object):
         self.dirty = False
         self.str_content = ''
 
+    def clear(self):
+        self.root.clear()
+        self.parents = {}
+        self.dirty = True
+        self.str_content = ''
+
     def leaf(self, childname):
         """Return childname VarObj and the VarObjList of the parent of childname.
 
