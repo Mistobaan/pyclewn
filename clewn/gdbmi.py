@@ -423,7 +423,6 @@ class Info(object):
         if self.changelist:
             self.varobj.dirty = True
             self.changelist = []
-            self.setnext_dirty = True
         elif self.setnext_dirty:
             self.setnext_dirty = False
             self.varobj.dirty = True
@@ -800,7 +799,7 @@ class VarObjCmdEvaluate(VarObjCmd):
             value = parsed['value']
             if value != self.varobj['value']:
                 self.varobj.chged = True
-                self.gdb.info.setnext_dirty = True # XXX
+                self.gdb.info.setnext_dirty = True
                 self.varobj['value'] = value
 
 class OobCommand(Command):
