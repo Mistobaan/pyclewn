@@ -33,6 +33,7 @@ import signal
 import atexit
 
 DOUBLEQUOTE = '"'
+QUOTED_STRING = r'"((?:\\"|[^"])+)"'
 NBDEBUG = 5
 NBDEBUG_LEVEL_NAME = 'nbdebug'
 LOG_LEVELS = 'critical, error, warning, info, debug or ' + NBDEBUG_LEVEL_NAME
@@ -114,6 +115,22 @@ def unescape_char(matchobj):
 
 def unquote(string):
     return '%s' % re_unescape.sub(unescape_char, string)
+
+def parse_keyval(regexp, line):
+    """Return a dictionary built from a string of 'key="value"' pairs.
+
+    The regexp format is:
+        r'(key1|key2|...)=%s' % QUOTED_STRING
+
+    """
+    parsed = regexp.findall(line)
+    if parsed and isinstance(parsed[0], tuple) and len(parsed[0]) == 2:
+        keyval_dict = {}
+        for (key, value) in parsed:
+            keyval_dict[key] = unquote(value)
+        return keyval_dict
+    debug('not an iterable of key/value pairs: "%s"', line)
+    return None
 
 # subprocess.check_call does not exist in Python 2.4
 def check_call(*popenargs, **kwargs):

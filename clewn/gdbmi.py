@@ -61,7 +61,7 @@ import misc
 from misc import (
         any as _any,
         quote as _quote,
-        unquote as _unquote,
+        parse_keyval as _parse_keyval,
         )
 
 # set the logging methods
@@ -89,8 +89,6 @@ SOURCE_CMDS = (
     'source')
 
 # regexp
-QUOTED_STRING = r'"((?:\\"|[^"])+)"'
-
 RE_COMPLETION = r'^break\s*(?P<sym>[\w:]*)(?P<sig>\(.*\))?(?P<rest>.*)$'    \
                 r'# break symbol completion'
 
@@ -134,15 +132,15 @@ RE_VARUPDATE = r'(name|in_scope)=%s'                                        \
 re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_evaluate = re.compile(RE_EVALUATE, re.VERBOSE)
 re_dict_list = re.compile(RE_DICT_LIST, re.VERBOSE)
-re_varcreate = re.compile(RE_VARCREATE % QUOTED_STRING, re.VERBOSE)
+re_varcreate = re.compile(RE_VARCREATE % misc.QUOTED_STRING, re.VERBOSE)
 re_vardelete = re.compile(RE_VARDELETE, re.VERBOSE)
-re_varevaluate = re.compile(RE_VAREVALUATE % QUOTED_STRING, re.VERBOSE)
-re_breakpoints = re.compile(RE_BREAKPOINTS % QUOTED_STRING, re.VERBOSE)
+re_varevaluate = re.compile(RE_VAREVALUATE % misc.QUOTED_STRING, re.VERBOSE)
+re_breakpoints = re.compile(RE_BREAKPOINTS % misc.QUOTED_STRING, re.VERBOSE)
 re_directories = re.compile(RE_DIRECTORIES, re.VERBOSE)
-re_file = re.compile(RE_FILE % QUOTED_STRING, re.VERBOSE)
-re_frame = re.compile(RE_FRAME % QUOTED_STRING, re.VERBOSE)
-re_sources = re.compile(RE_SOURCES % QUOTED_STRING, re.VERBOSE)
-re_varupdate = re.compile(RE_VARUPDATE % QUOTED_STRING, re.VERBOSE)
+re_file = re.compile(RE_FILE % misc.QUOTED_STRING, re.VERBOSE)
+re_frame = re.compile(RE_FRAME % misc.QUOTED_STRING, re.VERBOSE)
+re_sources = re.compile(RE_SOURCES % misc.QUOTED_STRING, re.VERBOSE)
+re_varupdate = re.compile(RE_VARUPDATE % misc.QUOTED_STRING, re.VERBOSE)
 
 def fullname(name, file):
     """Return 'fullname' value, matching name in the file dictionary."""
@@ -152,17 +150,6 @@ def fullname(name, file):
     except KeyError:
         pass
     return ''
-
-def parse_vardict(regexp, line):
-    """Return a dictionary of varobj elements."""
-    parsed = regexp.findall(line)
-    if parsed and isinstance(parsed[0], tuple) and len(parsed[0]) == 2:
-        vardict = {}
-        for (key, value) in parsed:
-            vardict[key] = _unquote(value)
-        return vardict
-    debug('not an iterable of key/value pairs: "%s"', line)
-    return None
 
 class VarObjList(dict):
     """A dictionary of {name:VarObj instance}."""
@@ -673,7 +660,7 @@ class VarCreateCommand(MiCommand):
                                         _quote(self.varobj['exp']))
 
     def handle_result(self, line):
-        parsed = parse_vardict(re_varcreate, line)
+        parsed = _parse_keyval(re_varcreate, line)
         if parsed is not None:
             rootvarobj = self.gdb.info.varobj
             varobj = self.varobj
@@ -711,12 +698,11 @@ class ListChildrenCommand(MiCommand):
 
     def handle_result(self, line):
         varlist = [VarObj(x) for x in
-                        [parse_vardict(re_varcreate, map)
+                        [_parse_keyval(re_varcreate, map)
                             for map in re_dict_list.findall(line)]
                                                     if x is not None]
         for varobj in varlist:
             self.varobj['children'][varobj['name']] = varobj
-            varobj['value'] = _unquote(varobj['value'])
         self.gdb.info.varobj.dirty = True
 
 class ShowBalloon(Command):
@@ -788,10 +774,10 @@ class VarObjCmdEvaluate(VarObjCmd):
         return self.send('-var-evaluate-expression %s\n', name)
 
     def handle_result(self, line):
-        parsed = parse_vardict(re_varevaluate, line)
+        parsed = _parse_keyval(re_varevaluate, line)
         if parsed is not None:
             self.result = line
-            value = _unquote(parsed['value'])
+            value = parsed['value']
             if value != self.varobj['value']:
                 self.varobj.chged = True
                 self.varobj['value'] = value
@@ -892,11 +878,11 @@ class OobCommand(Command):
             if self.gdblist:
                 # a list of dictionaries
                 parsed = [x for x in
-                            [parse_vardict(self.regexp, map)
+                            [_parse_keyval(self.regexp, map)
                                 for map in re_dict_list.findall(remain)]
                                                         if x is not None]
             else:
-                parsed = parse_vardict(self.regexp, remain)
+                parsed = _parse_keyval(self.regexp, remain)
             if parsed:
                 setattr(self.gdb.info, self.info_attribute, parsed)
             else:
