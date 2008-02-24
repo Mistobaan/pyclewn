@@ -904,9 +904,12 @@ class OobCommand(Command):
                                 for map in re_dict_list.findall(remain)]
                             if x is not None and self.reqkeys.issubset(x)]
             else:
-                parsed = _parse_keyval(self.regexp, remain)
-                if parsed is not None and not self.reqkeys.issubset(parsed):
-                    parsed = None
+                if self.reqkeys:
+                    parsed = _parse_keyval(self.regexp, remain)
+                    if parsed is not None and not self.reqkeys.issubset(parsed):
+                        parsed = None
+                else:
+                    parsed = self.regexp.findall(remain)
             if parsed:
                 setattr(self.gdb.info, self.info_attribute, parsed)
             else:
