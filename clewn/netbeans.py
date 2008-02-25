@@ -762,7 +762,7 @@ class Netbeans(asynchat.async_chat):
                     else:
                         warning('got fileOpened with wrong bufId')
 
-                if not buf.editport:
+                if not buf.editport or not isinstance(buf.editport, Console):
                     self.last_buf = buf
             else:
                 warning('absolute pathname required')

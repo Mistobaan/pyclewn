@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 February 5
+*pyclewn.txt*                                   Last change: 2008 February 25
 
 
                             PYCLEWN USER MANUAL
@@ -210,9 +210,8 @@ Console:
 --------
 The debugger output is redirected to a vim window: the console.
 
-The console window pops up whenever a|Ccommand|is entered on vim command line.
-This does not happen when using keys mapped by pyclewn and it is possible to
-keep the console closed by using only those keys.
+The console window pops up whenever a|Ccommand|is entered on vim command line
+or a key mapped by pyclewn is hit.
 
 The initial console window height is set with the vim option 'previewheight'
 that defaults to 12 lines.
@@ -495,10 +494,6 @@ or >
 
 The comments in the configuration file explain how to customize the key
 mappings.
-
-The difference between keys mapped by pyclewn and keys mapped by vim
-|:map-commands|is that in the first case, the clewn console does not pop up
-each time a pyclewn key is pressed.
 
 
 ==============================================================================

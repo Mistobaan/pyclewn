@@ -479,6 +479,11 @@ class Application(object):
                                         console=netbeans.CONSOLE,
                                         variables=netbeans.VARIABLES_BUFFER))
 
+            # popup gdb console on pyclewn mapped keys
+            f.write(string.Template(
+                'cnoremap nbkey call <SID>console("${console}") <Bar> nbkey'
+                ).substitute(console=netbeans.CONSOLE))
+
             # utility vim functions
             f.write(FUNCTION_GETFILEVT)
             f.write(FUNCTION_CONSOLE)
