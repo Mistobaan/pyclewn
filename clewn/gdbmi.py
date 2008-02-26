@@ -721,6 +721,8 @@ class NumChildrenCommand(MiCommand):
         # used as a nop command by the foldvar command
         pass
 
+# 'type' and 'value' are not always present in -var-list-children output
+LIST_CHILDREN_KEYS = VARLISTCHILDREN_ATTRIBUTES.difference(set(('type', 'value')))
 class ListChildrenCommand(MiCommand):
     def sendcmd(self):
         return MiCommand.sendcmd(self, '-var-list-children --all-values %s\n',
@@ -730,7 +732,7 @@ class ListChildrenCommand(MiCommand):
         varlist = [VarObj(x) for x in
                         [_parse_keyval(re_varlistchildren, map)
                             for map in re_dict_list.findall(line)]
-                if x is not None and VARLISTCHILDREN_ATTRIBUTES.issubset(x)]
+                if x is not None and LIST_CHILDREN_KEYS.issubset(x)]
         for varobj in varlist:
             self.varobj['children'][varobj['name']] = varobj
         self.gdb.info.varobj.dirty = True
