@@ -36,12 +36,14 @@ FEATURES:
   Pyclewn automatically finds the source file for the breakpoint if it exists,
   and tells vim to load and display the file and highlight the line.
 
-* An expression value or a variable value is displayed in a balloon in vim,
+* The value of an expression or variable is displayed in a balloon in vim
   when the mouse pointer is hovering over the selected expression or the
   variable.
 
-* Variables can be watched in a vim window. The variable value is updated and
-  highlighted whenever changed.
+* An expression can be watched in a vim window. The expression value is
+  updated and highlighted whenever it has changed. When the expression is a
+  structure or class instance, it can be expanded to show its members and
+  their values.
 
 * Vim command completion on the commands and their first argument.
 

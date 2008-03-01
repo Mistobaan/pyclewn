@@ -405,6 +405,8 @@ class Gdb(application.Application, misc.ProcessChannel):
         'S-R' : ('run',),
         'S-Q' : ('quit',),
         'S-C' : ('continue',),
+        'S-X' : ('foldvar ${lnum}',
+                    'expand/collapse a watched variable'),
         'S-W' : ('where',),
         'C-U' : ('up',),
         'C-D' : ('down',),

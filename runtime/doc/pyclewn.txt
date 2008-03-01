@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 February 25
+*pyclewn.txt*                                   Last change: 2008 March 1
 
 
                             PYCLEWN USER MANUAL
@@ -10,7 +10,7 @@ The Pyclewn user guide                              *pyclewn*
 3. Using pyclewn                                    |pyclewn-using|
 4. Gdb                                              |pyclewn-gdb|
 5. Key mappings                                     |pyclewn-mappings|
-6. Variable debugger window                         |pyclewn-variable|
+6. Watched variables                                |pyclewn-variable|
 7. Extending pyclewn                                |pyclewn-extending|
 
 
@@ -53,13 +53,14 @@ Pyclewn provides the following features:
   Pyclewn automatically finds the source file for the breakpoint if it exists,
   and tells vim to load and display the file and highlight the line.
 
-* An expression value or a variable value is displayed in a balloon in vim
+* The value of an expression or variable is displayed in a balloon in vim
   when the mouse pointer is hovering over the selected expression or the
   variable.
 
-* Variables or expressions can be watched in the variable debugger vim window.
-  The variable or expression value is updated and highlighted whenever
-  changed.
+* An expression can be watched in a vim window. The expression value is
+  updated and highlighted whenever it has changed. When the expression is a
+  structure or class instance, it can be expanded to show its members and
+  their values.
 
 * Vim command completion on the commands and their first argument.
 
@@ -72,7 +73,7 @@ The remaining sections of this manual are:
     3.|pyclewn-using|explains how to use the pyclewn features common to all
        supported debuggers
 
-    4.|pyclewn-gdb|details all the topics relevant to pyclewn and the gdb
+    4.|pyclewn-gdb|details the topics relevant to pyclewn and the gdb
        debugger.
 
     5.|pyclewn-mappings|lists the pyclewn key mappings and how to use them.
@@ -93,7 +94,7 @@ To use with gdb, pyclewn is usually simply started as: >
 
 The debugger is started by running a debugger command from vim command line.
 For example, load foobar with the gdb command "file" and start gbd by typing
-on the vim command line, possibly using completion: >
+on the vim command line: >
 
     :Cfile foobar
 
@@ -285,7 +286,7 @@ Use the powerful command line search capabilities of the Vim command line.
 For example, you want to type again, possibly after a little editing, one of
 the commands previously entered: >
 
-    Cprint (*(foo*)0x0123ABCD)->next->next->part1->something_else.aaa
+    :Cprint (*(foo*)0x0123ABCD)->next->next->part1->something_else.aaa
 
 You can get rapidly to this command by using the Vim command line window
 |cmdline-window|: >
@@ -294,7 +295,7 @@ You can get rapidly to this command by using the Vim command line window
     /something_else
     <CR>
 
-or >
+or from normal mode >
     q:
     /something_else
     <CR>
@@ -314,13 +315,16 @@ Pyclewn commands:
 The|Ccommand|list includes all the debugger commands and some pyclewn specific
 commands that are listed here:
 
-    * Cdbgvar        add a watched variable or expression to the
+    *|Cdbgvar|       add a watched variable or expression to the
                      (clewn)_dbgvar buffer
 
-    * Cdelvar        delete a watched variable from the (clewn)_dbgvar buffer
+    *|Cdelvar|       delete a watched variable from the (clewn)_dbgvar buffer
 
-    * Cdumprepr      print on the console, pyclewn internal structures that
+    * Cdumprepr      print on the console pyclewn internal structures that
                      may be used for debugging pyclewn
+
+    *|Cfoldvar|      collapse/expand the members of a watched structure or
+                     class instance
 
     * Chelp          print on the console, help on the pyclewn specific
                      commands (those on this list) in addition to the help on
@@ -343,7 +347,7 @@ commands that are listed here:
 4. Gdb                                              *pyclewn-gdb*
 
 
-Note: One particularly useful tutorial on gdb is Peter Jay Salzman's, at
+Note: One useful tutorial on gdb is Peter Jay Salzman's, at
 http://www.dirac.org/linux/gdb/.
 
 
@@ -402,6 +406,7 @@ These keys are mapped after the|Cmapkeys|vim command is run.
         Q       quit
         C       continue
         W       where
+        X       foldvar
         CTRL-U  up: go up one frame
         CTRL-D  down: go down one frame
 
@@ -430,11 +435,11 @@ When using a gdb version older than 6.2.1, and in order to have gdb find your
 source files when they are not located in the current directory, you must add
 the relevant directories to the gdb directory variable. For example: >
 
-    Cfile /path/to/this_project/foobar
+    :Cfile /path/to/this_project/foobar
 
-    Cdirectory /path/to/this_project
+    :Cdirectory /path/to/this_project
 
-    Cbreak main
+    :Cbreak main
 
 The last command will set a breakpoint and have vim edit
 /path/to/this_project/foobar.c with the appropriate line highlighted (assuming
@@ -468,11 +473,18 @@ Known limitations:
 
 
 ==============================================================================
-5. Key mappings                                 *pyclewn-mappings* *Cmapkeys*
+5. Key mappings                                             *pyclewn-mappings*
 
 
 All|Ccommand|can be mapped to vim keys using the vim|:map-commands|.
+For example, to set a breakpoint at the current cursor position: >
 
+    :map <F8> :exe "Cbreak " . expand("%:p") . ":" . line(".")<CR>
+.
+
+                                                            *Cmapkeys*
+Pyclewn key mappings:
+---------------------
 This section describes another mapping mechanism where pyclewn maps vim keys
 by reading a configuration file. This is done when the|Cmapkeys|vim command is
 run. The pyclewn keys mapping is mostly useful for the pyclewn casual user.
@@ -497,7 +509,78 @@ mappings.
 
 
 ==============================================================================
-6. Variable debugger window                         *pyclewn-variable*
+6. Watched variables                                        *pyclewn-variable*
+
+The vim watched variables buffer is named "(clewn)_dbgvar".
+
+                                                            *Cdbgvar*
+The|Cdbgvar|command is used to create a gdb watched variable in the variables
+buffer from any valid expression. A valid expression is an expression that is
+valid in the current frame.
+The argument of the|Cdbgvar|pyclewn command is the expression to be watched.
+For example, to create a watched variable for the expression "len - max":
+>
+    :Cdbgvar len - max
+
+Upon creation, the watched variable is given a name by gdb, for example
+<var1>.
+The watched variables buffer, "(clewn)_dbgvar", is created upon creation of
+the first watched variable. It is created but not displayed in a window.
+To display "(clewn)_dbgvar" upon creation of the first variable: >
+    :e #
+or >
+    CTL-^
+later, use the following command to find "(clewn)_dbgvar" buffer number N: >
+    :ls
+and >
+    :Nb
+or >
+    N CTL-^
+or >
+    :Nsb
+to split the current window and display "(clewn)_dbgvar".
+
+
+                                                            *Cfoldvar*
+When the watched variable is a structure or class instance, it can be expanded
+with the|Cfoldvar|pyclewn command to display all its members and their values
+as children watched variables.
+The argument of the|Cfoldvar|command is the line number of the watched
+variable in the watched variable window.
+For example: >
+
+    :Cfoldvar 1
+
+The|Cfoldvar|command is meant to be used in a key mapping. This is the 'X' key
+when using pyclewn key mappings, or one can use the following mapping:
+>
+    :map <F8> :exe "Cfoldvar " . line(".")<CR>
+
+The watched variable can be collapsed also with the|Cfoldvar|command.
+
+
+                                                            *Cdelvar*
+A gdb watched variable can be deleted with the|Cdelvar|pyclewn command.
+The argument of the|Cdelvar|command is the name of the variable as given by
+gdb upon creation.
+For example: >
+
+    :Cdelvar var1
+
+When the watched variable is a structure or class instance and it has been
+expanded, all its children are also deleted.
+
+
+Highlighting:
+-------------
+When the value of a watched variable has changed, it is highlighted with the
+"Special" highlight group.
+
+When a watched variable becomes out of scope, it is highlighted with the
+"Comment" highlight group.
+
+The foreground and background colors used by these highlight groups are setup
+by the|colorsheme|currently in use.
 
 
 ==============================================================================
