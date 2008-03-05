@@ -614,7 +614,8 @@ class Gdb(application.Application, misc.ProcessChannel):
             # clear varobj
             rootvarobj = self.info.varobj
             rootvarobj.clear()
-            self.nbsock.dbgvarbuf.update(rootvarobj.collect())
+            if self.nbsock.dbgvarbuf is not None:
+                self.nbsock.dbgvarbuf.update(rootvarobj.collect())
 
             # remove temporary files
             del self.f_init

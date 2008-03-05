@@ -475,6 +475,10 @@ class Application(object):
         try:
             f = misc.TmpFile('vimscript')
 
+            # set 'cpo' option to its vim default value
+            f.write('let s:cpo_save=&cpo\n')
+            f.write('set cpo&vim\n')
+
             # vim autocommands
             f.write(string.Template(AUTOCOMMANDS).substitute(
                                         console=netbeans.CONSOLE,
@@ -525,6 +529,9 @@ class Application(object):
 
             # add application specific vim statements
             f.write(self.vim_script_custom(prefix))
+
+            # reset 'cpo' option
+            f.write('let &cpo = s:cpo_save\n')
 
             # delete the vim script after it has been sourced
             f.write('\ncall delete(expand("<sfile>"))\n')
