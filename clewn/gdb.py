@@ -262,14 +262,15 @@ class GlobalSetup(misc.Singleton):
         'clear',
         )
 
-    def init(self, gdbname):
+    def init(self, gdbname, pyclewn_cmds):
         """Singleton initialisation."""
         self.gdbname = gdbname
+        self.pyclewn_cmds = pyclewn_cmds
         self.gdb_cmds()
         self.f_ack = tmpfile()
         self.f_clist = tmpfile()
 
-    def __init__(self, gdbname):
+    def __init__(self, gdbname, pyclewn_cmds):
         pass
 
     def gdb_cmds(self):
@@ -328,7 +329,7 @@ class GlobalSetup(misc.Singleton):
         self.cmds[''] = dash_cmds
 
         # add pyclewn commands
-        for cmd in application.Application.pyclewn_cmds:
+        for cmd in self.pyclewn_cmds:
             if cmd and cmd != 'help':
                 self.cmds[cmd] = ()
 
@@ -393,7 +394,7 @@ class Gdb(application.Application, misc.ProcessChannel):
 
     # list of key mappings, used to build the .pyclewn_keys.simple file
     #     key : (mapping, comment)
-    mapkeys = {
+    gdb_mapkeys = {
         'C-Z' : ('sigint',
                     'kill the inferior running program'),
         'S-B' : ('info breakpoints',),
@@ -422,6 +423,9 @@ class Gdb(application.Application, misc.ProcessChannel):
 
     def __init__(self, nbsock, daemon, pgm, arglist):
         application.Application.__init__(self, nbsock, daemon)
+        self.pyclewn_cmds.update({'foldvar':()})
+        self.mapkeys.update(self.gdb_mapkeys)
+
         self.pgm = pgm or 'gdb'
         self.arglist = arglist
         gdb_version(self.pgm)
@@ -429,10 +433,8 @@ class Gdb(application.Application, misc.ProcessChannel):
         misc.ProcessChannel.__init__(self, self.getargv())
 
         self.info = gdbmi.Info(self)
-        application.Application.pyclewn_cmds.update({'foldvar':()})
-        self.globaal = GlobalSetup(self.pgm)
-        self.__class__.cmds = self.globaal.cmds
-        self.__class__.pyclewn_cmds = application.Application.pyclewn_cmds
+        self.globaal = GlobalSetup(self.pgm, self.pyclewn_cmds)
+        self.cmds = self.globaal.cmds
         self.results = gdbmi.Result()
         self.oob_list = gdbmi.OobList(self)
         self.cli = gdbmi.CliCommand(self)

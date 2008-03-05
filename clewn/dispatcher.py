@@ -448,10 +448,11 @@ class Dispatcher(object):
         else: return ''
 
     def __str__(self):
-        return '\n'                                                     \
-            + self.pprint('options', self.options)                      \
-            + self.pprint('netbeans', self.nbsock)                      \
-            + self.pprint('application %s' % self.clss.__name__, self.app)
+        str = '\n%s%s' % (self.pprint('options', self.options),
+                            self.pprint('netbeans', self.nbsock))
+        if self.app is not None:
+            str += 'application %s:\n%s\n' % (self.clss.__name__, self.app)
+        return str
 
 
 if __name__ == "__main__":

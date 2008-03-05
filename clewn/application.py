@@ -69,6 +69,7 @@ import os.path
 import re
 import pprint
 import string
+import copy
 
 import clewn
 import misc
@@ -372,18 +373,20 @@ class Application(object):
             the option requires a parameter when this attribute is not None
         metavar: str
             see the python standard optparse module: 'Generating help'
+
+    Instance attributes:
         cmds: dict
             dictionary of commands: first argument completion value
             a command value can be:
                 () or []: no completion
                 a non empty list or tuple: first argument list
                 anything else: file name completion on the first argument
+        pyclewn_cmds: dict
+            the subset of 'cmds' that are pyclewn specific commands
         mapkeys: dict
             dictionary of vim key: tuple (command, comment):
                 command is the command mapped to the key
                 comment is an optional comment
-
-    Instance attributes:
         pgm: str or None
             the application command or pathname
         arglist: list or None
@@ -413,23 +416,21 @@ class Application(object):
     param = None        # the option parameter
     metavar = None      # see the optparse python module
 
-    cmds = {
-        'dbgvar':(),
-        'delvar':(),
-        'dumprepr':(),
-        'help':(),
-        'mapkeys':(),
-        'sigint':(),
-        'symcompletion':(),
-        'unmapkeys':(),
-    }
-    pyclewn_cmds = cmds
-
-    # dictionary of vim key: tuple (command, comment)
-    mapkeys = {}
-
     def __init__(self, nbsock, daemon=False, pgm=None, arglist=None):
         """Initialize instance variables and the prompt."""
+        self.cmds = {
+            'dbgvar':(),
+            'delvar':(),
+            'dumprepr':(),
+            'help':(),
+            'mapkeys':(),
+            'sigint':(),
+            'symcompletion':(),
+            'unmapkeys':(),
+        }
+        self.pyclewn_cmds = self.cmds
+        self.mapkeys = {}
+
         self.pgm = pgm
         self.arglist = arglist
         self.nbsock = nbsock
@@ -587,13 +588,12 @@ class Application(object):
         """Print debugging information on netbeans and the application."""
         self.console_print(
                 'netbeans:\n%s\n' % pprint.pformat(self.nbsock.__dict__)
-                + '%s:\n%s\n' % (self.__class__.__name__.lower(),
-                                        pprint.pformat(self.__dict__)))
+                + '%s:\n%s\n' % (self.__class__.__name__.lower(), self))
         self.prompt()
 
     def cmd_help(self, *args):
         """Print help on the pyclewn specific commands."""
-        for cmd in sorted(self.__class__.pyclewn_cmds):
+        for cmd in sorted(self.pyclewn_cmds):
             if cmd:
                 method = getattr(self, 'cmd_%s' % cmd)
                 self.console_print('%s -- %s\n', cmd,
@@ -805,4 +805,11 @@ class Application(object):
             f.close()
         except IOError:
             critical('reading %s', path); raise
+
+    def __str__(self):
+        shallow = copy.copy(self.__dict__)
+        for name in ('cmds', 'pyclewn_cmds', 'mapkeys'):
+            if shallow.has_key(name):
+                del shallow[name]
+        return pprint.pformat(shallow)
 

@@ -225,7 +225,7 @@ class Simple(application.Application):
 
     # list of key mappings, used to build the .pyclewn_keys.simple file
     #     key : (mapping, comment)
-    mapkeys = {
+    simple_mapkeys = {
         'C-B' : ('break ${fname}:${lnum}',
                     'set breakpoint at current line'),
         'C-E' : ('clear ${fname}:${lnum}',
@@ -242,7 +242,8 @@ class Simple(application.Application):
     def __init__(self, nbsock, daemon, pgm, arglist):
         """Constructor."""
         application.Application.__init__(self, nbsock, daemon)
-        application.Application.cmds.update(self.simple_cmds)
+        self.cmds.update(self.simple_cmds)
+        self.mapkeys.update(self.simple_mapkeys)
         self.bp_id = 0
         self.inferior = None
         self.step_bufname = None
