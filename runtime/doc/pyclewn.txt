@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 March 1
+*pyclewn.txt*                                   Last change: 2008 March 8
 
 
                             PYCLEWN USER MANUAL
@@ -245,14 +245,15 @@ asynchronously (as this is the case with gdb).  For example: >
 
     :Cfile /path/to/foobar | sleep 200m | Cbreak main
 
+Note:
 Quotes and backslashes must be escaped on vim command line. For example, to
-print a string in gdb: >
+print foo with a string as first argument to the foo function: >
 
-    :Cprint \"foobar\"
+    :Cprint foo(\"foobar\", 1)
 
-And to print a string including a new line: >
+And to do the same thing with the string including a new line: >
 
-    :Cprint \"foobar\\n\"
+    :Cprint foo(\"foobar\\n\", 1)
 
 
 Completion:
@@ -457,19 +458,6 @@ pyclewn command.
 To minimize the number of loaded symbols and to avoid fetching the shared
 libraries symbols, run the Csymcompletion command after the file is loaded
 with the gdb <file> command, and before the program is run.
-
-
-Known limitations:
-------------------
-    * The frame sign is not turned off after a user-defined command, when the
-      command includes a <continue> statement for example.
-
-    * When the program being debugged stops while in a function called from
-      gdb (for example after using the gdb <print> command on the function
-      (foo) where a breakpoint is set). When the function (foo) is done
-      executing, pyclewn incorrectly does not show the frame sign.
-      In this case, to display the frame sign, one must run the gdb <frame>
-      command.
 
 
 ==============================================================================

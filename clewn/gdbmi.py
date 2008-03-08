@@ -69,19 +69,14 @@ from misc import (
 
 VAROBJ_FMT = '%%(name)-%ds: (%%(type)-%ds) %%(exp)-%ds %%(chged)s %%(value)s\n'
 
-# beakpoint commands are also triggered on a frame event
-BREAKPOINT_CMDS = (
-    'b', 'tbreak', 'hbreak', 'thbreak', 'rbreak',
-    'clear', 'delete',
-    'disable', 'enable',
-    'source')
+BREAKPOINT_CMDS = ()
+FILE_CMDS = ()
+FRAME_CMDS = ()
+VARUPDATE_CMDS = ()
 
 DIRECTORY_CMDS = (
     'directory',
     'source')
-
-# frame commands are triggered on a frame event
-FRAME_CMDS = ()
 
 SOURCE_CMDS = (
     'r', 'start',
@@ -867,8 +862,6 @@ class OobCommand(Command):
         trigger_prefix: set
             set of the trigger_list command prefixes built from the
             trigger_list and the list of gdb commands
-        frame_trigger: boolean
-            True when a frame event triggers the oob command
 
     """
 
@@ -892,8 +885,6 @@ class OobCommand(Command):
                 and isinstance(self.trigger_list, tuple)
         assert hasattr(self, 'reqkeys')                     \
                 and isinstance(self.reqkeys, set)
-        assert hasattr(self, 'frame_trigger')               \
-                and isinstance(self.frame_trigger, bool)
         self.trigger = False
 
         # build prefix list that triggers the command after being notified
@@ -901,11 +892,15 @@ class OobCommand(Command):
         self.trigger_prefix = set([misc.smallpref_inlist(x, keys)
                                                 for x in self.trigger_list])
 
-    def notify(self, cmd='', frame=False):
-        """Notify of the cmd being processed / of a frame event."""
-        if frame and self.frame_trigger:
-            self.trigger = True
-        if cmd and _any([cmd.startswith(x) for x in self.trigger_prefix]):
+    def notify(self, cmd):
+        """Notify of the cmd being processed.
+
+        The OobCommand is run when the trigger_list is empty, or when a
+        prefix of the notified command matches in the trigger_prefix list.
+
+        """
+        if not self.trigger_list or     \
+                _any([cmd.startswith(x) for x in self.trigger_prefix]):
             self.trigger = True
 
     def sendcmd(self):
@@ -982,7 +977,6 @@ Breakpoints =   \
                 'gdblist': True,
                 'action': 'update_breakpoints',
                 'trigger_list': BREAKPOINT_CMDS,
-                'frame_trigger': True,
             })
 
 Directories =    \
@@ -995,7 +989,6 @@ Directories =    \
                 'reqkeys': set(),
                 'gdblist': False,
                 'trigger_list': DIRECTORY_CMDS,
-                'frame_trigger': False,
             })
 
 File =    \
@@ -1007,8 +1000,7 @@ File =    \
                 'regexp': re_file,
                 'reqkeys': FILE_ATTRIBUTES,
                 'gdblist': False,
-                'trigger_list': FRAME_CMDS,
-                'frame_trigger': True,
+                'trigger_list': FILE_CMDS,
             })
 
 # Frame depends on, and is after File
@@ -1023,7 +1015,6 @@ Frame =    \
                 'gdblist': False,
                 'action': 'update_frame',
                 'trigger_list': FRAME_CMDS,
-                'frame_trigger': True,
             })
 
 Sources =   \
@@ -1036,7 +1027,6 @@ Sources =   \
                 'reqkeys': SOURCES_ATTRIBUTES,
                 'gdblist': True,
                 'trigger_list': SOURCE_CMDS,
-                'frame_trigger': False,
             })
 
 VarUpdate =    \
@@ -1049,7 +1039,6 @@ VarUpdate =    \
                 'reqkeys': VARUPDATE_ATTRIBUTES,
                 'gdblist': True,
                 'action': 'update_changelist',
-                'trigger_list': FRAME_CMDS,
-                'frame_trigger': True,
+                'trigger_list': VARUPDATE_CMDS,
             })
 

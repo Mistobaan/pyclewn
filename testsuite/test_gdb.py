@@ -443,8 +443,29 @@ class GdbTestCase(ClewnTestCase):
             ":1,$$w! >> ${test_out}\n"
             ':qa!\n',
 
-            "[+] var1: (map_t) map ={*} {...}\n"
+            "[+] var1: (map_t) map ={=} {...}\n"
             )
+
+    def test_watch_print(self):
+        """Watched variables are updated when changed with the print command"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':sleep ${time}\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Crun\n'
+            ':sleep ${time}\n'
+            ':Cdbgvar len\n'
+            ':sleep ${time}\n'
+            ':Cprint len=555\n'
+            ':sleep ${time}\n'
+            ":edit (clewn)_dbgvar | 1,$$w! >> ${test_out}\n"
+            ':qa!\n',
+
+            " *  var1: (int) len ={*} 555"
+            )
+
 
 def test_main():
     # run make on the testsuite
@@ -472,6 +493,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_varobj'))
     suite.addTest(GdbTestCase('test_varobj_hilite'))
     suite.addTest(GdbTestCase('test_tabedit_bug'))
+    suite.addTest(GdbTestCase('test_watch_print'))
     run_unittest(suite)
 
 if __name__ == '__main__':

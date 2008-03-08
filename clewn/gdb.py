@@ -540,15 +540,8 @@ class Gdb(application.Application, misc.ProcessChannel):
         if matchobj and annotation_lvl1 is None:
             self.stream_record.append(_unquote(matchobj.group(1)))
         else:
-            # notify the frame event
-            if annotation_lvl1 is not None:
-                # when processing the output of a non oob command
-                if self.oob is None:
-                    for oob in self.oob_list:
-                        oob.notify(frame=True)
-            else:
-                # ignore bad format
-                pass
+            # ignore bad format
+            pass
 
     def process_mi_record(self, matchobj):
         token = matchobj.group('token')
@@ -604,7 +597,7 @@ class Gdb(application.Application, misc.ProcessChannel):
                     self.console_print("%s\n", self.firstcmdline)
                     # notify each OobCommand instance
                     for oob in self.oob_list:
-                        oob.notify(cmd=self.firstcmdline)
+                        oob.notify(self.firstcmdline)
                     self.cli.sendcmd(self.firstcmdline)
                 self.firstcmdline = ''
 
@@ -679,7 +672,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         else:
             # notify each OobCommand instance of the cmd being processed
             for oob in self.oob_list:
-                oob.notify(cmd=cmd)
+                oob.notify(cmd)
             self.cli.sendcmd(self.curcmdline)
 
     def cmd_help(self, *args):
