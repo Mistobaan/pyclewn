@@ -761,5 +761,6 @@ class Gdb(application.Application, misc.ProcessChannel):
     def balloon_text(self, text):
         """Process a netbeans balloonText event."""
         application.Application.balloon_text(self, text)
-        gdbmi.ShowBalloon(self, text).sendcmd()
+        if self.info.frame:
+            gdbmi.ShowBalloon(self, text).sendcmd()
 
