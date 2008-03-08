@@ -494,6 +494,22 @@ class Gdb(application.Application, misc.ProcessChannel):
         if self.gotprmpt:   # print prompt only after gdb has started
             application.Application.prompt(self)
 
+    def update_dbgvarbuf(self):
+        """Update the variables buffer and set the cursor when needed."""
+        # race condition: must note the state of the buffer before
+        # updating the buffer, since this will change its visible state
+        # temporarily
+        dbgvarbuf = self.nbsock.dbgvarbuf
+        visible = dbgvarbuf.visible
+        lnum = dbgvarbuf.foldlnum
+        if self.info.varobj.dirty or dbgvarbuf.dirty:
+            dbgvarbuf.update(self.info.varobj.collect())
+            # set the cursor on the current fold when visible
+            if lnum is not None and visible:
+                self.nbsock.send_cmd(dbgvarbuf.buf, 'setDot', '%d/0' % lnum)
+        if lnum is not None:
+            dbgvarbuf.foldlnum = None
+
     def handle_line(self, line):
         """Process the line received from gdb."""
         if self.fileasync is None:
@@ -578,11 +594,7 @@ class Gdb(application.Application, misc.ProcessChannel):
                         break
             except StopIteration:
                 self.oob = None
-
-                # update the var buffer
-                if self.info.varobj.dirty or self.nbsock.dbgvarbuf.dirty:
-                    self.nbsock.dbgvarbuf.update(self.info.varobj.collect())
-
+                self.update_dbgvarbuf()
                 t = _timer()
                 info('oob commands execution: %f second'
                                             % (t - self.time))
@@ -733,6 +745,7 @@ class Gdb(application.Application, misc.ProcessChannel):
                 # expand
                 else:
                     gdbmi.ListChildrenCommand(self, varobj).sendcmd()
+                self.nbsock.dbgvarbuf.foldlnum = lnum
                 return
             else:
                 error = 'Not a valid line number.'

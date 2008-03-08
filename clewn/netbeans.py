@@ -407,6 +407,8 @@ class DebuggerVarBuffer(ClewnBuffer):
     Instance attributes:
         linelist: list
             the vim buffer content as a sequence of newline terminated strings
+        foldlnum: int
+            line number of the current fold operation
         differ: difflib.Differ
             a differ object to compare two sequences of lines
 
@@ -415,6 +417,7 @@ class DebuggerVarBuffer(ClewnBuffer):
     def __init__(self, nbsock):
         ClewnBuffer.__init__(self, VARIABLES_BUFFER, nbsock)
         self.linelist = []
+        self.foldlnum = None
         self.differ = difflib.Differ()
 
     def append(self, msg):
@@ -792,6 +795,8 @@ class Netbeans(asynchat.async_chat):
             if os.path.isabs(pathname) or clewnbuf:
                 if clewnbuf:
                     buf = self.app._bset[os.path.basename(pathname)]
+                    if buf.editport is not None:
+                        buf.editport.visible = True
                 else:
                     buf = self.app._bset[pathname]
 

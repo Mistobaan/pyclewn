@@ -99,6 +99,8 @@ augroup clewn
 """
     autocmd BufWinEnter ${console} silent! nbkey ClewnBuffer.Console.open
     autocmd BufWinLeave ${console} silent! nbkey ClewnBuffer.Console.close
+    autocmd BufWinEnter ${variables} silent! nbkey ClewnBuffer.DebuggerVarBuffer.open
+    autocmd BufWinLeave ${variables} silent! nbkey ClewnBuffer.DebuggerVarBuffer.close
     autocmd BufWinEnter ${variables} silent! setlocal syntax=dbgvar
     autocmd BufNew * silent! call s:getfilevt()
 augroup END
