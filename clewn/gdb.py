@@ -580,7 +580,7 @@ class Gdb(application.Application, misc.ProcessChannel):
                 self.oob = None
 
                 # update the var buffer
-                if self.info.varobj.dirty:
+                if self.info.varobj.dirty or self.nbsock.dbgvarbuf.dirty:
                     self.nbsock.dbgvarbuf.update(self.info.varobj.collect())
 
                 t = _timer()

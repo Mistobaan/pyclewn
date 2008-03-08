@@ -324,8 +324,12 @@ class ClewnBuffer(object):
             the netbeans socket
         visible: boolean
             when True, the buffer is displayed in a Vim window
+        nonempty_last: boolean
+            when True, the last line in the vim buffer is non empty
         len: int
             buffer length
+        dirty: boolean
+            when True, must update the vim buffer
 
     """
 
@@ -336,7 +340,9 @@ class ClewnBuffer(object):
         self.buf.editport = self
         self.nbsock = nbsock
         self.visible = False
+        self.nonempty_last = False
         self.len = 0
+        self.dirty = False
 
     def register(self):
         """Register the buffer with netbeans vim."""
@@ -349,24 +355,35 @@ class ClewnBuffer(object):
         """Append text to the end of the editport."""
         if not self.buf.registered:
             return
+        if self.nonempty_last:
+            self.nonempty_last = False
+            self.len -= 1
         self.nbsock.send_cmd(self.buf, 'setReadOnly', 'F')
         self.nbsock.send_function(self.buf, 'insert',
                                     '%s %s' % (str(self.len), _quote(msg)))
         self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
+        if not msg.endswith('\n'):
+            self.nonempty_last = True
+            self.len += 1
         self.len += len(msg)
 
         # show the last line if the buffer is displayed in a gvim window
         if self.visible:
             self.nbsock.send_cmd(self.buf, 'setDot', str(self.len - 1))
 
+    def update(self):
+        self.dirty = False
+
     def clear(self):
         """Empty the editport."""
-        self.len = 0
         if not self.buf.registered:
             return
-        self.nbsock.send_cmd(self.buf, 'setReadOnly', 'F')
-        self.nbsock.send_function(self.buf, 'remove', '0 ' + str(self.len))
-        self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
+        if self.len:
+            self.nbsock.send_cmd(self.buf, 'setReadOnly', 'F')
+            self.nbsock.send_function(self.buf, 'remove', '0 ' + str(self.len))
+            self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
+            self.nonempty_last = False
+            self.len = 0
 
     def eofprint(self, msg, *args):
         self.nbsock.send_cmd(None, 'startAtomic')
@@ -411,6 +428,7 @@ class DebuggerVarBuffer(ClewnBuffer):
 
     def update(self, content):
         """Update the vim buffer with the new content."""
+        self.dirty = False
         if not self.buf.registered:
             return
 
@@ -484,6 +502,16 @@ class Reply(object):
         self.seqno = seqno
         self.nbsock = nbsock
 
+    def clear_onerror(self, err):
+        """Clear the clewn buffer on error in the reply."""
+        clewnbuffer = self.buf.editport
+        assert clewnbuffer is not None
+        clewnbuffer.dirty = True
+        clewnbuffer.clear()
+        err += '\nThe buffer will be restored on the next gdb command.'
+        self.nbsock.show_balloon(err)
+        error(err)
+
     def __call__(self, seqno, string, arg_list):
         """Process the netbeans reply."""
         raise NotImplementedError('must be implemented in subclass')
@@ -492,21 +520,35 @@ class insertReply(Reply):
     """Check the reply to an insert function."""
 
     def __call__(self, seqno, string, arg_list):
-        error = None
         if seqno != self.seqno:
-             error = 'invalid sequence number on editing %s' % self.buf.name
+             error('%s: invalid sequence number on edit', self.buf.name)
+             return
         if len(arg_list):
-            error = 'error when editing %s: %s' % (self.buf.name,
-                                                        ' '.join(arg_list))
-        if error:
-            self.nbsock.show_balloon('\n  %s  \n' % error)
-            warning(error)
-            if self.buf.editport:
-                self.buf.editport.clear()
+            err = '%s: got edit error from netbeans: %s' %      \
+                            (self.buf.name, ' '.join(arg_list))
+            self.nbsock.send_function(self.buf, 'getLength')
+            self.clear_onerror(err)
 
-class removeReply(insertReply):
-    """Check the reply to a remove function."""
-    pass
+# Check the reply to a remove function.
+removeReply = insertReply
+
+class getLengthReply(Reply):
+    """Check the reply to a getLength function."""
+
+    def __call__(self, seqno, string, arg_list):
+        if seqno != self.seqno:
+            error('%s: invalid sequence number on getLength', self.buf.name)
+            return
+        clewnbuffer = self.buf.editport
+        assert clewnbuffer is not None
+        assert len(arg_list) == 1
+        length = int(arg_list[0])
+        if clewnbuffer.len != length:
+            err= '%s: invalid buffer length.\n'     \
+                 '(pyclewn:%d - vim: %d)' %         \
+                 (self.buf.name, clewnbuffer.len, length)
+            clewnbuffer.len = length
+            self.clear_onerror(err)
 
 class Server(asyncore.dispatcher):
     """Accept a connection on the netbeans port
@@ -761,6 +803,8 @@ class Netbeans(asynchat.async_chat):
                         buf.update()
                     else:
                         warning('got fileOpened with wrong bufId')
+                elif clewnbuf and not isinstance(buf.editport, Console):
+                    self.send_function(buf, 'getLength')
 
                 if not buf.editport or not isinstance(buf.editport, Console):
                     self.last_buf = buf

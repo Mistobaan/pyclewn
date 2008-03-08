@@ -424,6 +424,28 @@ class GdbTestCase(ClewnTestCase):
             " *  var1: (int) i ={-} 1\n"
             )
 
+    def test_tabedit_bug(self):
+        """Check robustness against vim 'tabedit (clewn)_dbgvar' bug"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':sleep ${time}\n'
+            ':Cbreak foo\n'
+            ':sleep ${time}\n'
+            ':Crun\n'
+            ':sleep ${time}\n'
+            ':Cdbgvar map\n'
+            ':sleep ${time}\n'
+            ":edit (clewn)_dbgvar\n"
+            ":tabedit (clewn)_dbgvar\n"
+            ':Cshow annotate\n'
+            ':sleep ${time}\n'
+            ":1,$$w! >> ${test_out}\n"
+            ':qa!\n',
+
+            "[+] var1: (map_t) map ={*} {...}\n"
+            )
+
 def test_main():
     # run make on the testsuite
     check_call(['make', '-C', 'testsuite'])
@@ -449,6 +471,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_break_completion'))
     suite.addTest(GdbTestCase('test_varobj'))
     suite.addTest(GdbTestCase('test_varobj_hilite'))
+    suite.addTest(GdbTestCase('test_tabedit_bug'))
     run_unittest(suite)
 
 if __name__ == '__main__':
