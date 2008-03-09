@@ -27,7 +27,7 @@ import os
 import subprocess
 import re
 import string
-from timeit import default_timer as _timer
+import time
 
 import gdbmi
 import misc
@@ -36,6 +36,13 @@ from misc import (
         unquote as _unquote,
         )
 import clewn.application as application
+
+if sys.platform == "win32":
+    # On Windows, the best timer is time.clock()
+    _timer = time.clock
+else:
+    # On most other platforms the best timer is time.time()
+    _timer = time.time
 
 # gdb initial settings
 GDB_INIT = """
@@ -385,6 +392,9 @@ class Gdb(application.Application, misc.ProcessChannel):
             temporary file containing the gdb initialisation script
         time: float
             time of the startup of the sequence of oob commands
+        multiple_choice: float
+            time value, keeping track of a breakpoint multiple choice setting
+            on an overloaded class method
 
     """
 
@@ -446,6 +456,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         self.token = ''
         self.curcmdline = ''
         self.firstcmdline = None
+        self.multiple_choice = 0
 
     def getargv(self):
         """Return the gdb argv list."""
@@ -495,6 +506,12 @@ class Gdb(application.Application, misc.ProcessChannel):
         if self.gotprmpt:   # print prompt only after gdb has started
             application.Application.prompt(self)
 
+    def timer(self):
+        """Set all breakpoints on a multiple choice after a timeout."""
+        if self.multiple_choice and _timer() - self.multiple_choice > 0.500:
+            self.multiple_choice = 0
+            self.write('1\n')
+
     def update_dbgvarbuf(self):
         """Update the variables buffer and set the cursor when needed."""
         # race condition: must note the state of the buffer before
@@ -522,6 +539,9 @@ class Gdb(application.Application, misc.ProcessChannel):
             return
 
         # gdb/mi stream record
+        if line.startswith('> ~"'):
+            # remove the '> ' prompt after a multiple choice
+            line = line[2:]
         if line[0] in '~@&':
             self.process_stream_record(line)
         else:
@@ -539,7 +559,14 @@ class Gdb(application.Application, misc.ProcessChannel):
         matchobj = re_quoted.match(line[1:])
         annotation_lvl1 = re_anno_1.match(line)
         if matchobj and annotation_lvl1 is None:
-            self.stream_record.append(_unquote(matchobj.group(1)))
+            line = _unquote(matchobj.group(1))
+            if (not self.stream_record and line == '[0] cancel\n[1] all\n') \
+                    or (not self.multiple_choice                            \
+                            and len(self.stream_record) == 1                \
+                            and self.stream_record[0] == '[0] cancel\n'     \
+                            and line.startswith('[1] all\n')):
+                self.multiple_choice = _timer()
+            self.stream_record.append(line)
         else:
             # ignore bad format
             pass
@@ -576,6 +603,7 @@ class Gdb(application.Application, misc.ProcessChannel):
                 error('all cmds have not been processed in results')
                 self.results.clear()
             self.gotprmpt = True
+            self.multiple_choice = 0
             self.prompt()
 
         # send the next oob command

@@ -560,6 +560,10 @@ class Application(object):
     def prompt(self):
         self.console_print(self.prompt_str)
 
+    def timer(self):
+        """Handle a timer event sent from the dispatch loop."""
+        pass
+
     #-----------------------------------------------------------------------
     #   commands
     #-----------------------------------------------------------------------

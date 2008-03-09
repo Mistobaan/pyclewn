@@ -494,6 +494,30 @@ class GdbTestCase(ClewnTestCase):
             '    line=23  id=2  name=1\n'
             )
 
+    def test_multiple_choice(self):
+        """Set automatically all breakpoints on a multiple choice"""
+        self.cltest_redir(
+            ':edit testsuite/overloaded.cc\n'
+            ':Cfile testsuite/overloaded\n'
+            ':sleep ${time}\n'
+            ':Cbreak A::test\n'
+            ':sleep ${time}\n'
+            ':sleep ${time}\n'
+            ':sleep ${time}\n'
+            ':sleep ${time}\n'
+            ':sleep ${time}\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            '--- Signs ---\n'
+            'Signs for testsuite/overloaded.cc:\n'
+            '    line=3  id=2  name=1\n'
+            '    line=4  id=3  name=1\n'
+            '    line=5  id=1  name=1\n'
+            )
+
 
 def test_main():
     # run make on the testsuite
@@ -523,6 +547,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_tabedit_bug'))
     suite.addTest(GdbTestCase('test_watch_print'))
     suite.addTest(GdbTestCase('test_frame_print'))
+    suite.addTest(GdbTestCase('test_multiple_choice'))
     run_unittest(suite)
 
 if __name__ == '__main__':

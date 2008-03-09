@@ -377,6 +377,7 @@ class Dispatcher(object):
                 info('new "%s" instance', self.clss.__name__.lower())
 
             asyncore.poll(timeout=.100, map=map)
+            self.app.timer()
 
     def register(self, clss):
         """Register an application."""

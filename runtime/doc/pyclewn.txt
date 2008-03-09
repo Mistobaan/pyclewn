@@ -356,31 +356,6 @@ When gdb is started, it automatically executes commands from its
 init files, normally called '.gdbinit'. See gdb documentation.
 
 
-List of illegal gdb commands:
------------------------------
-The following gdb commands cannot be run from pyclewn:
-
-        commands
-        complete
-        define
-        edit
-        end
-        set annotate
-        set confirm
-        set height
-        set width
-        shell
-
-The <define> command is not allowed. To build gdb user-defined commands in
-pyclewn, edit the commands in a temporary file with vim, and load the
-commands into gdb by using the gdb <source> command on this file.
-
-The <commands> command is not allowed. To give a breakpoint a series of
-commands to execute when the debuggee stops due to that breakpoint, edit the
-commands in a temporary file with vim, and load the commands into gdb by using
-the gdb <source> command on this file.
-
-
 Debuggee standard input and output:
 -----------------------------------
 When pyclewn is started from a terminal and not as a daemon, the standard
@@ -462,6 +437,37 @@ with the gdb <file> command, and before the program is run.
 Note: The <break> and <clear> filename completion is not the same as gdb file
 name completion for these two commands. Gdb uses the symbols found in the
 program file to debug, while pyclewn uses only the file system.
+
+
+Limitations:
+------------
+The <define> command is not allowed. To build gdb user-defined commands in
+pyclewn, edit the commands in a temporary file with vim, and load the
+commands into gdb by using the gdb <source> command on this file.
+
+The <commands> command is not allowed. To give a breakpoint a series of
+commands to execute when the debuggee stops due to that breakpoint, edit the
+commands in a temporary file with vim, and load the commands into gdb by using
+the gdb <source> command on this file.
+
+When setting breakpoints on an overloaded method, pyclewn bypasses the gdb
+prompt for the multiple choice and sets automatically all breakpoints.
+
+
+List of illegal gdb commands:
+-----------------------------
+The following gdb commands cannot be run from pyclewn:
+
+        commands
+        complete
+        define
+        edit
+        end
+        set annotate
+        set confirm
+        set height
+        set width
+        shell
 
 
 ==============================================================================
