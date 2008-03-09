@@ -466,6 +466,34 @@ class GdbTestCase(ClewnTestCase):
             " *  var1: (int) len ={*} 555"
             )
 
+    def test_frame_print(self):
+        """Returning to the correct frame location after a print command"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':sleep ${time}\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Cbreak foo\n'
+            ':sleep ${time}\n'
+            ':Crun\n'
+            ':sleep ${time}\n'
+            r':Cprint foo(\"toto\", 1)\n'
+            ':sleep ${time}\n'
+            ':Ccontinue\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            '--- Signs ---\n'
+            'Signs for testsuite/foobar.c:\n'
+            '    line=9  id=3  name=3\n'
+            '    line=9  id=1  name=1\n'
+            'Signs for /home/xavier/src/pyclewn_wa/trunk/pyclewn/testsuite/foo.c:\n'
+            '    line=23  id=2  name=1\n'
+            )
+
 
 def test_main():
     # run make on the testsuite
@@ -494,6 +522,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_varobj_hilite'))
     suite.addTest(GdbTestCase('test_tabedit_bug'))
     suite.addTest(GdbTestCase('test_watch_print'))
+    suite.addTest(GdbTestCase('test_frame_print'))
     run_unittest(suite)
 
 if __name__ == '__main__':

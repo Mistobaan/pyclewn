@@ -396,8 +396,13 @@ class Info(object):
         if hide:
             self.frame = {}
         if self.frame and isinstance(self.frame, dict):
-            pathname = self.get_fullpath(self.file['fullname'])
             line = int(self.frame['line'])
+            fullname = self.file['fullname']
+            file = self.frame['file']
+            if os.path.basename(fullname) == file:
+                file = fullname
+            pathname = self.get_fullpath(file)
+
             if pathname is not None:
                 frameloc = {'pathname':pathname, 'lnum':line}
                 # do it only when frame location has changed
