@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 March 8
+*pyclewn.txt*                                   Last change: 2008 March 9
 
 
                             PYCLEWN USER MANUAL
@@ -458,6 +458,10 @@ pyclewn command.
 To minimize the number of loaded symbols and to avoid fetching the shared
 libraries symbols, run the Csymcompletion command after the file is loaded
 with the gdb <file> command, and before the program is run.
+
+Note: The <break> and <clear> filename completion is not the same as gdb file
+name completion for these two commands. Gdb uses the symbols found in the
+program file to debug, while pyclewn uses only the file system.
 
 
 ==============================================================================
