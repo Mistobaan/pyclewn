@@ -250,6 +250,7 @@ class GlobalSetup(misc.Singleton):
         'attach', 'detach', 'kill',
         'run', 'start', 'continue', 'fg', 'step', 'next', 'finish', 'until', 'advance',
         'jump', 'signal', 'return',
+        'file', 'exec-file', 'core-file',
         )
     illegal_setargs = (
         'annotate',
