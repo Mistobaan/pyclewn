@@ -64,6 +64,7 @@ re_clewname = re.compile(RE_CLEWNAME, re.VERBOSE)
 (critical, error, warning, info, debug) = misc.logmethods('nb')
 logger = logging.getLogger('nb')
 def debug(msg, *args, **kwargs):
+    """Force NBDEBUG log level for debug messages."""
     logger.log(misc.NBDEBUG, msg, *args, **kwargs)
 
 def evt_ignore(buf_id, string, arg_list):
@@ -75,7 +76,7 @@ def parse_msg(msg):
 
     Return the (None,) tuple or the tuple:
         is_event: boolean
-            True: an event - False: a reply - None: an error
+            True: an event - False: a reply
         buf_id: int
             netbeans buffer number
         event: string
@@ -100,7 +101,7 @@ def parse_msg(msg):
         matchobj = re_response.match(msg)
     if not matchobj:
         error('discarding invalid netbeans message: "%s"', msg)
-        return None,
+        return (None,)
 
     seqno = matchobj.group('seqno')
     args = matchobj.group('args').strip()
@@ -156,6 +157,7 @@ class Buffer(dict):
     """
 
     def __init__(self, name, buf_id, nbsock):
+        """Constructor."""
         self.__name = name
         self.buf_id = buf_id
         self.nbsock = nbsock
@@ -225,8 +227,10 @@ class Buffer(dict):
                 self[anno_id].remove_anno()
 
     # readonly property
-    def getname(self): return self.__name
-    name = property(getname, None, None, 'buffer full path name')
+    def getname(self):
+        """Buffer full path name."""
+        return self.__name
+    name = property(getname, None, None, getname.__doc__)
 
 class Annotation(object):
     """A netbeans annotation.
@@ -249,6 +253,7 @@ class Annotation(object):
     """
 
     def __init__(self, buf, lnum, nbsock, disabled=False):
+        """Constructor."""
         self.buf = buf
         self.lnum = lnum
         self.nbsock = nbsock
@@ -278,6 +283,7 @@ class Annotation(object):
         self.is_set = False
 
     def __repr__(self):
+        """Return breakpoint information."""
         state = 'enabled'
         if self.disabled:
             state = 'disabled'
@@ -288,12 +294,17 @@ class FrameAnnotation(misc.Singleton, Annotation):
 
     def init(self, buf, lnum, nbsock):
         """Singleton initialisation."""
+        unused = buf
+        unused = lnum
+        self.disabled = False
         self.sernum = nbsock.last_sernum
         self.nbsock = nbsock
 
     def __init__(self, buf, lnum, nbsock):
+        """Constructor."""
         self.buf = buf
         self.lnum = lnum
+        unused = nbsock
         self.disabled = False
         self.is_set = False
         # this happens when running regtests
@@ -303,6 +314,7 @@ class FrameAnnotation(misc.Singleton, Annotation):
 
     def update(self, disabled=False):
         """Update the annotation."""
+        unused = disabled
         if not self.is_set:
             typeNum = self.buf.define_frameanno()
             self.nbsock.send_cmd(self.buf, 'addAnno', '%d %d %d/0 -1'
@@ -312,6 +324,7 @@ class FrameAnnotation(misc.Singleton, Annotation):
             self.is_set = True
 
     def __repr__(self):
+        """Return frame information."""
         return 'frame at line %d' % self.lnum
 
 class ClewnBuffer(object):
@@ -334,6 +347,7 @@ class ClewnBuffer(object):
     """
 
     def __init__(self, name, nbsock):
+        """Constructor."""
         assert is_clewnbuf(name)
         self.buf = nbsock.app._bset[name]
         self.buf.registered = False
@@ -371,7 +385,9 @@ class ClewnBuffer(object):
         if self.visible:
             self.nbsock.send_cmd(self.buf, 'setDot', str(self.len - 1))
 
-    def update(self):
+    def update(self, content):
+        """Update the buffer content in Vim."""
+        unused = content
         self.dirty = False
 
     def clear(self):
@@ -386,6 +402,7 @@ class ClewnBuffer(object):
             self.len = 0
 
     def eofprint(self, msg, *args):
+        """Print a end of buffer and restore previous cursor position."""
         self.nbsock.send_cmd(None, 'startAtomic')
         if args:
             msg = msg % args
@@ -398,6 +415,7 @@ class Console(ClewnBuffer):
     """The clewn console."""
 
     def __init__(self, nbsock):
+        """Constructor."""
         ClewnBuffer.__init__(self, CONSOLE, nbsock)
         self.visible = True
 
@@ -415,17 +433,20 @@ class DebuggerVarBuffer(ClewnBuffer):
     """
 
     def __init__(self, nbsock):
+        """Constructor."""
         ClewnBuffer.__init__(self, VARIABLES_BUFFER, nbsock)
         self.linelist = []
         self.foldlnum = None
         self.differ = difflib.Differ()
 
     def append(self, msg):
+        """Append 'msg' to the end of the buffer."""
         assert msg.endswith('\n')
-        ClewnBuffer.append(self)
+        ClewnBuffer.append(self, msg)
         self.linelist.extend(msg.splitlines(1))
 
     def clear(self):
+        """Clear the buffer."""
         ClewnBuffer.clear(self)
         self.linelist = []
 
@@ -501,6 +522,7 @@ class Reply(object):
     """
 
     def __init__(self, buf, seqno, nbsock):
+        """Constructor."""
         self.buf = buf
         self.seqno = seqno
         self.nbsock = nbsock
@@ -517,12 +539,18 @@ class Reply(object):
 
     def __call__(self, seqno, string, arg_list):
         """Process the netbeans reply."""
+        unused = self
+        unused = seqno
+        unused = string
+        unused = arg_list
         raise NotImplementedError('must be implemented in subclass')
 
 class insertReply(Reply):
     """Check the reply to an insert function."""
 
     def __call__(self, seqno, string, arg_list):
+        """Check the reply to an insert or remove netbeans function."""
+        unused = string
         if seqno != self.seqno:
              error('%s: invalid sequence number on edit', self.buf.name)
              return
@@ -539,6 +567,8 @@ class getLengthReply(Reply):
     """Check the reply to a getLength function."""
 
     def __call__(self, seqno, string, arg_list):
+        """Check the length of the Vim buffer."""
+        unused = string
         if seqno != self.seqno:
             error('%s: invalid sequence number on getLength', self.buf.name)
             return
@@ -562,26 +592,38 @@ class Server(asyncore.dispatcher):
     """
 
     def __init__(self, nb):
+        """Constructor."""
         asyncore.dispatcher.__init__(self)
         self._nb = nb
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def handle_error(self):
+        """Raise the exception."""
+        unused = self
         raise
 
     def handle_expt(self):
-        raise NotImplementedError('unhandled exception in server')
+        """We are not listening on exceptional conditions."""
+        unused = self
+        assert False, 'unhandled exceptional condition'
 
     def handle_read(self):
-        raise NotImplementedError('unhandled read event in server')
+        """Not implementd."""
+        unused = self
+        assert False, 'unhandled read event in server'
 
     def handle_write(self):
-        raise NotImplementedError('unhandled write event in server')
+        """Not implementd."""
+        unused = self
+        assert False, 'unhandled write event in server'
 
     def handle_connect(self):
-        raise NotImplementedError('unhandled connect event in server')
+        """Not implementd."""
+        unused = self
+        assert False, 'unhandled connect event in server'
 
     def handle_accept(self):
+        """Accept the connection from Vim."""
         try:
             conn, addr = self.socket.accept()
             conn.setblocking(0)
@@ -593,9 +635,11 @@ class Server(asyncore.dispatcher):
             critical('error accepting a connection on the server socket'); raise
 
     def handle_close(self):
-        raise NotImplementedError('unhandled close event in server')
+        """Handle an asyncore close event."""
+        unused = self
+        assert False, 'unhandled close event in server'
 
-class Netbeans(asynchat.async_chat):
+class Netbeans(asynchat.async_chat, object):
     """A Netbeans instance exchanges netbeans messages on a socket.
 
     Instance attributes:
@@ -631,6 +675,7 @@ class Netbeans(asynchat.async_chat):
     """
 
     def __init__(self):
+        """Constructor."""
         asynchat.async_chat.__init__(self, None)
 
         self.__last_sernum = 0
@@ -651,9 +696,10 @@ class Netbeans(asynchat.async_chat):
         self.set_terminator('\n')
 
     def set_application(self, application):
+        """Notify of the current application."""
         self.app = application
 
-    def listen(self, host, port, passwd):
+    def nb_listen(self, host, port, passwd):
         """Have the server socket listen on the netbeans port."""
         self.passwd = passwd
         try:
@@ -669,6 +715,7 @@ class Netbeans(asynchat.async_chat):
             critical('cannot listen on "(%s, %s)"', host, port); raise
 
     def close(self):
+        """Close netbeans the server and the application."""
         try:
             self.server.close()
             asynchat.async_chat.close(self)
@@ -681,23 +728,32 @@ class Netbeans(asynchat.async_chat):
             self.app.close()
 
     def handle_error(self):
+        """Raise the exception."""
+        unused = self
         raise
 
     def handle_expt(self):
-        raise NotImplementedError('unhandled exception')
+        """We are not listening on exceptional conditions."""
+        unused = self
+        assert False, 'unhandled exceptional condition'
 
     def handle_connect(self):
-        pass
+        """Not implemented."""
+        unused = self
 
     def handle_accept(self):
-        raise NotImplementedError('unhandled accept event')
+        """Not implemented."""
+        unused = self
+        assert False, 'unhandled accept event'
 
     def handle_close(self):
+        """Handle an async_chat close event."""
         info('netbeans socket disconnected')
         self.ready = False
         self.close()
 
     def collect_incoming_data(self, data):
+        """Process async_chat received data."""
         self.ibuff.append(data)
 
     def found_terminator(self):
@@ -719,12 +775,15 @@ class Netbeans(asynchat.async_chat):
                 (lambda a, b=None, c=None, d=None, e=None, f=None:
                             (a, b, c, d, e, f))(*parse_msg(msg))
 
-        if is_event:
+        if is_event is None:
+            # ignore invalid message
+            pass
+        elif is_event:
             evt_handler = getattr(self, "evt_%s" % event, evt_ignore)
             evt_handler(buf_id, string, arg_list)
 
         # a function reply: process the reply
-        elif is_event == False:
+        else:
             # vim may send multiple replies for one function request
             if seqno == self.last_seqno:
                 return
@@ -733,12 +792,10 @@ class Netbeans(asynchat.async_chat):
                 raise misc.Error(
                         'got a reply with no matching function request')
             n, reply = self.reply_fifo.pop()
+            unused = n
             reply(seqno, string, arg_list)
             self.last_seqno = seqno
 
-        else:
-            # ignore invalid message
-            pass
 
     def open_session(self, msg):
         """Process initial netbeans messages."""
@@ -748,7 +805,7 @@ class Netbeans(asynchat.async_chat):
             if matchobj.group('passwd') == self.passwd:
                 return
             else:
-                raise misc.Error('invalid password: "%s"' % passwd)
+                raise misc.Error('invalid password: "%s"' % self.passwd)
         # '0:version=0 "2.3"'
         # '0:startupDone=0'
         else:
@@ -756,6 +813,9 @@ class Netbeans(asynchat.async_chat):
             is_event, buf_id, event, seqno, string, arg_list =          \
                     (lambda a, b=None, c=None, d=None, e=None, f=None:
                                 (a, b, c, d, e, f))(*parse_msg(msg))
+            unused = arg_list
+            unused = buf_id
+            unused = seqno
 
             if is_event:
                 if event == "version":
@@ -780,16 +840,24 @@ class Netbeans(asynchat.async_chat):
     #   Events
     #-----------------------------------------------------------------------
     def evt_balloonText(self, buf_id, string, arg_list):
+        """Process a balloonText netbeans event."""
+        unused = arg_list
+        unused = buf_id
         if not string:
             error('empty string in balloonText')
         else:
             self.app.balloon_text(string)
 
     def evt_disconnect(self, buf_id, string, arg_list):
+        """Process a disconnect netbeans event."""
+        unused = arg_list
+        unused = string
+        unused = buf_id
         self.close()
 
     def evt_fileOpened(self, buf_id, pathname, arg_list):
         """A file was opened by the user."""
+        unused = arg_list
         if pathname:
             clewnbuf = is_clewnbuf(pathname)
             if os.path.isabs(pathname) or clewnbuf:
@@ -850,6 +918,7 @@ class Netbeans(asynchat.async_chat):
         return False
 
     def evt_keyAtPos(self, buf_id, string, arg_list):
+        """Process a keyAtPos netbeans event."""
         if self.console is None or not self.console.buf.registered:
             self.console = Console(self)
             self.console.register()
@@ -886,6 +955,8 @@ class Netbeans(asynchat.async_chat):
 
     def evt_killed(self, buf_id, string, arg_list):
         """A file was closed by the user."""
+        unused = string
+        unused = arg_list
         # buffer killed by netbeans, signs are already removed by gvim
         buf = self.app._bset.getbuf(buf_id)
         if buf is None:
@@ -914,6 +985,7 @@ class Netbeans(asynchat.async_chat):
                 self.close()
 
     def show_balloon(self, text):
+        """Show the Vim balloon."""
         # do not show a balloon when the application is not started
         if not self.app or not self.app.started:
             return
@@ -921,11 +993,12 @@ class Netbeans(asynchat.async_chat):
         # restrict size to 2000 chars, about...
         size = 2000
         if len(text) > size:
-            size /= 2
+            size //= 2
             text = text[:size] + '...' + text[-size:]
         self.send_cmd(None, 'showBalloon', _quote(text))
 
     def special_keys(self, key):
+        """Send the specialKeys netbeans command."""
         self.send_cmd(None, 'specialKeys', _quote(key))
 
     def send_cmd(self, buf, cmd, args=''):
@@ -947,6 +1020,7 @@ class Netbeans(asynchat.async_chat):
         self.send_request('%d:%s/%d%s%s\n', buf, function, args)
 
     def send_request(self, fmt, buf, request, args):
+        """Send a netbeans function or command."""
         self.seqno += 1
         buf_id = 0
         space = ' '
@@ -960,15 +1034,18 @@ class Netbeans(asynchat.async_chat):
 
     # readonly property
     def get_sernum(self):
+        """Return a unique sernum."""
         self.__last_sernum += 1
         return self.__last_sernum
 
     last_sernum = property(get_sernum, None, None, 'last annotation serial number')
 
     def __repr__(self):
-         return self.__str__()
+        """Return the async_chat representation."""
+        return self.__str__()
 
     def __str__(self):
+        """Return the string representation."""
         status = ''
         if self.ready:
             status = 'ready, netbeans version "%s", remote ' % self.nbversion

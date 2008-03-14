@@ -42,6 +42,9 @@ RE_ESCAPE = r'["\n\t\r\\]'                                      \
             r'# RE: escaped characters in a string'
 RE_UNESCAPE = r'\\["ntr\\]'                                     \
               r'# RE: escaped characters in a quoted string'
+Unused = QUOTED_STRING
+Unused = NBDEBUG
+Unused = LOG_LEVELS
 
 # compile regexps
 re_escape = re.compile(RE_ESCAPE, re.VERBOSE)
@@ -78,6 +81,7 @@ def escape_char(matchobj):
     assert False
 
 def quote(string):
+    """Quote 'string' and escape special characters."""
     return '"%s"' % re_escape.sub(escape_char, string)
 
 def dequote(string):
@@ -114,6 +118,7 @@ def unescape_char(matchobj):
     assert False
 
 def unquote(string):
+    """Remove escapes from escaped characters in a quoted string."""
     return '%s' % re_unescape.sub(unescape_char, string)
 
 def parse_keyval(regexp, line):
@@ -181,11 +186,51 @@ def smallpref_inlist(word, strlist):
     return max(previous, next)
 
 def unlink(filename):
+    """Unlink a file."""
     if filename and os.path.exists(filename):
         try:
             os.unlink(filename)
         except OSError:
             pass
+
+def daemonize():
+    """Run as a daemon."""
+    CHILD = 0
+    if os.name == 'posix':
+        # setup a pipe between the child and the parent,
+        # so that the parent knows when the child has done
+        # the setsid() call and is allowed to exit
+        pipe_r, pipe_w = os.pipe()
+
+        pid = os.fork()
+        if pid != CHILD:
+            # the read returns when the child closes the pipe
+            os.close(pipe_w)
+            os.read(pipe_r, 1)
+            os.close(pipe_r)
+            os._exit(os.EX_OK)
+
+        # close stdin, stdout and stderr
+        try:
+            devnull = os.devnull
+        except AttributeError:
+            devnull = '/dev/null'
+        fd = os.open(devnull, os.O_RDWR)
+        os.close(0)
+        os.close(1)
+        os.close(2)
+        os.dup(fd)      # replace stdin  (file descriptor 0)
+        os.dup(fd)      # replace stdout (file descriptor 1)
+        os.dup(fd)      # replace stderr (file descriptor 2)
+        os.close(fd)    # don't need this now that we've duplicated it
+
+        # change our process group in the child
+        try:
+            os.setsid()
+        except OSError:
+            critical('cannot run as a daemon'); raise
+        os.close(pipe_r)
+        os.close(pipe_w)
 
 
 class Error(Exception):
@@ -199,9 +244,13 @@ class CalledProcessError(Error):
     """
 
     def __init__(self, returncode, cmd):
+        """Constructor."""
+        Error.__init__(self)
         self.returncode = returncode
         self.cmd = cmd
+
     def __str__(self):
+        """Return the error message."""
         return "Command '%s' returned non-zero exit status %d"  \
                                         % (self.cmd, self.returncode)
 
@@ -209,6 +258,7 @@ class TmpFile(file):
     """An instance of this class is a writtable temporary file object."""
 
     def __init__(self, prefix):
+        """Constructor."""
         self.tmpname = None
         try:
             fd, self.tmpname = tempfile.mkstemp('.clewn', prefix)
@@ -221,10 +271,14 @@ class TmpFile(file):
             atexit.register(unlink, self.tmpname)
 
     def __del__(self):
+        """Unlink the file."""
         unlink(self.tmpname)
 
 class Singleton(object):
+    """A singleton, there is only one instance of this class."""
+
     def __new__(cls, *args, **kwds):
+        """Create the single instance."""
         it = cls.__dict__.get("__it__")
         if it is not None:
             return it
@@ -233,6 +287,7 @@ class Singleton(object):
         return it
 
     def init(self, *args, **kwds):
+        """Override in subclass."""
         pass
 
 if os.name == 'posix':
@@ -242,6 +297,7 @@ if os.name == 'posix':
         """The SIGCHLD handler is also used to register the ProcessChannel."""
         # takes advantage of the fact that the 'l' default value
         # is evaluated only once
+        unused = frame
         if process is not None and isinstance(process, ProcessChannel):
             l[0:len(l)] = [process]
             return
@@ -264,6 +320,7 @@ if os.name == 'posix':
         """
 
         def __init__(self, f):
+            """Constructor."""
             self.fobj = None
             if isinstance(f, file):
                 self.fobj = f
@@ -273,15 +330,18 @@ if os.name == 'posix':
             self.connected = True
 
         def recv(self, *args):
+            """Receive data from the file."""
             return os.read(self.fd, *args)
 
         def send(self, *args):
+            """Send data to the file."""
             return os.write(self.fd, *args)
 
         read = recv
         write = send
 
         def close(self):
+            """Close the file."""
             if self.connected:
                 self.connected = False
                 if self.fobj is not None:
@@ -290,6 +350,7 @@ if os.name == 'posix':
                     os.close(self.fd)
 
         def fileno(self):
+            """Return the file descriptor."""
             return self.fd
 
     class FileAsynchat(asynchat.async_chat):
@@ -314,6 +375,7 @@ if os.name == 'posix':
         """
 
         def __init__(self, f, channel, reader=None):
+            """Constructor."""
             asynchat.async_chat.__init__(self)
             self.channel = channel
             self.reader = reader
@@ -333,10 +395,12 @@ if os.name == 'posix':
             fcntl.fcntl(self._fileno, fcntl.F_SETFL, flags)
 
         def set_file(self, f):
+            """Set the file descriptor."""
             self.socket = FileWrapper(f)
             self.add_channel()
 
         def recv(self, buffer_size):
+            """Receive data from the file."""
             try:
                 return asynchat.async_chat.recv(self, buffer_size)
             except OSError:
@@ -344,6 +408,7 @@ if os.name == 'posix':
                 return ''
 
         def send(self, data):
+            """Send data to the file."""
             try:
                 return asynchat.async_chat.send(self, data)
             except OSError:
@@ -351,31 +416,43 @@ if os.name == 'posix':
                 return 0
 
         def handle_error(self):
+            """Process an error."""
+            unused = self
             raise
 
         def handle_expt(self):
-            raise NotImplementedError('unhandled exception')
+            """Process a select exception."""
+            unused = self
+            assert False, 'unhandled exception'
 
         def handle_connect(self):
-            raise NotImplementedError('unhandled connect event')
+            """Process a connect event."""
+            unused = self
+            assert False, 'unhandled connect event'
 
         def handle_accept(self):
-            raise NotImplementedError('unhandled accept event')
+            """Process an accept event."""
+            unused = self
+            assert False, 'unhandled accept event'
 
         def handle_close(self):
+            """Process a close event."""
             self.close()
 
         def readable(self):
+            """Is the file readable."""
             if self.reader is False:
                 return False
             return asynchat.async_chat.readable(self)
 
         def writable(self):
+            """Is the file writable."""
             if self.reader is True:
                 return False
             return asynchat.async_chat.writable(self)
 
         def collect_incoming_data(self, data):
+            """Called with data holding an arbitrary amount of received data."""
             self.ibuff.append(data)
 
         def found_terminator(self):
@@ -413,6 +490,7 @@ if os.name == 'posix':
         INTERRUPT_CHAR = chr(3)     # <Ctl-C>
 
         def __init__(self, argv):
+            """Constructor."""
             assert argv
             self.argv = argv
             self.pgm = os.path.basename(self.argv[0])
@@ -510,6 +588,7 @@ if os.name == 'posix':
             info('program argv list: %s', str(self.argv))
 
         def waitpid(self):
+            """Wait on the process."""
             if self.pid != 0:
                 pid, status = os.waitpid(self.pid, os.WNOHANG)
                 if (pid, status) != (0, 0):
@@ -531,6 +610,7 @@ if os.name == 'posix':
                         info("process %s terminated", self.pgm)
 
         def close(self):
+            """Close the channel an wait on the process."""
             if self.fileasync is not None:
                 # it is safe to close the same FileAsynchat twice
                 self.fileasync[0].close()
@@ -545,6 +625,7 @@ if os.name == 'posix':
 
         def handle_line(self, line):
             """Process the line received from the program stdout and stderr."""
+            unused = line
             if self.fileasync is not None:
                 raise NotImplementedError('handle_line in ProcessChannel')
 

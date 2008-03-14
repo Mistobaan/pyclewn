@@ -56,7 +56,6 @@ import pprint
 import cStringIO
 from collections import deque
 
-import gdb
 import misc
 from misc import (
         any as _any,
@@ -94,6 +93,8 @@ VARLISTCHILDREN_ATTRIBUTES = set(('name', 'exp', 'numchild', 'value', 'type'))
 VAREVALUATE_ATTRIBUTES = set(('value',))
 
 def keyval_pattern(attributes, comment=''):
+    """Build and return a keyval pattern string."""
+    unused = comment
     return '(' + '|'.join(attributes) + ')=' + misc.QUOTED_STRING
 
 # regexp
@@ -151,11 +152,11 @@ re_frame = re.compile(RE_FRAME, re.VERBOSE)
 re_sources = re.compile(RE_SOURCES, re.VERBOSE)
 re_varupdate = re.compile(RE_VARUPDATE, re.VERBOSE)
 
-def fullname(name, file):
-    """Return 'fullname' value, matching name in the file dictionary."""
+def fullname(name, source_dict):
+    """Return 'fullname' value, matching name in the source_dict dictionary."""
     try:
-        if file and file['file'] == name:
-            return file['fullname']
+        if source_dict and source_dict['file'] == name:
+            return source_dict['fullname']
     except KeyError:
         pass
     return ''
@@ -164,6 +165,7 @@ class VarObjList(dict):
     """A dictionary of {name:VarObj instance}."""
 
     def collect(self, parents, lnum, stream, indent=0):
+        """Collect all varobj children data."""
         if not self: return
         # follow positional parameters in VAROBJ_FMT
         tab = [(len(x['name']), len(x['type']), len(x['exp']))
@@ -190,12 +192,14 @@ class RootVarObj(object):
     """
 
     def __init__(self):
+        """Constructor."""
         self.root = VarObjList()
         self.parents = {}
         self.dirty = False
         self.str_content = ''
 
     def clear(self):
+        """Clear all varobj elements."""
         self.root.clear()
         self.parents = {}
         self.dirty = True
@@ -231,15 +235,18 @@ class RootVarObj(object):
         if self.dirty:
             self.dirty = False
             self.parents = {}
-            self.lnum = [0]
+            lnum = [0]
             output = cStringIO.StringIO()
-            self.root.collect(self.parents, self.lnum, output)
+            self.root.collect(self.parents, lnum, output)
             self.str_content = output.getvalue()
             output.close()
         return self.str_content
 
 class VarObj(dict):
+    """A gdb/mi varobj object."""
+
     def __init__(self, vardict={}):
+        """Constructor."""
         self['name'] = ''
         self['exp'] = ''
         self['type'] = ''
@@ -251,6 +258,7 @@ class VarObj(dict):
         self.update(vardict)
 
     def collect(self, parents, lnum, stream, indent, tab):
+        """Collect varobj data."""
         if self.chged:
             self['chged'] = '={*}'
             self.chged = False
@@ -307,6 +315,7 @@ class Info(object):
     """
 
     def __init__(self, gdb):
+        """Constructor."""
         self.gdb = gdb
         self.breakpoints = []
         self.bp_dictionary = {}
@@ -340,20 +349,20 @@ class Info(object):
             return None
 
         # proceed with each directory in gdb source directories
-        for dir in self.directories:
-            if dir == '$cdir':
+        for dirname in self.directories:
+            if dirname == '$cdir':
                 pathname = fullname(name, self.file)
                 if not pathname:
-                    for file in self.sources:
-                        pathname = fullname(name, file)
+                    for source_dict in self.sources:
+                        pathname = fullname(name, source_dict)
                         if pathname:
                             break
                     else:
                         continue # main loop
-            elif dir == '$cwd':
+            elif dirname == '$cwd':
                 pathname = os.path.abspath(name)
             else:
-                pathname = os.path.normpath(dir, path)
+                pathname = os.path.normpath(dirname, name)
 
             if os.path.exists(pathname):
                 return pathname
@@ -398,10 +407,10 @@ class Info(object):
         if self.frame and isinstance(self.frame, dict):
             line = int(self.frame['line'])
             fullname = self.file['fullname']
-            file = self.frame['file']
-            if os.path.basename(fullname) == file:
-                file = fullname
-            pathname = self.get_fullpath(file)
+            source = self.frame['file']
+            if os.path.basename(fullname) == source:
+                source = fullname
+            pathname = self.get_fullpath(source)
 
             if pathname is not None:
                 frameloc = {'pathname':pathname, 'lnum':line}
@@ -416,8 +425,10 @@ class Info(object):
         self.frameloc = {}
 
     def update_changelist(self):
+        """Process a varobj changelist event."""
         for vardict in self.changelist:
             (varobj, varlist) = self.varobj.leaf(vardict['name'])
+            unused = varlist
             if varobj is not None:
                 varobj['in_scope'] = vardict['in_scope']
                 self.gdb.oob_list.push(VarObjCmdEvaluate(self.gdb, varobj))
@@ -429,6 +440,7 @@ class Info(object):
             self.varobj.dirty = True
 
     def __repr__(self):
+        """Return the pretty formated self dictionary."""
         return pprint.pformat(self.__dict__)
 
 class Result(dict):
@@ -443,6 +455,7 @@ class Result(dict):
     """
 
     def __init__(self):
+        """Constructor."""
         self.token = 100
 
     def add(self, command):
@@ -492,6 +505,7 @@ class OobList(object):
     """
 
     def __init__(self, gdb):
+        """Constructor."""
         self.running_list = []
         self.fifo = None
 
@@ -519,6 +533,7 @@ class OobList(object):
         return self
 
     def next(self):
+        """Iterator next method."""
         if self.fifo is not None and len(self.fifo):
             return self.fifo.popleft()
         else:
@@ -547,22 +562,19 @@ class Command(object):
     """
 
     def __init__(self, gdb):
+        """Constructor."""
         self.gdb = gdb
-
-    def sendcmd(self):
-        """Send a gdb command.
-
-        Return True when the command was successfully sent.
-        """
-
-        raise NotImplementedError('must be implemented in subclass')
 
     def handle_result(self, result):
         """Process the result of the gdb command."""
+        unused = self
+        unused = result
         raise NotImplementedError('must be implemented in subclass')
 
     def handle_strrecord(self, stream_record):
         """Process the stream records output by the command."""
+        unused = self
+        unused = stream_record
         raise NotImplementedError('must be implemented in subclass')
 
     def send(self, fmt, *args):
@@ -599,13 +611,16 @@ class CliCommand(Command):
 class CompleteBreakCommand(CliCommand):
     """CliCommand sent to get the symbols completion list."""
 
-    def sendcmd(self):
+    def sendcmd(self, cmd=''):
+        """Send the gdb command."""
+        unused = cmd
         if not CliCommand.sendcmd(self, 'complete break '):
             self.handle_strrecord('')
             return False
         return True
 
     def handle_strrecord(self, stream_record):
+        """Process the gdb/mi stream records."""
         f_clist = f_ack = None
         try:
             if not stream_record:
@@ -660,26 +675,33 @@ class MiCommand(Command):
     """
 
     def __init__(self, gdb, varobj):
+        """Constructor."""
         self.gdb = gdb
         self.varobj = varobj
         self.result = ''
 
-    def sendcmd(self, fmt, *args):
+    def docmd(self, fmt, *args):
+        """Send the gdb command."""
         if self.gdb.gotprmpt and self.gdb.oob is None:
             self.result = ''
             return self.send(fmt, *args)
         return False
 
     def handle_strrecord(self, stream_record):
+        """Process the gdb/mi stream records."""
         if not self.result and stream_record:
             self.gdb.console_print(stream_record)
 
 class VarCreateCommand(MiCommand):
+    """Create a variable object."""
+
     def sendcmd(self):
-        return MiCommand.sendcmd(self, '-var-create - * %s\n',
+        """Send the gdb command."""
+        return MiCommand.docmd(self, '-var-create - * %s\n',
                                         _quote(self.varobj['exp']))
 
     def handle_result(self, line):
+        """Process gdb/mi result."""
         parsed = _parse_keyval(re_varcreate, line)
         if parsed is not None and VARCREATE_ATTRIBUTES.issubset(parsed):
             rootvarobj = self.gdb.info.varobj
@@ -693,11 +715,15 @@ class VarCreateCommand(MiCommand):
                 error('in varobj creation of %s', str(parsed))
 
 class VarDeleteCommand(MiCommand):
+    """Delete the variable object and its children."""
+
     def sendcmd(self):
-        return MiCommand.sendcmd(self, '-var-delete %s\n',
+        """Send the gdb command."""
+        return MiCommand.docmd(self, '-var-delete %s\n',
                                             self.varobj['name'])
 
     def handle_result(self, line):
+        """Process gdb/mi result."""
         matchobj = re_vardelete.match(line)
         if matchobj:
             self.result = matchobj.group('ndeleted')
@@ -705,6 +731,7 @@ class VarDeleteCommand(MiCommand):
                 name = self.varobj['name']
                 rootvarobj = self.gdb.info.varobj
                 (varobj, varlist) = rootvarobj.leaf(name)
+                unused = varobj
                 if varlist is not None:
                     del varlist[name]
                     rootvarobj.dirty = True
@@ -713,25 +740,33 @@ class VarDeleteCommand(MiCommand):
                                                                 self.result)
 
 class NumChildrenCommand(MiCommand):
+    """Get how many children this object has."""
+
     def sendcmd(self):
-        return MiCommand.sendcmd(self, '-var-info-num-children %s\n',
+        """Send the gdb command."""
+        return MiCommand.docmd(self, '-var-info-num-children %s\n',
                                                         self.varobj['name'])
 
     def handle_result(self, line):
+        """Process gdb/mi result."""
         # used as a nop command by the foldvar command
         pass
 
 # 'type' and 'value' are not always present in -var-list-children output
 LIST_CHILDREN_KEYS = VARLISTCHILDREN_ATTRIBUTES.difference(set(('type', 'value')))
 class ListChildrenCommand(MiCommand):
+    """."""
+
     def sendcmd(self):
-        return MiCommand.sendcmd(self, '-var-list-children --all-values %s\n',
+        """Send the gdb command."""
+        return MiCommand.docmd(self, '-var-list-children --all-values %s\n',
                                                         self.varobj['name'])
 
     def handle_result(self, line):
+        """Send the gdb command."""
         varlist = [VarObj(x) for x in
-                        [_parse_keyval(re_varlistchildren, map)
-                            for map in re_dict_list.findall(line)]
+                        [_parse_keyval(re_varlistchildren, list_element)
+                            for list_element in re_dict_list.findall(line)]
                 if x is not None and LIST_CHILDREN_KEYS.issubset(x)]
         for varobj in varlist:
             self.varobj['children'][varobj['name']] = varobj
@@ -751,11 +786,13 @@ class ShowBalloon(Command):
     """
 
     def __init__(self, gdb, text):
+        """Constructor."""
         self.gdb = gdb
         self.text = text
         self.result = ''
 
     def sendcmd(self):
+        """Send the gdb command."""
         if self.gdb.gotprmpt and self.gdb.oob is None:
             self.result = ''
             return self.send('-data-evaluate-expression %s\n',
@@ -763,6 +800,7 @@ class ShowBalloon(Command):
         return False
 
     def handle_result(self, line):
+        """Send the gdb command."""
         matchobj = re_evaluate.match(line)
         if matchobj:
             self.result = matchobj.group('value')
@@ -770,6 +808,7 @@ class ShowBalloon(Command):
                 self.gdb.show_balloon('%s = "%s"' % (self.text, self.result))
 
     def handle_strrecord(self, stream_record):
+        """Process the gdb/mi stream records."""
         if not self.result and stream_record:
             self.gdb.show_balloon(stream_record)
 
@@ -787,11 +826,13 @@ class VarObjCmd(Command):
     """
 
     def __init__(self, gdb, varobj):
+        """Constructor."""
         self.gdb = gdb
         self.varobj = varobj
         self.result = ''
 
     def handle_strrecord(self, stream_record):
+        """Process the gdb/mi stream records."""
         if not self.result and stream_record:
             self.gdb.console_print(stream_record)
 
@@ -799,6 +840,7 @@ class VarObjCmdEvaluate(VarObjCmd):
     """The VarObjCmdEvaluate class."""
 
     def sendcmd(self):
+        """Send the gdb command."""
         name = self.varobj['name']
         if not name:
             return False
@@ -806,6 +848,7 @@ class VarObjCmdEvaluate(VarObjCmd):
         return self.send('-var-evaluate-expression %s\n', name)
 
     def handle_result(self, line):
+        """Send the gdb command."""
         parsed = _parse_keyval(re_varevaluate, line)
         if parsed is not None and VAREVALUATE_ATTRIBUTES.issubset(parsed):
             self.result = line
@@ -819,6 +862,7 @@ class VarObjCmdDelete(VarObjCmd):
     """The VarObjCmdDelete class."""
 
     def sendcmd(self):
+        """Send the gdb command."""
         name = self.varobj['name']
         if not name:
             return False
@@ -826,6 +870,7 @@ class VarObjCmdDelete(VarObjCmd):
         return self.send('-var-delete %s\n', name)
 
     def handle_result(self, line):
+        """Send the gdb command."""
         matchobj = re_vardelete.match(line)
         if matchobj:
             self.result = matchobj.group('ndeleted')
@@ -833,6 +878,7 @@ class VarObjCmdDelete(VarObjCmd):
                 name = self.varobj['name']
                 rootvarobj = self.gdb.info.varobj
                 (varobj, varlist) = rootvarobj.leaf(name)
+                unused = varobj
                 if varlist is not None:
                     del varlist[name]
                     rootvarobj.dirty = True
@@ -871,6 +917,7 @@ class OobCommand(Command):
     """
 
     def __init__(self, gdb):
+        """Constructor."""
         Command.__init__(self, gdb)
         assert self.__class__ is not OobCommand
         assert hasattr(self, 'gdb_cmd') and isinstance(self.gdb_cmd, str)
@@ -935,9 +982,9 @@ class OobCommand(Command):
             if self.gdblist:
                 # a list of dictionaries
                 parsed = [x for x in
-                            [_parse_keyval(self.regexp, map)
-                                for map in re_dict_list.findall(remain)]
-                            if x is not None and self.reqkeys.issubset(x)]
+                           [_parse_keyval(self.regexp, list_element)
+                            for list_element in re_dict_list.findall(remain)]
+                                 if x is not None and self.reqkeys.issubset(x)]
             else:
                 if self.reqkeys:
                     parsed = _parse_keyval(self.regexp, remain)
@@ -974,6 +1021,7 @@ class OobCommand(Command):
 Breakpoints =   \
     type('Breakpoints', (OobCommand,),
             {
+                '__doc__': """Get the breakpoints list.""",
                 'gdb_cmd': '-break-list\n',
                 'info_attribute': 'breakpoints',
                 'prefix': 'done,',
@@ -987,6 +1035,7 @@ Breakpoints =   \
 Directories =    \
     type('Directories', (OobCommand,),
             {
+                '__doc__': """Get the directory list.""",
                 'gdb_cmd': '-interpreter-exec console "show directories"\n',
                 'info_attribute': 'directories',
                 'prefix': 'Source directories searched: ',
@@ -999,6 +1048,7 @@ Directories =    \
 File =    \
     type('File', (OobCommand,),
             {
+                '__doc__': """Get the source file.""",
                 'gdb_cmd': '-file-list-exec-source-file\n',
                 'info_attribute': 'file',
                 'prefix': 'done,',
@@ -1012,6 +1062,7 @@ File =    \
 Frame =    \
     type('Frame', (OobCommand,),
             {
+                '__doc__': """Get the frame information.""",
                 'gdb_cmd': 'frame\n',
                 'info_attribute': 'frame',
                 'prefix': 'done,',
@@ -1025,6 +1076,7 @@ Frame =    \
 Sources =   \
     type('Sources', (OobCommand,),
             {
+                '__doc__': """Get the list of source files.""",
                 'gdb_cmd': '-file-list-exec-source-files\n',
                 'info_attribute': 'sources',
                 'prefix': 'done,',
@@ -1037,6 +1089,7 @@ Sources =   \
 VarUpdate =    \
     type('VarUpdate', (OobCommand,),
             {
+                '__doc__': """Update the variable and its children.""",
                 'gdb_cmd': '-var-update *\n',
                 'info_attribute': 'changelist',
                 'prefix': 'done,',

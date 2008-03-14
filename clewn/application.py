@@ -193,20 +193,33 @@ class BufferSet(dict):
 
     """
 
+    # defeating pychecker check on non-initialized data members
+    _buf_list = None
+    _anno_dict = None
+
     def __new__(cls, *args, **kwds):
         """A singleton."""
+        unused = args
+        unused = kwds
         it = cls.__dict__.get("__it__")
         if it is not None:
             return it
         # cannot subclass netbeans.Singleton, this gives the following error msg:
         # TypeError: object.__new__(BufferSet) is not safe, use dict.__new__()
         cls.__it__ = it = dict.__new__(cls)
-        it.init(*args, **kwds)
+        it.init()
         return it
 
     def init(self):
-        self.buf_list = []
-        self.anno_dict = {}
+        """Initialize once."""
+        self._buf_list = []
+        self._anno_dict = {}
+
+    def __init__(self, nbsock):
+        """Constructor."""
+        self.nbsock = nbsock
+        self.buf_list = self._buf_list
+        self.anno_dict = self._anno_dict
 
     def add_anno(self, anno_id, pathname, lnum):
         """Add the annotation to the global list and to the buffer annotation list."""
@@ -344,18 +357,38 @@ class BufferSet(dict):
         return dict.__getitem__(self, pathname)
 
     def __setitem__(self, pathname, item):
+        """Mapped to __getitem__."""
+        unused = item
         self.__getitem__(pathname)
 
     def setdefault(self, pathname, failobj=None):
+        """Mapped to __getitem__."""
+        unused = failobj
         return self.__getitem__(pathname)
 
-    # a key is never removed
-    def __delitem__(self, key): pass
-    def popitem(self): pass
-    def pop(self, key, *args): pass
+    def __delitem__(self, key):
+        """A key is never removed."""
+        pass
 
-    def update(self, dict=None, **kwargs): raise NotImplementedError
-    def copy(self): raise NotImplementedError
+    def popitem(self):
+        """A key is never removed."""
+        pass
+
+    def pop(self, key, *args):
+        """A key is never removed."""
+        pass
+
+    def update(self, dict=None, **kwargs):
+        """Not implemented."""
+        unused = self
+        unused = dict
+        unused = kwargs
+        assert False, 'not implemented'
+
+    def copy(self):
+        """Not implemented."""
+        unused = self
+        assert False, 'not implemented'
 
 class Application(object):
     """Abstract base class for pyclewn applications.
@@ -437,8 +470,7 @@ class Application(object):
         self.arglist = arglist
         self.nbsock = nbsock
         self.daemon = daemon
-        self._bset = BufferSet()
-        self._bset.nbsock = nbsock
+        self._bset = BufferSet(nbsock)
         self.cmds[''] = []
         self.closed = False
         self.started = False
@@ -558,6 +590,7 @@ class Application(object):
                     self.__class__.__name__.lower())
 
     def prompt(self):
+        """Print the prompt."""
         self.console_print(self.prompt_str)
 
     def timer(self):
@@ -579,26 +612,45 @@ class Application(object):
                 the arguments of the command
 
         """
+        unused = self
+        unused = buf
+        unused = cmd
+        unused = args
         raise NotImplementedError('must be implemented in subclass')
 
     def pre_cmd(self, cmd, args):
         """The method called before each invocation of a 'cmd_xxx' method."""
+        unused = self
+        unused = cmd
+        unused = args
         raise NotImplementedError('must be implemented in subclass')
 
     def post_cmd(self, cmd, args):
         """The method called after each invocation of a 'cmd_xxx' method."""
+        unused = self
+        unused = cmd
+        unused = args
         raise NotImplementedError('must be implemented in subclass')
 
-    def cmd_dbgvar(self, *args):
-        """Add a variable to the debugger variable buffer (not implemented)."""
-        self.default_cmd_processing(*args)
+    def cmd_dbgvar(self, buf, cmd, args):
+        """Add a variable to the debugger variable buffer."""
+        unused = self
+        unused = buf
+        unused = cmd
+        unused = args
+        raise NotImplementedError('must be implemented in subclass')
 
-    def cmd_delvar(self, *args):
-        """Delete a variable from the debugger variable buffer (not implemented)."""
-        self.default_cmd_processing(*args)
+    def cmd_delvar(self, buf, cmd, args):
+        """Delete a variable from the debugger variable buffer."""
+        unused = self
+        unused = buf
+        unused = cmd
+        unused = args
+        raise NotImplementedError('must be implemented in subclass')
 
     def cmd_dumprepr(self, *args):
         """Print debugging information on netbeans and the application."""
+        unused = args
         self.console_print(
                 'netbeans:\n%s\n' % pprint.pformat(self.nbsock.__dict__)
                 + '%s:\n%s\n' % (self.__class__.__name__.lower(), self))
@@ -606,6 +658,7 @@ class Application(object):
 
     def cmd_help(self, *args):
         """Print help on the pyclewn specific commands."""
+        unused = args
         for cmd in sorted(self.pyclewn_cmds):
             if cmd:
                 method = getattr(self, 'cmd_%s' % cmd)
@@ -614,6 +667,7 @@ class Application(object):
 
     def cmd_mapkeys(self, *args):
         """Map the pyclewn keys."""
+        unused = args
         for k in sorted(self.mapkeys):
             self.nbsock.special_keys(k)
 
@@ -739,7 +793,7 @@ class Application(object):
         try:
             method = getattr(self, 'cmd_%s' % cmd)
         except AttributeError:
-            method = getattr(self, 'default_cmd_processing')
+            method = self.default_cmd_processing
 
         self.pre_cmd(cmd, args)
         method(buf, cmd, args)
@@ -751,6 +805,7 @@ class Application(object):
 
     def full_pathname(self, name):
         """Return the full pathname or None if name is a clewn buffer name."""
+        unused = self
         if netbeans.is_clewnbuf(name):
             name = None
         elif not os.path.isabs(name):
@@ -820,6 +875,7 @@ class Application(object):
             critical('reading %s', path); raise
 
     def __str__(self):
+        """Return the string representation."""
         shallow = copy.copy(self.__dict__)
         for name in ('cmds', 'pyclewn_cmds', 'mapkeys'):
             if shallow.has_key(name):

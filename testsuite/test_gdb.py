@@ -19,6 +19,9 @@
 #
 # $Id$
 
+"""Test the gdb application.
+
+"""
 import sys
 import os
 import unittest
@@ -31,11 +34,13 @@ class GdbTestCase(ClewnTestCase):
     """Test the gdb debugger."""
 
     def setUp(self):
+        """Test setup."""
         ClewnTestCase.setUp(self)
         sys.argv.append('--gdb')
 
     def setup_gdb_args(self, args=''):
         """Setup gdb args and redirect debuggee output to /dev/null."""
+        unused = self
         if hasattr(os, 'devnull'):
             terminal = os.devnull
         else:
@@ -520,6 +525,7 @@ class GdbTestCase(ClewnTestCase):
 
 
 def test_main():
+    """Run all the tests."""
     # run make on the testsuite
     check_call(['make', '-C', 'testsuite'])
 

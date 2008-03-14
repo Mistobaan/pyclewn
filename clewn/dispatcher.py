@@ -29,8 +29,6 @@ registered debuggers.
 
 """
 import sys
-import os
-import string
 import time
 import subprocess
 import asyncore
@@ -53,6 +51,7 @@ CONNECTION_TIMEOUT = 30
 (critical, error, warning, info, debug) = misc.logmethods('disp')
 
 def last_traceback():
+    """Return the last trace back."""
     t, v, tb = sys.exc_info()
     assert tb
     while tb:
@@ -64,7 +63,14 @@ def last_traceback():
 
     return t, v, filename, lnum, last_tb
 
+def pformat(name, obj):
+    """Pretty format an object __dict__."""
+    if obj:
+        return '%s:\n%s\n' % (name, pprint.pformat(obj.__dict__))
+    else: return ''
+
 def main():
+    """Main."""
     # build the list of Application subclasses,
     # candidates for selection by the commad line arguments
     classes = clewn.class_list()
@@ -85,16 +91,16 @@ def main():
             # get the line where exception occured
             try:
                 lines, top = inspect.getsourcelines(last_tb)
-                info = 'source line: "%s"\nat %s:%d' \
+                location = 'source line: "%s"\nat %s:%d' \
                         % (lines[lnum - top].strip(), filename, lnum)
             except IOError:
                 sys.exc_clear()
-                info = ''
+                location = ''
 
             except_str = '\nException in pyclewn:\n\n'  \
                             '%s\n"%s"\n%s\n\n'          \
                             'pyclewn aborting...\n'     \
-                                    % (str(t), str(v), info)
+                                    % (str(t), str(v), location)
             critical(except_str)
             proc.nbsock.show_balloon(except_str)
     finally:
@@ -184,7 +190,7 @@ class Dispatcher(object):
             conn[2:] = conn[2:] or [CONNECTION_DEFAULTs[2]]
         assert len(conn) == 3, 'too many netbeans connection parameters'
         conn[1] = conn[1] or CONNECTION_DEFAULTs[1]
-        self.nbsock.listen(*conn)
+        self.nbsock.nb_listen(*conn)
         info(self.nbsock)
 
         # check pyclewn version
@@ -272,6 +278,7 @@ class Dispatcher(object):
                         '"%s" is an invalid log LEVEL, must be one of: %s'
                         % (str(value), misc.LOG_LEVELS))
         def args_callback(option, opt_str, value, parser):
+            unused = opt_str
             try:
                 args = misc.dequote(value)
             except misc.Error, e:
@@ -345,10 +352,10 @@ class Dispatcher(object):
 
     def loop(self):
         """The dispatch loop."""
-        map = asyncore.socket_map
+        socket_map = asyncore.socket_map
 
         start = time.time()
-        while map:
+        while socket_map:
             # start the application
             if start is not False:
                 if time.time() - start > CONNECTION_TIMEOUT:
@@ -363,7 +370,7 @@ class Dispatcher(object):
                     # can daemonize now, no more critical startup errors to
                     # print on the console
                     if self.options.daemon:
-                        self.daemonize()
+                        misc.daemonize()
                     info('pyclewn version %s and the %s application',
                         clewn.__version__ + clewn.__svn__, self.clss.__name__)
 
@@ -376,12 +383,15 @@ class Dispatcher(object):
                 self.nbsock.set_application(self.app)
                 info('new "%s" instance', self.clss.__name__.lower())
 
-            asyncore.poll(timeout=.100, map=map)
+            asyncore.poll(timeout=.100, map=socket_map)
             self.app.timer()
 
     def register(self, clss):
         """Register an application."""
         def set_applicationCallback(option, opt_str, value, parser):
+            unused = opt_str
+            unused = parser
+            unused = value
             if self.clss:
                 raise optparse.OptionValueError(
                             'selecting two applications is not allowed')
@@ -404,56 +414,13 @@ class Dispatcher(object):
             args['type'] = 'string'
         self.parser.add_option(clss.opt, clss.long_opt, **args)
 
-    def daemonize(self):
-        """Run Dispatcher as a daemon."""
-        CHILD = 0
-        if os.name == 'posix':
-            # setup a pipe between the child and the parent,
-            # so that the parent knows when the child has done
-            # the setsid() call and is allowed to exit
-            pipe_r, pipe_w = os.pipe()
-
-            pid = os.fork()
-            if pid != CHILD:
-		# the read returns when the child closes the pipe
-		os.close(pipe_w)
-		os.read(pipe_r, 1)
-		os.close(pipe_r)
-                os._exit(os.EX_OK)
-
-            # close stdin, stdout and stderr
-            try:
-                devnull = os.devnull
-            except AttributeError:
-                devnull = '/dev/null'
-            fd = os.open(devnull, os.O_RDWR)
-            os.close(0)
-            os.close(1)
-            os.close(2)
-            os.dup(fd)      # replace stdin  (file descriptor 0)
-            os.dup(fd)      # replace stdout (file descriptor 1)
-            os.dup(fd)      # replace stderr (file descriptor 2)
-            os.close(fd)    # don't need this now that we've duplicated it
-
-            # change our process group in the child
-            try:
-                os.setsid()
-            except OSError:
-                critical('cannot run as a daemon'); raise
-            os.close(pipe_r)
-            os.close(pipe_w)
-
-    def pprint(self, name, obj):
-        if obj:
-            return '%s:\n%s\n' % (name, pprint.pformat(obj.__dict__))
-        else: return ''
-
     def __str__(self):
-        str = '\n%s%s' % (self.pprint('options', self.options),
-                            self.pprint('netbeans', self.nbsock))
+        """Return a representation of the whole stuff."""
+        string = '\n%s%s' % (pformat('options', self.options),
+                            pformat('netbeans', self.nbsock))
         if self.app is not None:
-            str += 'application %s:\n%s\n' % (self.clss.__name__, self.app)
-        return str
+            string += 'application %s:\n%s\n' % (self.clss.__name__, self.app)
+        return string
 
 
 if __name__ == "__main__":

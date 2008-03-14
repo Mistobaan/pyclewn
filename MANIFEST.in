@@ -6,6 +6,8 @@ include runtime/pyclewn.vim
 include runtime/.pyclewn_keys.*
 include runtime/doc/pyclewn.txt
 include runtime/syntax/dbgvar.vim
+include pychecker.sh
+include .pycheckrc
 include regrtest.py
 include testsuite/*.py
 include testsuite/*.c

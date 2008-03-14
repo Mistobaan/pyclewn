@@ -231,6 +231,14 @@ class GlobalSetup(misc.Singleton):
 
     """
 
+    # defeating pychecker check on non-initialized data members
+    _cmds = None
+    _illegal_cmds_prefix = None
+    _run_cmds_prefix = None
+    _illegal_setargs_prefix = None
+    _f_ack = None
+    _f_clist = None
+
     filename_complt = (
         'cd',
         'directory',
@@ -274,12 +282,33 @@ class GlobalSetup(misc.Singleton):
         """Singleton initialisation."""
         self.gdbname = gdbname
         self.pyclewn_cmds = pyclewn_cmds
+
+        self.cmds = self._cmds = {}
+        self.illegal_cmds_prefix = []
+        self.run_cmds_prefix = []
+        self.illegal_setargs_prefix = []
+
         self.gdb_cmds()
-        self.f_ack = tmpfile()
-        self.f_clist = tmpfile()
+
+        self._illegal_cmds_prefix = self.illegal_cmds_prefix
+        self._run_cmds_prefix = self.run_cmds_prefix
+        self._illegal_setargs_prefix = self.illegal_setargs_prefix
+
+        self._f_ack = tmpfile()
+        self._f_clist = tmpfile()
 
     def __init__(self, gdbname, pyclewn_cmds):
-        pass
+        """Constructor."""
+        self.gdbname = gdbname
+        self.pyclewn_cmds = pyclewn_cmds
+
+        # tricking pychecker
+        self.cmds = self._cmds
+        self.illegal_cmds_prefix = self._illegal_cmds_prefix
+        self.run_cmds_prefix = self._run_cmds_prefix
+        self.illegal_setargs_prefix = self._illegal_setargs_prefix
+        self.f_ack = self._f_ack
+        self.f_clist = self._f_clist
 
     def gdb_cmds(self):
         """Get the completion lists from gdb and build the GlobalSetup lists.
@@ -291,7 +320,6 @@ class GlobalSetup(misc.Singleton):
             illegal_setargs_prefix
 
         """
-        self.cmds = {}
         dash_cmds = []  # list of gdb commands including a '-'
         firstarg_complt = ''
 
@@ -349,7 +377,6 @@ class GlobalSetup(misc.Singleton):
         self.run_cmds_prefix = set([misc.smallpref_inlist(x, keys)
                                             for x in self.run_cmds])
 
-        self.illegal_setargs_prefix = []
         if self.cmds.has_key('set') and self.cmds['set']:
             # remove the illegal arguments
             self.cmds['set'] = list(
@@ -433,6 +460,7 @@ class Gdb(application.Application, misc.ProcessChannel):
     }
 
     def __init__(self, nbsock, daemon, pgm, arglist):
+        """.Constructor."""
         application.Application.__init__(self, nbsock, daemon)
         self.pyclewn_cmds.update({'foldvar':()})
         self.mapkeys.update(self.gdb_mapkeys)
@@ -456,6 +484,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         self.token = ''
         self.curcmdline = ''
         self.firstcmdline = None
+        self.time = _timer()
         self.multiple_choice = 0
 
     def getargv(self):
@@ -503,6 +532,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         misc.ProcessChannel.start(self)
 
     def prompt(self):
+        """Print the prompt."""
         if self.gotprmpt:   # print prompt only after gdb has started
             application.Application.prompt(self)
 
@@ -556,6 +586,7 @@ class Gdb(application.Application, misc.ProcessChannel):
                 error('handle_line: bad format of "%s"', line)
 
     def process_stream_record(self, line):
+        """Process a received gdb/mi stream record."""
         matchobj = re_quoted.match(line[1:])
         annotation_lvl1 = re_anno_1.match(line)
         if matchobj and annotation_lvl1 is None:
@@ -572,6 +603,7 @@ class Gdb(application.Application, misc.ProcessChannel):
             pass
 
     def process_mi_record(self, matchobj):
+        """Process a received gdb/mi record."""
         token = matchobj.group('token')
         result = matchobj.group('result')
         cmd = self.results.remove(token)
@@ -587,6 +619,7 @@ class Gdb(application.Application, misc.ProcessChannel):
             cmd.handle_result(result)
 
     def process_prompt(self):
+        """Process the gdb/mi prompt."""
         cmd = self.lastcmd or self.cli
         # process all the stream records
         cmd.handle_strrecord(''.join(self.stream_record))
@@ -631,6 +664,7 @@ class Gdb(application.Application, misc.ProcessChannel):
                 self.firstcmdline = ''
 
     def write(self, data):
+        """Write data to gdb."""
         misc.ProcessChannel.write(self, data)
         debug(data)
 
@@ -675,6 +709,7 @@ class Gdb(application.Application, misc.ProcessChannel):
 
     def default_cmd_processing(self, buf, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""
+        unused = buf
         if _any([cmd.startswith(x)
                 for x in self.globaal.illegal_cmds_prefix]):
             self.console_print('Illegal command in pyclewn.\n')
@@ -713,10 +748,13 @@ class Gdb(application.Application, misc.ProcessChannel):
 
     def cmd_symcompletion(self, *args):
         """Populate the break and clear commands with symbols completion."""
+        unused = args
         gdbmi.CompleteBreakCommand(self).sendcmd()
 
     def cmd_dbgvar(self, buf, cmd, args):
         """Add a variable to the debugger variable buffer."""
+        unused = buf
+        unused = cmd
         registering = False
         if not self.nbsock.dbgvarbuf.buf.registered:
             self.nbsock.dbgvarbuf.register()
@@ -729,6 +767,8 @@ class Gdb(application.Application, misc.ProcessChannel):
 
     def cmd_delvar(self, buf, cmd, args):
         """Delete a variable from the debugger variable buffer."""
+        unused = buf
+        unused = cmd
         args = args.split()
         # one argument is required
         if len(args) != 1:
@@ -736,6 +776,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         else:
             name = args[0]
             (varobj, varlist) = self.info.varobj.leaf(name)
+            unused = varlist
             if varobj is not None:
                 gdbmi.VarDeleteCommand(self, varobj).sendcmd()
                 return
@@ -744,17 +785,19 @@ class Gdb(application.Application, misc.ProcessChannel):
 
     def cmd_foldvar(self, buf, cmd, args):
         """Collapse/expand a variable from the debugger variable buffer."""
+        unused = buf
+        unused = cmd
         args = args.split()
-        error = ''
+        errmsg = ''
         # one argument is required
         if len(args) != 1:
-            error = 'Invalid arguments.'
+            errmsg = 'Invalid arguments.'
         else:
             try:
                 lnum = int(args[0])
             except ValueError:
-                error = 'Not a line number.'
-        if not error:
+                errmsg = 'Not a line number.'
+        if not errmsg:
             rootvarobj = self.info.varobj
             if rootvarobj.parents.has_key(lnum):
                 varobj = rootvarobj.parents[lnum]
@@ -770,13 +813,14 @@ class Gdb(application.Application, misc.ProcessChannel):
                 self.nbsock.dbgvarbuf.foldlnum = lnum
                 return
             else:
-                error = 'Not a valid line number.'
-        if error:
-            self.console_print('%s\n' % error)
+                errmsg = 'Not a valid line number.'
+        if errmsg:
+            self.console_print('%s\n' % errmsg)
         self.prompt()
 
     def cmd_sigint(self, *args):
         """Send a <C-C> character to the debugger."""
+        unused = args
         self.sendintr()
         if self.ttyname is None:
             self.console_print('\n'

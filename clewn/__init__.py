@@ -19,6 +19,9 @@
 #
 # $Id$
 
+"""The clewn package.
+
+"""
 import os
 import os.path
 import tempfile
@@ -30,6 +33,7 @@ import clewn.application as _application
 
 __version__ = '0.2'
 __svn__ = '.' + '$Revision$'.strip('$').split()[1]
+unused = __svn__
 VIM_PGM = ['gvim',  '-u', 'NONE', '-esX', '-c', 'set cpo&vim']
 
 def run_vim_cmd(cmd_list):

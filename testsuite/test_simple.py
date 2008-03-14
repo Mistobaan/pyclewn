@@ -17,8 +17,11 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id: test_simple.py 202 2007-12-20 19:16:45Z xavier $
+# $Id$
 
+"""Test the simple application.
+
+"""
 import sys
 import unittest
 from test.test_support import run_unittest
@@ -30,6 +33,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
     """Test the Simple commands."""
 
     def setUp(self):
+        """Test setup."""
         ClewnTestCase.setUp(self)
         sys.argv.append('--simple')
 
@@ -351,6 +355,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
 
 
 def test_main():
+    """Run all the tests."""
     suite = unittest.TestSuite()
     suite.addTest(SimpleCommandsTestCase('test_break'))
     suite.addTest(SimpleCommandsTestCase('test_clear'))

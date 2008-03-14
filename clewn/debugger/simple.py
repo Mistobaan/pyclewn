@@ -51,6 +51,7 @@ class Target(threading.Thread):
     TARGET_TIMEOUT = 0.100  # interruptible loop timer
 
     def __init__(self, daemon):
+        """Constructor."""
         threading.Thread.__init__(self)
         self.daemon = daemon
         self.bp = threading.Event()
@@ -63,6 +64,7 @@ class Target(threading.Thread):
                                         [False] + sys.modules.keys())
 
     def close(self):
+        """Close the target."""
         self.closed = True
 
     def interrupt(self):
@@ -89,10 +91,12 @@ class Target(threading.Thread):
         return True
 
     def __repr__(self):
+        """Return the target representation."""
         state = {'running': self.running, 'closed': self.closed}
         return 'Target: %s' % pprint.pformat(state)
 
     def run(self):
+        """Run the target."""
         while not self.closed:
             if self.bp.isSet():
                 if self.cnt == 0 and not self.daemon and not self.testrun:
@@ -123,6 +127,7 @@ class Varobj(object):
     """
 
     def __init__(self):
+        """Constructor."""
         self.var = {}
         self.current = None
         self.hilite = False
@@ -174,13 +179,14 @@ class Varobj(object):
         self.hilite = False
 
     def __str__(self):
+        """Return a string representation of the varobj."""
         varstr = ''
         for (name, value) in self.var.iteritems():
             if name == self.current and self.hilite:
-                type = '*'
+                hilite = '*'
             else:
-                type = '='
-            varstr += '%12s ={%s} %d\n' % (name, type, value)
+                hilite = '='
+            varstr += '%12s ={%s} %d\n' % (name, hilite, value)
         return varstr
 
 class Simple(application.Application):
@@ -242,6 +248,8 @@ class Simple(application.Application):
     def __init__(self, nbsock, daemon, pgm, arglist):
         """Constructor."""
         application.Application.__init__(self, nbsock, daemon)
+        unused = pgm
+        unused = arglist
         self.cmds.update(self.simple_cmds)
         self.mapkeys.update(self.simple_mapkeys)
         self.bp_id = 0
@@ -309,10 +317,15 @@ class Simple(application.Application):
         # buffer when processing Cdbgvar
 
         # update the vim debugger variable buffer with the variables values
+        unused = cmd
+        unused = args
         self.nbsock.dbgvarbuf.update(str(self.varobj))
 
     def default_cmd_processing(self, buf, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""
+        unused = buf
+        unused = cmd
+        unused = args
         self.console_print('Command ignored.\n')
         self.prompt()
 
@@ -322,6 +335,8 @@ class Simple(application.Application):
         The required argument of the vim user command is 'fname:lnum'.
 
         """
+        unused = buf
+        unused = cmd
         result = 'Invalid arguments.\n'
 
         name, lnum = self.name_lnum(args)
@@ -347,6 +362,8 @@ class Simple(application.Application):
         The required argument of the vim user command is 'fname:lnum'.
 
         """
+        unused = buf
+        unused = cmd
         result = 'Invalid arguments.\n'
 
         name, lnum = self.name_lnum(args)
@@ -359,7 +376,7 @@ class Simple(application.Application):
                                 % (name, lnum)
             else:
                 result = 'Deleted breakpoints %s\n'     \
-                                % ' '.join([str(id) for id in deleted])
+                                % ' '.join([str(num) for num in deleted])
 
                 # disable stepping when no enabled breakpoints
                 if name == self.step_bufname \
@@ -372,6 +389,8 @@ class Simple(application.Application):
 
     def cmd_dbgvar(self, buf, cmd, args):
         """Add a variable to the debugger variable buffer."""
+        unused = buf
+        unused = cmd
         args = args.split()
         # two arguments are required
         if len(args) != 2:
@@ -393,6 +412,8 @@ class Simple(application.Application):
 
     def cmd_delvar(self, buf, cmd, args):
         """Delete a variable from the debugger variable buffer."""
+        unused = buf
+        unused = cmd
         args = args.split()
         # one argument is required
         if len(args) != 1:
@@ -408,6 +429,7 @@ class Simple(application.Application):
 
     def set_bpstate(self, cmd, args, enable):
         """Change the state of one breakpoint."""
+        unused = cmd
         args = args.split()
         result = 'Invalid arguments.\n'
 
@@ -431,6 +453,7 @@ class Simple(application.Application):
         The required argument of the vim user command is the breakpoint number.
 
         """
+        unused = buf
         self.set_bpstate(cmd, args, False)
 
     def cmd_enable(self, buf, cmd, args):
@@ -439,16 +462,20 @@ class Simple(application.Application):
         The required argument of the vim user command is the breakpoint number.
 
         """
+        unused = buf
         self.set_bpstate(cmd, args, True)
 
     def cmd_print(self, buf, cmd, args):
         """Print a value."""
+        unused = buf
+        unused = cmd
         if args:
             self.console_print('%s\n', args)
         self.prompt()
 
     def cmd_step(self, *args):
         """Step program until it reaches a different source line."""
+        unused = args
         assert self.inferior is not None
         if not self.get_lnum_list(self.step_bufname):
             self.console_print('No breakpoint enabled at %s.\n', self.step_bufname)
@@ -462,6 +489,7 @@ class Simple(application.Application):
 
     def cmd_continue(self, *args):
         """Continue the program being debugged, also used to start the program."""
+        unused = args
         assert self.inferior is not None
         if not self.get_lnum_list(self.step_bufname):
             self.console_print('No breakpoint enabled at %s.\n', self.step_bufname)
@@ -473,6 +501,7 @@ class Simple(application.Application):
 
     def cmd_interrupt(self, *args):
         """Interrupt the execution of the debugged program."""
+        unused = args
         assert self.inferior is not None
         if self.inferior.interrupt():
             self.move_frame(True)
@@ -480,6 +509,7 @@ class Simple(application.Application):
 
     def cmd_quit(self, *args):
         """Quit the current simple session."""
+        unused = args
         self.varobj.clear()
         self.close()
 

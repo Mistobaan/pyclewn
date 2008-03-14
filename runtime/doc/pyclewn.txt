@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 March 9
+*pyclewn.txt*                                   Last change: 2008 March 14
 
 
                             PYCLEWN USER MANUAL
@@ -595,7 +595,7 @@ To implement a new debugger in pyclewn:
 
     3 - Update the pyclewn documentation at runtime/doc/pyclewn.txt
 
-    4 - Add tests to the testsuite
+    4 - Run pychecker.sh and add tests to the testsuite
 
     5 - Update setup.py to import the new clewn.Application subclass. The
         .pyclewn_keys.{debugger} keys map file is automatically created when

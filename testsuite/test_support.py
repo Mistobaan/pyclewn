@@ -17,7 +17,7 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id: test_support.py 193 2007-12-08 21:04:22Z xavier $
+# $Id$
 
 """Supporting definitions for the pyclewn regression tests."""
 
@@ -65,6 +65,7 @@ class ClewnTestCase(unittest.TestCase):
             sys.argv.append('--level=nbdebug')
 
     def tearDown(self):
+        """Cleanup stuff after the test."""
         self.__class__.__port = (self.__port + 1) % 100
         for name in os.listdir(os.getcwd()):
             if name.startswith(TESTFN):
@@ -88,8 +89,9 @@ class ClewnTestCase(unittest.TestCase):
 
         The result check ignores changes in the amount of white space
         (including new lines).
-        """
 
+        """
+        unused = self
         # write the commands
         fp = open(TESTFN, 'w')
         fp.write(string.Template(cmd).substitute(time=SLEEP_TIME,

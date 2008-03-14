@@ -17,8 +17,11 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id: test_pyclewn.py 199 2007-12-09 20:21:02Z xavier $
+# $Id$
 
+"""Test pyclewn.
+
+"""
 import sys
 import unittest
 from test.test_support import run_unittest
@@ -30,6 +33,7 @@ class PyclewnTestCase(ClewnTestCase):
     """Test pyclewn."""
 
     def setUp(self):
+        """Test setup."""
         ClewnTestCase.setUp(self)
         sys.argv.append('--simple')
 
@@ -194,6 +198,7 @@ class PyclewnTestCase(ClewnTestCase):
             )
 
 def test_main():
+    """Run all the tests."""
     suite = unittest.TestSuite()
     suite.addTest(PyclewnTestCase('test_noname'))
     suite.addTest(PyclewnTestCase('test_breakloadbuffer'))
