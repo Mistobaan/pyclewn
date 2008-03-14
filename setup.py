@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# $Id: setup.py 194 2007-12-09 09:57:08Z xavier $
+# $Id$
 
 import sys
 import os
@@ -91,13 +91,14 @@ def keymap_files():
         name = clazz.__name__.lower()
         f = open('runtime/.pyclewn_keys.' + name, 'w')
         f.write(string.Template(template).substitute(clazz=name))
-        for k in sorted(clazz.mapkeys):
-            if len(clazz.mapkeys[k]) == 2:
-                comment = ' # ' + clazz.mapkeys[k][1]
+        mapkeys = getattr(clazz, name + '_mapkeys')
+        for k in sorted(mapkeys):
+            if len(mapkeys[k]) == 2:
+                comment = ' # ' + mapkeys[k][1]
                 f.write('# %s%s\n' %
-                    (('%s : %s' % (k, clazz.mapkeys[k][0])).ljust(30), comment))
+                    (('%s : %s' % (k, mapkeys[k][0])).ljust(30), comment))
             else:
-                f.write('# %s : %s\n' % (k, clazz.mapkeys[k][0]))
+                f.write('# %s : %s\n' % (k, mapkeys[k][0]))
 
         f.close()
 

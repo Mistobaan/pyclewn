@@ -495,7 +495,7 @@ class GdbTestCase(ClewnTestCase):
             'Signs for testsuite/foobar.c:\n'
             '    line=9  id=3  name=3\n'
             '    line=9  id=1  name=1\n'
-            'Signs for /home/xavier/src/pyclewn_wa/trunk/pyclewn/testsuite/foo.c:\n'
+            'Signs for ${cwd}testsuite/foo.c:\n'
             '    line=23  id=2  name=1\n'
             )
 
