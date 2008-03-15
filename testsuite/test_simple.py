@@ -204,7 +204,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
             ':edit ${test_file}1\n'
             ':Chelp\n'
             ':sleep ${time}\n'
-            ':edit (clewn)_console | $$ | ?(simple) help?,$$-1w!  ${test_out}\n'
+            ':edit (clewn)_console | $$ | ?(simple) help?+1,$$-1w!  ${test_out}\n'
             ':qa!\n',
 
             'break -- Set a breakpoint at a specified line.\n'

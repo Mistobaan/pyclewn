@@ -608,17 +608,17 @@ class Server(asyncore.dispatcher):
         assert False, 'unhandled exceptional condition'
 
     def handle_read(self):
-        """Not implementd."""
+        """Not implemented."""
         unused = self
         assert False, 'unhandled read event in server'
 
     def handle_write(self):
-        """Not implementd."""
+        """Not implemented."""
         unused = self
         assert False, 'unhandled write event in server'
 
     def handle_connect(self):
-        """Not implementd."""
+        """Not implemented."""
         unused = self
         assert False, 'unhandled connect event in server'
 

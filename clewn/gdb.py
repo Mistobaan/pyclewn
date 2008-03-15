@@ -707,9 +707,8 @@ class Gdb(application.Application, misc.ProcessChannel):
         """The method called after each invocation of a 'cmd_xxx' method."""
         pass
 
-    def default_cmd_processing(self, buf, cmd, args):
+    def default_cmd_processing(self, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""
-        unused = buf
         if _any([cmd.startswith(x)
                 for x in self.globaal.illegal_cmds_prefix]):
             self.console_print('Illegal command in pyclewn.\n')
@@ -751,9 +750,8 @@ class Gdb(application.Application, misc.ProcessChannel):
         unused = args
         gdbmi.CompleteBreakCommand(self).sendcmd()
 
-    def cmd_dbgvar(self, buf, cmd, args):
+    def cmd_dbgvar(self, cmd, args):
         """Add a variable to the debugger variable buffer."""
-        unused = buf
         unused = cmd
         registering = False
         if not self.nbsock.dbgvarbuf.buf.registered:
@@ -765,9 +763,8 @@ class Gdb(application.Application, misc.ProcessChannel):
         if registering:
             self.nbsock.goto_last()
 
-    def cmd_delvar(self, buf, cmd, args):
+    def cmd_delvar(self, cmd, args):
         """Delete a variable from the debugger variable buffer."""
-        unused = buf
         unused = cmd
         args = args.split()
         # one argument is required
@@ -783,9 +780,8 @@ class Gdb(application.Application, misc.ProcessChannel):
             self.console_print('"%s" not found.\n' % name)
         self.prompt()
 
-    def cmd_foldvar(self, buf, cmd, args):
+    def cmd_foldvar(self, cmd, args):
         """Collapse/expand a variable from the debugger variable buffer."""
-        unused = buf
         unused = cmd
         args = args.split()
         errmsg = ''

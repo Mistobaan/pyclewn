@@ -321,21 +321,19 @@ class Simple(application.Application):
         unused = args
         self.nbsock.dbgvarbuf.update(str(self.varobj))
 
-    def default_cmd_processing(self, buf, cmd, args):
+    def default_cmd_processing(self, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""
-        unused = buf
         unused = cmd
         unused = args
         self.console_print('Command ignored.\n')
         self.prompt()
 
-    def cmd_break(self, buf, cmd, args):
+    def cmd_break(self, cmd, args):
         """Set a breakpoint at a specified line.
 
         The required argument of the vim user command is 'fname:lnum'.
 
         """
-        unused = buf
         unused = cmd
         result = 'Invalid arguments.\n'
 
@@ -356,13 +354,12 @@ class Simple(application.Application):
         self.console_print(result)
         self.prompt()
 
-    def cmd_clear(self, buf, cmd, args):
+    def cmd_clear(self, cmd, args):
         """Clear all breakpoints at a specified line.
 
         The required argument of the vim user command is 'fname:lnum'.
 
         """
-        unused = buf
         unused = cmd
         result = 'Invalid arguments.\n'
 
@@ -387,9 +384,8 @@ class Simple(application.Application):
         self.console_print(result)
         self.prompt()
 
-    def cmd_dbgvar(self, buf, cmd, args):
+    def cmd_dbgvar(self, cmd, args):
         """Add a variable to the debugger variable buffer."""
-        unused = buf
         unused = cmd
         args = args.split()
         # two arguments are required
@@ -410,9 +406,8 @@ class Simple(application.Application):
         elif registered:
             self.nbsock.goto_last()
 
-    def cmd_delvar(self, buf, cmd, args):
+    def cmd_delvar(self, cmd, args):
         """Delete a variable from the debugger variable buffer."""
-        unused = buf
         unused = cmd
         args = args.split()
         # one argument is required
@@ -447,27 +442,24 @@ class Simple(application.Application):
         self.console_print(result)
         self.prompt()
 
-    def cmd_disable(self, buf, cmd, args):
+    def cmd_disable(self, cmd, args):
         """Disable one breakpoint.
 
         The required argument of the vim user command is the breakpoint number.
 
         """
-        unused = buf
         self.set_bpstate(cmd, args, False)
 
-    def cmd_enable(self, buf, cmd, args):
+    def cmd_enable(self, cmd, args):
         """Enable one breakpoint.
 
         The required argument of the vim user command is the breakpoint number.
 
         """
-        unused = buf
         self.set_bpstate(cmd, args, True)
 
-    def cmd_print(self, buf, cmd, args):
+    def cmd_print(self, cmd, args):
         """Print a value."""
-        unused = buf
         unused = cmd
         if args:
             self.console_print('%s\n', args)

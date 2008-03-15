@@ -1,8 +1,10 @@
 #! /bin/bash
 
-list=$(find clewn/ testsuite/ -name "*py")
+if [ -z "$*" ]; then
+    set $* $(find clewn/ testsuite/ -name "*py")
+fi
 
-for i in $list; do
+for i in $*; do
     echo "--- $i"
     pychecker --quiet -F ./.pycheckrc $i
 done

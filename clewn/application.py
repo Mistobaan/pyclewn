@@ -601,11 +601,9 @@ class Application(object):
     #   commands
     #-----------------------------------------------------------------------
 
-    def default_cmd_processing(self, buf, cmd, args):
+    def default_cmd_processing(self, cmd, args):
         """Default method for cmds not handled by a 'cmd_xxx' method.
 
-            buf: netbeans.Buffer
-                the buffer instance
             cmd: str
                 the command name
             args: str
@@ -613,7 +611,6 @@ class Application(object):
 
         """
         unused = self
-        unused = buf
         unused = cmd
         unused = args
         raise NotImplementedError('must be implemented in subclass')
@@ -632,18 +629,16 @@ class Application(object):
         unused = args
         raise NotImplementedError('must be implemented in subclass')
 
-    def cmd_dbgvar(self, buf, cmd, args):
+    def cmd_dbgvar(self, cmd, args):
         """Add a variable to the debugger variable buffer."""
         unused = self
-        unused = buf
         unused = cmd
         unused = args
         raise NotImplementedError('must be implemented in subclass')
 
-    def cmd_delvar(self, buf, cmd, args):
+    def cmd_delvar(self, cmd, args):
         """Delete a variable from the debugger variable buffer."""
         unused = self
-        unused = buf
         unused = cmd
         unused = args
         raise NotImplementedError('must be implemented in subclass')
@@ -686,11 +681,15 @@ class Application(object):
 
     def cmd_sigint(self, *args):
         """Send a <C-C> character to the debugger (not implemented)."""
-        self.default_cmd_processing(*args)
+        unused = self
+        unused = args
+        assert False, 'not implemented'
 
     def cmd_symcompletion(self, *args):
         """Populate the break and clear commands with symbols completion (not implemented)."""
-        self.default_cmd_processing(*args)
+        unused = self
+        unused = args
+        assert False, 'not implemented'
 
     def cmd_unmapkeys(self, *args):
         """Unmap the pyclewn keys, this vim command does not invoke pyclewn."""
@@ -796,7 +795,7 @@ class Application(object):
             method = self.default_cmd_processing
 
         self.pre_cmd(cmd, args)
-        method(buf, cmd, args)
+        method(cmd, args)
         self.post_cmd(cmd, args)
 
     #-----------------------------------------------------------------------
