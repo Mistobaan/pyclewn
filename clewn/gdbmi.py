@@ -592,7 +592,7 @@ class CliCommand(Command):
 
     def sendcmd(self, cmd):
         """Send a cli command."""
-        if not self.gdb.gotprmpt or self.gdb.oob is not None:
+        if not self.gdb.accepting_cmd():
             self.gdb.console_print(
                     "gdb busy: command discarded, please retry\n")
             return False
@@ -682,7 +682,7 @@ class MiCommand(Command):
 
     def docmd(self, fmt, *args):
         """Send the gdb command."""
-        if self.gdb.gotprmpt and self.gdb.oob is None:
+        if self.gdb.accepting_cmd():
             self.result = ''
             return self.send(fmt, *args)
         return False
@@ -793,7 +793,7 @@ class ShowBalloon(Command):
 
     def sendcmd(self):
         """Send the gdb command."""
-        if self.gdb.gotprmpt and self.gdb.oob is None:
+        if self.gdb.accepting_cmd():
             self.result = ''
             return self.send('-data-evaluate-expression %s\n',
                                             _quote(self.text))

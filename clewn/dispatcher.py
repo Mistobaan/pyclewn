@@ -43,6 +43,9 @@ import misc
 import clewn.application as application
 import clewn.gdb as gdb
 import clewn.netbeans as netbeans
+from misc import (
+        any as _any,
+        )
 
 CONNECTION_DEFAULTs = '', 3219, 'changeme'
 CONNECTION_TIMEOUT = 30
@@ -75,8 +78,9 @@ def main():
     # candidates for selection by the commad line arguments
     classes = clewn.class_list()
 
-    testrun = reduce(lambda x, y: x or (y == 'unittest'),
-                                        [False] + sys.modules.keys())
+    # True when running the testsuite
+    testrun = _any([x == 'unittest' for x in sys.modules.keys()])
+
     proc = Dispatcher(classes, testrun)
     proc.parse_options()
     try:
@@ -171,7 +175,8 @@ class Dispatcher(object):
             self.clss = gdb.Gdb
 
         if self.clss.param:
-            self.clss.param = self.parser.values.param or self.clss.param
+            self.clss.param_list = tuple([x.lower().strip() for x in
+                            self.parser.values.application.split(',') if x])
 
         # instantiate the application
         self.app = self.clss(self.nbsock,
@@ -399,6 +404,7 @@ class Dispatcher(object):
             for clss in self.class_list:
                 if opt == clss.opt or opt == clss.long_opt:
                     self.clss = clss
+                    parser.values.application = value
                     break
             else:
                 assert False, 'programming error'
@@ -407,7 +413,7 @@ class Dispatcher(object):
         assert issubclass(clss, application.Application)
         assert clss.opt or clss.long_opt
         metavar = clss.metavar or clss.__name__
-        args = dict(metavar=metavar, help=clss.help,
+        args = dict(metavar=metavar, help=clss.help, dest='application',
                 action='callback', callback=set_applicationCallback)
         # Application option takes one parameter
         if clss.param:

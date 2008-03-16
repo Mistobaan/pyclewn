@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 March 14
+*pyclewn.txt*                                   Last change: 2008 March 16
 
 
                             PYCLEWN USER MANUAL
@@ -116,7 +116,9 @@ options:
   --version                   show program's version number and exit
   -h, --help                  show this help message and exit
   -s, --simple                select the simple debugger
-  -g, --gdb                   select the gdb debugger (the default)
+  -g PARAM_LIST, --gdb=PARAM_LIST
+                              select the gdb application (the default), with a
+                              mandatory, possibly empty, PARAM_LIST
   -d, --daemon                run as a daemon (default 'False')
   -p PGM, --pgm=PGM           set the debugger program to PGM
   -a ARGS, --args=ARGS        set the debugger program arguments to ARGS
@@ -133,6 +135,7 @@ options:
   -f FILE, --file=FILE        set the log file name to FILE
 
 
+                                                        *pyclewn-options*
 The full description of the command line options follows:
 --------------------------------------------------------
 
@@ -147,9 +150,17 @@ The full description of the command line options follows:
                     documented in debugger/simple.py, in the source
                     distribution.
 
--g
---gdb               Select the gdb debugger (the default). The --pgm option
-                    defaults to gdb.
+-g {PARAM_LIST}
+--gdb={PARAM_LIST}  Select the gdb debugger (the default). In this case, the
+                    --pgm option defaults to "gdb". The PARAM_LIST option
+                    parameter is a comma separated list of options and is
+                    mandatory. Currently, there is only one option, the
+                    |async-option|. To run pyclewn with gdb: >
+
+                            no option               with the async option
+                        pyclewn -g ""           pyclewn -g async
+                        pyclewn --gdb=          pyclewn --gdb=async
+                        pyclewn
 
 -d
 --daemon            Run as a daemon (default 'False'): pyclewn is detached
@@ -239,11 +250,14 @@ command names (for example <core-file> in gdb).
 To get help on the pyclewn commands, use Chelp.
 
 Pyclewn commands can be mapped to keys, or called within a Vim script or a
-menu. When two pyclewn commands are invoked in a row, a sleep time must be
-inserted between both commands when the debugger cannot handle requests
-asynchronously (as this is the case with gdb).  For example: >
+menu.
 
-    :Cfile /path/to/foobar | sleep 200m | Cbreak main
+Note:
+The gdb debugger cannot handle requests asynchronously, and one must use
+the|async-option|when mapping keys to a sequence of commands. With this option
+set, one can do the following mapping, for example: >
+
+    :map <F8> :Cfile /path/to/foobar <Bar> Cbreak main <Bar> Crun <CR>
 
 Note:
 Quotes and backslashes must be escaped on vim command line. For example, to
@@ -364,6 +378,18 @@ pyclewn was started.
 
 When pyclewn is run as a daemon, the <tty> gdb command, or the <attach> gdb
 command can be used to control the input and output of the program to debug.
+
+
+                                                    *async-option*
+Async option:
+-------------
+The gdb event loop is not asynchronous in most configurations, which means
+that gdb cannot handle a command while the previous one is being processed and
+discards it.
+When gdb is run with the|async-option|, pyclewn queues the commands in a fifo
+and send a command to gdb, only when gdb is ready to process the command. This
+allows the key mappings of a sequence of gdb commands. To set the
+|async-option|, see|pyclewn-options|.
 
 
                                                     *gdb-keys*

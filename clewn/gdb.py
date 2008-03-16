@@ -28,6 +28,7 @@ import subprocess
 import re
 import string
 import time
+from collections import deque
 
 import gdbmi
 import misc
@@ -422,13 +423,21 @@ class Gdb(application.Application, misc.ProcessChannel):
         multiple_choice: float
             time value, keeping track of a breakpoint multiple choice setting
             on an overloaded class method
+        cmd_fifo: deque
+            fifo of (method, cmd, args) tuples.
+        async: boolean
+            when True, store the commands in the cmd_fifo
 
     """
 
     # command line options
     opt = '-g'
     long_opt = '--gdb'
-    help = 'select the gdb application (the default)'
+    help = 'select the gdb application (the default)'           \
+           ', with a mandatory, possibly empty, PARAM_LIST'
+    param = True
+    metavar = 'PARAM_LIST'
+    param_list = ()
 
     # list of key mappings, used to build the .pyclewn_keys.simple file
     #     key : (mapping, comment)
@@ -486,6 +495,8 @@ class Gdb(application.Application, misc.ProcessChannel):
         self.firstcmdline = None
         self.time = _timer()
         self.multiple_choice = 0
+        self.cmd_fifo = deque()
+        self.async = 'async' in self.param_list
 
     def getargv(self):
         """Return the gdb argv list."""
@@ -537,10 +548,22 @@ class Gdb(application.Application, misc.ProcessChannel):
             application.Application.prompt(self)
 
     def timer(self):
-        """Set all breakpoints on a multiple choice after a timeout."""
-        if self.multiple_choice and _timer() - self.multiple_choice > 0.500:
-            self.multiple_choice = 0
-            self.write('1\n')
+        """Process tasks on timer events.
+
+        Set all breakpoints on a multiple choice after a timeout.
+        Pop a command from the fifo and run it.
+
+        """
+        if self.multiple_choice:
+            if _timer() - self.multiple_choice > 0.500:
+                self.multiple_choice = 0
+                self.write('1\n')
+            # do not pop a command from fifo while multiple_choice pending
+            return
+
+        if self.cmd_fifo and self.accepting_cmd():
+            (method, cmd, args) = self.cmd_fifo.popleft()
+            application.Application.do_cmd(self, method, cmd, args)
 
     def update_dbgvarbuf(self):
         """Update the variables buffer and set the cursor when needed."""
@@ -557,6 +580,10 @@ class Gdb(application.Application, misc.ProcessChannel):
                 self.nbsock.send_cmd(dbgvarbuf.buf, 'setDot', '%d/0' % lnum)
         if lnum is not None:
             dbgvarbuf.foldlnum = None
+
+    def accepting_cmd(self):
+        """Return True when gdb is ready to process a new command."""
+        return self.gotprmpt and self.oob is None
 
     def handle_line(self, line):
         """Process the line received from gdb."""
@@ -692,6 +719,25 @@ class Gdb(application.Application, misc.ProcessChannel):
     #   commands
     #-----------------------------------------------------------------------
 
+    def do_cmd(self, method, cmd, args):
+        """Process 'cmd' and its 'args' with 'method'.
+
+        Execute directly the command when running in non-async mode.
+        Otherwise, flush the cmd_fifo on receiving a sigint and send it,
+        or queue the command to the fifo.
+        """
+        if not self.async:
+            application.Application.do_cmd(self, method, cmd, args)
+            return
+
+        if method == self.cmd_sigint:
+            self.cmd_fifo.clear()
+            application.Application.do_cmd(self, method, cmd, args)
+            return
+
+        # queue the command as a tuple
+        self.cmd_fifo.append((method, cmd, args))
+
     def pre_cmd(self, cmd, args):
         """The method called before each invocation of a 'cmd_xxx' method."""
         self.curcmdline = cmd
@@ -700,7 +746,7 @@ class Gdb(application.Application, misc.ProcessChannel):
 
         # echo the cmd, but not the first one and when not busy
         if self.firstcmdline is not None and cmd != 'sigint':
-            if self.gotprmpt and self.oob is None:
+            if self.accepting_cmd():
                 self.console_print('%s\n', self.curcmdline)
 
     def post_cmd(self, cmd, args):

@@ -36,7 +36,7 @@ class GdbTestCase(ClewnTestCase):
     def setUp(self):
         """Test setup."""
         ClewnTestCase.setUp(self)
-        sys.argv.append('--gdb')
+        sys.argv.append('--gdb=async')
 
     def setup_gdb_args(self, args=''):
         """Setup gdb args and redirect debuggee output to /dev/null."""
@@ -92,9 +92,7 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit ${test_file}1\n'
             ':Cshow height\n'
-            ':sleep ${time}\n'
             ':Cshow width\n'
-            ':sleep ${time}\n'
             ':Cshow confirm\n'
             ':sleep ${time}\n'
             ':edit (clewn)_console | $$ | ?show height?,$$w!  ${test_out}\n'
@@ -115,9 +113,7 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_logfile(
             ':edit ${test_file}1\n'
             ':Cshow height\n'
-            ':sleep ${time}\n'
             ':Cquit\n'
-            ':sleep ${time}\n'
             ':Cshow height\n'
             ':sleep ${time}\n'
             ':qa!\n',
@@ -135,7 +131,6 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Crun\n'
             ':sleep ${time}\n'
             ':Csigint\n'
@@ -152,9 +147,7 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cbreak foo\n'
-            ':sleep ${time}\n'
             ':Crun\n'
-            ':sleep ${time}\n'
             ':Cprint max\n'
             ':sleep ${time}\n'
             ':edit (clewn)_console | $$ | $$-1w!  ${test_out}\n'
@@ -168,9 +161,7 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cset con\n'       # set confirm command
-            ':sleep ${time}\n'
             ':C she\n'          # shell command
             ':sleep ${time}\n'
             ':edit (clewn)_console | $$ | ?con?,$$-1w!  ${test_out}\n'
@@ -187,7 +178,6 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
             ':Csymcompletion\n'
             ':\n\n'
@@ -201,11 +191,8 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cbreak main\n'
-            ':sleep ${time}\n'
             ':Crun\n'
-            ':sleep ${time}\n'
             ':Cdumprepr\n'
             ':sleep ${time}\n'
             ":edit (clewn)_console | $$ | ?'info'?,/'last_balloon'/w!  ${test_out}\n"
@@ -222,9 +209,7 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cbreak main\n'
-            ':sleep ${time}\n'
             ':Crun\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -241,13 +226,9 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cbreak main\n'
-            ':sleep ${time}\n'
             ':Crun\n'
-            ':sleep ${time}\n'
             ':Cstep\n'
-            ':sleep ${time}\n'
             ':Cstep\n'
             ':sleep ${time}\n'
             ":edit (clewn)_console | $$ | /(gdb) step/,$$w!  ${test_out}\n"
@@ -262,9 +243,7 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cbreak main\n'
-            ':sleep ${time}\n'
             ':Cdisable 1\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -280,13 +259,9 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cbreak main\n'
-            ':sleep ${time}\n'
             ':Cenable delete 1\n'
-            ':sleep ${time}\n'
             ':Crun\n'
-            ':sleep ${time}\n'
             ':Cstep\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -302,7 +277,6 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cbreak foo\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -318,11 +292,8 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cbreak main\n'
-            ':sleep ${time}\n'
             ':Cbreak main\n'
-            ':sleep ${time}\n'
             ':Cdelete 1\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -338,11 +309,8 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cbreak main\n'
-            ':sleep ${time}\n'
             ':Crun\n'
-            ':sleep ${time}\n'
             ':Cclear\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -358,7 +326,6 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_logfile(
             ':edit testsuite/overloaded.cc\n'
             ':Cfile testsuite/overloaded\n'
-            ':sleep ${time}\n'
             ':Csymcompletion\n'
             ':\n\n'
             ':qa!\n',
@@ -375,17 +342,11 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cbreak foo\n'
-            ':sleep ${time}\n'
             ':Crun\n'
-            ':sleep ${time}\n'
             ':Cstep\n'
-            ':sleep ${time}\n'
             ':Cstep\n'
-            ':sleep ${time}\n'
             ':Cstep\n'
-            ':sleep ${time}\n'
             ':Cdbgvar map\n'
             ':sleep ${time}\n'
             ':Cfoldvar 1\n'
@@ -404,18 +365,13 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cbreak bar\n'
-            ':sleep ${time}\n'
             ':Crun\n'
-            ':sleep ${time}\n'
             ':Cstep\n'
-            ':sleep ${time}\n'
             ':Cdbgvar i\n'
             ':sleep ${time}\n'
             ":edit (clewn)_dbgvar | 1,$$w!  ${test_out}\n"
             ':Cstep\n'
-            ':sleep ${time}\n'
             ':Cstep\n'
             ':sleep ${time}\n'
             ":edit (clewn)_dbgvar | 1,$$w! >> ${test_out}\n"
@@ -434,11 +390,8 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cbreak foo\n'
-            ':sleep ${time}\n'
             ':Crun\n'
-            ':sleep ${time}\n'
             ':Cdbgvar map\n'
             ':sleep ${time}\n'
             ":edit (clewn)_dbgvar\n"
@@ -456,11 +409,8 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cbreak main\n'
-            ':sleep ${time}\n'
             ':Crun\n'
-            ':sleep ${time}\n'
             ':Cdbgvar len\n'
             ':sleep ${time}\n'
             ':Cprint len=555\n'
@@ -476,15 +426,10 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
-            ':sleep ${time}\n'
             ':Cbreak main\n'
-            ':sleep ${time}\n'
             ':Cbreak foo\n'
-            ':sleep ${time}\n'
             ':Crun\n'
-            ':sleep ${time}\n'
-            r':Cprint foo(\"toto\", 1)\n'
-            ':sleep ${time}\n'
+            ':Cprint foo(\\"toto\\", 1)\n'
             ':Ccontinue\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -504,12 +449,7 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':edit testsuite/overloaded.cc\n'
             ':Cfile testsuite/overloaded\n'
-            ':sleep ${time}\n'
             ':Cbreak A::test\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
             ':sleep ${time}\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'

@@ -404,8 +404,8 @@ class Application(object):
             command line long option
         help: str
             command line help
-        param: str
-            the option requires a parameter when this attribute is not None
+        param: boolean
+            when True, a parameter is required to opt and long_opt
         metavar: str
             see the python standard optparse module: 'Generating help'
 
@@ -448,7 +448,7 @@ class Application(object):
     opt = None          # command line short option
     long_opt = None     # command line long option
     help = None         # command line help
-    param = None        # the option parameter
+    param = False       # no parameter
     metavar = None      # see the optparse python module
 
     def __init__(self, nbsock, daemon=False, pgm=None, arglist=None):
@@ -779,6 +779,12 @@ class Application(object):
         """
         self.last_balloon = text
 
+    def do_cmd(self, method, cmd, args):
+        """Process 'cmd' and its 'args' with 'method'."""
+        self.pre_cmd(cmd, args)
+        method(cmd, args)
+        self.post_cmd(cmd, args)
+
     def dispatch_keypos(self, cmd, args, buf, lnum):
         """Dispatch the keyAtPos event to the proper cmd_xxx method."""
         if not self.started:
@@ -794,9 +800,7 @@ class Application(object):
         except AttributeError:
             method = self.default_cmd_processing
 
-        self.pre_cmd(cmd, args)
-        method(cmd, args)
-        self.post_cmd(cmd, args)
+        self.do_cmd(method, cmd, args)
 
     #-----------------------------------------------------------------------
     #   utilities

@@ -29,7 +29,7 @@ from test.test_support import TESTFN, verify, verbose
 
 import clewn.dispatcher
 
-SLEEP_TIME = '100m'
+SLEEP_TIME = '300m'
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
 TESTFN_FILE = TESTFN + '_file_'
