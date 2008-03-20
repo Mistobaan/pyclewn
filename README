@@ -1,7 +1,7 @@
 README - Pyclewn
 
 Pyclewn is a python program that allows the use of gvim as a front end to a
-debugger. Pyclewn currently supports gdb.
+debugger. Pyclewn currently supports gdb version 6.2.1 or above.
 
 The debugger output is redirected to a vim window, the pyclewn console. The
 debugger commands are mapped to vim user-defined commands with a common letter

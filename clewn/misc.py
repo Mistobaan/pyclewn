@@ -64,6 +64,17 @@ def logmethods(name):
 # set the logging methods
 (critical, error, warning, info, debug) = logmethods('misc')
 
+def previous_evaluation(f, previous={}):
+    """Decorator for functions returning previous result when args are unchanged."""
+    def _dec(*args):
+        if previous.has_key(f) and previous[f][0] == args:
+            return previous[f][1]
+        previous[f] = [args]
+        ret = f(*args)
+        previous[f].append(ret)
+        return ret
+    return _dec
+
 def any(iterable):
     """Return True if any element of the iterable is true."""
     for element in iterable:

@@ -452,6 +452,7 @@ class GdbTestCase(ClewnTestCase):
             ':Cbreak A::test\n'
             ':sleep ${time}\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
             ':sign place\n'
             ':qa!\n',

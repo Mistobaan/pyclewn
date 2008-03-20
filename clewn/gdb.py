@@ -45,6 +45,9 @@ else:
     # On most other platforms the best timer is time.time()
     _timer = time.time
 
+# minimum gdb version
+GDB_VERSION = '6.2.1'
+
 # gdb initial settings
 GDB_INIT = """
 set confirm off
@@ -171,8 +174,15 @@ def gdb_batch(pgm, job):
 
     return result
 
+@misc.previous_evaluation
 def gdb_version(pgm):
-    """Check that the gdb version is greater than 6.0."""
+    """Check that the gdb version is valid.
+
+    gdb 6.1.1 and below are rejected because:
+        gdb 6.1.1:error,msg='Undefined mi command:
+                file-list-exec-source-files (missing implementation)'
+
+    """
     version = None
     header = gdb_batch(pgm, 'show version')
     if header:
@@ -183,11 +193,12 @@ def gdb_version(pgm):
     if not version:
         critical('this is not a gdb program')
         sys.exit()
-    elif version.split('.') < ['6', '0']:
+    elif version.split('.') < GDB_VERSION.split('.'):
         critical('invalid gdb version "%s"', version)
         sys.exit()
     else:
         info('gdb version: %s', version)
+        return version
 
 
 class GlobalSetup(misc.Singleton):
@@ -392,6 +403,8 @@ class Gdb(application.Application, misc.ProcessChannel):
     """The Gdb application is a frontend to GDB/MI.
 
     Instance attributes:
+        version: str
+            current gdb version
         globaal: GlobalSetup
             gdb global data
         results: gdbmi.Result
@@ -476,7 +489,7 @@ class Gdb(application.Application, misc.ProcessChannel):
 
         self.pgm = pgm or 'gdb'
         self.arglist = arglist
-        gdb_version(self.pgm)
+        self.version = gdb_version(self.pgm)
         self.f_init = None
         misc.ProcessChannel.__init__(self, self.getargv())
 
