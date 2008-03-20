@@ -10,7 +10,7 @@
 import os
 import sys
 import warnings
-import sre
+import re
 import cStringIO
 import traceback
 

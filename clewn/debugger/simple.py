@@ -92,8 +92,8 @@ class Target(threading.Thread):
 
     def __repr__(self):
         """Return the target representation."""
-        state = {'running': self.running, 'closed': self.closed}
-        return 'Target: %s' % pprint.pformat(state)
+        return "Target: {'running': %s, 'closed': %s}" % (self.running,
+                                                                self.closed)
 
     def run(self):
         """Run the target."""
