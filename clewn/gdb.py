@@ -200,7 +200,6 @@ def gdb_version(pgm):
         info('gdb version: %s', version)
         return version
 
-
 class GlobalSetup(misc.Singleton):
     """Container for gdb data constant across all Gdb instances.
 

@@ -27,8 +27,11 @@ import os
 import unittest
 from test.test_support import run_unittest
 
+import clewn.gdb
 from clewn.misc import check_call
 from testsuite.test_support import ClewnTestCase
+
+gdb_version = clewn.gdb.gdb_version('gdb')
 
 class GdbTestCase(ClewnTestCase):
     """Test the gdb debugger."""
@@ -202,6 +205,30 @@ class GdbTestCase(ClewnTestCase):
             "         'fullname': '${cwd}testsuite/foobar.c',\n"
             "         'line': '4'},\n"
             "'frame': {'line': '9', 'file': 'foobar.c', 'func': 'main', 'level': '0'},\n"
+            )
+
+    def test_oob_command_v_64(self):
+        """Checking result of oob commands"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak main\n'
+            ':Crun\n'
+            ':Cdumprepr\n'
+            ':sleep ${time}\n'
+            ":edit (clewn)_console | $$ | ?'info'?,/'last_balloon'/w!  ${test_out}\n"
+            ':qa!\n',
+
+            "'file': {'file': 'foobar.c',\n"
+            "         'fullname': '${cwd}testsuite/foobar.c',\n"
+            "         'line': '4'},\n"
+            "'frame': {'file': 'foobar.c',\n"
+            "          'fullname': '${cwd}testsuite/foobar.c',\n"
+            "          'func': 'main',\n"
+            "          'level': '0',\n"
+            "          'line': '9'},\n"
+            "'frameloc': {'lnum': 9,\n"
+            "             'pathname': '${cwd}testsuite/foobar.c'},\n"
             )
 
     def test_frame_sign(self):
@@ -480,7 +507,10 @@ def test_main():
     suite.addTest(GdbTestCase('test_gdb_arglist'))
     suite.addTest(GdbTestCase('test_gdb_illegal'))
     suite.addTest(GdbTestCase('test_symbols_completion'))
-    suite.addTest(GdbTestCase('test_oob_command'))
+    if gdb_version.split('.') < '6.4'.split('.'):
+        suite.addTest(GdbTestCase('test_oob_command'))
+    else:
+        suite.addTest(GdbTestCase('test_oob_command_v_64'))
     suite.addTest(GdbTestCase('test_frame_sign'))
     suite.addTest(GdbTestCase('test_annotation_lvl1'))
     suite.addTest(GdbTestCase('test_disable_bp'))

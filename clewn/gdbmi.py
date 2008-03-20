@@ -85,7 +85,8 @@ SOURCE_CMDS = (
 # gdb objects attributes
 BREAKPOINT_ATTRIBUTES = set(('number', 'type', 'enabled', 'file', 'line'))
 FILE_ATTRIBUTES = set(('line', 'file', 'fullname'))
-FRAME_ATTRIBUTES = set(('level', 'func', 'file', 'line',))
+FRAMECLI_ATTRIBUTES = set(('level', 'func', 'file', 'line',))
+FRAME_ATTRIBUTES = set(('level', 'func', 'file', 'line', 'fullname',))
 SOURCES_ATTRIBUTES = set(('file', 'fullname'))
 VARUPDATE_ATTRIBUTES = set(('name', 'in_scope'))
 VARCREATE_ATTRIBUTES = set(('name', 'numchild', 'type'))
@@ -125,9 +126,10 @@ RE_DIRECTORIES = r'(?P<path>[^:^\n]+)'                                      \
 RE_FILE = keyval_pattern(FILE_ATTRIBUTES,
             'line="1",file="foobar.c",fullname="/home/xdg/foobar.c"')
 
-RE_FRAME = keyval_pattern(FRAME_ATTRIBUTES,
+RE_FRAMECLI = keyval_pattern(FRAMECLI_ATTRIBUTES,
             'frame={level="0",func="main",args=[{name="argc",value="1"},'
             '{name="argv",value="0xbfde84a4"}],file="foobar.c",line="12"}')
+RE_FRAME = keyval_pattern(FRAME_ATTRIBUTES)
 
 RE_SOURCES = keyval_pattern(SOURCES_ATTRIBUTES,
             'files=[{file="foobar.c",fullname="/home/xdg/foobar.c"},'
@@ -148,6 +150,7 @@ re_varevaluate = re.compile(RE_VAREVALUATE, re.VERBOSE)
 re_breakpoints = re.compile(RE_BREAKPOINTS, re.VERBOSE)
 re_directories = re.compile(RE_DIRECTORIES, re.VERBOSE)
 re_file = re.compile(RE_FILE, re.VERBOSE)
+re_framecli = re.compile(RE_FRAMECLI, re.VERBOSE)
 re_frame = re.compile(RE_FRAME, re.VERBOSE)
 re_sources = re.compile(RE_SOURCES, re.VERBOSE)
 re_varupdate = re.compile(RE_VARUPDATE, re.VERBOSE)
@@ -406,10 +409,14 @@ class Info(object):
             self.frame = {}
         if self.frame and isinstance(self.frame, dict):
             line = int(self.frame['line'])
-            fullname = self.file['fullname']
-            source = self.frame['file']
-            if os.path.basename(fullname) == source:
-                source = fullname
+            # gdb 6.4 and above
+            if self.frame.has_key('fullname'):
+                source = self.frame['fullname']
+            else:
+                fullname = self.file['fullname']
+                source = self.frame['file']
+                if os.path.basename(fullname) == source:
+                    source = fullname
             pathname = self.get_fullpath(source)
 
             if pathname is not None:
@@ -513,6 +520,12 @@ class OobList(object):
         self.static_list = []
         for clss in sys.modules[self.__module__].__dict__.values():
             if inspect.isclass(clss) and issubclass(clss, OobCommand):
+                if hasattr(clss, 'version_min')     \
+                        and gdb.version < clss.version_min:
+                    continue
+                if hasattr(clss, 'version_max')     \
+                        and gdb.version > clss.version_max:
+                    continue
                 try:
                     obj = clss(gdb)
                 except AssertionError:
@@ -1059,11 +1072,27 @@ File =    \
             })
 
 # Frame depends on, and is after File
-Frame =    \
+FrameCli =    \
+    type('FrameCli', (OobCommand,),
+            {
+                '__doc__': """Get the frame information.""",
+                'version_max': '6.3',
+                'gdb_cmd': 'frame\n',
+                'info_attribute': 'frame',
+                'prefix': 'done,',
+                'regexp': re_framecli,
+                'reqkeys': FRAMECLI_ATTRIBUTES,
+                'gdblist': False,
+                'action': 'update_frame',
+                'trigger_list': FRAME_CMDS,
+            })
+
+Frame=    \
     type('Frame', (OobCommand,),
             {
                 '__doc__': """Get the frame information.""",
-                'gdb_cmd': 'frame\n',
+                'version_min': '6.4',
+                'gdb_cmd': '-stack-info-frame\n',
                 'info_attribute': 'frame',
                 'prefix': 'done,',
                 'regexp': re_frame,
