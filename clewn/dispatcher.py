@@ -175,8 +175,10 @@ class Dispatcher(object):
             self.clss = gdb.Gdb
 
         if self.clss.param:
-            self.clss.param_list = tuple([x.lower().strip() for x in
-                            self.parser.values.application.split(',') if x])
+            param_list = self.parser.values.param_list
+            if param_list is not None:
+                self.clss.param_list = tuple([x.lower().strip() for x in
+                                                param_list.split(',') if x])
 
         # instantiate the application
         self.app = self.clss(self.nbsock,
@@ -404,7 +406,7 @@ class Dispatcher(object):
             for clss in self.class_list:
                 if opt == clss.opt or opt == clss.long_opt:
                     self.clss = clss
-                    parser.values.application = value
+                    parser.values.param_list = value
                     break
             else:
                 assert False, 'programming error'
@@ -413,7 +415,7 @@ class Dispatcher(object):
         assert issubclass(clss, application.Application)
         assert clss.opt or clss.long_opt
         metavar = clss.metavar or clss.__name__
-        args = dict(metavar=metavar, help=clss.help, dest='application',
+        args = dict(metavar=metavar, help=clss.help, dest='param_list',
                 action='callback', callback=set_applicationCallback)
         # Application option takes one parameter
         if clss.param:
