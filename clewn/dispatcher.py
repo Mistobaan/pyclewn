@@ -158,7 +158,7 @@ class Dispatcher(object):
         formatter = optparse.IndentedHelpFormatter(max_help_position=30)
         usage = "usage: python %prog [options]"
         self.parser = optparse.OptionParser(
-                        version='%prog ' + clewn.__version__ + clewn.__svn__,
+                        version='%prog ' + clewn.__version__,
                         usage=usage,
                         formatter=formatter)
         self.class_list = class_list

@@ -585,9 +585,8 @@ class Application(object):
         if not self.started:
             self.started = True
             self.console_print(
-                    'Pyclewn version %s starting a new instance of %s.\n\n',
-                    (clewn.__version__ + clewn.__svn__),
-                    self.__class__.__name__.lower())
+                'Pyclewn version %s starting a new instance of %s.\n\n',
+                        clewn.__version__, self.__class__.__name__.lower())
 
     def prompt(self):
         """Print the prompt."""
