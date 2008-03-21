@@ -57,7 +57,7 @@ set annotate 1
 """
 SYMBOL_COMPLETION_TIMEOUT = 20 # seconds
 
-RE_VERSION = r'^GNU\s*gdb\s*(?P<version>[0-9.]+)\s*$'           \
+RE_VERSION = r'GNU\s*gdb[^\d]*(?P<version>[0-9.]+)'             \
              r'# RE: gdb version'
 RE_COMPLETION = r'^(?P<cmd>\S+)\s*(?P<arg>\S+)(?P<rest>.*)$'    \
                 r'# RE: cmd 1st_arg_completion'
