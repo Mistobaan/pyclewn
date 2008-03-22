@@ -33,7 +33,7 @@ from collections import deque
 import gdbmi
 import misc
 from misc import (
-        any as _any,
+        misc_any as _any,
         unquote as _unquote,
         )
 import application

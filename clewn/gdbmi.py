@@ -58,7 +58,7 @@ from collections import deque
 
 import misc
 from misc import (
-        any as _any,
+        misc_any as _any,
         quote as _quote,
         parse_keyval as _parse_keyval,
         )

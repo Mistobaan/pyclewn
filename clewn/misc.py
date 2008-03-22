@@ -21,6 +21,7 @@
 
 """Pyclewn miscellaneous classes and functions."""
 
+import __builtin__
 import os
 import os.path
 import re
@@ -75,12 +76,17 @@ def previous_evaluation(f, previous={}):
         return ret
     return _dec
 
-def any(iterable):
-    """Return True if any element of the iterable is true."""
-    for element in iterable:
-        if element:
-            return True
-    return False
+# 'any' new in python 2.5
+if 'any' in __builtin__.__dict__.keys():
+    misc_any = __builtin__.any
+    Unused = misc_any
+else:
+    def misc_any(iterable):
+        """Return True if any element of the iterable is true."""
+        for element in iterable:
+            if element:
+                return True
+        return False
 
 def escape_char(matchobj):
     """Escape special characters in string."""

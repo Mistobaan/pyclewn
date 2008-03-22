@@ -44,7 +44,7 @@ import application
 import gdb
 import netbeans
 from misc import (
-        any as _any,
+        misc_any as _any,
         )
 
 CONNECTION_DEFAULTs = '', 3219, 'changeme'
