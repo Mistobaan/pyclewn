@@ -20,8 +20,10 @@ See INSTALL
 
 DOCUMENTATION:
 -------------
-Read the user manual in runtime/doc/pyclewn.txt, or type the vim command
-":help pyclewn" in vim once pyclewn has been installed.
+Read the user manual in the 'runtime/doc/pyclewn.txt' directory of the
+distribution, or once pyclewn has been installed, type the vim command:
+
+    :help pyclewn
 
 
 FEATURES:

@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 March 16
+*pyclewn.txt*                                   Last change: 2008 March 22
 
 
                             PYCLEWN USER MANUAL
@@ -33,7 +33,7 @@ example, gdb with the attach and tty commands).
 
 Pyclewn currently supports the following debuggers:
 
-    * gdb:      version 6.0 and above
+    * gdb:      version 6.2.1 and above
                 pyclewn uses the gdb MI interface
 
     * simple:   a fake debugger implemented in python to test pyclewn
@@ -253,15 +253,15 @@ Pyclewn commands can be mapped to keys, or called within a Vim script or a
 menu.
 
 Note:
-The gdb debugger cannot handle requests asynchronously, and one must use
-the|async-option|when mapping keys to a sequence of commands. With this option
-set, one can do the following mapping, for example: >
+The gdb debugger cannot handle requests asynchronously, so the
+|async-option|must be set, when mapping a key to a sequence of commands.
+With this option set, one can build, for example, the following mapping: >
 
     :map <F8> :Cfile /path/to/foobar <Bar> Cbreak main <Bar> Crun <CR>
 
 Note:
 Quotes and backslashes must be escaped on vim command line. For example, to
-print foo with a string as first argument to the foo function: >
+print foo with a string literal as first argument to the foo function: >
 
     :Cprint foo(\"foobar\", 1)
 
@@ -386,9 +386,9 @@ Async option:
 The gdb event loop is not asynchronous in most configurations, which means
 that gdb cannot handle a command while the previous one is being processed and
 discards it.
-When gdb is run with the|async-option|, pyclewn queues the commands in a fifo
-and send a command to gdb, only when gdb is ready to process the command. This
-allows the key mappings of a sequence of gdb commands. To set the
+When gdb is run with the|async-option|set, pyclewn queues the commands in a
+fifo and send a command to gdb, only when gdb is ready to process the command.
+This allows the key mappings of a sequence of gdb commands. To set the
 |async-option|, see|pyclewn-options|.
 
 
@@ -430,22 +430,7 @@ Source path:
 Pyclewn automatically locates the source file with the help of gdb, by using
 the debugging information stored in the file that is being debugged. This is
 useful when the program to debug is the result of multiple compilation units
-located in different directories. This feature is only available starting with
-gdb 6.2.1.
-
-When using a gdb version older than 6.2.1, and in order to have gdb find your
-source files when they are not located in the current directory, you must add
-the relevant directories to the gdb directory variable. For example: >
-
-    :Cfile /path/to/this_project/foobar
-
-    :Cdirectory /path/to/this_project
-
-    :Cbreak main
-
-The last command will set a breakpoint and have vim edit
-/path/to/this_project/foobar.c with the appropriate line highlighted (assuming
-main is in foobar.c).
+located in different directories.
 
 
                                                     *Csymcompletion*
@@ -546,31 +531,34 @@ For example, to create a watched variable for the expression "len - max":
 >
     :Cdbgvar len - max
 
-Upon creation, the watched variable is given a name by gdb, for example
+Upon creation, the watched variable is given a name by gdb, for example:
 <var1>.
 The watched variables buffer, "(clewn)_dbgvar", is created upon creation of
 the first watched variable. It is created but not displayed in a window.
-To display "(clewn)_dbgvar" upon creation of the first variable: >
+To display "(clewn)_dbgvar" just after the creation of the first variable: >
     :e #
 or >
     CTL-^
-later, use the following command to find "(clewn)_dbgvar" buffer number N: >
+
+Use the following command to find the number N of the "(clewn)_dbgvar"
+buffer: >
     :ls
-and >
+
+Knowing N, the following commands display the "(clewn)_dbgvar" buffer: >
     :Nb
 or >
     N CTL-^
-or >
-    :Nsb
-to split the current window and display "(clewn)_dbgvar".
 
+To split the current window and display "(clewn)_dbgvar": >
+    :Nsb
+.
 
                                                             *Cfoldvar*
 When the watched variable is a structure or class instance, it can be expanded
 with the|Cfoldvar|pyclewn command to display all its members and their values
 as children watched variables.
 The argument of the|Cfoldvar|command is the line number of the watched
-variable in the watched variable window.
+variable to expand, in the watched variable window.
 For example: >
 
     :Cfoldvar 1
@@ -580,7 +568,7 @@ when using pyclewn key mappings, or one can use the following mapping:
 >
     :map <F8> :exe "Cfoldvar " . line(".")<CR>
 
-The watched variable can be collapsed also with the|Cfoldvar|command.
+The watched variable can also be collapsed with the|Cfoldvar|command.
 
 
                                                             *Cdelvar*

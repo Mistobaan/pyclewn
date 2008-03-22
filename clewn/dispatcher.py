@@ -40,9 +40,9 @@ import platform
 
 import clewn
 import misc
-import clewn.application as application
-import clewn.gdb as gdb
-import clewn.netbeans as netbeans
+import application
+import gdb
+import netbeans
 from misc import (
         any as _any,
         )

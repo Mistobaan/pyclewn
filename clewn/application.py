@@ -73,7 +73,7 @@ import copy
 
 import clewn
 import misc
-import clewn.netbeans as netbeans
+import netbeans
 
 RE_KEY = r'^\s*(?P<key>[Ff]\d{1,2}|[A-Z]|[C-c]-[A-Za-z])\s*'    \
          r':\s*(?P<value>[^#]*)'                                \

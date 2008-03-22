@@ -1,7 +1,12 @@
-$Id: ChangeLog 157 2007-08-04 17:38:10Z xavier $
+$Id$
 
 ===============================================================================
+2008-03-22  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* application.py dispatcher.py netbeans.py gdb.py gdbmi.py:
+	Implementation of the Gdb application and watched variables.
+
+===============================================================================
 2007-08-04  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* application.py dispatcher.py gdb.py netbeans.py simple.py:

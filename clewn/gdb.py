@@ -36,7 +36,7 @@ from misc import (
         any as _any,
         unquote as _unquote,
         )
-import clewn.application as application
+import application
 
 if sys.platform == "win32":
     # On Windows, the best timer is time.clock()

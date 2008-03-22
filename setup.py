@@ -3,12 +3,18 @@
 
 import sys
 import os
-import subprocess
 import string
 import re
 from distutils.command.install import install as _install
 from distutils.command.sdist import sdist as _sdist
 from distutils.core import setup
+try:
+    import subprocess
+except ImportError, e:
+    import sys
+    print "%s: upgrade python to version 2.4 or above." % e
+    sys.exit(1)
+
 
 import clewn
 # list of debuggers to include in the distribution

@@ -25,11 +25,15 @@
 import os
 import os.path
 import tempfile
-import subprocess
 import sys as _sys
 import inspect as _inspect
+try:
+    import subprocess
+except ImportError, e:
+    print "%s: upgrade python to version 2.4 or above." % e
+    _sys.exit(1)
 
-import clewn.application as _application
+import application as _application
 
 __version__ = '0.3'
 __svn__ = '.' + '$Revision$'.strip('$').split()[1]
