@@ -37,7 +37,11 @@ a) Local installation of pyclewn binaries:
     $ python setup.py install --home=$HOME
 
     In that case $HOME/bin must be in your $PATH, and $HOME/lib/python
-    must be in your $PYTHONPATH.
+    must be in your $PYTHONPATH. When these environment variables are not
+    set, pyclewn can be run as:
+
+    $ PYTHONPATH=$HOME/lib/python $HOME/bin/pyclewn
+
 
 b) Local installation of the vim runtime files:
     This is done by setting the vimdir environment variable to your

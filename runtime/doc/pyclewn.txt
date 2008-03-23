@@ -592,7 +592,7 @@ When a watched variable becomes out of scope, it is highlighted with the
 "Comment" highlight group.
 
 The foreground and background colors used by these highlight groups are setup
-by the|colorsheme|currently in use.
+by the|:colorscheme|currently in use.
 
 
 ==============================================================================

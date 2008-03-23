@@ -3,6 +3,7 @@
 
 import sys
 import os
+import os.path
 import string
 import re
 from distutils.command.install import install as _install
@@ -61,7 +62,7 @@ def vimdir(dir=[]):
         else:
             content = clewn.run_vim_cmd(['echon $VIM'])
             if content:
-                dir.append(content)
+                dir.append(os.path.join(content, 'vimfiles'))
             else:
                 abort('aborting install: cannot get runtime files directory')
     return dir[0]
