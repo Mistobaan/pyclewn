@@ -183,6 +183,14 @@ def gdb_version(pgm):
                 file-list-exec-source-files (missing implementation)'
 
     """
+    # check first tty access rights
+    # (gdb does the same on forking the debuggee)
+    try:
+        f = open(os.ttyname(0), 'rw')
+        f.close()
+    except IOError, err:
+        raise misc.Error("Gdb cannot open the terminal: %s" % err)
+
     version = None
     header = gdb_batch(pgm, 'show version')
     if header:
