@@ -73,7 +73,7 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_logfile(
             ':qa!\n',
 
-            'gdb CRITICAL this is not a gdb program\n',
+            'gdb  CRITICAL cannot find the gdb version\n',
 
             'error'
             )

@@ -47,6 +47,7 @@ else:
 
 # minimum gdb version
 GDB_VERSION = '6.2.1'
+Unused = GDB_VERSION
 
 # gdb initial settings
 GDB_INIT = """
@@ -57,7 +58,7 @@ set annotate 1
 """
 SYMBOL_COMPLETION_TIMEOUT = 20 # seconds
 
-RE_VERSION = r'GNU\s*gdb[^\d]*(?P<version>[0-9.]+)'             \
+RE_VERSION = r'GNU\s*gdb[^\d]*(?P<version>[0-9.]+)'            \
              r'# RE: gdb version'
 RE_COMPLETION = r'^(?P<cmd>\S+)\s*(?P<arg>\S+)(?P<rest>.*)$'    \
                 r'# RE: cmd 1st_arg_completion'
@@ -68,7 +69,8 @@ RE_ANNO_1 = r'^[~@&]"\\032\\032[^:]+:[^:]+:[^:]+:[^:]+:[^:]+$'  \
             r'# ^Z^ZFILENAME:LINE:CHARACTER:MIDDLE:ADDR'
 
 # compile regexps
-re_version = re.compile(RE_VERSION, re.VERBOSE)
+re_version = re.compile(RE_VERSION, re.VERBOSE|re.MULTILINE)
+Unused = re_version
 re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_mirecord = re.compile(RE_MIRECORD, re.VERBOSE)
 re_quoted = re.compile(misc.QUOTED_STRING, re.VERBOSE)
@@ -153,6 +155,22 @@ def tmpfile():
             f.close()
     return f
 
+def unwrap_stream_record(lines):
+    """Remove the stream record wrapper from each line.
+
+    Return 'lines' unchanged, if one of them is not a stream record.
+
+    """
+    unwrapped = []
+    for line in lines.splitlines():
+        if line:
+            if line.startswith('~"') and line.endswith(r'\n"'):
+                line = line[2:-3]
+            else:
+                return lines
+        unwrapped.append(line)
+    return '\n'.join(unwrapped)
+
 def gdb_batch(pgm, job):
     """Run job in gdb batch mode and return the result as a string."""
     # create the gdb script as a temporary file
@@ -166,8 +184,11 @@ def gdb_batch(pgm, job):
 
     result = None
     try:
-        result = subprocess.Popen((pgm, '-batch', '-nx', '-x', f.name),
-                                    stdout=subprocess.PIPE).communicate()[0]
+        result = subprocess.Popen((pgm, '--interpreter=mi',
+                                        '-batch', '-nx', '-x', f.name),
+                                    stdin=subprocess.PIPE,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE).communicate()[0]
     except OSError:
         critical('cannot start gdb as "%s"', pgm)
         sys.exit()
@@ -194,12 +215,17 @@ def gdb_version(pgm):
     version = None
     header = gdb_batch(pgm, 'show version')
     if header:
-        matchobj = re_version.match(header.splitlines()[0])
+        matchobj = re_version.search(unwrap_stream_record(header))
         if matchobj:
             version = matchobj.group('version')
 
     if not version:
-        critical('this is not a gdb program')
+        critical('cannot find the gdb version')
+        if header:
+            critical('response to "show version":\n%s%s%s',
+                        '***START***\n',
+                        header,
+                        '***END***\n')
         sys.exit()
     elif version.split('.') < GDB_VERSION.split('.'):
         critical('invalid gdb version "%s"', version)
@@ -344,7 +370,8 @@ class GlobalSetup(misc.Singleton):
 
         # get the list of gdb commands
         for cmd in gdb_batch(self.gdbname, 'complete').splitlines():
-            # sanitize gdb output: remove empty lines and trunk multiple tokens
+            # sanitize gdb output: remove empty lines and truncate multiple tokens
+            cmd = unwrap_stream_record(cmd)
             if not cmd:
                 continue
             else:
@@ -362,7 +389,7 @@ class GlobalSetup(misc.Singleton):
 
         # get first arg completion commands
         for result in gdb_batch(self.gdbname, firstarg_complt).splitlines():
-            matchobj = re_completion.match(result)
+            matchobj = re_completion.match(unwrap_stream_record(result))
             if matchobj:
                 cmd = matchobj.group('cmd')
                 arg = matchobj.group('arg')

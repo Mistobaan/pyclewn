@@ -1,3 +1,10 @@
+April  9, 2008 - pyclewn 0.4
+
+    Bug fix:
+        Pyclewn exits with "gdb  CRITICAL this is not a gdb program" when gdb
+        writes an unexpected terminfo sequence on a subprocess pipe.
+
+
 March 22, 2008 - pyclewn 0.3
 
     Initial release.
