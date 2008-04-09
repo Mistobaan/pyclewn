@@ -16,8 +16,8 @@ INSTALL:
 Unpack the tarball, change directory to the distribution directory and
 run the setup script to install pyclewn:
 
-    # tar xzf pyclewn-0.3.tar.gz
-    # cd pyclewn-0.3
+    # tar xzf pyclewn-0.4.tar.gz
+    # cd pyclewn-0.4
     # python setup.py install
 
 You can now use the ":help pyclewn" command within vim, to get access to
