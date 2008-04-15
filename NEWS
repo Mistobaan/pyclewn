@@ -1,3 +1,9 @@
+XXX, 2008 - pyclewn 0.5
+
+    Bug fixes:
+        Enable a gdb command on the initial [No name] vim window.
+
+
 April  9, 2008 - pyclewn 0.4
 
     Bug fix:

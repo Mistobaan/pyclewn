@@ -115,7 +115,7 @@ FUNCTION_GETFILEVT = """
 " is to send a fake "" nbkey request for the very first buffer: this triggers a
 " fileOpened event, pyclewn in return sends a putBufferNumber command, and the
 " buffer is learnt by the netbeans implementation in gvim. This takes care of
-" problems to display the console with the "[No Name]" buffer, and a buffer
+" problems to display the console with a buffer
 " opened by an argument on vim command line (and unknown to netbeans).
 function s:getfilevt()
     if s:nofileOpened
@@ -127,43 +127,47 @@ endfunction
 """
 
 FUNCTION_CONSOLE = """
-" Split the window that is on top and display the console.
-" When the console is already displayed, show the last line.
-function s:console(file)
-    let name = bufname("%")
-    let n = bufwinnr(name)
+" Split the window that is on top and display the console with previewheight.
+function s:console(console_name)
+    let prevbuf_name = bufname("%")
+    let prevbuf_winnr = bufwinnr(prevbuf_name)
 
-    if bufwinnr(a:file) == -1
-	" horizontal split on top, set at previewheight
-	1wincmd w
-	exe &pvh . "split " . a:file
-	let n = n + 1
+    " The console window does not exist
+    if bufwinnr(a:console_name) == -1
+        " The initial [No name] window
+        if prevbuf_name == ""
+            exe "edit " . a:console_name
+        else
+            1wincmd w
+            exe &pvh . "split " . a:console_name
+            let prevbuf_winnr = prevbuf_winnr + 1
+        endif
 	normal G
+
+        " Sleep to let netbeans process the open file events
+        sleep 300m
+
+        " Return to the previous window if not [No Name]
+        if prevbuf_name != ""
+            exe prevbuf_winnr . "wincmd w"
+        endif
+    " Split the console window (when the only window)
+    elseif winnr("$") == 1
+        exe &pvh . "split"
+        2wincmd w
     endif
 
-    " return to the previous buffer
-    if name != "" && name != a:file
-        exe n . "wincmd w"
-    endif
 endfunction
 
 """
 
 FUNCTION_NBCOMMAND = """
-" run the nbkey netbeans Vim command
+" Run the nbkey netbeans Vim command.
 function s:nbcommand(...)
-    if bufname("%") == ""
-        echohl ErrorMsg
-        echo "You cannot use pyclewn on a '[No Name]' file, please load a file first."
-        echohl None
-        return
-    endif
-
-    " allow '' first arg: the 'C' command followed by a mandatory parameter
+    " Allow '' as first arg: the 'C' command followed by a mandatory parameter
     if a:0 != 0
         if a:1 != "" || (a:0 > 1 && a:2 != "")
             call s:console("${console}")
-
             let cmd = "nbkey " . join(a:000, ' ')
             exe cmd
         endif

@@ -37,18 +37,6 @@ class PyclewnTestCase(ClewnTestCase):
         ClewnTestCase.setUp(self)
         sys.argv.append('--simple')
 
-    def test_noname(self):
-        """Prevent running pyclewn on [No Name] buffer"""
-        self.cltest_redir(
-            ':redir! > ${test_out}\n'
-            ':Cbreak ${test_file}1:1\n'
-            ':qa!\n',
-
-            "You cannot use pyclewn on a '[No Name]' file",
-
-            'line 1\n'
-            )
-
     def test_breakloadbuffer(self):
         """The buffer is automatically loaded on a break command"""
         self.cltest_redir(
@@ -200,7 +188,6 @@ class PyclewnTestCase(ClewnTestCase):
 def test_main():
     """Run all the tests."""
     suite = unittest.TestSuite()
-    suite.addTest(PyclewnTestCase('test_noname'))
     suite.addTest(PyclewnTestCase('test_breakloadbuffer'))
     suite.addTest(PyclewnTestCase('test_steploadbuffer'))
     suite.addTest(PyclewnTestCase('test_wipeout'))

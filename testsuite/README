@@ -16,7 +16,5 @@ lib/pythonx.x/test/README in the Python distribution.
 
             ./regrtest.py -v test_simple.py
 
-    * always start the test case by editing a file before running a Cxxx command
-
     * do not setup pyclewn as a daemon in a test case
 

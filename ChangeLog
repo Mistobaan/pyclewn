@@ -1,10 +1,15 @@
 $Id$
 
+2008-04-15  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* application.py test_pyclewn.py test_simple.py: Enable a gdb command
+	on the initial [No name] vim window.
+
 ===============================================================================
 2008-04-09  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* gdb.py test_gdb.py: Prevent gdb from mistaking a pipe with a tty
-	in gdb_batch()
+	in gdb_batch().
 
 ===============================================================================
 2008-03-22  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
