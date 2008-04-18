@@ -145,6 +145,10 @@ class Buffer(dict):
             True: buffer registered to Vim with netbeans
         editport: ClewnBuffer
             the ClewnBuffer associated with this Buffer instance
+        lnum: int
+            cursor line number
+        col: int
+            cursor column
         type_num: int
             last sequence number of a defined annotation
         bp_tnum: int
@@ -163,6 +167,8 @@ class Buffer(dict):
         self.nbsock = nbsock
         self.registered = False
         self.editport = None
+        self.lnum = None
+        self.col = None
         self.type_num = self.bp_tnum = self.frame_tnum = 0
 
     def define_frameanno(self):
@@ -205,7 +211,6 @@ class Buffer(dict):
         # open file in netbeans
         if not self.registered:
             self.nbsock.send_cmd(self, 'editFile', _quote(self.name))
-            self.nbsock.last_buf = self
             self.nbsock.send_cmd(self, 'stopDocumentListen')
             self.registered = True
 
@@ -273,6 +278,9 @@ class Annotation(object):
             self.nbsock.send_cmd(self.buf, 'addAnno', '%d %d %d/0 -1'
                                 % (self.sernum, typeNum, self.lnum))
             self.nbsock.last_buf = self.buf
+            self.nbsock.last_buf.lnum = self.lnum
+            self.nbsock.last_buf.col = 0
+
             self.nbsock.send_cmd(self.buf, 'setDot', '%d/0' % self.lnum)
             self.is_set = True
 
@@ -320,6 +328,9 @@ class FrameAnnotation(misc.Singleton, Annotation):
             self.nbsock.send_cmd(self.buf, 'addAnno', '%d %d %d/0 -1'
                                 % (self.sernum, typeNum, self.lnum))
             self.nbsock.last_buf = self.buf
+            self.nbsock.last_buf.lnum = self.lnum
+            self.nbsock.last_buf.col = 0
+
             self.nbsock.send_cmd(self.buf, 'setDot', '%d/0' % self.lnum)
             self.is_set = True
 
@@ -657,7 +668,7 @@ class Netbeans(asynchat.async_chat, object):
             IP address: host, port tuple
         ready: boolean
             startupDone event has been received
-        app: clyapp.Application or subclass
+        app: clewn.Application or subclass
             the application instance
         passwd: str
             netbeans password
@@ -832,9 +843,9 @@ class Netbeans(asynchat.async_chat, object):
 
     def goto_last(self):
         """Go to the last cursor position."""
-        # FIXME: restore last cursor position by using an invalid offset
         if self.last_buf is not None:
-            self.send_cmd(self.last_buf, 'setDot', str(sys.maxint))
+            self.send_cmd(self.last_buf, 'setDot', '%d/%d' %
+                                    (self.last_buf.lnum, self.last_buf.col))
 
     #-----------------------------------------------------------------------
     #   Events
@@ -879,8 +890,6 @@ class Netbeans(asynchat.async_chat, object):
                 elif clewnbuf and not isinstance(buf.editport, Console):
                     self.send_function(buf, 'getLength')
 
-                if not buf.editport or not isinstance(buf.editport, Console):
-                    self.last_buf = buf
             else:
                 warning('absolute pathname required')
         else:
@@ -934,16 +943,16 @@ class Netbeans(asynchat.async_chat, object):
         elif len(arg_list) != 2:
             warning('invalid arg in keyAtPos')
         else:
-            if not buf.editport:
-                self.last_buf = buf
-
             matchobj = re_lnumcol.match(arg_list[1])
             if not matchobj:
                 error('invalid lnum/col: %s', arg_list[1])
             else:
                 lnum = int(matchobj.group('lnum'))
-                # col is not used in keyAtPos events
-                # col = int(matchobj.group('col'))
+                col = int(matchobj.group('col'))
+                if not buf.editport or not isinstance(buf.editport, Console):
+                    self.last_buf = buf
+                    self.last_buf.lnum = lnum
+                    self.last_buf.col = col
 
                 cmd, args = (lambda a='', b='':
                                     (a, b))(*string.split(None, 1))

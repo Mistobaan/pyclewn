@@ -740,7 +740,7 @@ class Gdb(application.Application, misc.ProcessChannel):
     def write(self, data):
         """Write data to gdb."""
         misc.ProcessChannel.write(self, data)
-        debug(data)
+        debug(data.rstrip('\n'))
 
     def close(self):
         """Close gdb."""

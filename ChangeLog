@@ -1,7 +1,9 @@
 $Id$
 
-2008-04-15  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2008-04-18  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* netbeans.py: Use netbeans keyAtPos events to store the current
+	cursor position.
 	* application.py test_pyclewn.py test_simple.py: Enable a gdb command
 	on the initial [No name] vim window.
 

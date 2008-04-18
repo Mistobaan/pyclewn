@@ -1,6 +1,9 @@
 XXX, 2008 - pyclewn 0.5
 
     Bug fixes:
+        Avoid having Vim segfaults when stepping very fast with gdb, by the
+        correct handling of the cursor position when restoring the cursor after
+        an update of the gdb console.
         Enable a gdb command on the initial [No name] vim window.
 
 

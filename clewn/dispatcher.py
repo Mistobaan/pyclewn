@@ -229,6 +229,11 @@ class Dispatcher(object):
             args[:0] = ['-nb']
         args[:0] = ['-g']       # it is safe to have multiple options '-g'
         args[:0] = [self.options.editor]
+
+        # uncomment next lines to run Valgrind on vim
+        # args[:0] = ["--leak-check=yes"]
+        # args[:0] = ["valgrind"]
+
         info('editor argv list: %s', str(args))
         try:
             self.gvim = subprocess.Popen(args)
