@@ -1,4 +1,6 @@
 XXX, 2008 - pyclewn 0.5
+    New features:
+        New --window option for the console window location.
 
     Bug fixes:
         Avoid having Vim segfaults when stepping very fast with gdb, by the

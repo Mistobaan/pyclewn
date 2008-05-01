@@ -47,6 +47,7 @@ from misc import (
         misc_any as _any,
         )
 
+WINDOW_LOCATION = ('top', 'bottom', 'left', 'right')
 CONNECTION_DEFAULTs = '', 3219, 'changeme'
 CONNECTION_TIMEOUT = 30
 
@@ -217,7 +218,8 @@ class Dispatcher(object):
 
         # start the editor
         args = self.options.editor_args or []
-        self.f_script = self.app.vim_script(self.options.prefix)
+        self.f_script = self.app.vim_script(self.options.prefix,
+                                                    self.options.location)
         info('sourcing the vim script file: %s', self.f_script.name)
         args[:0] = [self.f_script.name]
         args[:0] = ['-S']
@@ -289,6 +291,7 @@ class Dispatcher(object):
                 raise optparse.OptionValueError(
                         '"%s" is an invalid log LEVEL, must be one of: %s'
                         % (str(value), misc.LOG_LEVELS))
+
         def args_callback(option, opt_str, value, parser):
             unused = opt_str
             try:
@@ -299,6 +302,15 @@ class Dispatcher(object):
                 parser.values.editor_args = args
             else:
                 parser.values.args = args
+
+        def location_callback(option, opt_str, value, parser):
+            location = value.lower()
+            if location in WINDOW_LOCATION:
+                parser.values.location = location
+            else:
+                raise optparse.OptionValueError(
+                        '"%s" is an invalid window LOCATION, must be one of %s'
+                        % (str(value), WINDOW_LOCATION))
 
         self.parser.add_option('-d', '--daemon',
                 action="store_true", dest='daemon', default=False,
@@ -313,6 +325,11 @@ class Dispatcher(object):
         self.parser.add_option('-c', '--cargs', dest='editor_args', metavar='ARGS',
                 type='string', action='callback', callback=args_callback,
                 help='set the editor program arguments to ARGS')
+        self.parser.add_option('-w', '--window', dest='location', default='top',
+                type='string', action='callback', callback=location_callback,
+                help="%s%s%s" % ("open the debugger console window at LOCATION "
+                "which may be one of ", WINDOW_LOCATION,
+                ", the default is '%default'"))
         self.parser.add_option('-x', '--prefix', dest='prefix', default='C',
                 help='set the commands prefix to PREFIX (default \'%default\')')
         self.parser.add_option('-n', '--netbeans',

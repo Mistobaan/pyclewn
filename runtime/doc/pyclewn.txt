@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 March 22
+*pyclewn.txt*                                   Last change: 2008 April 25
 
 
                             PYCLEWN USER MANUAL
@@ -112,6 +112,7 @@ and start the new instance by running any debugger command from vim (except
 
 Pyclewn can be started with the following options:
 
+
 options:
   --version                   show program's version number and exit
   -h, --help                  show this help message and exit
@@ -125,6 +126,10 @@ options:
   -e EDITOR, --editor=EDITOR  set the editor program to EDITOR (default
                               gvim)
   -c ARGS, --cargs=ARGS       set the editor program arguments to ARGS
+  -w LOCATION, --window=LOCATION
+                              open the debugger console window at LOCATION
+                              which may be one of (top, bottom, left,
+                              right), the default is top
   -x PREFIX, --prefix=PREFIX  set the commands prefix to PREFIX (default|C|)
   -n CONN, --netbeans=CONN    set netBeans connection parameters to CONN with
                               CONN as 'host[:port[:passwd]]', (the default is
@@ -189,6 +194,14 @@ The full description of the command line options follows:
 -c {ARGS}
 --cargs={ARGS}      Set the editor program arguments to ARGS, possibly double
                     quoted (same as option --args).
+
+-w {LOCATION}
+--window={LOCATION} The debugger console window pops up at LOCATION, which may
+                    be one of top, bottom, left or right. The default is top.
+                    In the left or right case, the window pops up on the left
+                    (resp. right) if there is only one window currently
+                    displayed, otherwise the debugger window is opened at the
+                    default top.
 
 -x {PREFIX}
 --prefix={PREFIX}   Set the user defined vim commands prefix to PREFIX

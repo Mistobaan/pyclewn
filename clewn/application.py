@@ -126,11 +126,45 @@ endfunction
 
 """
 
+FUNCTION_SPLIT = """
+" Split a window and return to the initial window
+"   location may be: 'top' (default), 'bottom', 'left' or 'right'
+function s:split(bufname, location)
+    let nr = 1
+    let split = "split"
+    let spr = &splitright
+    let sb = &splitbelow
+    set nosplitright
+    set nosplitbelow
+    let prevbuf_winnr = bufwinnr(bufname("%"))
+    if winnr("$") == 1 && (a:location == "right" || a:location == "left")
+	let split = "vsplit"
+	if a:location == "right"
+	    set splitright
+        else
+            let prevbuf_winnr = 2
+	endif
+    else
+	if a:location == "bottom"
+ 	    let nr = winnr("$")
+	    set splitbelow
+        else
+            let prevbuf_winnr = prevbuf_winnr + 1
+	endif
+	exe nr . "wincmd w"
+    endif
+    exe &previewheight . split . " " . a:bufname
+    let &splitright = spr
+    let &splitbelow = sb
+    exe prevbuf_winnr . "wincmd w"
+endfunc
+
+"""
+
 FUNCTION_CONSOLE = """
-" Split the window that is on top and display the console with previewheight.
+" Split a window and display the console with previewheight.
 function s:console(console_name)
     let prevbuf_name = bufname("%")
-    let prevbuf_winnr = bufwinnr(prevbuf_name)
 
     " The console window does not exist
     if bufwinnr(a:console_name) == -1
@@ -138,23 +172,16 @@ function s:console(console_name)
         if prevbuf_name == ""
             exe "edit " . a:console_name
         else
-            1wincmd w
-            exe &pvh . "split " . a:console_name
-            let prevbuf_winnr = prevbuf_winnr + 1
+            call s:split(a:console_name, "${location}")
         endif
 	normal G
 
         " Sleep to let netbeans process the open file events
         sleep 300m
 
-        " Return to the previous window if not [No Name]
-        if prevbuf_name != ""
-            exe prevbuf_winnr . "wincmd w"
-        endif
     " Split the console window (when the only window)
-    elseif winnr("$") == 1
-        exe &pvh . "split"
-        2wincmd w
+    elseif winnr("$$") == 1
+        call s:split("", "${location}")
     endif
 
 endfunction
@@ -493,12 +520,14 @@ class Application(object):
         """Return application specific vim statements to add to the vim script."""
         return ''
 
-    def vim_script(self, prefix):
+    def vim_script(self, prefix, location):
         """Build the vim script.
 
         Argument:
             prefix: str
                 the clewn command prefix
+            location: str
+                the console window location: 'top' | 'bottom' | 'left' | 'right'
 
         Each clewn vim command can be invoked as 'prefix' + 'cmd' with optional
         arguments.  The command with its arguments is invoked with ':nbkey' and
@@ -529,7 +558,9 @@ class Application(object):
 
             # utility vim functions
             f.write(FUNCTION_GETFILEVT)
-            f.write(FUNCTION_CONSOLE)
+            f.write(FUNCTION_SPLIT)
+            f.write(string.Template(FUNCTION_CONSOLE).substitute(
+                                                    location=location))
 
             # unmapkeys script
             f.write('function s:unmapkeys()\n')
