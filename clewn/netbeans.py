@@ -495,16 +495,17 @@ class DebuggerVarBuffer(ClewnBuffer):
                         readonly = False
                     delta = len(line) - 2
 
-                    # FIXME
                     # vim 7.1 remove implementation is bugged and cannot remove
                     # a single line, so insert first an empty line and
                     # remove both lines in one shot
-                    #self.nbsock.send_function(self.buf, 'remove',
-                    #                    str(offset) + ' ' + str(delta))
-                    send_function(self.buf, 'insert',
+                    if self.nbsock.remove_bug:
+                        send_function(self.buf, 'insert',
                                         '%s %s' % (str(offset), _quote('\n')))
-                    send_function(self.buf, 'remove',
+                        send_function(self.buf, 'remove',
                                         '%s %s' % (str(offset), str(delta + 1)))
+                    else:
+                        send_function(self.buf, 'remove',
+                                        '%s %s' % (str(offset), str(delta)))
 
                     self.len -= delta
                 elif line.startswith('? '):
@@ -682,6 +683,8 @@ class Netbeans(asynchat.async_chat, object):
             last reply sequence number
         server: Server
             server socket listening on the netbeans port
+        remove_bug: boolean
+            True with vim 7.1 before patch 207
 
     """
 
@@ -702,6 +705,7 @@ class Netbeans(asynchat.async_chat, object):
         self.ibuff = []
         self.seqno = 0
         self.last_seqno = 0
+        self.remove_bug = True
 
         self.server = Server(self)
         self.set_terminator('\n')
@@ -1057,7 +1061,9 @@ class Netbeans(asynchat.async_chat, object):
         """Return the string representation."""
         status = ''
         if self.ready:
-            status = 'ready, netbeans version "%s", remote ' % self.nbversion
+            status = 'ready, netbeans version "%s"'                         \
+                     ' (vim "netbeans remove function" bug: %s), remote '   \
+                     % (self.nbversion, self.remove_bug)
         elif not self.connected and self.addr:
             status = 'listening to '
         elif self.connected:

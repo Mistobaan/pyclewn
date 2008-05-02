@@ -38,9 +38,9 @@ import application as _application
 __version__ = '0.4'
 __svn__ = '.' + '$Revision$'.strip('$').split()[1]
 unused = __svn__
-VIM_PGM = ['gvim',  '-u', 'NONE', '-esX', '-c', 'set cpo&vim']
+VIM_ARGS = ['-u', 'NONE', '-esX', '-c', 'set cpo&vim']
 
-def run_vim_cmd(cmd_list):
+def run_vim_cmd(cmd_list, pathname='gvim'):
     """Run a list of vim commands and return its output."""
     assert isinstance(cmd_list, (list, tuple))
     tmpname = f = content = None
@@ -49,7 +49,8 @@ def run_vim_cmd(cmd_list):
             fd, tmpname = tempfile.mkstemp(prefix='runvimcmd', suffix='.clewn')
             cmd_list[0:0] = ['redir! >' + tmpname]
             cmd_list.extend(['quit'])
-            args = VIM_PGM[:]
+            args = [pathname]
+            args.extend(VIM_ARGS)
             for cmd in cmd_list:
                 args.extend(['-c', cmd])
             subprocess.Popen(args).wait()

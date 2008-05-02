@@ -201,11 +201,20 @@ class Dispatcher(object):
         self.nbsock.nb_listen(*conn)
         info(self.nbsock)
 
+        # test if vim contains the netbeans 'remove' bug, and print vim version
+        self.nbsock.remove_bug = (clewn.run_vim_cmd([
+                                'echo v:version > 701 ||'
+                                '   v:version == 701 && has("patch207")' ],
+                                        self.options.editor).strip() == '0')
+        info('vim version: %s', clewn.run_vim_cmd(['echo v:version'],
+                                            self.options.editor).strip())
+
         # check pyclewn version
         version = clewn.run_vim_cmd(['runtime pyclewn.vim',
                                    'if exists("g:pyclewn_version")'
                                        '| echo g:pyclewn_version'
-                                       '| endif']).strip()
+                                       '| endif'],
+                                            self.options.editor).strip()
         pyclewn_version = 'pyclewn-' + clewn.__version__
         if version != pyclewn_version:
             critical('pyclewn.vim version does not match pyclewn\'s:\n'\
@@ -214,7 +223,6 @@ class Dispatcher(object):
                         pyclewn_version, version)
             sys.exit()
         info('pyclewn.vim version: %s', version)
-        info('vim version: %s', clewn.run_vim_cmd(['echo v:version']).strip())
 
         # start the editor
         args = self.options.editor_args or []
