@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 April 25
+*pyclewn.txt*                                   Last change: 2008 May 3
 
 
                             PYCLEWN USER MANUAL
@@ -130,6 +130,8 @@ options:
                               open the debugger console window at LOCATION
                               which may be one of (top, bottom, left,
                               right), the default is top
+  -m LNUM, --maxlines=LNUM    set the maximum number of lines of the debugger
+                              console window to LNUM (default 10000 lines)
   -x PREFIX, --prefix=PREFIX  set the commands prefix to PREFIX (default|C|)
   -n CONN, --netbeans=CONN    set netBeans connection parameters to CONN with
                               CONN as 'host[:port[:passwd]]', (the default is
@@ -202,6 +204,12 @@ The full description of the command line options follows:
                     (resp. right) if there is only one window currently
                     displayed, otherwise the debugger window is opened at the
                     default top.
+
+-m {LNUM}
+--maxlines={LNUM}   Set the maximum number of lines of the debugger console
+                    window to LNUM (default 10000 lines). When the number of
+                    lines in the buffer reaches LNUM, 10% of LNUM first lines
+                    are deleted from the buffer.
 
 -x {PREFIX}
 --prefix={PREFIX}   Set the user defined vim commands prefix to PREFIX

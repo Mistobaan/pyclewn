@@ -221,7 +221,7 @@ class Dispatcher(object):
                         '\t\tpyclewn version: "%s"\n'\
                         '\t\tpyclewn.vim version: "%s"',
                         pyclewn_version, version)
-            sys.exit()
+            sys.exit(1)
         info('pyclewn.vim version: %s', version)
 
         # start the editor
@@ -338,6 +338,10 @@ class Dispatcher(object):
                 help="%s%s%s" % ("open the debugger console window at LOCATION "
                 "which may be one of ", WINDOW_LOCATION,
                 ", the default is '%default'"))
+        self.parser.add_option('-m', '--maxlines', dest='max_lines',
+                metavar='LNUM', default=netbeans.CONSOLE_MAXLINES, type='int',
+                help='set the maximum number of lines of the debugger console'
+                ' window to LNUM (default %default lines)')
         self.parser.add_option('-x', '--prefix', dest='prefix', default='C',
                 help='set the commands prefix to PREFIX (default \'%default\')')
         self.parser.add_option('-n', '--netbeans',
@@ -353,6 +357,10 @@ class Dispatcher(object):
         self.parser.add_option('-f', '--file', dest='logFile', metavar='FILE',
                 help='set the log file name to FILE')
         (self.options, args) = self.parser.parse_args()
+
+        if self.options.max_lines <= 0:
+            self.parser.error('invalid number for maxlines option')
+        self.nbsock.max_lines = self.options.max_lines
 
     def setlogger(self):
         """Setup the root logger with handlers: stderr and optionnaly a file."""

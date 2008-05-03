@@ -1,10 +1,12 @@
 $Id$
 
-2008-05-02  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2008-05-03  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* dispatcher.py netbeans.py test_simple.py: New option to set a limit
+	on the console buffer size.
 	* __init__.py dispatcher.py netbeans.py: Do not insert a '\n' before
-	invoking netbeans "remove" function.
-	* application.py dispatcher.py: Option for the console window
+	invoking netbeans 'remove' function.
+	* application.py dispatcher.py: New option for the console window
 	location.
 	* netbeans.py: Use netbeans keyAtPos events to store the current
 	cursor position.

@@ -39,6 +39,7 @@ from misc import (
 NETBEANS_VERSION = '2.3'
 FRAME_ANNO_ID = 'frame'
 CONSOLE = '(clewn)_console'
+CONSOLE_MAXLINES = 10000
 VARIABLES_BUFFER = '(clewn)_dbgvar'
 
 RE_AUTH = r'^\s*AUTH\s*(?P<passwd>\S+)\s*$'                     \
@@ -338,6 +339,51 @@ class FrameAnnotation(misc.Singleton, Annotation):
         """Return frame information."""
         return 'frame at line %d' % self.lnum
 
+class LineCluster(object):
+    """Group lines in a bounded list of elements of a maximum size.
+
+    Instance attributes:
+        nb_element: int
+            maximum number of elements
+        nb_lines: int
+            maximum number of lines per element
+        last_element: list
+            the last element in the cluster
+            each element is a list of [lines_count, bytes_count]
+        cluster: list
+            the list of elements
+
+    """
+
+    def __init__(self, nb_element, nb_lines):
+        """Constructor."""
+        self.nb_element = nb_element
+        self.nb_lines = nb_lines
+        self.last_element = [0, 0]
+        self.cluster = [self.last_element]
+
+    def append(self, msg):
+        """Add 'msg' number of lines and bytes count to the last element.
+
+        When the list of elements has reached its maximum size and the last
+        element is full, the first element in the list is deleted and the number
+        of bytes in this first element is returned.
+
+        """
+        self.last_element[0] += msg.count('\n')
+        self.last_element[1] += len(msg)
+        #print 'line_cluster: %d elements, lines/bytes %s, last_element %s' % (
+        #            len(self.cluster),
+        #            reduce(lambda x, y: [x[0]+y[0], x[1]+y[1]], self.cluster),
+        #            self.last_element)
+        if msg.endswith('\n') and self.last_element[0] >= self.nb_lines:
+            self.last_element = [0, 0]
+            self.cluster.append(self.last_element)
+            if len(self.cluster) > self.nb_element:
+                info('line_cluster: clearing %d lines', self.cluster[0][0])
+                return self.cluster.pop(0)[1]
+        return 0
+
 class ClewnBuffer(object):
     """A ClewnBuffer instance is an edit port in gvim.
 
@@ -401,19 +447,52 @@ class ClewnBuffer(object):
         unused = content
         self.dirty = False
 
-    def clear(self):
-        """Empty the editport."""
+    def remove(self, offset, count):
+        """Remove 'count' bytes at 'offset'.
+
+        Vim 7.1 remove implementation is buggy and cannot remove a single or
+        partial line. In this case we insert first an empty line and remove all
+        lines in one shot (NOTE that this implies this method MUST NOT be
+        called when removing partial lines with a buggy vim 7.1).
+        It is Ok with a more recent vim version.
+
+        """
+        send_function = self.nbsock.send_function
+        if self.nbsock.remove_bug:
+            send_function(self.buf, 'insert',
+                            '%s %s' % (str(offset), _quote('\n')))
+            send_function(self.buf, 'remove',
+                            '%s %s' % (str(offset), str(count + 1)))
+        else:
+            send_function(self.buf, 'remove',
+                            '%s %s' % (str(offset), str(count)))
+
+    def clear(self, count=-1):
+        """Clear the ClewnBuffer instance.
+
+        When 'count' is -1, clear the whole buffer.
+        Otherwise, delete the first 'count' bytes and set the cursor
+        at the end of the buffer.
+
+        """
         if not self.buf.registered:
             return
-        if self.len:
+        if count == -1:
+            count = self.len
+        assert 0 <= count <= self.len
+        if count:
             self.nbsock.send_cmd(self.buf, 'setReadOnly', 'F')
-            self.nbsock.send_function(self.buf, 'remove', '0 ' + str(self.len))
+            self.remove(0, count)
             self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
-            self.nonempty_last = False
-            self.len = 0
+            self.len -= count
+            if self.len == 0:
+                self.nonempty_last = False
+            elif self.visible:
+                self.nbsock.send_cmd(self.buf, 'setDot', str(self.len - 1))
+            info('%s length: %d bytes', self.buf.name, self.len)
 
     def eofprint(self, msg, *args):
-        """Print a end of buffer and restore previous cursor position."""
+        """Print at end of buffer and restore previous cursor position."""
         self.nbsock.send_cmd(None, 'startAtomic')
         if args:
             msg = msg % args
@@ -423,12 +502,24 @@ class ClewnBuffer(object):
         self.nbsock.send_cmd(None, 'endAtomic')
 
 class Console(ClewnBuffer):
-    """The clewn console."""
+    """The clewn console.
+
+    Instance attributes:
+        line_cluster: LineCluster
+            the object handling the Console maximum number of lines
+
+    """
 
     def __init__(self, nbsock):
         """Constructor."""
         ClewnBuffer.__init__(self, CONSOLE, nbsock)
         self.visible = True
+        self.line_cluster = LineCluster(10, self.nbsock.max_lines / 10)
+
+    def append(self, msg):
+        """Append text to the end of the editport."""
+        ClewnBuffer.append(self, msg)
+        self.clear(self.line_cluster.append(msg))
 
 class DebuggerVarBuffer(ClewnBuffer):
     """The debugger variable buffer.
@@ -456,9 +547,9 @@ class DebuggerVarBuffer(ClewnBuffer):
         ClewnBuffer.append(self, msg)
         self.linelist.extend(msg.splitlines(1))
 
-    def clear(self):
+    def clear(self, len=-1):
         """Clear the buffer."""
-        ClewnBuffer.clear(self)
+        ClewnBuffer.clear(self, len)
         self.linelist = []
 
     def update(self, content):
@@ -494,19 +585,7 @@ class DebuggerVarBuffer(ClewnBuffer):
                         send_cmd(self.buf, 'setReadOnly', 'F')
                         readonly = False
                     delta = len(line) - 2
-
-                    # vim 7.1 remove implementation is bugged and cannot remove
-                    # a single line, so insert first an empty line and
-                    # remove both lines in one shot
-                    if self.nbsock.remove_bug:
-                        send_function(self.buf, 'insert',
-                                        '%s %s' % (str(offset), _quote('\n')))
-                        send_function(self.buf, 'remove',
-                                        '%s %s' % (str(offset), str(delta + 1)))
-                    else:
-                        send_function(self.buf, 'remove',
-                                        '%s %s' % (str(offset), str(delta)))
-
+                    self.remove(offset, delta)
                     self.len -= delta
                 elif line.startswith('? '):
                     pass    # skip line not present in either input sequence
@@ -685,6 +764,8 @@ class Netbeans(asynchat.async_chat, object):
             server socket listening on the netbeans port
         remove_bug: boolean
             True with vim 7.1 before patch 207
+        max_lines: int
+            Console maximum number of lines
 
     """
 
@@ -706,6 +787,7 @@ class Netbeans(asynchat.async_chat, object):
         self.seqno = 0
         self.last_seqno = 0
         self.remove_bug = True
+        self.max_lines = CONSOLE_MAXLINES
 
         self.server = Server(self)
         self.set_terminator('\n')

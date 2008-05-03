@@ -352,6 +352,25 @@ class SimpleCommandsTestCase(ClewnTestCase):
             'line 1\n'
             )
 
+    def test_maxlines(self):
+        """Maximum number of lines in the console buffer"""
+        sys.argv.extend(['--maxlines=70'])
+        self.cltest_redir(
+            ':let index = 0\n'
+            ':while index < 100\n'
+            ':  let index = index + 1\n'
+            ':  Cmapkeys\n'
+            ':endwhile\n'
+            ':sleep ${time}\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':file\n'
+            ':qa!\n',
+
+            # Cmapkeys outputs 8 lines, thus: 9 * 8 + 1 = 73 lines
+            '"(clewn)_console" [readonly] line 73 of 73'
+            )
+
 
 def test_main():
     """Run all the tests."""
@@ -371,6 +390,7 @@ def test_main():
     suite.addTest(SimpleCommandsTestCase('test_print'))
     suite.addTest(SimpleCommandsTestCase('test_quit'))
     suite.addTest(SimpleCommandsTestCase('test_unmapkeys'))
+    suite.addTest(SimpleCommandsTestCase('test_maxlines'))
     run_unittest(suite)
 
 if __name__ == "__main__":
