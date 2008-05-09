@@ -1,7 +1,9 @@
 $Id$
 
-2008-05-03  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2008-05-09  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* dispatcher.py gdb.py: New parameter of the 'gdb' option to set the
+	project file pathname.
 	* dispatcher.py netbeans.py test_simple.py: New option to set a limit
 	on the console buffer size.
 	* __init__.py dispatcher.py netbeans.py: Do not insert a '\n' before

@@ -178,7 +178,7 @@ class Dispatcher(object):
         if self.clss.param:
             param_list = self.parser.values.param_list
             if param_list is not None:
-                self.clss.param_list = tuple([x.lower().strip() for x in
+                self.clss.param_list = tuple([x.strip() for x in
                                                 param_list.split(',') if x])
 
         # instantiate the application

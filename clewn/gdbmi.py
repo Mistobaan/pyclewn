@@ -768,7 +768,7 @@ class NumChildrenCommand(MiCommand):
 # 'type' and 'value' are not always present in -var-list-children output
 LIST_CHILDREN_KEYS = VARLISTCHILDREN_ATTRIBUTES.difference(set(('type', 'value')))
 class ListChildrenCommand(MiCommand):
-    """."""
+    """Return a list of the object's children."""
 
     def sendcmd(self):
         """Send the gdb command."""
@@ -776,7 +776,7 @@ class ListChildrenCommand(MiCommand):
                                                         self.varobj['name'])
 
     def handle_result(self, line):
-        """Send the gdb command."""
+        """Process gdb/mi result."""
         varlist = [VarObj(x) for x in
                         [_parse_keyval(re_varlistchildren, list_element)
                             for list_element in re_dict_list.findall(line)]

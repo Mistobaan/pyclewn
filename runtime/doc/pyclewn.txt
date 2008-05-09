@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 May 3
+ the*pyclewn.txt*                                   Last change: 2008 May 9
 
 
                             PYCLEWN USER MANUAL
@@ -158,16 +158,30 @@ The full description of the command line options follows:
                     distribution.
 
 -g {PARAM_LIST}
---gdb={PARAM_LIST}  Select the gdb debugger (the default). In this case, the
-                    --pgm option defaults to "gdb". The PARAM_LIST option
-                    parameter is a comma separated list of options and is
-                    mandatory. Currently, there is only one option, the
-                    |async-option|. To run pyclewn with gdb: >
+--gdb={PARAM_LIST}  Select the gdb debugger (the default). The default value
+                    of the "pgm" option is "gdb". The PARAM_LIST option
+                    parameter is a comma separated list of parameters and is
+                    mandatory when the option is present. So, to run gdb with
+                    no specific parameter, the following commands are
+                    equivalent: >
 
-                            no option               with the async option
-                        pyclewn -g ""           pyclewn -g async
-                        pyclewn --gdb=          pyclewn --gdb=async
                         pyclewn
+                        pyclewn -g ""
+                        pyclewn --gdb=
+.
+                    There are two optional parameters:
+
+                        * the "async" keyword sets the|async-option|
+                        * the project file name sets the project file, see the
+                          description of the |project-file|feature
+
+                    The project file name can be an absolute pathname, a
+                    relative pathname starting with '.' or a home relative
+                    pathname starting with '~'. The directory of the project
+                    file name must be an existing directory.
+                    For example: >
+
+                        pyclewn --gdb=async,./project_name
 
 -d
 --daemon            Run as a daemon (default 'False'): pyclewn is detached

@@ -2,6 +2,7 @@ XXX, 2008 - pyclewn 0.5
     New features:
         New 'maxlines' option to set a limit on the console buffer size.
         New 'window' option for the console window location.
+        New parameter of the 'gdb' option to set the project file pathname.
 
     Changes:
         The vim implementation of the netbeans "remove" function is buggy, and

@@ -24,6 +24,7 @@
 
 import sys
 import os
+import os.path
 import subprocess
 import re
 import string
@@ -474,6 +475,8 @@ class Gdb(application.Application, misc.ProcessChannel):
             fifo of (method, cmd, args) tuples.
         async: boolean
             when True, store the commands in the cmd_fifo
+        project: string
+            project file pathname
 
     """
 
@@ -543,7 +546,33 @@ class Gdb(application.Application, misc.ProcessChannel):
         self.time = _timer()
         self.multiple_choice = 0
         self.cmd_fifo = deque()
-        self.async = 'async' in self.param_list
+        self.async = False
+        self.project = ''
+        self.parse_paramlist()
+
+    def parse_paramlist(self):
+        """Process the class parameter list."""
+        class Error(Exception): pass
+        for param in self.param_list:
+            try:
+                if param.lower() == 'async':
+                    self.async = True
+                else:
+                    pathname = os.path.expanduser(param)
+                    if os.path.isabs(pathname)          \
+                                or pathname.startswith(os.path.curdir):
+                        if not os.path.isdir(pathname)  \
+                                and os.path.isdir(os.path.dirname(pathname)):
+                            if not self.project:
+                                self.project = pathname
+                                continue
+                            raise Error('cannot have two project file names:'
+                                                    ' %s and ' % self.project)
+                        raise Error('not a valid project file pathname:')
+                    raise Error('invalid parameter for the \'--gdb\' option:')
+            except Error, err:
+                critical('%s %s', err, param)
+                sys.exit(1)
 
     def getargv(self):
         """Return the gdb argv list."""
