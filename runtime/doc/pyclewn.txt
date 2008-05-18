@@ -1,4 +1,4 @@
- the*pyclewn.txt*                                   Last change: 2008 May 9
+ the*pyclewn.txt*                                   Last change: 2008 May 17
 
 
                             PYCLEWN USER MANUAL
@@ -48,6 +48,9 @@ Pyclewn provides the following features:
   variable value at the current cursor or mouse position by just hitting a
   key.
 
+* A sequence of gdb commands can be run from a vim script when the
+ |async-option|is set. This may be useful in a key mapping.
+
 * Breakpoints and the line in the current frame are highlighted in the source
   code. Disabled breakpoints are noted with a different highlighting color.
   Pyclewn automatically finds the source file for the breakpoint if it exists,
@@ -59,8 +62,15 @@ Pyclewn provides the following features:
 
 * An expression can be watched in a vim window. The expression value is
   updated and highlighted whenever it has changed. When the expression is a
-  structure or class instance, it can be expanded to show its members and
-  their values.
+  structure or class instance, it can be expanded (resp. folded) to show
+  (resp. hide) its members and their values.
+
+* The|project-command|saves the current gdb settings to a project file that
+  may be sourced later by the gdb "source" command. These settings are the
+  working directory, the debuggee program file name, the program arguments and
+  the breakpoints. The sourcing and saving of the project file can be
+  automated to occur on each gdb startup and termination, whith the
+ |project-file|command line option.
 
 * Vim command completion on the commands and their first argument.
 
@@ -98,8 +108,11 @@ on the vim command line: >
 
     :Cfile foobar
 
+To just start gdb with a command that does not have any effect: >
 
-.                                                    *Ccommand* *C*
+    :Cecho
+
+.                                                   *Ccommand* *C*
 The prefix letter|C|is the default vim command prefix used to map debugger
 commands to vim user-defined commands. These commands are called|Ccommand|in
 this manual. The prefix can be changed with a command line option.
@@ -142,7 +155,7 @@ options:
   -f FILE, --file=FILE        set the log file name to FILE
 
 
-                                                        *pyclewn-options*
+                                                    *pyclewn-options*
 The full description of the command line options follows:
 --------------------------------------------------------
 
@@ -172,8 +185,7 @@ The full description of the command line options follows:
                     There are two optional parameters:
 
                         * the "async" keyword sets the|async-option|
-                        * the project file name sets the project file, see the
-                          description of the |project-file|feature
+                        * the project file name sets the|project-file|
 
                     The project file name can be an absolute pathname, a
                     relative pathname starting with '.' or a home relative
@@ -290,7 +302,7 @@ menu.
 Note:
 The gdb debugger cannot handle requests asynchronously, so the
 |async-option|must be set, when mapping a key to a sequence of commands.
-With this option set, one can build, for example, the following mapping: >
+With this option set, one can build for example the following mapping: >
 
     :map <F8> :Cfile /path/to/foobar <Bar> Cbreak main <Bar> Crun <CR>
 
@@ -366,7 +378,7 @@ The|Ccommand|list includes all the debugger commands and some pyclewn specific
 commands that are listed here:
 
     *|Cdbgvar|       add a watched variable or expression to the
-                     (clewn)_dbgvar buffer
+                    (clewn)_dbgvar buffer
 
     *|Cdelvar|       delete a watched variable from the (clewn)_dbgvar buffer
 
@@ -381,6 +393,8 @@ commands that are listed here:
                      the debugger commands
 
     *|Cmapkeys|      map pyclewn keys
+
+    *|Cproject|      save the current gdb settings to a project file
 
     * Csigint        send a <C-C> character to the debugger to interrupt the
                      running program that is being debugged (only with gdb,
@@ -401,8 +415,8 @@ Note: One useful tutorial on gdb is Peter Jay Salzman's, at
 http://www.dirac.org/linux/gdb/.
 
 
-When gdb is started, it automatically executes commands from its
-init files, normally called '.gdbinit'. See gdb documentation.
+When gdb is started, it automatically executes commands from its init file,
+normally called '.gdbinit'. See gdb documentation.
 
 
 Debuggee standard input and output:
@@ -485,6 +499,35 @@ name completion for these two commands. Gdb uses the symbols found in the
 program file to debug, while pyclewn uses only the file system.
 
 
+                                            *project-command* *project-file*
+Project file:
+-------------
+The pyclewn|project-command|name is "project". This command saves the current
+gdb settings to a project file that may be sourced later by the gdb "source"
+command.
+
+These settings are:
+    * current working directory
+    * debuggee program file name
+    * program arguments
+    * all the breakpoints (at most one breakpoint per source line is saved)
+
+The argument of the|project-command|is the pathname of the project file.
+For example: >
+
+    :Cproject /path/to/project
+
+When the "--gdb" option is set with a project filename (see|pyclewn-options|),
+the project file is automatically sourced when a a gdb session is started, and
+the project file is automatically saved when the gdb session or vim session,
+is terminated.
+
+Note: When gdb sources the project file and cannot set a breakpoint because,
+for example, it was set in a shared library that was loaded at the time the
+project file was saved, gdb ignores silently the breakpoint (see gdb help on
+"set breakpoint pending").
+
+
 Limitations:
 ------------
 The <define> command is not allowed. To build gdb user-defined commands in
@@ -517,7 +560,7 @@ The following gdb commands cannot be run from pyclewn:
 
 
 ==============================================================================
-5. Key mappings                                             *pyclewn-mappings*
+5. Key mappings                                     *pyclewn-mappings*
 
 
 All|Ccommand|can be mapped to vim keys using the vim|:map-commands|.
@@ -526,7 +569,7 @@ For example, to set a breakpoint at the current cursor position: >
     :map <F8> :exe "Cbreak " . expand("%:p") . ":" . line(".")<CR>
 .
 
-                                                            *Cmapkeys*
+                                                    *Cmapkeys*
 Pyclewn key mappings:
 ---------------------
 This section describes another mapping mechanism where pyclewn maps vim keys
@@ -553,11 +596,11 @@ mappings.
 
 
 ==============================================================================
-6. Watched variables                                        *pyclewn-variable*
+6. Watched variables                                *pyclewn-variable*
 
 The vim watched variables buffer is named "(clewn)_dbgvar".
 
-                                                            *Cdbgvar*
+                                                    *Cdbgvar*
 The|Cdbgvar|command is used to create a gdb watched variable in the variables
 buffer from any valid expression. A valid expression is an expression that is
 valid in the current frame.
@@ -588,7 +631,7 @@ To split the current window and display "(clewn)_dbgvar": >
     :Nsb
 .
 
-                                                            *Cfoldvar*
+                                                    *Cfoldvar*
 When the watched variable is a structure or class instance, it can be expanded
 with the|Cfoldvar|pyclewn command to display all its members and their values
 as children watched variables.
@@ -606,7 +649,7 @@ when using pyclewn key mappings, or one can use the following mapping:
 The watched variable can also be collapsed with the|Cfoldvar|command.
 
 
-                                                            *Cdelvar*
+                                                    *Cdelvar*
 A gdb watched variable can be deleted with the|Cdelvar|pyclewn command.
 The argument of the|Cdelvar|command is the name of the variable as given by
 gdb upon creation.

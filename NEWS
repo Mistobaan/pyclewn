@@ -1,8 +1,15 @@
 XXX, 2008 - pyclewn 0.5
     New features:
-        New 'maxlines' option to set a limit on the console buffer size.
-        New 'window' option for the console window location.
-        New parameter of the 'gdb' option to set the project file pathname.
+        The new 'maxlines' option sets a limit on the console buffer size.
+        The new 'window' option positions the console window.
+        The new 'project' pyclewn command saves the current gdb settings to a
+        project file that may be sourced later by the gdb 'source' command.
+        These settings are the working directory, the debuggee program file
+        name, the program arguments and the breakpoints.
+        A new parameter to the 'gdb' option can be used to set the project file
+        pathname. When set, the project file is automatically sourced on
+        starting a gdb session, and the gdb settings are automatically saved to
+        the project file on quitting gdb or vim.
 
     Changes:
         The vim implementation of the netbeans "remove" function is buggy, and
@@ -14,7 +21,6 @@ XXX, 2008 - pyclewn 0.5
         Avoid having Vim segfaults when stepping very fast with gdb, by the
         correct handling of the cursor position when restoring the cursor after
         an update of the gdb console.
-
         Enable a gdb command on the initial [No name] vim window.
 
 

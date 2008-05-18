@@ -31,6 +31,9 @@ import string
 import time
 from collections import deque
 
+# gdb states
+STATE_INIT, STATE_RUNNING, STATE_QUITTING = range(3)
+
 import gdbmi
 import misc
 from misc import (
@@ -412,9 +415,9 @@ class GlobalSetup(misc.Singleton):
         self.cmds[''] = dash_cmds
 
         # add pyclewn commands
-        for cmd in self.pyclewn_cmds:
+        for cmd, completion in self.pyclewn_cmds.iteritems():
             if cmd and cmd != 'help':
-                self.cmds[cmd] = ()
+                self.cmds[cmd] = completion
 
         keys = self.cmds.keys()
         self.illegal_cmds_prefix = set([misc.smallpref_inlist(x, keys)
@@ -440,6 +443,8 @@ class Gdb(application.Application, misc.ProcessChannel):
     Instance attributes:
         version: str
             current gdb version
+        state: enum
+            gdb state
         globaal: GlobalSetup
             gdb global data
         results: gdbmi.Result
@@ -521,9 +526,13 @@ class Gdb(application.Application, misc.ProcessChannel):
     def __init__(self, nbsock, daemon, pgm, arglist):
         """.Constructor."""
         application.Application.__init__(self, nbsock, daemon)
-        self.pyclewn_cmds.update({'foldvar':()})
+        self.pyclewn_cmds.update(
+            {   'foldvar':(),
+                'project':True
+            })
         self.mapkeys.update(self.gdb_mapkeys)
 
+        self.state = STATE_INIT
         self.pgm = pgm or 'gdb'
         self.arglist = arglist
         self.version = gdb_version(self.pgm)
@@ -564,6 +573,12 @@ class Gdb(application.Application, misc.ProcessChannel):
                         if not os.path.isdir(pathname)  \
                                 and os.path.isdir(os.path.dirname(pathname)):
                             if not self.project:
+                                if os.path.isfile(pathname):
+                                    try:
+                                        f = open(pathname, 'r+b')
+                                        f.close()
+                                    except IOError, err:
+                                        raise Error('project file: %s:' % err)
                                 self.project = pathname
                                 continue
                             raise Error('cannot have two project file names:'
@@ -714,7 +729,8 @@ class Gdb(application.Application, misc.ProcessChannel):
             if token == self.token:
                 # ignore received duplicate token
                 pass
-            else:
+            elif self.state != STATE_QUITTING:
+                # may occur on quitting with the debuggee still running
                 raise misc.Error('invalid token "%s"' % token)
         else:
             self.token = token
@@ -736,19 +752,26 @@ class Gdb(application.Application, misc.ProcessChannel):
             self.time = _timer()
             self.oob = self.oob_list.iterator()
             if len(self.results):
-                error('all cmds have not been processed in results')
+                if self.state != STATE_QUITTING:
+                    # may occur on quitting with the debuggee still running
+                    error('all cmds have not been processed in results')
                 self.results.clear()
             self.gotprmpt = True
             self.multiple_choice = 0
-            self.prompt()
+            if not isinstance(self.lastcmd, gdbmi.CliCommandNoPrompt):
+                self.prompt()
 
+        self.process_oob()
+
+    def process_oob(self):
+        """Process OobCommands."""
         # send the next oob command
         assert self.gotprmpt
         if self.oob is not None:
             try:
                 # loop over oob commands that don't send anything
                 while True:
-                    if self.oob.next().sendcmd():
+                    if self.oob.next()():
                         break
             except StopIteration:
                 self.oob = None
@@ -757,14 +780,36 @@ class Gdb(application.Application, misc.ProcessChannel):
                 info('oob commands execution: %f second'
                                             % (t - self.time))
                 self.time = t
+
+                # source the project file
+                if self.state == STATE_INIT:
+                    self.state = STATE_RUNNING
+                    if self.project:
+                        self.clicmd_notify('source %s' % self.project)
+                        return
+
                 # send the first cli command line
                 if self.firstcmdline:
-                    self.console_print("%s\n", self.firstcmdline)
-                    # notify each OobCommand instance
-                    for oob in self.oob_list:
-                        oob.notify(self.firstcmdline)
-                    self.cli.sendcmd(self.firstcmdline)
+                    self.clicmd_notify(self.firstcmdline)
                 self.firstcmdline = ''
+
+    def clicmd_notify(self, cmd, console=True, gdb=True):
+        """Send a cli command after having notified the OobCommands.
+
+        When 'console' is True, print 'cmd' on the console.
+        When 'gdb' is True, send the command to gdb, otherwise send
+        an empty command.
+
+        """
+        if console:
+            self.console_print("%s\n", cmd)
+        # notify each OobCommand instance
+        for oob in self.oob_list:
+            oob.notify(cmd)
+        if gdb:
+            self.cli.sendcmd(cmd)
+        else:
+            gdbmi.CliCommandNoPrompt(self).sendcmd('')
 
     def write(self, data):
         """Write data to gdb."""
@@ -773,13 +818,12 @@ class Gdb(application.Application, misc.ProcessChannel):
 
     def close(self):
         """Close gdb."""
+        if self.state == STATE_RUNNING:
+            self.cmd_quit()
+            return
+
         if not self.closed:
             application.Application.close(self)
-
-            # send an interrupt followed by the quit command
-            self.sendintr()
-            self.write('quit\n')
-            self.console_print('\n===========\n')
             misc.ProcessChannel.close(self)
 
             # clear varobj
@@ -831,6 +875,7 @@ class Gdb(application.Application, misc.ProcessChannel):
 
     def default_cmd_processing(self, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""
+        assert cmd == self.curcmdline.split()[0]
         if _any([cmd.startswith(x)
                 for x in self.globaal.illegal_cmds_prefix]):
             self.console_print('Illegal command in pyclewn.\n')
@@ -855,10 +900,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         if self.firstcmdline is None:
             self.firstcmdline = self.curcmdline
         else:
-            # notify each OobCommand instance of the cmd being processed
-            for oob in self.oob_list:
-                oob.notify(cmd)
-            self.cli.sendcmd(self.curcmdline)
+            self.clicmd_notify(self.curcmdline, console=False)
 
     def cmd_help(self, *args):
         """Print help on gdb and on pyclewn specific commands."""
@@ -935,6 +977,29 @@ class Gdb(application.Application, misc.ProcessChannel):
         if errmsg:
             self.console_print('%s\n' % errmsg)
         self.prompt()
+
+    def cmd_project(self, cmd, args):
+        """Save information to the project file."""
+        if not args:
+            self.console_print('Invalid argument.\n')
+            self.prompt()
+            return
+        self.clicmd_notify('%s %s\n' % (cmd, args), console=False, gdb=False)
+
+    def cmd_quit(self, *args):
+        """Quit gdb."""
+        unused = args
+        # Send a nop command to trigger the OobCommand list.
+        # Interrupt the current command and force a new command.
+        # This may generate errors in the parsing of gdb output
+        # such as invalid tokens when (for example) the debuggee
+        # is running and there is a gdb 'continue' command running.
+        # These errors must be silently ignored.
+        self.gotprmpt = True
+        self.oob = None
+        self.state = STATE_QUITTING
+        self.sendintr()
+        self.clicmd_notify('project %s' % self.project, console=False, gdb=False)
 
     def cmd_sigint(self, *args):
         """Send a <C-C> character to the debugger."""

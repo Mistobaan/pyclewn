@@ -171,10 +171,8 @@ function s:console(console_name)
         " The initial [No name] window
         if prevbuf_name == ""
             exe "edit " . a:console_name
-        else
-            call s:split(a:console_name, "${location}")
         endif
-	normal G
+        call s:split(a:console_name, "${location}")
 
         " Sleep to let netbeans process the open file events
         sleep 300m
@@ -690,9 +688,12 @@ class Application(object):
         unused = args
         for cmd in sorted(self.pyclewn_cmds):
             if cmd:
-                method = getattr(self, 'cmd_%s' % cmd)
-                self.console_print('%s -- %s\n', cmd,
-                                    method.__doc__.split('\n')[0])
+                method = getattr(self, 'cmd_%s' % cmd, None)
+                if method is not None:
+                    doc = ''
+                    if method.__doc__ is not None:
+                        doc = method.__doc__.split('\n')[0]
+                    self.console_print('%s -- %s\n', cmd, doc)
 
     def cmd_mapkeys(self, *args):
         """Map the pyclewn keys."""

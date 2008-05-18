@@ -222,7 +222,7 @@ suppressions = {
 	'netbeans.parse_msg': 'no-returnvalues',
 	'netbeans.FrameAnnotation.init': 'no-override',
 	'gdb.GlobalSetup.init': 'no-override',
-	'gdbmi.OobCommand': 'no-classattr',
+	'gdbmi.OobGdbCommand': 'no-classattr',
     }
 
 # dict: suppress warnings where keys can be regular expressions

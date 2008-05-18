@@ -33,7 +33,10 @@ FEATURES:
   variable value at the current cursor or mouse position by just hitting a
   key.
 
-* Breakpoints and the line in the current frame, are highlighted in the source
+* A sequence of gdb commands can be run from a vim script when the
+ |async-option|is set. This may be useful in a key mapping.
+
+* Breakpoints and the line in the current frame are highlighted in the source
   code. Disabled breakpoints are noted with a different highlighting color.
   Pyclewn automatically finds the source file for the breakpoint if it exists,
   and tells vim to load and display the file and highlight the line.
@@ -44,8 +47,15 @@ FEATURES:
 
 * An expression can be watched in a vim window. The expression value is
   updated and highlighted whenever it has changed. When the expression is a
-  structure or class instance, it can be expanded to show its members and
-  their values.
+  structure or class instance, it can be expanded (resp. folded) to show
+  (resp. hide) its members and their values.
+
+* The|project-command|saves the current gdb settings to a project file that
+  may be sourced later by the gdb "source" command. These settings are the
+  working directory, the debuggee program file name, the program arguments and
+  the breakpoints. The sourcing and saving of the project file can be
+  automated to occur on each gdb startup and termination, whith the
+ |project-file|command line option.
 
 * Vim command completion on the commands and their first argument.
 

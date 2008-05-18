@@ -41,21 +41,15 @@ The instance of the Info class contains all this data.
 The oob commands also perform actions such as: source the project file, update
 the breakpoints and frame sign, create/delete/update the varobj objects.
 
-The sequence of instances of OobCommand commands is sorted in alphabetical order
-in class OobList.  The names of the subclasses of OobCommand are chosen so that
-class instances that depend on the result of the processing of other class
-instances, are last in alphabetical order.
-
 """
 
-import sys
 import os.path
 import re
-import inspect
 import pprint
 import cStringIO
 from collections import deque
 
+import gdb
 import misc
 from misc import (
         misc_any as _any,
@@ -76,6 +70,8 @@ VARUPDATE_CMDS = ()
 DIRECTORY_CMDS = (
     'directory',
     'source')
+
+PROJECT_CMDS = ('project',)
 
 SOURCE_CMDS = (
     'r', 'start',
@@ -118,6 +114,9 @@ RE_VARLISTCHILDREN = keyval_pattern(VARLISTCHILDREN_ATTRIBUTES)
 
 RE_VAREVALUATE = keyval_pattern(VAREVALUATE_ATTRIBUTES, 'done,value="14"')
 
+RE_ARGS = r'\s*"(?P<args>.+)"\.'                                            \
+             r'# "toto "begquot endquot" titi".'
+
 RE_BREAKPOINTS = keyval_pattern(BREAKPOINT_ATTRIBUTES, 'a breakpoint')
 
 RE_DIRECTORIES = r'(?P<path>[^:^\n]+)'                                      \
@@ -130,6 +129,11 @@ RE_FRAMECLI = keyval_pattern(FRAMECLI_ATTRIBUTES,
             'frame={level="0",func="main",args=[{name="argc",value="1"},'
             '{name="argv",value="0xbfde84a4"}],file="foobar.c",line="12"}')
 RE_FRAME = keyval_pattern(FRAME_ATTRIBUTES)
+
+RE_PGMFILE = r'\s*"(?P<debuggee>[^"]+)"\.'                                  \
+             r'# "/path/to/pyclewn/testsuite/foobar".'
+
+RE_PWD = r'"(?P<cwd>[^"]+)"# "/home/xavier/src/pyclewn_wa/trunk/pyclewn"'
 
 RE_SOURCES = keyval_pattern(SOURCES_ATTRIBUTES,
             'files=[{file="foobar.c",fullname="/home/xdg/foobar.c"},'
@@ -147,11 +151,14 @@ re_varcreate = re.compile(RE_VARCREATE, re.VERBOSE)
 re_vardelete = re.compile(RE_VARDELETE, re.VERBOSE)
 re_varlistchildren = re.compile(RE_VARLISTCHILDREN, re.VERBOSE)
 re_varevaluate = re.compile(RE_VAREVALUATE, re.VERBOSE)
+re_args = re.compile(RE_ARGS, re.VERBOSE)
 re_breakpoints = re.compile(RE_BREAKPOINTS, re.VERBOSE)
 re_directories = re.compile(RE_DIRECTORIES, re.VERBOSE)
 re_file = re.compile(RE_FILE, re.VERBOSE)
 re_framecli = re.compile(RE_FRAMECLI, re.VERBOSE)
 re_frame = re.compile(RE_FRAME, re.VERBOSE)
+re_pgmfile = re.compile(RE_PGMFILE, re.VERBOSE)
+re_pwd = re.compile(RE_PWD, re.VERBOSE)
 re_sources = re.compile(RE_SOURCES, re.VERBOSE)
 re_varupdate = re.compile(RE_VARUPDATE, re.VERBOSE)
 
@@ -294,10 +301,16 @@ class Info(object):
     Instance attributes:
         gdb: gdb.Gdb
             the Gdb application instance
+        args: list
+            the debuggee arguments
         breakpoints: list
-            list of breakpoints
+            list of breakpoints, result of a previous OobGdbCommand
         bp_dictionary: dict
-            breakpoints dictionary
+            breakpoints dictionary, with bp number as key
+        cwd: list
+            current working directory
+        debuggee: list
+            program file
         directories: list
             list of gdb directories
         file: dict
@@ -320,8 +333,11 @@ class Info(object):
     def __init__(self, gdb):
         """Constructor."""
         self.gdb = gdb
+        self.args = []
         self.breakpoints = []
         self.bp_dictionary = {}
+        self.cwd = []
+        self.debuggee = []
         self.directories = ['$cdir', '$cwd']
         self.file = {}
         self.frame = {}
@@ -468,9 +484,9 @@ class Result(dict):
     def add(self, command):
         """Add a command object to the dictionary."""
         assert isinstance(command, Command)
-        # do not add an OobCommand if the dictionary contains
+        # do not add an OobGdbCommand if the dictionary contains
         # an object of the same class
-        if isinstance(command, OobCommand)  \
+        if isinstance(command, OobGdbCommand)  \
                 and _any([command.__class__ is obj.__class__
                         for obj in self.values()]):
             return None
@@ -484,7 +500,8 @@ class Result(dict):
     def remove(self, token):
         """Remove a command object from the dictionary and return the object."""
         if not self.has_key(token):
-            error('no token "%s" as an expected pending result', token)
+            # do not report as an error: may occur on quitting
+            info('no token "%s" as an expected pending result', token)
             return None
         command = self[token]
         del self[token]
@@ -502,7 +519,7 @@ class OobList(object):
         gdb: Gdb
             the Gdb instance
         static_list: list
-            list of OobCommand objects
+            ordered list of OobCommand objects
         running_list: list
             list of VarObjCmd objects
         fifo: deque
@@ -516,24 +533,22 @@ class OobList(object):
         self.running_list = []
         self.fifo = None
 
-        # build the OobCommand list
-        self.static_list = []
-        for clss in sys.modules[self.__module__].__dict__.values():
-            if inspect.isclass(clss) and issubclass(clss, OobCommand):
-                if hasattr(clss, 'version_min')     \
-                        and gdb.version < clss.version_min:
-                    continue
-                if hasattr(clss, 'version_max')     \
-                        and gdb.version > clss.version_max:
-                    continue
-                try:
-                    obj = clss(gdb)
-                except AssertionError:
-                    # skip abstract classes
-                    pass
-                else:
-                    self.static_list.append(obj)
-        self.static_list.sort()
+        # build the OobCommand objects list
+        # object ordering is important
+        self.static_list = [
+            Args(gdb),
+            Directories(gdb),
+            File(gdb),
+            FrameCli(gdb),      # after File
+            Frame(gdb),
+            PgmFile(gdb),
+            Pwd(gdb),
+            Sources(gdb),
+            Breakpoints(gdb),   # after File and Sources
+            VarUpdate(gdb),
+            Project(gdb),
+            Quit(gdb),
+        ]
 
     def __iter__(self):
         """Return an iterator over the list of OobCommand objects."""
@@ -620,6 +635,10 @@ class CliCommand(Command):
     def handle_strrecord(self, stream_record):
         """Process the stream records output by the command."""
         self.gdb.console_print(stream_record)
+
+class CliCommandNoPrompt(CliCommand):
+    """The prompt is printed by one of the OobCommands."""
+    pass
 
 class CompleteBreakCommand(CliCommand):
     """CliCommand sent to get the symbols completion list."""
@@ -849,11 +868,32 @@ class VarObjCmd(Command):
         if not self.result and stream_record:
             self.gdb.console_print(stream_record)
 
+    def sendcmd(self):
+        """Send the gdb command.
+
+        Return True when the command has been sent to gdb, False otherwise.
+
+        """
+        unused = self
+        raise NotImplementedError('must be implemented in subclass')
+
+    def __call__(self):
+        """Run the gdb command.
+
+        Return True when the command has been sent to gdb, False otherwise.
+
+        """
+        return self.sendcmd()
+
 class VarObjCmdEvaluate(VarObjCmd):
     """The VarObjCmdEvaluate class."""
 
     def sendcmd(self):
-        """Send the gdb command."""
+        """Send the gdb command.
+
+        Return True when the command has been sent to gdb, False otherwise.
+
+        """
         name = self.varobj['name']
         if not name:
             return False
@@ -875,7 +915,11 @@ class VarObjCmdDelete(VarObjCmd):
     """The VarObjCmdDelete class."""
 
     def sendcmd(self):
-        """Send the gdb command."""
+        """Send the gdb command.
+
+        Return True when the command has been sent to gdb, False otherwise.
+
+        """
         name = self.varobj['name']
         if not name:
             return False
@@ -896,11 +940,35 @@ class VarObjCmdDelete(VarObjCmd):
                     del varlist[name]
                     rootvarobj.dirty = True
 
-class OobCommand(Command):
-    """Base abstract class for oob commands.
+class OobCommand(object):
+    """Abstract class for all static OobCommands.
 
-    All subclasses of OobCommand that are abstract classes, must raise an
-    AssertionError in their constructor.
+    An OobCommand can either send a gdb command, or process the result of other
+    OobCommands as with the Project OobCommand.
+
+    """
+
+    def __init__(self, gdb):
+        """Constructor."""
+        self.gdb = gdb
+
+    def notify(self, cmd):
+        """Notify of the cmd being processed."""
+        unused = self
+        unused = cmd
+        raise NotImplementedError('must be implemented in subclass')
+
+    def __call__(self):
+        """Run the gdb command or perform the task.
+
+        Return True when the command has been sent to gdb, False otherwise.
+
+        """
+        unused = self
+        raise NotImplementedError('must be implemented in subclass')
+
+class OobGdbCommand(OobCommand, Command):
+    """Base abstract class for oob commands.
 
     Instance attributes:
         mi: bool
@@ -920,9 +988,9 @@ class OobCommand(Command):
             optional: not present in all subclasses
             name of the gdb.info method that is called after parsing the result
         trigger: boolean
-            when True, invoke sendcmd()
+            when True, invoke _call__()
         trigger_list: tuple
-            list of commands that trigger the invocation of sendcmd()
+            list of commands that trigger the invocation of __call__()
         trigger_prefix: set
             set of the trigger_list command prefixes built from the
             trigger_list and the list of gdb commands
@@ -931,8 +999,8 @@ class OobCommand(Command):
 
     def __init__(self, gdb):
         """Constructor."""
-        Command.__init__(self, gdb)
-        assert self.__class__ is not OobCommand
+        OobCommand.__init__(self, gdb)
+        assert self.__class__ is not OobGdbCommand
         assert hasattr(self, 'gdb_cmd') and isinstance(self.gdb_cmd, str)
         self.mi = not self.gdb_cmd.startswith('-interpreter-exec console')
         assert hasattr(self, 'info_attribute')              \
@@ -960,15 +1028,15 @@ class OobCommand(Command):
     def notify(self, cmd):
         """Notify of the cmd being processed.
 
-        The OobCommand is run when the trigger_list is empty, or when a
+        The OobGdbCommand is run when the trigger_list is empty, or when a
         prefix of the notified command matches in the trigger_prefix list.
 
         """
         if not self.trigger_list or     \
-                _any([cmd.startswith(x) for x in self.trigger_prefix]):
+                    _any([cmd.startswith(x) for x in self.trigger_prefix]):
             self.trigger = True
 
-    def sendcmd(self):
+    def __call__(self):
         """Send the gdb command.
 
         Return True when the command was sent, False otherwise.
@@ -1029,10 +1097,23 @@ class OobCommand(Command):
         if not self.mi:
             self.parse(stream_record)
 
-# instantiate the OobCommand subclasses
-# listed in alphabetic order to remind they are run in alphabetic order
+# instantiate the OobGdbCommand subclasses
+Args =          \
+    type('Args', (OobGdbCommand,),
+            {
+                '__doc__': """Get the program arguments.""",
+                'gdb_cmd': '-interpreter-exec console "show args"\n',
+                'info_attribute': 'args',
+                'prefix': 'Argument list to give program being'     \
+                          ' debugged when it is started is',
+                'regexp': re_args,
+                'reqkeys': set(),
+                'gdblist': False,
+                'trigger_list': PROJECT_CMDS,
+            })
+
 Breakpoints =   \
-    type('Breakpoints', (OobCommand,),
+    type('Breakpoints', (OobGdbCommand,),
             {
                 '__doc__': """Get the breakpoints list.""",
                 'gdb_cmd': '-break-list\n',
@@ -1045,8 +1126,8 @@ Breakpoints =   \
                 'trigger_list': BREAKPOINT_CMDS,
             })
 
-Directories =    \
-    type('Directories', (OobCommand,),
+Directories =   \
+    type('Directories', (OobGdbCommand,),
             {
                 '__doc__': """Get the directory list.""",
                 'gdb_cmd': '-interpreter-exec console "show directories"\n',
@@ -1058,8 +1139,8 @@ Directories =    \
                 'trigger_list': DIRECTORY_CMDS,
             })
 
-File =    \
-    type('File', (OobCommand,),
+File =          \
+    type('File', (OobGdbCommand,),
             {
                 '__doc__': """Get the source file.""",
                 'gdb_cmd': '-file-list-exec-source-file\n',
@@ -1071,9 +1152,8 @@ File =    \
                 'trigger_list': FILE_CMDS,
             })
 
-# Frame depends on, and is after File
-FrameCli =    \
-    type('FrameCli', (OobCommand,),
+FrameCli =      \
+    type('FrameCli', (OobGdbCommand,),
             {
                 '__doc__': """Get the frame information.""",
                 'version_max': '6.3',
@@ -1087,8 +1167,8 @@ FrameCli =    \
                 'trigger_list': FRAME_CMDS,
             })
 
-Frame=    \
-    type('Frame', (OobCommand,),
+Frame=          \
+    type('Frame', (OobGdbCommand,),
             {
                 '__doc__': """Get the frame information.""",
                 'version_min': '6.4',
@@ -1102,8 +1182,34 @@ Frame=    \
                 'trigger_list': FRAME_CMDS,
             })
 
-Sources =   \
-    type('Sources', (OobCommand,),
+PgmFile =       \
+    type('PgmFile', (OobGdbCommand,),
+            {
+                '__doc__': """Get the program file.""",
+                'gdb_cmd': '-interpreter-exec console "info files"\n',
+                'info_attribute': 'debuggee',
+                'prefix': 'Symbols from',
+                'regexp': re_pgmfile,
+                'reqkeys': set(),
+                'gdblist': False,
+                'trigger_list': PROJECT_CMDS,
+            })
+
+Pwd =           \
+    type('Pwd', (OobGdbCommand,),
+            {
+                '__doc__': """Get the current working directory.""",
+                'gdb_cmd': '-environment-pwd\n',
+                'info_attribute': 'cwd',
+                'prefix': 'done,cwd=',
+                'regexp': re_pwd,
+                'reqkeys': set(),
+                'gdblist': False,
+                'trigger_list': PROJECT_CMDS,
+            })
+
+Sources =       \
+    type('Sources', (OobGdbCommand,),
             {
                 '__doc__': """Get the list of source files.""",
                 'gdb_cmd': '-file-list-exec-source-files\n',
@@ -1115,8 +1221,8 @@ Sources =   \
                 'trigger_list': SOURCE_CMDS,
             })
 
-VarUpdate =    \
-    type('VarUpdate', (OobCommand,),
+VarUpdate =     \
+    type('VarUpdate', (OobGdbCommand,),
             {
                 '__doc__': """Update the variable and its children.""",
                 'gdb_cmd': '-var-update *\n',
@@ -1128,4 +1234,101 @@ VarUpdate =    \
                 'action': 'update_changelist',
                 'trigger_list': VARUPDATE_CMDS,
             })
+
+class Project(OobCommand):
+    """Save project information.
+
+    Instance attributes:
+        project_name: str
+            project file pathname
+
+    """
+
+    def __init__(self, gdb):
+        """Constructor."""
+        OobCommand.__init__(self, gdb)
+        self.project_name = ''
+
+    def notify(self, line):
+        """Set the project filename on notification."""
+        self.project_name = ''
+        cmd = 'project '
+        if line.startswith(cmd):
+            self.project_name = line[len(cmd):].strip()
+
+    def save_breakpoints(self, project):
+        """Save the breakpoints in a project file.
+
+        Save at most one breakpoint per line.
+
+        """
+        gdb_info = self.gdb.info
+        bp_list = []
+        for num in sorted(gdb_info.bp_dictionary.keys(), key=int):
+            bp_element = gdb_info.bp_dictionary[num]
+            pathname = gdb_info.get_fullpath(bp_element['file'])
+            breakpoint = '%s:%s' % (pathname, bp_element['line'])
+            if pathname is not None and breakpoint not in bp_list:
+                project.write('break %s\n' % breakpoint)
+                bp_list.append(breakpoint)
+
+    def __call__(self):
+        """Write the project file."""
+        if self.project_name:
+            # write the project file
+            errmsg = ''
+            gdb_info = self.gdb.info
+            quitting = (self.gdb.state == gdb.STATE_QUITTING)
+            if gdb_info.debuggee:
+                try:
+                    project = open(self.project_name, 'w+b')
+
+                    if gdb_info.cwd:
+                        cwd = gdb_info.cwd[0]
+                        if not cwd.endswith(os.path.sep):
+                            cwd += os.path.sep
+                        project.write('cd %s\n' % cwd)
+
+                    project.write('file %s\n' % gdb_info.debuggee[0])
+
+                    if gdb_info.args:
+                        project.write('set args %s\n' % gdb_info.args[0])
+
+                    self.save_breakpoints(project)
+
+                    project.close()
+
+                    msg = 'Project \'%s\' has been saved.' % self.project_name
+                    info(msg)
+                    self.gdb.console_print('%s\n', msg)
+                    if not quitting:
+                        self.gdb.prompt()
+                except IOError, errmsg:
+                    pass
+            else:
+                errmsg = 'Project \'%s\' not saved:'    \
+                         ' no executable file specified.' % self.project_name
+            if errmsg:
+                error(errmsg)
+                self.gdb.console_print('%s\n', errmsg)
+                if not quitting:
+                    self.gdb.prompt()
+        return False
+
+class Quit(OobCommand):
+    """Quit gdb.
+
+    """
+
+    def notify(self, cmd):
+        """Ignore the notification."""
+        unused = self
+        unused = cmd
+
+    def __call__(self):
+        """Quit gdb."""
+        if self.gdb.state == gdb.STATE_QUITTING:
+            self.gdb.write('quit\n')
+            self.gdb.console_print('\n===========\n')
+        return False
 

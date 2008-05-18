@@ -1,7 +1,9 @@
 $Id$
 
-2008-05-09  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2008-05-17  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* application.py gdb.py gdbmi.py : Implementation of the 'project'
+	command and of the project feature.
 	* dispatcher.py gdb.py: New parameter of the 'gdb' option to set the
 	project file pathname.
 	* dispatcher.py netbeans.py test_simple.py: New option to set a limit

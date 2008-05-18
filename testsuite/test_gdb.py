@@ -29,7 +29,7 @@ from test.test_support import run_unittest
 
 import clewn.gdb
 from clewn.misc import check_call
-from testsuite.test_support import ClewnTestCase
+from testsuite.test_support import ClewnTestCase, TESTFN_FILE, TESTFN_OUT
 
 gdb_version = clewn.gdb.gdb_version('gdb')
 
@@ -40,6 +40,14 @@ class GdbTestCase(ClewnTestCase):
         """Test setup."""
         ClewnTestCase.setUp(self)
         sys.argv.append('--gdb=async')
+
+    def setup_project_tests(self, project_file):
+        """Setup a project test with its project file."""
+        unused = self
+        ASYNC_OPTION = '--gdb=async'
+        if ASYNC_OPTION in sys.argv:
+            assert sys.argv.pop() == ASYNC_OPTION
+        sys.argv.append('--gdb=async,./%s' % project_file)
 
     def setup_gdb_args(self, args=''):
         """Setup gdb args and redirect debuggee output to /dev/null."""
@@ -425,6 +433,7 @@ class GdbTestCase(ClewnTestCase):
             ":tabedit (clewn)_dbgvar\n"
             ':Cshow annotate\n'
             ':sleep ${time}\n'
+            ":edit (clewn)_dbgvar\n"
             ":1,$$w! >> ${test_out}\n"
             ':qa!\n',
 
@@ -491,6 +500,98 @@ class GdbTestCase(ClewnTestCase):
             '    line=5  id=1  name=1\n'
             )
 
+    def test_project_cmd(self):
+        """Check the project command"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak main\n'
+            ':Cbreak foo\n'
+            ':Cset args foo \\"1 2 3\\" bar\n'
+            ':Cproject ${test_out}\n'
+            ':sleep ${time}\n'
+            ':qa!\n',
+
+            'cd ${cwd}\n'
+            'file ${cwd}testsuite/foobar\n'
+            'set args foo "1 2 3" bar\n'
+            'break ${cwd}testsuite/foobar.c:9\n'
+            'break ${cwd}testsuite/foo.c:23\n'
+            )
+
+    def test_project_cmd_unique_bp(self):
+        """Check the project command saves at most one breakpoint per line"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak foo\n'
+            ':Cbreak foo\n'
+            ':Cbreak foo\n'
+            ':Cbreak main\n'
+            ':Cproject ${test_out}\n'
+            ':sleep ${time}\n'
+            ':qa!\n',
+
+            'file ${cwd}testsuite/foobar\n'
+            'break ${cwd}testsuite/foo.c:23\n'
+            'break ${cwd}testsuite/foobar.c:9\n'
+            )
+
+    def test_project_option_load(self):
+        """Project option sources a project file"""
+        self.setup_project_tests('%s1' % TESTFN_FILE)
+        self.cltest_redir(
+            ':Cecho\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            '--- Signs ---\n'
+            'Signs for ${cwd}testsuite/foobar.c:\n'
+            '    line=9  id=1  name=1\n'
+            'Signs for ${cwd}testsuite/foo.c:\n'
+            '    line=23  id=2  name=1\n',
+
+            'cd testsuite\n'
+            'file foobar\n'
+            'break main\n'
+            'break foo\n'
+            )
+
+    def test_project_option_save(self):
+        """Project option saves a project file"""
+        self.setup_project_tests(TESTFN_OUT)
+        self.cltest_redir(
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak main\n'
+            ':Cbreak foo\n'
+            ':Cset args foo \\"1 2 3\\" bar\n'
+            ':Cquit\n'
+            ':sleep ${time}\n'
+            ':qa!\n',
+
+            'cd ${cwd}\n'
+            'file ${cwd}testsuite/foobar\n'
+            'set args foo "1 2 3" bar\n'
+            'break ${cwd}testsuite/foobar.c:9\n'
+            'break ${cwd}testsuite/foo.c:23\n'
+            )
+
+    def test_project_option_vimquit(self):
+        """Project option saves a project file on quitting from Vim"""
+        self.setup_project_tests(TESTFN_OUT)
+        self.cltest_redir(
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':qa!\n',
+
+            'cd ${cwd}\n'
+            'file ${cwd}testsuite/foobar\n'
+            'break ${cwd}testsuite/foobar.c:9\n'
+            )
+
 
 def test_main():
     """Run all the tests."""
@@ -525,6 +626,11 @@ def test_main():
     suite.addTest(GdbTestCase('test_watch_print'))
     suite.addTest(GdbTestCase('test_frame_print'))
     suite.addTest(GdbTestCase('test_multiple_choice'))
+    suite.addTest(GdbTestCase('test_project_cmd'))
+    suite.addTest(GdbTestCase('test_project_cmd_unique_bp'))
+    suite.addTest(GdbTestCase('test_project_option_load'))
+    suite.addTest(GdbTestCase('test_project_option_save'))
+    suite.addTest(GdbTestCase('test_project_option_vimquit'))
     run_unittest(suite)
 
 if __name__ == '__main__':
