@@ -59,6 +59,7 @@ from misc import (
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('mi')
+Unused = critical
 
 VAROBJ_FMT = '%%(name)-%ds: (%%(type)-%ds) %%(exp)-%ds %%(chged)s %%(value)s\n'
 

@@ -3,7 +3,7 @@ XXX, 2008 - pyclewn 0.5
         The new 'maxlines' option sets a limit on the console buffer size.
         The new 'window' option positions the console window.
         The new 'project' pyclewn command saves the current gdb settings to a
-        project file that may be sourced later by the gdb 'source' command.
+        project file that may be sourced later with the gdb 'source' command.
         These settings are the working directory, the debuggee program file
         name, the program arguments and the breakpoints.
         A new parameter to the 'gdb' option can be used to set the project file
@@ -16,12 +16,15 @@ XXX, 2008 - pyclewn 0.5
         has been fixed by patch 207 in vim 7.1. The workaround in pyclewn is to
         insert a '\n' before the line to delete, and to delete both lines in one
         shot. This workaround is not used when vim implements patch 207.
+        Allow a gdb command on the initial [No name] vim window.
 
     Bug fixes:
         Avoid having Vim segfaults when stepping very fast with gdb, by the
         correct handling of the cursor position when restoring the cursor after
         an update of the gdb console.
-        Enable a gdb command on the initial [No name] vim window.
+        Remove the gdb tui commands.
+        The 'help' command must list the pyclewn commands with the gdb commands
+        only when used with no argument.
 
 
 April  9, 2008 - pyclewn 0.4

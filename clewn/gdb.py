@@ -309,6 +309,14 @@ class GlobalSetup(misc.Singleton):
         'edit',
         'end',
         'shell',
+        # tui commands
+        'layout',
+        'focus',
+        'fs',
+        'refresh',
+        'tui',
+        'update',
+        'winheight',
         )
     run_cmds = (
         'attach', 'detach', 'kill',
@@ -904,10 +912,12 @@ class Gdb(application.Application, misc.ProcessChannel):
 
     def cmd_help(self, *args):
         """Print help on gdb and on pyclewn specific commands."""
-        self.console_print('Pyclewn specific commands:\n')
-        application.Application.cmd_help(self, *args)
-        self.console_print('\nGdb help:\n')
-        self.default_cmd_processing(*args)
+        cmd, line = args
+        if not line:
+            self.console_print('Pyclewn specific commands:\n')
+            application.Application.cmd_help(self, cmd)
+            self.console_print('\nGdb help:\n')
+        self.default_cmd_processing(cmd, line)
 
     def cmd_symcompletion(self, *args):
         """Populate the break and clear commands with symbols completion."""
@@ -979,7 +989,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         self.prompt()
 
     def cmd_project(self, cmd, args):
-        """Save information to the project file."""
+        """Save information to a project file."""
         if not args:
             self.console_print('Invalid argument.\n')
             self.prompt()

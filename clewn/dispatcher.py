@@ -53,6 +53,8 @@ CONNECTION_TIMEOUT = 30
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('disp')
+Unused = error
+Unused = warning
 
 def last_traceback():
     """Return the last trace back."""

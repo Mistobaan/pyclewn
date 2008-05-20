@@ -43,6 +43,9 @@ import clewn.application as application
 
 # set the logging methods
 (critical, error, warning, info, debug) = clewn.misc.logmethods('simp')
+Unused = error
+Unused = warning
+Unused = debug
 
 
 class Target(threading.Thread):

@@ -203,6 +203,8 @@ endfunction
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('app')
+Unused = warning
+Unused = debug
 
 
 class BufferSet(dict):

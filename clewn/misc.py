@@ -64,6 +64,8 @@ def logmethods(name):
 
 # set the logging methods
 (critical, error, warning, info, debug) = logmethods('misc')
+Unused = error
+Unused = warning
 
 def previous_evaluation(f, previous={}):
     """Decorator for functions returning previous result when args are unchanged."""

@@ -2,6 +2,9 @@ $Id$
 
 2008-05-17  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* gdb.py: The 'help' command lists the pyclewn commands with the gdb
+	commands only when used with no argument.
+	* gdb.py: Remove tui commands.
 	* application.py gdb.py gdbmi.py : Implementation of the 'project'
 	command and of the project feature.
 	* dispatcher.py gdb.py: New parameter of the 'gdb' option to set the
