@@ -536,7 +536,7 @@ class OobList(object):
 
         # build the OobCommand objects list
         # object ordering is important
-        self.static_list = [
+        cmdlist = [
             Args(gdb),
             Directories(gdb),
             File(gdb),
@@ -550,6 +550,10 @@ class OobList(object):
             Project(gdb),
             Quit(gdb),
         ]
+        cmdlist = [cmd for cmd in cmdlist if not hasattr(cmd, 'version_min')
+                                            or gdb.version >= cmd.version_min]
+        self.static_list = [cmd for cmd in cmdlist if not hasattr(cmd,
+                            'version_max') or gdb.version <= cmd.version_max]
 
     def __iter__(self):
         """Return an iterator over the list of OobCommand objects."""

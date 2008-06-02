@@ -41,6 +41,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
     def test_break(self):
         """The break command"""
         self.cltest_redir(
+            ':edit ${test_file}1\n'
             ':Cbreak ${test_file}1:1\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'

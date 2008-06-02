@@ -2,6 +2,10 @@ $Id$
 
 2008-05-17  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* netbeans.py: Set the buffer number with 'putBufferNumber' after
+	sending the 'editFile' netbeans message.
+	* gdbmi.py: Restore handling of version_min and version_max for the
+	Frame OobCommand.
 	* gdb.py: The 'help' command lists the pyclewn commands with the gdb
 	commands only when used with no argument.
 	* gdb.py: Remove tui commands.

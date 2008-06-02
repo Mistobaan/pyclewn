@@ -1,4 +1,4 @@
- the*pyclewn.txt*                                   Last change: 2008 May 17
+ the*pyclewn.txt*                                   Last change: 2008 June 2
 
 
                             PYCLEWN USER MANUAL
@@ -541,6 +541,16 @@ the gdb <source> command on this file.
 
 When setting breakpoints on an overloaded method, pyclewn bypasses the gdb
 prompt for the multiple choice and sets automatically all breakpoints.
+
+After a "detach" gdb command, the frame sign remains highlighted because
+gdb/mi considers the frame as still valid.
+
+When answering "Abort" to a dialog after pyclewn attempts to edit a buffer and
+set a breakpoint in a file already opened within another Vim session, the
+breakpoint is set in gdb, but not highlighted in the corresponding buffer.
+However, it is possible to|bwipeout|a buffer at any time, and load it again in
+order to restore the correct highlighting of all the breakpoints in the
+buffer.
 
 
 List of illegal gdb commands:

@@ -25,6 +25,8 @@ XXX, 2008 - pyclewn 0.5
         Remove the gdb tui commands.
         The 'help' command must list the pyclewn commands with the gdb commands
         only when used with no argument.
+        Fix incorrect breakpoint highlighting after user aborts on the dialog
+        warning him that the buffer is already opened by another Vim session.
 
 
 April  9, 2008 - pyclewn 0.4

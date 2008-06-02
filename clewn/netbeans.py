@@ -212,6 +212,7 @@ class Buffer(dict):
         # open file in netbeans
         if not self.registered:
             self.nbsock.send_cmd(self, 'editFile', _quote(self.name))
+            self.nbsock.send_cmd(self, 'putBufferNumber', _quote(self.name))
             self.nbsock.send_cmd(self, 'stopDocumentListen')
             self.registered = True
 

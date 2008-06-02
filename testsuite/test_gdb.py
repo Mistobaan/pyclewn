@@ -433,7 +433,6 @@ class GdbTestCase(ClewnTestCase):
             ":tabedit (clewn)_dbgvar\n"
             ':Cshow annotate\n'
             ':sleep ${time}\n'
-            ":edit (clewn)_dbgvar\n"
             ":1,$$w! >> ${test_out}\n"
             ':qa!\n',
 
@@ -541,6 +540,7 @@ class GdbTestCase(ClewnTestCase):
         """Project option sources a project file"""
         self.setup_project_tests('%s1' % TESTFN_FILE)
         self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
             ':Cecho\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -548,7 +548,7 @@ class GdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             '--- Signs ---\n'
-            'Signs for ${cwd}testsuite/foobar.c:\n'
+            'Signs for testsuite/foobar.c:\n'
             '    line=9  id=1  name=1\n'
             'Signs for ${cwd}testsuite/foo.c:\n'
             '    line=23  id=2  name=1\n',
@@ -563,6 +563,7 @@ class GdbTestCase(ClewnTestCase):
         """Project option saves a project file"""
         self.setup_project_tests(TESTFN_OUT)
         self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Cbreak foo\n'
@@ -582,8 +583,10 @@ class GdbTestCase(ClewnTestCase):
         """Project option saves a project file on quitting from Vim"""
         self.setup_project_tests(TESTFN_OUT)
         self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
+            ':sleep ${time}\n'
             ':sleep ${time}\n'
             ':qa!\n',
 
