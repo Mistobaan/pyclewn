@@ -17,6 +17,9 @@ XXX, 2008 - pyclewn 0.5
         insert a '\n' before the line to delete, and to delete both lines in one
         shot. This workaround is not used when vim implements patch 207.
         Allow a gdb command on the initial [No name] vim window.
+        Pyclewn can be started now without setting the environment variable
+        PYTHONPATH which was required in the previous release when pyclewn is
+        installed with the 'home scheme'.
 
     Bug fixes:
         Avoid having Vim segfaults when stepping very fast with gdb, by the

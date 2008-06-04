@@ -8,6 +8,7 @@ import string
 import re
 from distutils.command.install import install as _install
 from distutils.command.sdist import sdist as _sdist
+from distutils.command.build_scripts import build_scripts as _build_scripts
 from distutils.core import setup
 try:
     import subprocess
@@ -26,6 +27,9 @@ RE_VERSION = r'(?P<name>pyclewn-)(?P<num>\d+\.\d+)'     \
 
 # compile regexps
 re_version = re.compile(RE_VERSION, re.VERBOSE)
+
+# installation path of pyclewn lib
+pythonpath = None
 
 def abort(msg):
     print msg
@@ -73,6 +77,9 @@ class install(_install):
 
     """
     def run(self):
+        global pythonpath
+        pythonpath = self.install_purelib
+
         vim_features()
         _install.run(self)
         helpdir = os.path.join(vimdir(), 'doc')
@@ -109,6 +116,17 @@ def keymap_files():
 
         f.close()
 
+class build_scripts(_build_scripts):
+    """Specialized scripts builder.
+
+    """
+    def run(self):
+        """Add pythonpath to pyclewn script in a 'home scheme' installation."""
+        if pythonpath is not None and pythonpath not in sys.path:
+            path_append = string.Template("sys.path.append('${pythonpath}')\n")
+            self.executable += '\n\nimport sys\n'   \
+                                + path_append.substitute(pythonpath=pythonpath)
+        _build_scripts.run(self)
 
 class sdist(_sdist):
     """Specialized sdister."""
@@ -118,9 +136,8 @@ class sdist(_sdist):
         keymap_files()
         _sdist.run(self)
 
-
 setup(
-    cmdclass={'install': install, 'sdist': sdist},
+    cmdclass={'sdist': sdist, 'build_scripts': build_scripts, 'install': install},
     requires=['subprocess'],
     scripts=['pyclewn'],
     packages=['clewn', 'clewn.debugger'],
@@ -140,6 +157,6 @@ setup(
     license='GNU GENERAL PUBLIC LICENSE Version 2',
     author='Xavier de Gaye',
     author_email='xdegaye at users dot sourceforge dot net',
-    url='http://clewn.sourceforge.net/',
+    url='http://pyclewn.sourceforge.net/',
 )
 

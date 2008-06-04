@@ -2,6 +2,9 @@ $Id$
 
 2008-05-17  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* setup.py INSTALL: pyclewn may be started without setting the
+	environment variable PYTHONPATH (this was required when pyclewn is
+	installed with the 'home scheme', see INSTALL in release 0.4)
 	* netbeans.py: Set the buffer number with 'putBufferNumber' after
 	sending the 'editFile' netbeans message.
 	* gdbmi.py: Restore handling of version_min and version_max for the
