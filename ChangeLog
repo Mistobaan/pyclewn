@@ -1,6 +1,6 @@
 $Id$
 
-2008-05-17  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2008-06-06  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* setup.py INSTALL: pyclewn may be started without setting the
 	environment variable PYTHONPATH (this was required when pyclewn is
