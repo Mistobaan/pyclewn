@@ -27,9 +27,11 @@ import string
 import unittest
 from test.test_support import TESTFN, verify, verbose
 
-import clewn.dispatcher
+from clewn.dispatcher import main
 
 SLEEP_TIME = '300m'
+if os.name == 'nt' or os.environ.has_key('CLEWN_PIPES'):
+    SLEEP_TIME = '1400m'
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
 TESTFN_FILE = TESTFN + '_file_'
@@ -92,6 +94,10 @@ class ClewnTestCase(unittest.TestCase):
 
         """
         unused = self
+        if os.name == 'nt' or os.environ.has_key('CLEWN_PIPES'):
+            # some Windows tests fail sometimes without this sleeping
+            cmd = ':sleep ${time}\n' + cmd
+
         # write the commands
         fp = open(TESTFN, 'w')
         fp.write(string.Template(cmd).substitute(time=SLEEP_TIME,
@@ -106,18 +112,26 @@ class ClewnTestCase(unittest.TestCase):
             fp.close()
 
         # process the commands
-        clewn.dispatcher.main()
+        main()
 
         # check the result
         fp = open(outfile, 'r')
         output = fp.read()
         fp.close()
 
+        if os.name == 'nt':
+            expected = expected.replace('/', '\\')
         cwd = os.getcwd() + os.sep
         expected = string.Template(expected).substitute(
                                             cwd=cwd, test_file=TESTFN_FILE)
 
-        verify(' '.join(expected.split()) in ' '.join(output.split()),
+        checked = ' '.join(expected.split()) in ' '.join(output.split())
+        # project files on Windows do have forward slashes, so try with
+        # forward slashes if the normal verification failed
+        if os.name == 'nt' and not checked:
+            expected = expected.replace('\\', '/')
+            checked = ' '.join(expected.split()) in ' '.join(output.split())
+        verify(checked,
                 "\n\n...Expected:\n%s \n\n...Got:\n%s" % (expected, output))
 
     def cltest_redir(self, cmd, expected, *test):

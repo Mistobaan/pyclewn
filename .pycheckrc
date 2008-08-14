@@ -202,7 +202,7 @@ unaryPositive = 1
 # bool: check for modifying a parameter with a default value
 #       (value must be: list, dict, instance)
 #       modifying the value may have undesirable/unexpected side-effects
-modifyDefaultValue = 1
+modifyDefaultValue = 0
 
 # bool: check if the exec statement is used (possible security problem)
 usesExec = 1
@@ -223,6 +223,7 @@ suppressions = {
 	'netbeans.FrameAnnotation.init': 'no-override',
 	'gdb.GlobalSetup.init': 'no-override',
 	'gdbmi.OobGdbCommand': 'no-classattr',
+	'netbeans.Server': 'no-callinit',
     }
 
 # dict: suppress warnings where keys can be regular expressions

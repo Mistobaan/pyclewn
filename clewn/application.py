@@ -67,7 +67,6 @@ Summary of the components of a subclass of Application that must be implemented
 import os
 import os.path
 import re
-import pprint
 import string
 import copy
 
@@ -681,7 +680,7 @@ class Application(object):
         """Print debugging information on netbeans and the application."""
         unused = args
         self.console_print(
-                'netbeans:\n%s\n' % pprint.pformat(self.nbsock.__dict__)
+                'netbeans:\n%s\n' % misc.pformat(self.nbsock.__dict__)
                 + '%s:\n%s\n' % (self.__class__.__name__.lower(), self))
         self.prompt()
 
@@ -920,5 +919,5 @@ class Application(object):
         for name in ('cmds', 'pyclewn_cmds', 'mapkeys'):
             if shallow.has_key(name):
                 del shallow[name]
-        return pprint.pformat(shallow)
+        return misc.pformat(shallow)
 

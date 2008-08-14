@@ -3,24 +3,64 @@
 
 import sys
 import os
-import os.path
 import string
 import re
+from os.path import join
 from distutils.command.install import install as _install
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_scripts import build_scripts as _build_scripts
 from distutils.core import setup
-try:
-    import subprocess
-except ImportError, e:
-    import sys
-    print "%s: upgrade python to version 2.4 or above." % e
-    sys.exit(1)
-
+import pyclewn_install
+from pyclewn_install import vimdir
+from pyclewn_install import vim_features
+from pyclewn_install import build_vimhelp
 
 import clewn
 # list of debuggers to include in the distribution
 import clewn.gdb, clewn.debugger.simple
+
+DESCRIPTION = """Pyclewn allows using Vim as a front end to a debugger.
+The debugger output is redirected to a Vim window, the pyclewn console.
+The debugger commands are mapped to Vim user-defined commands
+with a common letter prefix, and with completion available on the
+commands and their first argument. The controlling terminal of the
+program to debug is the terminal used to launch pyclewn, or any other
+terminal when the debugger allows it.
+"""
+
+WINDOWS_INSTALL = """BEFORE INSTALLING:
+Please make sure that Gvim is in the PATH, otherwise the installation
+will fail. Use the Control Panel on Windows XP to add the gvim directory
+to %PATH%:
+Control Panel > System > Advanced tab > Envt Variables > Edit "PATH"
+"""
+
+if os.name == 'nt':
+    SCRIPTS = ['pyclewn', 'pyclewn_install.py']
+    VIMDIR = ['pyclewn']
+    LONG_DESCRIPTION = WINDOWS_INSTALL
+else:
+    SCRIPTS = ['pyclewn']
+    VIMDIR = []
+    LONG_DESCRIPTION = DESCRIPTION
+
+def keys_filename(clazz):
+    """Return the pyclewn_keys pathname for a given application class."""
+    ext = clazz.__name__.lower()
+    return 'runtime/.pyclewn_keys.' + ext
+
+PYCLEWN_CLASSES = clewn.class_list()
+DATA_FILES = [
+    (vimdir(VIMDIR),
+        ['runtime/pyclewn.vim']),
+    (join(vimdir(VIMDIR), 'doc'),
+        ['runtime/doc/pyclewn.txt']),
+    (join(vimdir(VIMDIR), 'macros'),
+        [keys_filename(clazz) for clazz in PYCLEWN_CLASSES]),
+    (join(vimdir(VIMDIR), 'syntax'),
+        ['runtime/syntax/dbgvar.vim'])]
+if os.name == 'nt':
+    DATA_FILES.append(pyclewn_install.icon(VIMDIR[0]))
 
 RE_VERSION = r'(?P<name>pyclewn-)(?P<num>\d+\.\d+)'     \
              r'# RE: pyclewn-d.d'
@@ -30,46 +70,6 @@ re_version = re.compile(RE_VERSION, re.VERBOSE)
 
 # installation path of pyclewn lib
 pythonpath = None
-
-def abort(msg):
-    print msg
-    sys.exit()
-
-def vim_features():
-    """Abort if missing required Vim feature."""
-    args = ['gvim',  '-u', 'NONE', '--version']
-    try:
-        output = subprocess.Popen(args, stdout=subprocess.PIPE).communicate()[0]
-    except OSError:
-        abort('aborting install: cannot start gvim')
-
-    print 'checking netbeans support in gvim:',
-    try:
-        output.index('+netbeans_intg')
-    except ValueError:
-        abort('no\n' 'aborting install: netbeans support in gvim is required')
-    print 'yes'
-
-    print 'checking auto commands support in gvim:',
-    try:
-        output.index('+autocmd')
-    except ValueError:
-        abort('no\n' 'aborting install: auto commands support in gvim is required')
-    print 'yes'
-
-def vimdir(dir=[]):
-    """Return the vim runtime files directory."""
-    # do it only once
-    if not dir:
-        if os.environ.has_key('vimdir'):
-            dir.append(os.environ['vimdir'])
-        else:
-            content = clewn.run_vim_cmd(['echon $VIM'])
-            if content:
-                dir.append(os.path.join(content, 'vimfiles'))
-            else:
-                abort('aborting install: cannot get runtime files directory')
-    return dir[0]
 
 class install(_install):
     """Specialized installer, check required Vim features support and
@@ -82,9 +82,7 @@ class install(_install):
 
         vim_features()
         _install.run(self)
-        helpdir = os.path.join(vimdir(), 'doc')
-        print 'pyclewn help tags file generation in %s' % helpdir
-        clewn.run_vim_cmd(['helptags ' + helpdir])
+        build_vimhelp()
 
 def update_version(filename):
     """Update the version number in the content of filename."""
@@ -100,12 +98,11 @@ def update_version(filename):
 def keymap_files():
     """Build key map files for each imported Application subclass."""
     template = open('runtime/.pyclewn_keys.template').read()
-    classes = clewn.class_list()
-    for clazz in classes:
-        name = clazz.__name__.lower()
-        f = open('runtime/.pyclewn_keys.' + name, 'w')
-        f.write(string.Template(template).substitute(clazz=name))
-        mapkeys = getattr(clazz, name + '_mapkeys')
+    for clazz in PYCLEWN_CLASSES:
+        f = open(keys_filename(clazz), 'w')
+        ext = clazz.__name__.lower()
+        f.write(string.Template(template).substitute(clazz=ext))
+        mapkeys = getattr(clazz, ext + '_mapkeys')
         for k in sorted(mapkeys):
             if len(mapkeys[k]) == 2:
                 comment = ' # ' + mapkeys[k][1]
@@ -139,20 +136,15 @@ class sdist(_sdist):
 setup(
     cmdclass={'sdist': sdist, 'build_scripts': build_scripts, 'install': install},
     requires=['subprocess'],
-    scripts=['pyclewn'],
+    scripts=SCRIPTS,
     packages=['clewn', 'clewn.debugger'],
-
-    # runtime files
-    data_files=[(vimdir(), ['runtime/pyclewn.vim']),
-        (os.path.join(vimdir(), 'doc'), ['runtime/doc/pyclewn.txt']),
-        (os.path.join(vimdir(), 'syntax'), ['runtime/syntax/dbgvar.vim'])],
+    data_files=DATA_FILES,
 
     # meta-data
     name='pyclewn',
     version=clewn.__version__,
-    description='Pyclewn controls a debugger application'\
-                            ' with gvim, through netbeans.',
-    long_description=clewn.__doc__,
+    description='Pyclewn allows using Vim as a front end to a debugger.',
+    long_description=LONG_DESCRIPTION,
     platforms='all',
     license='GNU GENERAL PUBLIC LICENSE Version 2',
     author='Xavier de Gaye',

@@ -35,7 +35,6 @@ command, the dispatcher instantiates a new instance of Simple.
 import sys
 import threading
 import time
-import pprint
 
 import clewn
 import clewn.misc

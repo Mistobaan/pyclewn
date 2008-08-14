@@ -35,7 +35,7 @@ except ImportError, e:
 
 import application as _application
 
-__version__ = '0.5'
+__version__ = '1.0'
 __svn__ = '.' + '$Revision$'.strip('$').split()[1]
 unused = __svn__
 VIM_ARGS = ['-u', 'NONE', '-esX', '-c', 'set cpo&vim']
@@ -62,7 +62,10 @@ def run_vim_cmd(cmd_list, pathname='gvim'):
         if f:
             f.close()
         if os.path.exists(tmpname):
-            os.unlink(tmpname)
+            try:
+                os.unlink(tmpname)
+            except OSError:
+                pass
     return content
 
 def class_list():

@@ -1,3 +1,18 @@
+August 1, 2008 - pyclewn 1.0
+    New features:
+        Pyclewn runs on the Windows platform.
+
+    Changes:
+
+    Bug fixes:
+        Fix setting or clearing a breakpoint with clewn mapped keys when the
+        breakpoint file pathname includes spaces.
+        Fix an assertion error that occured on exit while pyclewn is busy
+        processing gdb messages. A side effect of this fix is that the project
+        file is not saved automatically on exit, if gdb is busy running a
+        command at this time.
+
+
 June 6, 2008 - pyclewn 0.5
     New features:
         The new 'maxlines' option sets a limit on the console buffer size.

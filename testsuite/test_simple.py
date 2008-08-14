@@ -22,6 +22,7 @@
 """Test the simple application.
 
 """
+import os
 import sys
 import unittest
 from test.test_support import run_unittest
@@ -283,7 +284,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_quit(self):
+    def test_quit_posix(self):
         """The quit command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -315,6 +316,34 @@ class SimpleCommandsTestCase(ClewnTestCase):
             " 'closed': False,\n"
             " 'daemon': False,\n"
             " 'inferior': Target: {'running': False, 'closed': False},\n",
+
+            'line 1\n'
+            )
+
+    def test_quit(self):
+        """The quit command"""
+        self.cltest_redir(
+            ':edit ${test_file}1\n'
+            ':Cbreak ${test_file}1:1\n'
+            ':Cstep\n'
+            ':Cdumprepr\n'
+            ':sleep ${time}\n'
+            ':edit (clewn)_console | $$ | ?\'_bset\'?,?\'arglist\': None,?w! ${test_out}\n'
+            ':Cquit\n'
+            ':Cdumprepr\n'
+            ':sleep ${time}\n'
+            ':edit (clewn)_console | $$ | ?\'_bset\'?,?\'arglist\': None,?w!  >> ${test_out}\n'
+            ':qa!\n',
+
+            "{'_bset': {'(clewn)_console': {},\n"
+            "           '(clewn)_dbgvar': {},\n"
+            "           '${cwd}@test_file_1': {1: bp enabled at line 1,\n"
+            "                                     'frame': frame at line 1}},\n"
+            " 'arglist': None,\n"
+            "{'_bset': {'(clewn)_console': {},\n"
+            "           '(clewn)_dbgvar': {},\n"
+            "           '${cwd}@test_file_1': {}},\n"
+            " 'arglist': None,\n",
 
             'line 1\n'
             )
@@ -358,9 +387,10 @@ class SimpleCommandsTestCase(ClewnTestCase):
         sys.argv.extend(['--maxlines=70'])
         self.cltest_redir(
             ':let index = 0\n'
-            ':while index < 100\n'
+            ':while index < 50\n'
             ':  let index = index + 1\n'
             ':  Cmapkeys\n'
+            ':  sleep 20m\n'
             ':endwhile\n'
             ':sleep ${time}\n'
             ':sleep ${time}\n'
@@ -389,7 +419,10 @@ def test_main():
     suite.addTest(SimpleCommandsTestCase('test_step'))
     suite.addTest(SimpleCommandsTestCase('test_mapkeys'))
     suite.addTest(SimpleCommandsTestCase('test_print'))
-    suite.addTest(SimpleCommandsTestCase('test_quit'))
+    if os.name == 'nt':
+        suite.addTest(SimpleCommandsTestCase('test_quit'))
+    else:
+        suite.addTest(SimpleCommandsTestCase('test_quit_posix'))
     suite.addTest(SimpleCommandsTestCase('test_unmapkeys'))
     suite.addTest(SimpleCommandsTestCase('test_maxlines'))
     run_unittest(suite)

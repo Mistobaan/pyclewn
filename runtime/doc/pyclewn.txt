@@ -1,4 +1,4 @@
- the*pyclewn.txt*                                   Last change: 2008 June 2
+*pyclewn.txt*                                   Last change: 2008 August 9
 
 
                             PYCLEWN USER MANUAL
@@ -9,9 +9,10 @@ The Pyclewn user guide                              *pyclewn*
 2. Starting pyclewn                                 |pyclewn-starting|
 3. Using pyclewn                                    |pyclewn-using|
 4. Gdb                                              |pyclewn-gdb|
-5. Key mappings                                     |pyclewn-mappings|
-6. Watched variables                                |pyclewn-variable|
-7. Extending pyclewn                                |pyclewn-extending|
+5. Windows                                          |pyclewn-windows|
+6. Key mappings                                     |pyclewn-mappings|
+7. Watched variables                                |pyclewn-variable|
+8. Extending pyclewn                                |pyclewn-extending|
 
 
 ==============================================================================
@@ -26,9 +27,11 @@ debugger commands are mapped to vim user-defined commands with a common letter
 prefix (the default is the|C|letter), and with vim command completion
 available on the commands and their first argument.
 
-The controlling terminal of the program to debug is the terminal used to
-launch pyclewn, or any other terminal when the debugger allows it (for
+On unix, the controlling terminal of the program to debug is the terminal used
+to launch pyclewn, or any other terminal when the debugger allows it (for
 example, gdb with the attach and tty commands).
+
+On Windows, gdb pops up a console attached to the program to debug.
 
 
 Pyclewn currently supports the following debuggers:
@@ -86,11 +89,13 @@ The remaining sections of this manual are:
     4.|pyclewn-gdb|details the topics relevant to pyclewn and the gdb
        debugger.
 
-    5.|pyclewn-mappings|lists the pyclewn key mappings and how to use them.
+    5.|pyclewn-windows|describes what is specific to pyclewn on Windows.
 
-    6.|pyclewn-variable|explains how to use the variable debugger window.
+    6.|pyclewn-mappings|lists the pyclewn key mappings and how to use them.
 
-    7.|pyclewn-extending|explains how to implement a new debugger in pyclewn
+    7.|pyclewn-variable|explains how to use the variable debugger window.
+
+    8.|pyclewn-extending|explains how to implement a new debugger in pyclewn
 
 
 ==============================================================================
@@ -100,6 +105,10 @@ The remaining sections of this manual are:
 To use with gdb, pyclewn is usually simply started as: >
 
     pyclewn
+
+On Windows, pyclewn is started with a Desktop shortcut that runs pyclewn.bat.
+The pyclewn.bat file is located in the Scripts directory of the Python
+distribution.
 
 
 The debugger is started by running a debugger command from vim command line.
@@ -191,16 +200,19 @@ The full description of the command line options follows:
                     relative pathname starting with '.' or a home relative
                     pathname starting with '~'. The directory of the project
                     file name must be an existing directory.
-                    For example: >
+                    For example on unix: >
 
                         pyclewn --gdb=async,./project_name
 
 -d
---daemon            Run as a daemon (default 'False'): pyclewn is detached
-                    from the terminal from where it has been launched, which
-                    means that this terminal cannot be used as a controlling
-                    terminal for the program to debug, and cannot be used for
-                    printing the pyclewn logs as well.
+--daemon            Run as a daemon (default 'False'): on unix, pyclewn is
+                    detached from the terminal from where it has been
+                    launched, which means that this terminal cannot be used as
+                    a controlling terminal for the program to debug, and
+                    cannot be used for printing the pyclewn logs as well.
+                    On Windows, this option hides the pyclewn Windows console
+                    and it is set on the shortcut that is installed on the
+                    Desktop.
 
 -p {PGM}
 --pgm={PGM}         Set the debugger program to PGM. PGM must be in one of the
@@ -397,9 +409,12 @@ commands that are listed here:
     *|Cproject|      save the current gdb settings to a project file
 
     * Csigint        send a <C-C> character to the debugger to interrupt the
-                     running program that is being debugged (only with gdb,
+                     running program that is being debugged; only with gdb,
                      and when pyclewn and gdb communicate over a pseudo
-                     terminal)
+                     terminal, which means on unixes but not on Windows;
+                     on Windows, to interrupt the debuggee, one must type
+                     <C-C> in the console that is popped by gdb on debuggee
+                     start up
 
     *|Csymcompletion|populate the break and clear commands with symbols
                      completion (only with gdb)
@@ -421,12 +436,14 @@ normally called '.gdbinit'. See gdb documentation.
 
 Debuggee standard input and output:
 -----------------------------------
-When pyclewn is started from a terminal and not as a daemon, the standard
-input and output of the program to debug are those of the terminal from where
-pyclewn was started.
+On unix, when pyclewn is started from a terminal and not as a daemon, the
+standard input and output of the program to debug are those of the terminal
+from where pyclewn was started.
 
 When pyclewn is run as a daemon, the <tty> gdb command, or the <attach> gdb
 command can be used to control the input and output of the program to debug.
+
+On Windows, gdb pops up a console attached to the program to debug.
 
 
                                                     *async-option*
@@ -446,7 +463,8 @@ List of gdb default key mappings:
 --------------------------------
 These keys are mapped after the|Cmapkeys|vim command is run.
 
-        CTRL-Z  send an interrupt to gdb and the program it is running
+        CTRL-Z  send an interrupt to gdb and the program it is running (unix
+                only)
         B       info breakpoints
         L       info locals
         A       info args
@@ -539,6 +557,11 @@ commands to execute when the debuggee stops due to that breakpoint, edit the
 commands in a temporary file with vim, and load the commands into gdb by using
 the gdb <source> command on this file.
 
+The project file is not saved automatically on exit, if gdb is busy running a
+command at this time.
+
+On Windows, it is not possible to interrupt gdb with the Csigint command.
+
 When setting breakpoints on an overloaded method, pyclewn bypasses the gdb
 prompt for the multiple choice and sets automatically all breakpoints.
 
@@ -570,7 +593,48 @@ The following gdb commands cannot be run from pyclewn:
 
 
 ==============================================================================
-5. Key mappings                                     *pyclewn-mappings*
+5. Windows                                          *pyclewn-windows*
+
+Installation:
+-------------
+See http://pyclewn.wiki.sourceforge.net/install for installing pyclewn on
+Windows.
+
+If pyclewn does not start once installed, edit the desktop shortcut and add
+"-l debug -f \path\to\logfile.txt" to the command line. Check the content of
+logfile.txt.
+
+When pyclewn stops with the following error in the logfile:
+
+    gdb  CRITICAL cannot start gdb as "C:\msys\mingw\bin\gdb.exe"
+
+This means you have to update the shortcut command line with the correct path
+to gdb.
+
+
+Interrupt the debuggee:
+-----------------------
+Gdb is started with the "console-new" gdb variable set to on. When you start
+the debuggee, gdb pops up the console attached to the debuggee. You can type
+<Ctl-C> in the console to interrupt the debuggee.
+
+If this console bothers you, run the following command: >
+
+  :Cset new-console off
+
+
+Escape quotes:
+--------------
+The following is true as well for pyclewn on unix, but since pathnames
+containing space characters are common on Windows, it may be useful to recall
+that quotes must be escaped on Vim command line.
+For example one could write: >
+
+    :Cfile \"\path with space\to\foobar.exe\"
+
+
+==============================================================================
+6. Key mappings                                     *pyclewn-mappings*
 
 
 All|Ccommand|can be mapped to vim keys using the vim|:map-commands|.
@@ -586,13 +650,13 @@ This section describes another mapping mechanism where pyclewn maps vim keys
 by reading a configuration file. This is done when the|Cmapkeys|vim command is
 run. The pyclewn keys mapping is mostly useful for the pyclewn casual user.
 When the configuration file cannot be found, pyclewn sets the default key
-mappings.|gdb-keys|lists the default key mappings for gdb.
+mappings. See|gdb-keys|for the list of default key mappings for gdb.
 
 The configuration file is named .pyclewn_keys.{debugger}, where debugger is
 the name of the debugger. The default placement for this file is
 $CLEWNDIR/.pyclewn_keys.{debugger}, or $HOME/.pyclewn_keys.{debugger}.
 
-To customize pyclewn key mappings copy the configuration file found in the
+To customize pyclewn key mappings copy the configurations files found in the
 distribution to the proper directory: >
 
     cp runtime/.clewn_keys.gdb        $CLEWNDIR
@@ -604,9 +668,18 @@ or >
 The comments in the configuration file explain how to customize the key
 mappings.
 
+On Windows, the .pyclewn_keys.{debugger} configuration files are found in the
+directory $VIM\vimfiles\macros. The value of $VIM can be obtained by running
+the following command in Vim: >
+
+    :echo $VIM
+
+Copy these files to the $CLEWNDIR or $HOME directory, and customize the key
+mappings.
+
 
 ==============================================================================
-6. Watched variables                                *pyclewn-variable*
+7. Watched variables                                *pyclewn-variable*
 
 The vim watched variables buffer is named "(clewn)_dbgvar".
 
@@ -684,7 +757,7 @@ by the|:colorscheme|currently in use.
 
 
 ==============================================================================
-7. Extending pyclewn                                *pyclewn-extending*
+8. Extending pyclewn                                *pyclewn-extending*
 
 
 To implement a new debugger in pyclewn:

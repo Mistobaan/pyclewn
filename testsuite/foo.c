@@ -1,3 +1,6 @@
+#ifdef WIN32
+#include <windows.h>
+#endif
 #include <stdio.h>
 #include <time.h>
 
@@ -10,11 +13,15 @@ extern int bar(int * pnum, char * ptr);
 
 void msleep(int msec)
 {
+#ifdef WIN32
+    Sleep(msec);
+#else
     struct timespec ts;
 
     ts.tv_sec = msec / 1000;
     ts.tv_nsec = (msec % 1000) * 1000000;
     (void)nanosleep(&ts, NULL);
+#endif
 }
 
 void foo(char *ptr, int max)

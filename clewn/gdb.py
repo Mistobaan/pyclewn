@@ -38,11 +38,16 @@ import gdbmi
 import misc
 from misc import (
         misc_any as _any,
+        quote as _quote,
         unquote as _unquote,
         )
 import application
+if os.name == 'posix':
+    from misc_posix import ProcessChannel
+else:
+    from misc import ProcessChannel
 
-if sys.platform == "win32":
+if os.name == 'nt':
     # On Windows, the best timer is time.clock()
     _timer = time.clock
 else:
@@ -60,6 +65,8 @@ set height 0
 set width 0
 set annotate 1
 """
+if os.name == 'nt':
+    GDB_INIT += 'set new-console on\n'
 SYMBOL_COMPLETION_TIMEOUT = 20 # seconds
 
 RE_VERSION = r'GNU\s*gdb[^\d]*(?P<version>[0-9.]+)'            \
@@ -68,9 +75,10 @@ RE_COMPLETION = r'^(?P<cmd>\S+)\s*(?P<arg>\S+)(?P<rest>.*)$'    \
                 r'# RE: cmd 1st_arg_completion'
 RE_MIRECORD = r'^(?P<token>\d\d\d)[\^*+=](?P<result>.*)$'       \
               r'# gdb/mi record'
-RE_ANNO_1 = r'^[~@&]"\\032\\032[^:]+:[^:]+:[^:]+:[^:]+:[^:]+$'  \
-            r'# annotation level 1'                             \
-            r'# ^Z^ZFILENAME:LINE:CHARACTER:MIDDLE:ADDR'
+RE_ANNO_1 = r'^[~@&]"\\032\\032([a-zA-Z]:|)[^:]+:[^:]+:[^:]+:[^:]+:[^:]+$'  \
+            r'# annotation level 1'                                         \
+            r'# ^Z^ZFILENAME:LINE:CHARACTER:MIDDLE:ADDR'                    \
+            r'# ^Z^ZD:FILENAME:LINE:CHARACTER:MIDDLE:ADDR'
 
 # compile regexps
 re_version = re.compile(RE_VERSION, re.VERBOSE|re.MULTILINE)
@@ -106,7 +114,7 @@ endfunction
 " get the symbols completion list and define the new
 " break and clear vim user defined commands
 function s:symcompletion()
-    call writefile([], "${ack_tmpfile}")
+    call writefile([], ${ack_tmpfile})
     let start = localtime()
     let loadmsg = "\\rLoading gdb symbols"
     call s:nbcommand("symcompletion")
@@ -115,13 +123,13 @@ function s:symcompletion()
         call s:message(loadmsg)
 
         " pyclewn signals that complete_tmpfile is ready for reading
-        if getfsize("${ack_tmpfile}") > 0
+        if getfsize(${ack_tmpfile}) > 0
             " ignore empty list
-            if join(readfile("${ack_tmpfile}"), "") != "Ok"
+            if join(readfile(${ack_tmpfile}), "") != "Ok"
                 call s:prompt("\\nNo symbols found.")
                 break
             endif
-            let s:symbols_list = readfile("${complete_tmpfile}")
+            let s:symbols_list = readfile(${complete_tmpfile})
             let s:symbols= join(s:symbols_list, "\\n")
             command! -bar -nargs=* -complete=custom,s:Arg_break     \
                 ${pre}break call s:nbcommand("break", <f-args>)
@@ -210,11 +218,12 @@ def gdb_version(pgm):
     """
     # check first tty access rights
     # (gdb does the same on forking the debuggee)
-    try:
-        f = open(os.ttyname(0), 'rw')
-        f.close()
-    except IOError, err:
-        raise misc.Error("Gdb cannot open the terminal: %s" % err)
+    if hasattr(os, 'ttyname'):
+        try:
+            f = open(os.ttyname(0), 'rw')
+            f.close()
+        except IOError, err:
+            raise misc.Error("Gdb cannot open the terminal: %s" % err)
 
     version = None
     header = gdb_batch(pgm, 'show version')
@@ -445,7 +454,7 @@ class GlobalSetup(misc.Singleton):
                                         [misc.smallpref_inlist(x, setargs)
                                             for x in self.illegal_setargs])
 
-class Gdb(application.Application, misc.ProcessChannel):
+class Gdb(application.Application, ProcessChannel):
     """The Gdb application is a frontend to GDB/MI.
 
     Instance attributes:
@@ -521,9 +530,9 @@ class Gdb(application.Application, misc.ProcessChannel):
         'S-W' : ('where',),
         'C-U' : ('up',),
         'C-D' : ('down',),
-        'C-B' : ('break ${fname}:${lnum}',
+        'C-B' : ('break "${fname}":${lnum}',
                     'set breakpoint at current line'),
-        'C-E' : ('clear ${fname}:${lnum}',
+        'C-E' : ('clear "${fname}":${lnum}',
                     'clear breakpoint at current line'),
         'C-P' : ('print ${text}',
                     'print value of selection at mouse position'),
@@ -545,7 +554,7 @@ class Gdb(application.Application, misc.ProcessChannel):
         self.arglist = arglist
         self.version = gdb_version(self.pgm)
         self.f_init = None
-        misc.ProcessChannel.__init__(self, self.getargv())
+        ProcessChannel.__init__(self, self.getargv())
 
         self.info = gdbmi.Info(self)
         self.globaal = GlobalSetup(self.pgm, self.pyclewn_cmds)
@@ -603,13 +612,12 @@ class Gdb(application.Application, misc.ProcessChannel):
 
         # use pyclewn tty as the debuggee standard input and output
         # may be overriden by --args option on pyclewn command line
-        if not self.daemon and hasattr(os, 'isatty') and os.isatty(0):
-            terminal = os.ttyname(0)
-        elif hasattr(os, 'devnull'):
-            terminal = os.devnull
-        else:
-            terminal = '/dev/null'
-        argv += ['-tty=%s' % terminal]
+        if os.name != 'nt':
+            if not self.daemon and hasattr(os, 'isatty') and os.isatty(0):
+                terminal = os.ttyname(0)
+            else:
+                terminal = os.devnull
+            argv += ['-tty=%s' % terminal]
 
         # build the gdb init temporary file
         try:
@@ -632,14 +640,14 @@ class Gdb(application.Application, misc.ProcessChannel):
 
         """
         return string.Template(SYMCOMPLETION).substitute(pre=prefix,
-                                ack_tmpfile=self.globaal.f_ack.name,
-                                complete_tmpfile=self.globaal.f_clist.name,
-                                complete_timeout=SYMBOL_COMPLETION_TIMEOUT)
+                            ack_tmpfile=_quote(self.globaal.f_ack.name),
+                            complete_tmpfile=_quote(self.globaal.f_clist.name),
+                            complete_timeout=SYMBOL_COMPLETION_TIMEOUT)
 
     def start(self):
         """Start gdb."""
         application.Application.start(self)
-        misc.ProcessChannel.start(self)
+        ProcessChannel.start(self)
 
     def prompt(self):
         """Print the prompt."""
@@ -709,7 +717,9 @@ class Gdb(application.Application, misc.ProcessChannel):
             elif line == '(gdb) ':
                 self.process_prompt()
             else:
-                error('handle_line: bad format of "%s"', line)
+                # on Windows, the inferior output is redirected by gdb
+                # to the pipe when 'new-console' is not set
+                warning('handle_line: bad format of "%s"', line)
 
     def process_stream_record(self, line):
         """Process a received gdb/mi stream record."""
@@ -821,7 +831,7 @@ class Gdb(application.Application, misc.ProcessChannel):
 
     def write(self, data):
         """Write data to gdb."""
-        misc.ProcessChannel.write(self, data)
+        ProcessChannel.write(self, data)
         debug(data.rstrip('\n'))
 
     def close(self):
@@ -832,7 +842,7 @@ class Gdb(application.Application, misc.ProcessChannel):
 
         if not self.closed:
             application.Application.close(self)
-            misc.ProcessChannel.close(self)
+            ProcessChannel.close(self)
 
             # clear varobj
             rootvarobj = self.info.varobj
@@ -999,31 +1009,32 @@ class Gdb(application.Application, misc.ProcessChannel):
     def cmd_quit(self, *args):
         """Quit gdb."""
         unused = args
-        # Send a nop command to trigger the OobCommand list.
-        # Interrupt the current command and force a new command.
-        # This may generate errors in the parsing of gdb output
-        # such as invalid tokens when (for example) the debuggee
-        # is running and there is a gdb 'continue' command running.
-        # These errors must be silently ignored.
-        self.gotprmpt = True
-        self.oob = None
+        # Attempt to save the project file.
+        # When oob commands are being processed, or gdb is busy in a
+        # 'continue' statement, the project file is not saved.
+        # The clicmd_notify nop command must not be run in this case, to
+        # avoid breaking pyclewn state (assert on self.gotprmpt).
         self.state = STATE_QUITTING
         self.sendintr()
-        self.clicmd_notify('project %s' % self.project, console=False, gdb=False)
+        if self.gotprmpt and self.oob == None:
+            self.clicmd_notify('project %s' % self.project,
+                                    console=False, gdb=False)
 
     def cmd_sigint(self, *args):
         """Send a <C-C> character to the debugger."""
         unused = args
         self.sendintr()
-        if self.ttyname is None:
+        if not hasattr(self, 'ttyname'):
             self.console_print('\n'
-                'Sorry, pyclewn is currently using pipes to talk to gdb,'
-                    ' and gdb does not handle interrupts over pipes.\n'
-                'As a workaround, get the pid of the program with'
-                    ' the gdb command "info proc".\n'
-                'And send a SIGINT signal with the shell, on vim'
-                    ' command line: ":!kill -s SIGINT pid"\n'
+                'Command ignored. Gdb does not handle interrupts over pipes.\n'
             )
+            if os.name == 'posix':
+                self.console_print('\n'
+                    'As a workaround, get the pid of the program with'
+                        ' the gdb command "info proc".\n'
+                    'And send a SIGINT signal with the shell, on vim'
+                        ' command line: ":!kill -s SIGINT <pid>".\n'
+                )
         self.prompt()
 
     #-----------------------------------------------------------------------

@@ -51,7 +51,7 @@ RE_EVENT = r'^\s*(?P<buf_id>\d+):(?P<event>\S+)=(?P<seqno>\d+)' \
            r'# RE: a netbeans event message'
 RE_LNUMCOL = r'^(?P<lnum>\d+)/(?P<col>\d+)'                     \
              r'# RE: lnum/col'
-RE_CLEWNAME = r'^\S*\(clewn\)_\w+$'                             \
+RE_CLEWNAME = r'^\s*(?P<path>.*)\(clewn\)_\w+$'                 \
               r'# RE: a valid ClewnBuffer name'
 
 # compile regexps
@@ -129,8 +129,12 @@ def parse_msg(msg):
 
 def is_clewnbuf(bufname):
     """Return True if bufname is the name of a clewn buffer."""
-    return re_clewname.match(bufname) is not None
-
+    matchobj = re_clewname.match(bufname)
+    if matchobj:
+        path = matchobj.group('path')
+        if not path or os.path.exists(path):
+            return True
+    return False
 
 class Buffer(dict):
     """A Vim buffer is a dictionary of annotations {anno_id: annotation}.
@@ -772,7 +776,7 @@ class Netbeans(asynchat.async_chat, object):
 
     def __init__(self):
         """Constructor."""
-        asynchat.async_chat.__init__(self, None)
+        asynchat.async_chat.__init__(self)
 
         self.__last_sernum = 0
         self.last_buf = None

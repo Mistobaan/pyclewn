@@ -28,6 +28,7 @@ The debugger to run is chosen from the command line arguments, amongst the
 registered debuggers.
 
 """
+import os
 import sys
 import time
 import subprocess
@@ -35,7 +36,6 @@ import asyncore
 import inspect
 import optparse
 import logging
-import pprint
 import platform
 
 import clewn
@@ -43,9 +43,15 @@ import misc
 import application
 import gdb
 import netbeans
+import evtloop
 from misc import (
         misc_any as _any,
         )
+if os.name == 'nt':
+    from misc_win import hide_console as daemonize
+else:
+    from misc_posix import daemonize
+
 
 WINDOW_LOCATION = ('top', 'bottom', 'left', 'right')
 CONNECTION_DEFAULTs = '', 3219, 'changeme'
@@ -72,7 +78,7 @@ def last_traceback():
 def pformat(name, obj):
     """Pretty format an object __dict__."""
     if obj:
-        return '%s:\n%s\n' % (name, pprint.pformat(obj.__dict__))
+        return '%s:\n%s\n' % (name, misc.pformat(obj.__dict__))
     else: return ''
 
 def main():
@@ -171,7 +177,9 @@ class Dispatcher(object):
     def start(self):
         """Start the editor, connect to it, and start the application."""
         # log platform information for debugging
-        info('platform: [%s]', ', '.join(platform.uname()))
+        info('platform: %s', platform.uname())
+        if os.name == 'nt':
+            info('Windows version: %s', sys.getwindowsversion())
 
         # set Gdb as the default Application
         if not self.clss:
@@ -287,7 +295,11 @@ class Dispatcher(object):
         else:
             logging.shutdown()
 
-        assert not asyncore.socket_map
+        # interrupting pyclewn whith a hanged PipePeek thread may
+        # cause this assert error to be printed: skip assert to avoid this
+        # error message that may confuse the user
+        if not (os.environ.has_key('CLEWN_PIPES') or os.name == 'nt'):
+            assert not asyncore.socket_map
 
     def parse_options(self):
         """Parse the command line options."""
@@ -366,6 +378,8 @@ class Dispatcher(object):
 
     def setlogger(self):
         """Setup the root logger with handlers: stderr and optionnaly a file."""
+        # do not handle exceptions while emit(ing) a logging record
+        logging.raiseExceptions = False
         # add nbdebug log level
         logging.addLevelName(misc.NBDEBUG, misc.NBDEBUG_LEVEL_NAME.upper())
 
@@ -417,7 +431,7 @@ class Dispatcher(object):
                     # can daemonize now, no more critical startup errors to
                     # print on the console
                     if self.options.daemon:
-                        misc.daemonize()
+                        daemonize()
                     info('pyclewn version %s and the %s application',
                         clewn.__version__ + clewn.__svn__, self.clss.__name__)
 
@@ -430,7 +444,7 @@ class Dispatcher(object):
                 self.nbsock.set_application(self.app)
                 info('new "%s" instance', self.clss.__name__.lower())
 
-            asyncore.poll(timeout=.100, map=socket_map)
+            evtloop.poll(socket_map, timeout=.100)
             self.app.timer()
 
     def register(self, clss):

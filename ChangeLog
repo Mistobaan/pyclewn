@@ -1,5 +1,26 @@
 $Id$
 
+2008-08-12  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* netbeans.py : Fix identification of a clewn buffer when the current
+	working directory includes spaces in its pathname.
+	* gdb.py : Fix space in path names when using clewn mapped keys.
+	* gdbmi.py : Fix Windows pathnames.
+	* gdb.py : Fix AssertException on self.gotprompt when quitting. The
+	project file is not saved anymore when pyclewn is processing oob
+	commands or when gdb is busy.
+	* evtloop.py misc.py misc_posix.py misc_win.py: Set $CLEWN_PIPES to
+	run clewn with pipes on posix. The same code is run on Windows and
+	posix when using pipes.
+	* dispatcher.py misc.py misc_posix.py misc_win.py: clewn_select is a
+	parameter to the asyncore poll function.
+	* gdb.py misc.py misc_posix.py: Posix ProcessChannel using pseudo tty
+	or pipes, and generic ProcessChannel using pipes.
+	* gdb.py misc.py: Windows regression test suite: overriding
+	pprint.pformat to avoid duplicate backslashes in tests verification.
+	* setup.py pyclewn_install.py: Windows installer.
+
+===============================================================================
 2008-06-06  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* setup.py INSTALL: pyclewn may be started without setting the

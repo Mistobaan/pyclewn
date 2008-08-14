@@ -27,11 +27,16 @@ import os
 import unittest
 from test.test_support import run_unittest
 
-import clewn.gdb
+from clewn.gdb import gdb_version
 from clewn.misc import check_call
 from testsuite.test_support import ClewnTestCase, TESTFN_FILE, TESTFN_OUT
 
-gdb_version = clewn.gdb.gdb_version('gdb')
+if os.name == 'nt':
+    debuggee = 'file ${cwd}testsuite/foobar.exe'
+else:
+    debuggee = 'file ${cwd}testsuite/foobar'
+
+gdb_v = gdb_version('gdb')
 
 class GdbTestCase(ClewnTestCase):
     """Test the gdb debugger."""
@@ -47,16 +52,12 @@ class GdbTestCase(ClewnTestCase):
         ASYNC_OPTION = '--gdb=async'
         if ASYNC_OPTION in sys.argv:
             assert sys.argv.pop() == ASYNC_OPTION
-        sys.argv.append('--gdb=async,./%s' % project_file)
+        sys.argv.append('--gdb=async,.%s%s' % (os.sep, project_file))
 
     def setup_gdb_args(self, args=''):
         """Setup gdb args and redirect debuggee output to /dev/null."""
         unused = self
-        if hasattr(os, 'devnull'):
-            terminal = os.devnull
-        else:
-            terminal = '/dev/null'
-        sys.argv.extend(['-a', ('-tty=%s %s' % (terminal, args))])
+        sys.argv.extend(['-a', ('-tty=%s %s' % (os.devnull, args))])
 
     def test_completion(self):
         """The gdb commands completion in vim"""
@@ -88,7 +89,7 @@ class GdbTestCase(ClewnTestCase):
 
     def test_bad_gdbpath(self):
         """The gdb program is not a valid pathname"""
-        foobar = '/path/to/nowhere/foobar'
+        foobar = 'path_to_nowhere%sfoobar' % os.sep
         sys.argv.extend(['--pgm=' + foobar])
         self.cltest_logfile(
             ':qa!\n',
@@ -222,6 +223,7 @@ class GdbTestCase(ClewnTestCase):
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Crun\n'
+            ':sleep ${time}\n'
             ':Cdumprepr\n'
             ':sleep ${time}\n'
             ":edit (clewn)_console | $$ | ?'info'?,/'last_balloon'/w!  ${test_out}\n"
@@ -319,7 +321,7 @@ class GdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             "Signs for ${cwd}testsuite/foo.c:\n"
-            "line=23  id=1  name=1\n"
+            "line=30  id=1  name=1\n"
             )
 
     def test_delete_bp(self):
@@ -464,6 +466,7 @@ class GdbTestCase(ClewnTestCase):
             ':Cbreak main\n'
             ':Cbreak foo\n'
             ':Crun\n'
+            ':sleep ${time}\n'
             ':Cprint foo(\\"toto\\", 1)\n'
             ':Ccontinue\n'
             ':sleep ${time}\n'
@@ -476,7 +479,7 @@ class GdbTestCase(ClewnTestCase):
             '    line=9  id=3  name=3\n'
             '    line=9  id=1  name=1\n'
             'Signs for ${cwd}testsuite/foo.c:\n'
-            '    line=23  id=2  name=1\n'
+            '    line=30  id=2  name=1\n'
             )
 
     def test_multiple_choice(self):
@@ -512,10 +515,10 @@ class GdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             'cd ${cwd}\n'
-            'file ${cwd}testsuite/foobar\n'
+            + debuggee + '\n'
             'set args foo "1 2 3" bar\n'
             'break ${cwd}testsuite/foobar.c:9\n'
-            'break ${cwd}testsuite/foo.c:23\n'
+            'break ${cwd}testsuite/foo.c:30\n'
             )
 
     def test_project_cmd_unique_bp(self):
@@ -531,8 +534,8 @@ class GdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':qa!\n',
 
-            'file ${cwd}testsuite/foobar\n'
-            'break ${cwd}testsuite/foo.c:23\n'
+            debuggee + '\n'
+            'break ${cwd}testsuite/foo.c:30\n'
             'break ${cwd}testsuite/foobar.c:9\n'
             )
 
@@ -551,7 +554,7 @@ class GdbTestCase(ClewnTestCase):
             'Signs for testsuite/foobar.c:\n'
             '    line=9  id=1  name=1\n'
             'Signs for ${cwd}testsuite/foo.c:\n'
-            '    line=23  id=2  name=1\n',
+            '    line=30  id=2  name=1\n',
 
             'cd testsuite\n'
             'file foobar\n'
@@ -568,15 +571,16 @@ class GdbTestCase(ClewnTestCase):
             ':Cbreak main\n'
             ':Cbreak foo\n'
             ':Cset args foo \\"1 2 3\\" bar\n'
+            ':sleep ${time}\n'
             ':Cquit\n'
             ':sleep ${time}\n'
             ':qa!\n',
 
             'cd ${cwd}\n'
-            'file ${cwd}testsuite/foobar\n'
+            + debuggee + '\n'
             'set args foo "1 2 3" bar\n'
             'break ${cwd}testsuite/foobar.c:9\n'
-            'break ${cwd}testsuite/foo.c:23\n'
+            'break ${cwd}testsuite/foo.c:30\n'
             )
 
     def test_project_option_vimquit(self):
@@ -591,7 +595,7 @@ class GdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             'cd ${cwd}\n'
-            'file ${cwd}testsuite/foobar\n'
+            + debuggee + '\n'
             'break ${cwd}testsuite/foobar.c:9\n'
             )
 
@@ -607,11 +611,12 @@ def test_main():
     suite.addTest(GdbTestCase('test_bad_gdbpath'))
     suite.addTest(GdbTestCase('test_initial_setup'))
     suite.addTest(GdbTestCase('test_new_session'))
-    suite.addTest(GdbTestCase('test_sigint'))
+    if not os.environ.has_key('CLEWN_PIPES') and os.name != 'nt':
+        suite.addTest(GdbTestCase('test_sigint'))
     suite.addTest(GdbTestCase('test_gdb_arglist'))
     suite.addTest(GdbTestCase('test_gdb_illegal'))
     suite.addTest(GdbTestCase('test_symbols_completion'))
-    if gdb_version.split('.') < '6.4'.split('.'):
+    if gdb_v.split('.') < '6.4'.split('.'):
         suite.addTest(GdbTestCase('test_oob_command'))
     else:
         suite.addTest(GdbTestCase('test_oob_command_v_64'))

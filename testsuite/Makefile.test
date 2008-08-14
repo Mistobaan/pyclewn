@@ -1,0 +1,9 @@
+CFLAGS = -Wall -g $(PLATFORM)
+CPPFLAGS = -Wall -g $(PLATFORM)
+
+all: foobar overloaded
+foobar: foobar.c foo.c bar.c
+overloaded: overloaded.cc
+
+clean:
+	@rm -f foobar overloaded

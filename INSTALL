@@ -11,21 +11,21 @@ REQUIRED:
 Note that netbeans does not run on the console vim, you must use gvim.
 
 
-INSTALL:
--------
+INSTALL ON UNIX:
+---------------
 Unpack the tarball, change directory to the distribution directory and
 run the setup script to install pyclewn:
 
-    tar xzf pyclewn-0.5.tar.gz
-    cd pyclewn-0.5
+    tar xzf pyclewn-1.0.tar.gz
+    cd pyclewn-1.0
     python setup.py install
 
 You can now use the ":help pyclewn" command within vim, to access the
 documentation.
 
 
-LOCAL INSTALLATION:
-------------------
+LOCAL INSTALLATION ON UNIX:
+--------------------------
 Use a local installation when you do not have root privileges and those are
 required to install python packages or to install the vim runtime files on your
 system.
@@ -45,4 +45,32 @@ b) Local installation of the vim runtime files:
 c) Local installation of both pyclewn binaries and the vim runtime files:
 
         vimdir=$HOME/.vim python setup.py install --home=$HOME
+
+
+INSTALL ON WINDOWS:
+------------------
+Pyclewn is installed with a Windows installer.
+
+The following software must have been installed on Windows:
+
+    * the win32 python package from http://starship.python.net/crew/mhammond/
+    * MinGW and the MinGW components MSYS and gdb from http://www.mingw.org/
+
+Gvim must be in the PATH before starting the installation, otherwise the
+installation will fail. Use the Control Panel on Windows XP to add the gvim
+directory to %PATH%:
+
+    Control Panel > System > Advanced tab > Enviroment Variables > Edit "PATH"
+
+To install pyclewn, double-click on the installer: pyclewn-1.0.win32.exe.
+This will install pyclewn, configure Vim and create a shortcut on the Desktop.
+The installation is complete after the following message is printed by the
+installer: "pyclewn postinstall completed". You can now use the
+":help pyclewn" command within vim, to access the documentation.
+
+You may have to edit the installed shortcut (right-click > Properties) to
+update the gdb full pathname when gdb has not been installed in the standard
+MinGW location.
+
+Pyclewn may be uninstalled with the Control Panel.
 

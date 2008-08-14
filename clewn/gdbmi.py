@@ -43,9 +43,9 @@ the breakpoints and frame sign, create/delete/update the varobj objects.
 
 """
 
+import os
 import os.path
 import re
-import pprint
 import cStringIO
 from collections import deque
 
@@ -54,7 +54,9 @@ import misc
 from misc import (
         misc_any as _any,
         quote as _quote,
+        unquote as _unquote,
         parse_keyval as _parse_keyval,
+        norm_unixpath as _norm_unixpath,
         )
 
 # set the logging methods
@@ -120,7 +122,7 @@ RE_ARGS = r'\s*"(?P<args>.+)"\.'                                            \
 
 RE_BREAKPOINTS = keyval_pattern(BREAKPOINT_ATTRIBUTES, 'a breakpoint')
 
-RE_DIRECTORIES = r'(?P<path>[^:^\n]+)'                                      \
+RE_DIRECTORIES = r'(?P<path>[^' + os.pathsep + r'^\n]+)'                    \
                  r'# /path/to/foobar:$cdir:$cwd\n'
 
 RE_FILE = keyval_pattern(FILE_ATTRIBUTES,
@@ -163,10 +165,17 @@ re_pwd = re.compile(RE_PWD, re.VERBOSE)
 re_sources = re.compile(RE_SOURCES, re.VERBOSE)
 re_varupdate = re.compile(RE_VARUPDATE, re.VERBOSE)
 
+def compare_filename(a, b):
+    """Compare two filenames."""
+    if os.name == 'nt':
+        return a.lower() == b.lower()
+    else:
+        return a == b
+
 def fullname(name, source_dict):
     """Return 'fullname' value, matching name in the source_dict dictionary."""
     try:
-        if source_dict and source_dict['file'] == name:
+        if source_dict and compare_filename(source_dict['file'], name):
             return source_dict['fullname']
     except KeyError:
         pass
@@ -355,12 +364,13 @@ class Info(object):
 
         If name is an absolute path, just stat it. Otherwise, add name to
         each directory in gdb source directories and stat the result.
+        Path names are unix normalized with forward slashes.
         """
 
         # an absolute path name
         if os.path.isabs(name):
             if os.path.exists(name):
-                return name
+                return _norm_unixpath(name, True)
             else:
                 # strip off the directory part and continue
                 name = os.path.split(name)[1]
@@ -382,10 +392,10 @@ class Info(object):
             elif dirname == '$cwd':
                 pathname = os.path.abspath(name)
             else:
-                pathname = os.path.normpath(dirname, name)
+                pathname = os.path.normpath(name)
 
             if os.path.exists(pathname):
-                return pathname
+                return _norm_unixpath(pathname, True)
 
         return None
 
@@ -465,7 +475,7 @@ class Info(object):
 
     def __repr__(self):
         """Return the pretty formated self dictionary."""
-        return pprint.pformat(self.__dict__)
+        return misc.pformat(self.__dict__)
 
 class Result(dict):
     """Storage for Command objects whose command has been sent to gdb.
@@ -631,6 +641,7 @@ class CliCommand(Command):
             return False
 
         self.gdb.gotprmpt = False
+        cmd = _norm_unixpath(cmd)
         return self.send('-interpreter-exec console %s\n', _quote(cmd))
 
     def handle_result(self, line):
@@ -1290,11 +1301,13 @@ class Project(OobCommand):
 
                     if gdb_info.cwd:
                         cwd = gdb_info.cwd[0]
-                        if not cwd.endswith(os.path.sep):
-                            cwd += os.path.sep
-                        project.write('cd %s\n' % cwd)
+                        if not cwd.endswith(os.sep):
+                            cwd += os.sep
+                        project.write('cd %s\n'
+                            % _norm_unixpath(_unquote(cwd), True))
 
-                    project.write('file %s\n' % gdb_info.debuggee[0])
+                    project.write('file %s\n'
+                            % _norm_unixpath(gdb_info.debuggee[0], True))
 
                     if gdb_info.args:
                         project.write('set args %s\n' % gdb_info.args[0])
