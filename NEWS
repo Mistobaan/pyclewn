@@ -1,8 +1,6 @@
-August 1, 2008 - pyclewn 1.0
-    New features:
-        Pyclewn runs on the Windows platform.
-
+August 14, 2008 - pyclewn 0.6
     Changes:
+        Pyclewn runs on the Windows platform.
 
     Bug fixes:
         Fix setting or clearing a breakpoint with clewn mapped keys when the

@@ -35,7 +35,7 @@ except ImportError, e:
 
 import application as _application
 
-__version__ = '1.0'
+__version__ = '0.5'
 __svn__ = '.' + '$Revision$'.strip('$').split()[1]
 unused = __svn__
 VIM_ARGS = ['-u', 'NONE', '-esX', '-c', 'set cpo&vim']
