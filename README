@@ -8,9 +8,11 @@ debugger commands are mapped to vim user-defined commands with a common letter
 prefix, and with completion available on the commands and their first
 argument.
 
-The controlling terminal of the program to debug is the terminal used to
-launch pyclewn, or any other terminal when the debugger allows it (for
+On unix, the controlling terminal of the program to debug is the terminal used
+to launch pyclewn, or any other terminal when the debugger allows it (for
 example, gdb with the attach and tty commands).
+
+On Windows, gdb pops up a console attached to the program to debug.
 
 
 INSTALLATION:

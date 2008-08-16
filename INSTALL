@@ -16,8 +16,8 @@ INSTALL ON UNIX:
 Unpack the tarball, change directory to the distribution directory and
 run the setup script to install pyclewn:
 
-    tar xzf pyclewn-0.5.tar.gz
-    cd pyclewn-0.5
+    tar xzf pyclewn-0.6.tar.gz
+    cd pyclewn-0.6
     python setup.py install
 
 You can now use the ":help pyclewn" command within vim, to access the
@@ -62,7 +62,7 @@ directory to %PATH%:
 
     Control Panel > System > Advanced tab > Enviroment Variables > Edit "PATH"
 
-To install pyclewn, double-click on the installer: pyclewn-0.5.win32.exe.
+To install pyclewn, double-click on the installer: pyclewn-0.6.win32.exe.
 This will install pyclewn, configure Vim and create a shortcut on the Desktop.
 The installation is complete after the following message is printed by the
 installer: "pyclewn postinstall completed". You can now use the
