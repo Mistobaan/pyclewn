@@ -1,3 +1,10 @@
+October 24, 2008 - pyclewn 0.7
+    Changes:
+
+    Bug fixes:
+        Fix cannot run two simultaneous pyclewn sessions on the same listening
+        port.
+
 August 16, 2008 - pyclewn 0.6
     Changes:
         Pyclewn runs on the Windows platform.

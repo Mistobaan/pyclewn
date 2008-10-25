@@ -1,5 +1,11 @@
 $Id$
 
+2008-10-24  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* misc.py misc_posix.py dispatcher.py : Fix cannot run two
+	simultaneous pyclewn sessions on the same listening port.
+
+===============================================================================
 2008-08-12  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* netbeans.py : Fix identification of a clewn buffer when the current

@@ -153,8 +153,7 @@ class ProcessChannel(misc.ProcessChannel):
             os.dup2(slave_fd, 0)
             os.dup2(slave_fd, 1)
             os.dup2(slave_fd, 2)
-            if (slave_fd > 2):
-                os.close(slave_fd)
+            misc.close_fds()
 
             # exec program
             os.execvp(self.pgm, self.argv)

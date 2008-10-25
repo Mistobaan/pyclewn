@@ -22,6 +22,7 @@
 """Pyclewn miscellaneous classes and functions."""
 
 import __builtin__
+import sys
 import os
 import os.path
 import re
@@ -38,6 +39,11 @@ import atexit
 import pprint
 if os.name == 'posix':
     import fcntl
+
+try:
+    MAXFD = os.sysconf("SC_OPEN_MAX")
+except:
+    MAXFD = 256
 
 DOUBLEQUOTE = '"'
 QUOTED_STRING = r'"((?:\\"|[^"])+)"'
@@ -268,6 +274,14 @@ def unlink(filename):
         try:
             os.unlink(filename)
         except OSError:
+            pass
+
+def close_fds():
+    """Close all file descriptors except stdin, stdout and stderr."""
+    for i in xrange(3, MAXFD):
+        try:
+            os.close(i)
+        except:
             pass
 
 
@@ -535,7 +549,8 @@ class ProcessChannel(object):
         proc = subprocess.Popen(self.argv,
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT)
+                            stderr=subprocess.STDOUT,
+                            close_fds=(sys.platform != "win32"))
         self.fileasync = (FileAsynchat(proc.stdout, self, True),
                             FileAsynchat(proc.stdin, self, False))
         self.pid = proc.pid

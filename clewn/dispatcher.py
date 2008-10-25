@@ -256,7 +256,8 @@ class Dispatcher(object):
 
         info('editor argv list: %s', str(args))
         try:
-            self.gvim = subprocess.Popen(args)
+            self.gvim = subprocess.Popen(args,
+                                close_fds=(sys.platform != "win32"))
         except OSError:
             critical('cannot start the editor'); raise
 
