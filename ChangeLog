@@ -2,6 +2,12 @@ $Id$
 
 2008-10-24  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* misc.py gdb.py misc_posix.py dispatcher.py: pyclewn falls back to
+	using pipes when it cannot open a pseudo tty with gdb. Environment
+	variables 'CLEWN_PIPES' and 'CLEWN_POPEN' can be used to force this
+	behavior. Fix cmd_sigint help message and __doc__ when running with
+	pipes.
+
 	* misc.py misc_posix.py dispatcher.py : Fix cannot run two
 	simultaneous pyclewn sessions on the same listening port.
 

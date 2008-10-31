@@ -43,6 +43,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The break command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}1:1\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -58,6 +59,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The clear command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}1:1\n'
             ':Cbreak ${test_file}1:2\n'
             ':Cbreak ${test_file}1:2\n'
@@ -78,6 +80,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The continue command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}1:1\n'
             ':Ccontinue\n'
             ':Cdumprepr\n'
@@ -94,6 +97,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The dbgvar command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}1:1\n'
             ':Cdbgvar testvar value\n'
             ':Cdbgvar second value\n'
@@ -118,6 +122,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The delvar command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cdbgvar testvar value\n'
             ':Cdelvar\n'
             ':Cdelvar unknown\n'
@@ -143,6 +148,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The disable command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}1:1\n'
             ':Cdisable 1\n'
             ':sleep ${time}\n'
@@ -159,6 +165,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The dumprepr command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cdumprepr\n'
             ':sleep ${time}\n'
             ':edit (clewn)_console | $$ | ?\'_bset\'?,?\'lnum\'?w!  ${test_out}\n'
@@ -182,6 +189,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The enable command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}1:1\n'
             ':Cbreak ${test_file}1:2\n'
             ':Cdisable 1\n'
@@ -203,6 +211,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The help command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Chelp\n'
             ':sleep ${time}\n'
             ':edit (clewn)_console | $$ | ?(simple) help?+1,$$-1w!  ${test_out}\n'
@@ -233,6 +242,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The interrupt command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}1:1\n'
             ':Ccontinue\n'
             ':Cdumprepr\n'
@@ -254,6 +264,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The mapkeys command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cmapkeys\n'
             ':sleep ${time}\n'
             ':edit (clewn)_console | $$ | ?mapkeys?,$$-1w!  ${test_out}\n'
@@ -274,6 +285,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The print command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cprint foobar\n'
             ':sleep ${time}\n'
             ':edit (clewn)_console | $$-1w! ${test_out}\n'
@@ -288,6 +300,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The quit command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}1:1\n'
             ':Cstep\n'
             ':Cdumprepr\n'
@@ -324,6 +337,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The quit command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}1:1\n'
             ':Cstep\n'
             ':Cdumprepr\n'
@@ -352,6 +366,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The step command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}1:2\n'
             ':Cstep\n'
             ':sleep ${time}\n'
@@ -370,6 +385,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """The unmapkeys command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cmapkeys\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'

@@ -56,24 +56,15 @@ else:
 WINDOW_LOCATION = ('top', 'bottom', 'left', 'right')
 CONNECTION_DEFAULTs = '', 3219, 'changeme'
 CONNECTION_TIMEOUT = 30
+CONNECTION_ERROR = """Connection to the editor timed out after %s seconds.
+Please check that the netbeans_intg feature is compiled
+in your Vim version by running the Vim command ':version',
+and checking that this command displays '+netbeans_intg'."""
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('disp')
 Unused = error
 Unused = warning
-
-def last_traceback():
-    """Return the last trace back."""
-    t, v, tb = sys.exc_info()
-    assert tb
-    while tb:
-        filename = tb.tb_frame.f_code.co_filename
-        lnum = tb.tb_lineno
-        last_tb = tb
-        tb = tb.tb_next
-    del tb
-
-    return t, v, filename, lnum, last_tb
 
 def pformat(name, obj):
     """Pretty format an object __dict__."""
@@ -99,7 +90,7 @@ def main():
         except (KeyboardInterrupt, SystemExit):
             pass
         except:
-            t, v, filename, lnum, last_tb = last_traceback()
+            t, v, filename, lnum, last_tb = misc.last_traceback()
 
             # get the line where exception occured
             try:
@@ -129,6 +120,9 @@ class Dispatcher(object):
             True when run from a test suite
         file_hdlr: logger.FileHandler
             log file
+        socket_map: asyncore socket dictionary
+            socket and socket-like objects listening on the select
+            event loop
         app: application.Application
             the application instance run by Dispatcher
         clss: class
@@ -158,6 +152,7 @@ class Dispatcher(object):
         """
         self.testrun = testrun
         self.file_hdlr = None
+        self.socket_map = asyncore.socket_map
         self.app = None
         self.clss = None
         self.f_script = None
@@ -296,11 +291,8 @@ class Dispatcher(object):
         else:
             logging.shutdown()
 
-        # interrupting pyclewn whith a hanged PipePeek thread may
-        # cause this assert error to be printed: skip assert to avoid this
-        # error message that may confuse the user
-        if not (os.environ.has_key('CLEWN_PIPES') or os.name == 'nt'):
-            assert not asyncore.socket_map
+        for asyncobj in self.socket_map.values():
+            asyncobj.close()
 
     def parse_options(self):
         """Parse the command line options."""
@@ -414,16 +406,13 @@ class Dispatcher(object):
 
     def loop(self):
         """The dispatch loop."""
-        socket_map = asyncore.socket_map
 
         start = time.time()
-        while socket_map:
+        while self.socket_map:
             # start the application
             if start is not False:
                 if time.time() - start > CONNECTION_TIMEOUT:
-                    raise IOError(
-                        'connection to the editor timed out after %s seconds'
-                        % str(CONNECTION_TIMEOUT))
+                    raise IOError(CONNECTION_ERROR % str(CONNECTION_TIMEOUT))
                 if self.nbsock.ready:
                     start = False
                     info(self.nbsock)
@@ -445,7 +434,7 @@ class Dispatcher(object):
                 self.nbsock.set_application(self.app)
                 info('new "%s" instance', self.clss.__name__.lower())
 
-            evtloop.poll(socket_map, timeout=.100)
+            evtloop.poll(self.socket_map, timeout=.100)
             self.app.timer()
 
     def register(self, clss):

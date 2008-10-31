@@ -284,6 +284,19 @@ def close_fds():
         except:
             pass
 
+def last_traceback():
+    """Return the last trace back."""
+    t, v, tb = sys.exc_info()
+    assert tb
+    while tb:
+        filename = tb.tb_frame.f_code.co_filename
+        lnum = tb.tb_lineno
+        last_tb = tb
+        tb = tb.tb_next
+    del tb
+
+    return t, v, filename, lnum, last_tb
+
 
 class Error(Exception):
     """Base class for exceptions in pyclewn."""
@@ -533,6 +546,8 @@ class ProcessChannel(object):
             the readable and writable instances of FileAsynchat helpers
         pid: int
             spawned process pid
+        ttyname: str
+            pseudo tty name
 
     """
 
@@ -543,6 +558,7 @@ class ProcessChannel(object):
         self.pgm = os.path.basename(self.argv[0])
         self.fileasync = None
         self.pid = 0
+        self.ttyname = None
 
     def popen(self):
         """Spawn a process using pipes."""

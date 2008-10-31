@@ -1024,16 +1024,16 @@ class Gdb(application.Application, ProcessChannel):
         """Send a <C-C> character to the debugger."""
         unused = args
         self.sendintr()
-        if not hasattr(self, 'ttyname'):
-            self.console_print('\n'
-                'Command ignored. Gdb does not handle interrupts over pipes.\n'
-            )
+        if self.ttyname is None:
+            self.cmd_sigint.im_func.__doc__ = \
+                'Command ignored: gdb does not handle interrupts over pipes.'
+            self.console_print('\n%s\n', self.cmd_sigint.__doc__)
             if os.name == 'posix':
-                self.console_print('\n'
-                    'As a workaround, get the pid of the program with'
-                        ' the gdb command "info proc".\n'
-                    'And send a SIGINT signal with the shell, on vim'
-                        ' command line: ":!kill -s SIGINT <pid>".\n'
+                self.console_print('To interrupt the program being debugged, '
+                    'send a SIGINT signal\n'
+                    'from the shell. For example, type from the vim command'
+                    ' line:\n'
+                    '    :!kill -SIGINT $(pgrep program_name)\n'
                 )
         self.prompt()
 

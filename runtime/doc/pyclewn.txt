@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 August 9
+*pyclewn.txt*                                   Last change: 2008 October 31
 
 
                             PYCLEWN USER MANUAL
@@ -273,6 +273,13 @@ The full description of the command line options follows:
 --file={FILE}       Set the log file name to FILE.
 
 
+On unix, when the 'CLEWN_PIPES' environment variable is set, pyclewn uses
+pipes instead of a pseudo tty and emulates the select event loop with threads.
+When the 'CLEWN_POPEN' environment variable is set, pyclewn uses pipes instead
+of a pseudo tty but continues using the select event loop. These variables are
+mainly used for regression testing.
+
+
 ==============================================================================
 3. Using pyclewn                            *pyclewn-using* *pyclewn-console*
 
@@ -411,7 +418,7 @@ commands that are listed here:
     * Csigint        send a <C-C> character to the debugger to interrupt the
                      running program that is being debugged; only with gdb,
                      and when pyclewn and gdb communicate over a pseudo
-                     terminal, which means on unixes but not on Windows;
+                     terminal, which means on unix but not on Windows;
                      on Windows, to interrupt the debuggee, one must type
                      <C-C> in the console that is popped by gdb on debuggee
                      start up
@@ -558,9 +565,18 @@ commands in a temporary file with vim, and load the commands into gdb by using
 the gdb <source> command on this file.
 
 The project file is not saved automatically on exit, if gdb is busy running a
-command at this time.
+command at that time.
 
-On Windows, it is not possible to interrupt gdb with the Csigint command.
+When pyclewn cannot setup a pseudo tty to communicate with gdb, pyclewn falls
+back to pipes. In this case, the Csigint command does not work as gdb does not
+handle interrupts over a pipe. Instead, one must send a SIGINT signal to the
+debuggee in order to interrupt the debuggee while it is running. This can be
+done from Vim with the command: >
+
+    :!kill -SIGINT $(pgrep debuggee_process_name)
+
+On Windows, it is not possible to interrupt gdb with the Csigint command, but
+you can type <Ctl-C> in the console to interrupt the debuggee.
 
 When setting breakpoints on an overloaded method, pyclewn bypasses the gdb
 prompt for the multiple choice and sets automatically all breakpoints.
@@ -618,7 +634,7 @@ Gdb is started with the "console-new" gdb variable set to on. When you start
 the debuggee, gdb pops up the console attached to the debuggee. You can type
 <Ctl-C> in the console to interrupt the debuggee.
 
-If this console bothers you, run the following command: >
+If this console bothers you, run the following gdb command: >
 
   :Cset new-console off
 

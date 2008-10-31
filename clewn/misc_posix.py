@@ -28,7 +28,6 @@ import signal
 import select
 import errno
 import fcntl
-import pty
 import termios
 
 import misc
@@ -98,8 +97,6 @@ class ProcessChannel(misc.ProcessChannel):
     Instance attributes:
         sig_handler: function
             default SIGCHLD signal handler
-        ttyname: str
-            pseudo tty name
 
     """
 
@@ -109,32 +106,29 @@ class ProcessChannel(misc.ProcessChannel):
         """Constructor."""
         misc.ProcessChannel.__init__(self, argv)
         self.sig_handler = None
-        self.ttyname = None
 
     def forkexec(self):
         """Fork and exec the program after setting the pseudo tty attributes.
 
-        Return the pseudo tty file descriptor.
+        Return the master pseudo tty file descriptor.
 
         """
-        fd, slave_fd = pty.openpty()
+        import pty
+        master_fd, slave_fd = pty.openpty()
         self.ttyname = os.ttyname(slave_fd)
 
         # don't map '\n' to '\r\n' - no echo - INTR is <C-C>
-        try:
-            attr = termios.tcgetattr(fd)
-            attr[1] = attr[1] & ~termios.ONLCR  # oflag
-            attr[3] = attr[3] & ~termios.ECHO   # lflags
-            attr[6][termios.VINTR] = self.INTERRUPT_CHAR
-            termios.tcsetattr(fd, termios.TCSADRAIN, attr)
-        except termios.error:
-            critical("failed to set termios attributes to pseudo tty")
+        attr = termios.tcgetattr(slave_fd)
+        attr[1] = attr[1] & ~termios.ONLCR  # oflag
+        attr[3] = attr[3] & ~termios.ECHO   # lflags
+        attr[6][termios.VINTR] = self.INTERRUPT_CHAR
+        termios.tcsetattr(slave_fd, termios.TCSADRAIN, attr)
 
         self.pid = os.fork()
         if self.pid == 0:
             # establish a new session
             os.setsid()
-            os.close(fd)
+            os.close(master_fd)
 
             # grab control of terminal
             # (from `The GNU C Library' (glibc-2.3.1))
@@ -156,10 +150,31 @@ class ProcessChannel(misc.ProcessChannel):
             misc.close_fds()
 
             # exec program
-            os.execvp(self.pgm, self.argv)
-            critical('failed to execvp "%"', self.pgm); raise
+            try:
+                os.execvp(self.pgm, self.argv)
+            except:
+                os._exit(os.EX_OSERR)
 
-        return fd
+        return master_fd
+
+    def ptyopen(self):
+        """Spawn a process using a pseudo tty.
+
+        Fall back to using pipes when failing to setup a pty.
+
+        """
+        try:
+            master = self.forkexec()
+        except (ImportError, OSError, os.error, termios.error):
+            t, v, filename, lnum, unused = misc.last_traceback()
+            critical("failed to setup a pseudo tty, falling back to pipes:")
+            critical("    %s: %s", str(t), str(v))
+            critical("    at %s:%s", filename, lnum)
+            self.popen()
+        else:
+            pty = misc.FileAsynchat(master, self)
+            self.fileasync = (pty, pty)
+            info('starting "%s" with a pseudo tty', self.pgm)
 
     def popen(self):
         """Spawn a process using pipes."""
@@ -174,17 +189,11 @@ class ProcessChannel(misc.ProcessChannel):
         self.sig_handler = signal.signal(signal.SIGCHLD, sigchld_handler)
 
         try:
-            if os.environ.has_key('CLEWN_PIPES'):
+            if os.environ.has_key('CLEWN_PIPES')            \
+                    or os.environ.has_key('CLEWN_POPEN'):
                 self.popen()
             else:
-                try:
-                    # use a pseudo tty
-                    pty = misc.FileAsynchat(self.forkexec(), self)
-                    self.fileasync = (pty, pty)
-                    info('starting "%s" with a pseudo tty', self.pgm)
-                except (ImportError, OSError):
-                    # fall back to using pipes
-                    self.popen()
+                self.ptyopen()
         except OSError:
             critical('cannot start process "%"', self.pgm); raise
         info('program argv list: %s', str(self.argv))

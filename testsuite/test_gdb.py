@@ -103,6 +103,7 @@ class GdbTestCase(ClewnTestCase):
         """Test the height, width and confirm setup"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cshow height\n'
             ':Cshow width\n'
             ':Cshow confirm\n'
@@ -124,6 +125,7 @@ class GdbTestCase(ClewnTestCase):
         """Test that after quit, a new gdb session can be started"""
         self.cltest_logfile(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cshow height\n'
             ':Cquit\n'
             ':Cshow height\n'
@@ -142,6 +144,7 @@ class GdbTestCase(ClewnTestCase):
         self.setup_gdb_args()
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Crun\n'
             ':sleep ${time}\n'
@@ -158,6 +161,7 @@ class GdbTestCase(ClewnTestCase):
         self.setup_gdb_args('--args testsuite/foobar 55')
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cbreak foo\n'
             ':Crun\n'
             ':Cprint max\n'
@@ -172,6 +176,7 @@ class GdbTestCase(ClewnTestCase):
         """Illegal commands are rejected"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cset con\n'       # set confirm command
             ':C she\n'          # shell command
@@ -189,6 +194,7 @@ class GdbTestCase(ClewnTestCase):
         """The break and clear commands symbols completion"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':redir! > ${test_out}\n'
             ':Csymcompletion\n'
@@ -202,6 +208,7 @@ class GdbTestCase(ClewnTestCase):
         """Checking result of oob commands"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Crun\n'
@@ -220,6 +227,7 @@ class GdbTestCase(ClewnTestCase):
         """Checking result of oob commands"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Crun\n'
@@ -245,6 +253,7 @@ class GdbTestCase(ClewnTestCase):
         """Check frame sign"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Crun\n'
@@ -262,6 +271,7 @@ class GdbTestCase(ClewnTestCase):
         """Check annotations level 1 are removed"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Crun\n'
@@ -279,6 +289,7 @@ class GdbTestCase(ClewnTestCase):
         """Check disable breakpoint"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Cdisable 1\n'
@@ -295,6 +306,7 @@ class GdbTestCase(ClewnTestCase):
         """Check breakpoint delete once"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Cenable delete 1\n'
@@ -313,6 +325,7 @@ class GdbTestCase(ClewnTestCase):
         """Check setting a breakpoint open the source file"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak foo\n'
             ':sleep ${time}\n'
@@ -328,6 +341,7 @@ class GdbTestCase(ClewnTestCase):
         """Check delete breakpoint"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Cbreak main\n'
@@ -345,6 +359,7 @@ class GdbTestCase(ClewnTestCase):
         """Check clearing breakpoints on the frame sign line"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Crun\n'
@@ -362,6 +377,7 @@ class GdbTestCase(ClewnTestCase):
         """Check break completion on overloaded functions"""
         self.cltest_logfile(
             ':edit testsuite/overloaded.cc\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/overloaded\n'
             ':Csymcompletion\n'
             ':\n\n'
@@ -378,6 +394,7 @@ class GdbTestCase(ClewnTestCase):
         """Check varobj creation, folding and deletion"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak foo\n'
             ':Crun\n'
@@ -401,6 +418,7 @@ class GdbTestCase(ClewnTestCase):
         """Check varobj hiliting"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak bar\n'
             ':Crun\n'
@@ -426,6 +444,7 @@ class GdbTestCase(ClewnTestCase):
         """Check robustness against vim 'tabedit (clewn)_dbgvar' bug"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak foo\n'
             ':Crun\n'
@@ -445,6 +464,7 @@ class GdbTestCase(ClewnTestCase):
         """Watched variables are updated when changed with the print command"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Crun\n'
@@ -462,6 +482,7 @@ class GdbTestCase(ClewnTestCase):
         """Returning to the correct frame location after a print command"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Cbreak foo\n'
@@ -486,6 +507,7 @@ class GdbTestCase(ClewnTestCase):
         """Set automatically all breakpoints on a multiple choice"""
         self.cltest_redir(
             ':edit testsuite/overloaded.cc\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/overloaded\n'
             ':Cbreak A::test\n'
             ':sleep ${time}\n'
@@ -506,6 +528,7 @@ class GdbTestCase(ClewnTestCase):
         """Check the project command"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Cbreak foo\n'
@@ -525,6 +548,7 @@ class GdbTestCase(ClewnTestCase):
         """Check the project command saves at most one breakpoint per line"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak foo\n'
             ':Cbreak foo\n'
@@ -544,6 +568,7 @@ class GdbTestCase(ClewnTestCase):
         self.setup_project_tests('%s1' % TESTFN_FILE)
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cecho\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -567,6 +592,7 @@ class GdbTestCase(ClewnTestCase):
         self.setup_project_tests(TESTFN_OUT)
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':Cbreak foo\n'
@@ -588,6 +614,7 @@ class GdbTestCase(ClewnTestCase):
         self.setup_project_tests(TESTFN_OUT)
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
             ':sleep ${time}\n'
@@ -611,7 +638,9 @@ def test_main():
     suite.addTest(GdbTestCase('test_bad_gdbpath'))
     suite.addTest(GdbTestCase('test_initial_setup'))
     suite.addTest(GdbTestCase('test_new_session'))
-    if not os.environ.has_key('CLEWN_PIPES') and os.name != 'nt':
+    if not os.environ.has_key('CLEWN_PIPES')            \
+            and not os.environ.has_key('CLEWN_POPEN')   \
+            and os.name != 'nt':
         suite.addTest(GdbTestCase('test_sigint'))
     suite.addTest(GdbTestCase('test_gdb_arglist'))
     suite.addTest(GdbTestCase('test_gdb_illegal'))

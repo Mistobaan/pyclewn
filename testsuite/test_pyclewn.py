@@ -41,6 +41,7 @@ class PyclewnTestCase(ClewnTestCase):
         """The buffer is automatically loaded on a break command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}2:1\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -60,6 +61,7 @@ class PyclewnTestCase(ClewnTestCase):
         """The buffer is automatically loaded on a step command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}1:2\n'
             ':edit ${test_file}2\n'
             ':sleep ${time}\n'
@@ -84,6 +86,7 @@ class PyclewnTestCase(ClewnTestCase):
         """The breakpoint and frame signs are restored after a wipeout"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}1:2\n'
             ':sleep ${time}\n'
             ':edit ${test_file}2:1\n'
@@ -111,6 +114,7 @@ class PyclewnTestCase(ClewnTestCase):
         """The simple application can be restarted"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cbreak ${test_file}1:1\n'
             ':Cquit\n'
             ':sleep ${time}\n'
@@ -162,6 +166,7 @@ class PyclewnTestCase(ClewnTestCase):
         """The simple keys are mapped"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
             ':Cmapkeys\n'
             ':sleep ${time}\n'
             ':redir! >> ${test_out}\n'

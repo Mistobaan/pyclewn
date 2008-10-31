@@ -1,9 +1,13 @@
 October 24, 2008 - pyclewn 0.7
     Changes:
+        Pyclewn falls back to pipes when a pseudo tty with gdb cannot be setup.
 
     Bug fixes:
         Fix cannot run two simultaneous pyclewn sessions on the same listening
         port.
+        Fix Csigint help and warning message when running with pipes instead of
+        a pseudo tty.
+
 
 August 16, 2008 - pyclewn 0.6
     Changes:
