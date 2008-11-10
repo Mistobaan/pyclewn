@@ -41,6 +41,14 @@ FRAME_ANNO_ID = 'frame'
 CONSOLE = '(clewn)_console'
 CONSOLE_MAXLINES = 10000
 VARIABLES_BUFFER = '(clewn)_dbgvar'
+CONSOLE_TITLE = """*********************
+*                   *
+*   Clewn console   *
+*                   *
+*********************
+
+
+"""
 
 RE_AUTH = r'^\s*AUTH\s*(?P<passwd>\S+)\s*$'                     \
           r'# RE: password authentication'
@@ -422,9 +430,8 @@ class ClewnBuffer(object):
 
     def register(self):
         """Register the buffer with netbeans vim."""
-        self.nbsock.send_cmd(self.buf, 'setFullName', _quote(self.buf.name))
+        self.nbsock.send_cmd(self.buf, 'editFile', _quote(self.buf.name))
         self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
-        self.nbsock.send_cmd(self.buf, 'initDone', '')
         self.buf.registered = True
 
     def append(self, msg):
@@ -800,6 +807,10 @@ class Netbeans(asynchat.async_chat, object):
     def set_application(self, application):
         """Notify of the current application."""
         self.app = application
+        if self.console is None or not self.console.buf.registered:
+            self.console = Console(self)
+            self.console.register()
+            self.console.eofprint(CONSOLE_TITLE)
 
     def nb_listen(self, host, port, passwd):
         """Have the server socket listen on the netbeans port."""

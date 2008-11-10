@@ -418,6 +418,35 @@ class SimpleCommandsTestCase(ClewnTestCase):
             '"(clewn)_console" [readonly] line 73 of 73'
             )
 
+    def test_firstcommand(self):
+        """The first command on the [NoName] buffer succeeds"""
+        self.cltest_redir(
+            ':Chelp\n'
+            ':sleep ${time}\n'
+            ':sleep ${time}\n'
+            ':w! ${test_out}\n'
+            ':qa!\n',
+
+            '(simple) help\n'
+            'break -- Set a breakpoint at a specified line.\n'
+            'clear -- Clear all breakpoints at a specified line.\n'
+            'continue -- Continue the program being debugged, also used to start the program.\n'
+            'dbgvar -- Add a variable to the debugger variable buffer.\n'
+            'delvar -- Delete a variable from the debugger variable buffer.\n'
+            'disable -- Disable one breakpoint.\n'
+            'dumprepr -- Print debugging information on netbeans and the application.\n'
+            'enable -- Enable one breakpoint.\n'
+            'help -- Print help on the simple commands.\n'
+            'interrupt -- Interrupt the execution of the debugged program.\n'
+            'mapkeys -- Map the pyclewn keys.\n'
+            'print -- Print a value.\n'
+            'quit -- Quit the current simple session.\n'
+            'sigint -- Send a <C-C> character to the debugger (not implemented).\n'
+            'step -- Step program until it reaches a different source line.\n'
+            'symcompletion -- Populate the break and clear commands with symbols completion (not implemented).\n'
+            'unmapkeys -- Unmap the pyclewn keys, this vim command does not invoke pyclewn.'
+            )
+
 
 def test_main():
     """Run all the tests."""
@@ -441,6 +470,7 @@ def test_main():
         suite.addTest(SimpleCommandsTestCase('test_quit_posix'))
     suite.addTest(SimpleCommandsTestCase('test_unmapkeys'))
     suite.addTest(SimpleCommandsTestCase('test_maxlines'))
+    suite.addTest(SimpleCommandsTestCase('test_firstcommand'))
     run_unittest(suite)
 
 if __name__ == "__main__":

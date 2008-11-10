@@ -101,27 +101,9 @@ augroup clewn
     autocmd BufWinEnter ${variables} silent! nbkey ClewnBuffer.DebuggerVarBuffer.open
     autocmd BufWinLeave ${variables} silent! nbkey ClewnBuffer.DebuggerVarBuffer.close
     autocmd BufWinEnter ${variables} silent! setlocal syntax=dbgvar
-    autocmd BufNew * silent! call s:getfilevt()
 augroup END
 
 let s:nofileOpened = 1
-
-"""
-
-FUNCTION_GETFILEVT = """
-" Vim discards nbkey requests on an unknown buffer (unknown to the netbeans
-" implementation in gvim). Instead, vim sends a fileOpened event. The workaround
-" is to send a fake "" nbkey request for the very first buffer: this triggers a
-" fileOpened event, pyclewn in return sends a putBufferNumber command, and the
-" buffer is learnt by the netbeans implementation in gvim. This takes care of
-" problems to display the console with a buffer
-" opened by an argument on vim command line (and unknown to netbeans).
-function s:getfilevt()
-    if s:nofileOpened
-        silent! nbkey ""
-        let s:nofileOpened = 0
-    endif
-endfunction
 
 """
 
@@ -163,24 +145,17 @@ endfunc
 FUNCTION_CONSOLE = """
 " Split a window and display the console with previewheight.
 function s:console(console_name)
-    let prevbuf_name = bufname("%")
-
     " The console window does not exist
     if bufwinnr(a:console_name) == -1
-        " The initial [No name] window
-        if prevbuf_name == ""
-            exe "edit " . a:console_name
-        endif
         call s:split(a:console_name, "${location}")
-
-        " Sleep to let netbeans process the open file events
-        sleep 300m
-
     " Split the console window (when the only window)
+    " this is required to prevent Vim display toggling between
+    " clewn console and the last buffer where the cursor was
+    " positionned (clewn does not know that this buffer is not
+    " anymore displayed)
     elseif winnr("$$") == 1
         call s:split("", "${location}")
     endif
-
 endfunction
 
 """
@@ -556,7 +531,6 @@ class Application(object):
                 ).substitute(console=netbeans.CONSOLE))
 
             # utility vim functions
-            f.write(FUNCTION_GETFILEVT)
             f.write(FUNCTION_SPLIT)
             f.write(string.Template(FUNCTION_CONSOLE).substitute(
                                                     location=location))
