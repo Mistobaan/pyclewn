@@ -24,7 +24,7 @@ class Error(Exception):
 try:
     import subprocess
 except ImportError, e:
-    raise Error("%s: upgrade python to version 2.4 or above." % e)
+    raise Error, ("%s: upgrade python to version 2.4 or above." % e)
 
 def icon(vimdir):
     """Return icon file tuple to be used as data file in distutils setup."""
@@ -33,22 +33,19 @@ def icon(vimdir):
 def vim_features():
     """Abort if missing required Vim feature."""
     output = clewn.run_vim_cmd(['version'])
-    if not output:
-        raise Error('error: cannot start gvim\n'
-                    'Please check that the gvim directory is in Windows PATH.')
 
     print 'checking netbeans support in gvim:',
     try:
         output.index('+netbeans_intg')
     except ValueError:
-        raise Error('no\n' 'error: netbeans support in gvim is required')
+        raise Error, 'netbeans support in gvim is required'
     print 'yes'
 
     print 'checking auto commands support in gvim:',
     try:
         output.index('+autocmd')
     except ValueError:
-        raise Error('no\n' 'error: auto commands support in gvim is required')
+        raise Error, 'auto commands support in gvim is required'
     print 'yes'
 
 def vimdir(dir=[]):
@@ -58,18 +55,15 @@ def vimdir(dir=[]):
         if os.environ.has_key('vimdir'):
             dir.append(os.environ['vimdir'])
         else:
-            content = clewn.run_vim_cmd(['echon $VIM'])
-            if content:
-                dir.append(join(content, 'vimfiles'))
-            else:
-                raise Error('error: cannot get Vim runtime files directory')
+            path = clewn.run_vim_cmd(['echon $VIM'])
+            dir.append(join(path, 'vimfiles'))
     return dir[0]
 
 def build_vimhelp():
     """Add pyclewn help to Vim help."""
     helpdir = join(vimdir(), 'doc')
     print 'running Vim help tags file generation in %s' % helpdir
-    clewn.run_vim_cmd(['helptags ' + helpdir])
+    clewn.run_vim_cmd(['helptags ' + helpdir, 'echo v:version'])
 
 def unlink(file):
     """Delete a file."""

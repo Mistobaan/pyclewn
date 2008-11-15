@@ -40,32 +40,47 @@ __svn__ = '.' + '$Revision$'.strip('$').split()[1]
 unused = __svn__
 VIM_ARGS = ['-u', 'NONE', '-esX', '-c', 'set cpo&vim']
 
-def run_vim_cmd(cmd_list, pathname='gvim'):
+class Error(Exception):
+    """Base class for exceptions in pyclewn."""
+    pass
+
+def run_vim_cmd(cmd_list, pathname=None):
     """Run a list of vim commands and return its output."""
     assert isinstance(cmd_list, (list, tuple))
+
+    if pathname is None:
+        if os.environ.has_key('vimcmd'):
+            pathname = os.environ['vimcmd']
+        else:
+            pathname = 'gvim'
+
     tmpname = f = content = None
+    fd, tmpname = tempfile.mkstemp(prefix='runvimcmd', suffix='.clewn')
+    cmd_list[0:0] = ['redir! >' + tmpname]
+    cmd_list.extend(['quit'])
+    args = [pathname]
+    args.extend(VIM_ARGS)
+    for cmd in cmd_list:
+        args.extend(['-c', cmd])
     try:
         try:
-            fd, tmpname = tempfile.mkstemp(prefix='runvimcmd', suffix='.clewn')
-            cmd_list[0:0] = ['redir! >' + tmpname]
-            cmd_list.extend(['quit'])
-            args = [pathname]
-            args.extend(VIM_ARGS)
-            for cmd in cmd_list:
-                args.extend(['-c', cmd])
             subprocess.Popen(args).wait()
             f = os.fdopen(fd)
             content = f.read()
         except (OSError, IOError):
-            pass
+            print >> _sys.stderr, \
+                ("Failed to run gvim as:\n'%s'" % " ".join(args))
+            raise
     finally:
         if f:
             f.close()
-        if os.path.exists(tmpname):
+        if tmpname and os.path.exists(tmpname):
             try:
                 os.unlink(tmpname)
             except OSError:
                 pass
+    if not content:
+        raise Error, ("No result to gvim command:\n'%s'" % " ".join(args))
     return content
 
 def class_list():
