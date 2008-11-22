@@ -489,14 +489,15 @@ class ClewnBuffer(object):
 
         """
         if not self.buf.registered:
-            return
+            self.visible = False
         if count == -1:
             count = self.len
         assert 0 <= count <= self.len
         if count:
-            self.nbsock.send_cmd(self.buf, 'setReadOnly', 'F')
-            self.remove(0, count)
-            self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
+            if self.buf.registered:
+                self.nbsock.send_cmd(self.buf, 'setReadOnly', 'F')
+                self.remove(0, count)
+                self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
             self.len -= count
             if self.len == 0:
                 self.nonempty_last = False

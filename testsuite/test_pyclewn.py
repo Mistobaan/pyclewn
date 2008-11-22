@@ -190,6 +190,28 @@ class PyclewnTestCase(ClewnTestCase):
             'line 1\n'
             )
 
+    def test_delconsole(self):
+        """The bdelete Vim command on the clewn console"""
+        self.cltest_redir(
+            ':edit ${test_file}1\n'
+            ':sleep ${time}\n'
+            ':Cbreak ${test_file}1:1\n'
+            ':sleep ${time}\n'
+            ':bdelete (clewn)_console\n'
+            ':Cquit\n'
+            ':sleep ${time}\n'
+            ':Cbreak ${test_file}1:2\n'
+            ':sleep ${time}\n'
+            ':edit (clewn)_console | $$-2,$$-1w! ${test_out}\n'
+            ':qa!\n',
+
+            '(simple) break ${test_file}1:2\n'
+            'Breakpoint 1 at file ${cwd}${test_file}1, line 2.\n',
+
+            'line 1\n'
+            'line 2\n'
+            )
+
 def test_main():
     """Run all the tests."""
     suite = unittest.TestSuite()
@@ -199,6 +221,7 @@ def test_main():
     suite.addTest(PyclewnTestCase('test_restart'))
     suite.addTest(PyclewnTestCase('test_cmdlist'))
     suite.addTest(PyclewnTestCase('test_mapkeys'))
+    suite.addTest(PyclewnTestCase('test_delconsole'))
     run_unittest(suite)
 
 if __name__ == "__main__":

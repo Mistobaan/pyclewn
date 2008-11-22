@@ -2,6 +2,8 @@ $Id$
 
 2008-11-22  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* netbeans.py: Fix incorrect display after the Vim command bdelete or
+	bwipeout on the clewn console.
 	* misc.py gdb.py netbeans.py application.py dispatcher.py: Use
 	clewn.Error for exceptions and tidy up raise statements.
 	* pyclewn_install.py __init__.py: The "gvim" name or full pathname can

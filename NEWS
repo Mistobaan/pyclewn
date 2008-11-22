@@ -1,4 +1,4 @@
-November 15, 2008 - pyclewn 0.7
+November 22, 2008 - pyclewn 0.7
     Changes:
         Pyclewn falls back to pipes when a pseudo tty cannot be setup with gdb.
         On Vim 7.2 and later Vim versions, the first gdb command on the initial
@@ -13,6 +13,8 @@ November 15, 2008 - pyclewn 0.7
         port.
         Fix Csigint help and warning message when running with pipes instead of
         a pseudo tty.
+        Fix incorrect display after the Vim command bdelete or bwipeout on the
+        clewn console.
 
 
 August 16, 2008 - pyclewn 0.6
