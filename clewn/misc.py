@@ -137,7 +137,7 @@ def dequote(string):
     """
     split = string.split(DOUBLEQUOTE)
     if len(split) % 2 != 1:
-        raise Error("uneven number of double quotes in '%s'" % string)
+        raise Error, ("uneven number of double quotes in '%s'" % string)
 
     tok_list = []
     previous = True
@@ -299,7 +299,7 @@ def last_traceback():
 
 
 class Error(Exception):
-    """Base class for exceptions in pyclewn."""
+    """Base class for misc exceptions in pyclewn."""
 
 class PrettyPrinterString(pprint.PrettyPrinter):
     """Strings are printed with str() to avoid duplicate backslash."""

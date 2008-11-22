@@ -36,6 +36,7 @@ STATE_INIT, STATE_RUNNING, STATE_QUITTING = range(3)
 
 import gdbmi
 import misc
+import clewn
 from misc import (
         misc_any as _any,
         quote as _quote,
@@ -223,7 +224,7 @@ def gdb_version(pgm):
             f = open(os.ttyname(0), 'rw')
             f.close()
         except IOError, err:
-            raise misc.Error("Gdb cannot open the terminal: %s" % err)
+            raise clewn.Error, ("Gdb cannot open the terminal: %s" % err)
 
     version = None
     header = gdb_batch(pgm, 'show version')
@@ -578,7 +579,6 @@ class Gdb(application.Application, ProcessChannel):
 
     def parse_paramlist(self):
         """Process the class parameter list."""
-        class Error(Exception): pass
         for param in self.param_list:
             try:
                 if param.lower() == 'async':
@@ -595,14 +595,17 @@ class Gdb(application.Application, ProcessChannel):
                                         f = open(pathname, 'r+b')
                                         f.close()
                                     except IOError, err:
-                                        raise Error('project file: %s:' % err)
+                                        raise clewn.Error, (
+                                                    'project file: %s:' % err)
                                 self.project = pathname
                                 continue
-                            raise Error('cannot have two project file names:'
+                            raise clewn.Error, (
+                                        'cannot have two project file names:'
                                                     ' %s and ' % self.project)
-                        raise Error('not a valid project file pathname:')
-                    raise Error('invalid parameter for the \'--gdb\' option:')
-            except Error, err:
+                        raise clewn.Error, 'not a valid project file pathname:'
+                    raise clewn.Error, (
+                                'invalid parameter for the \'--gdb\' option:')
+            except clewn.Error, err:
                 critical('%s %s', err, param)
                 sys.exit(1)
 
@@ -749,7 +752,7 @@ class Gdb(application.Application, ProcessChannel):
                 pass
             elif self.state != STATE_QUITTING:
                 # may occur on quitting with the debuggee still running
-                raise misc.Error('invalid token "%s"' % token)
+                raise clewn.Error, ('invalid token "%s"' % token)
         else:
             self.token = token
             self.lastcmd = cmd

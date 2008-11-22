@@ -311,7 +311,7 @@ class Dispatcher(object):
             unused = opt_str
             try:
                 args = misc.dequote(value)
-            except misc.Error, e:
+            except clewn.Error, e:
                 raise optparse.OptionValueError(e)
             if option._short_opts[0] == '-c':
                 parser.values.editor_args = args

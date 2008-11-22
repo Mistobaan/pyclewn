@@ -103,8 +103,6 @@ augroup clewn
     autocmd BufWinEnter ${variables} silent! setlocal syntax=dbgvar
 augroup END
 
-let s:nofileOpened = 1
-
 """
 
 FUNCTION_SPLIT = """
@@ -882,7 +880,7 @@ class Application(object):
                     else:
                         self.mapkeys[k] = (v.strip(),)
                 elif not re_comment.match(line):
-                    raise misc.Error('invalid line in %s: %s' % (path, line))
+                    raise clewn.Error, ('invalid line in %s: %s' % (path, line))
             f.close()
         except IOError:
             critical('reading %s', path); raise

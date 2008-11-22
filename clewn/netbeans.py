@@ -30,6 +30,7 @@ import asynchat
 import difflib
 
 import misc
+import clewn
 from misc import (
         quote as _quote,
         unquote as _unquote,
@@ -902,7 +903,7 @@ class Netbeans(asynchat.async_chat, object):
                 return
 
             if self.reply_fifo.is_empty():
-                raise misc.Error(
+                raise clewn.Error, (
                         'got a reply with no matching function request')
             n, reply = self.reply_fifo.pop()
             unused = n
@@ -918,7 +919,7 @@ class Netbeans(asynchat.async_chat, object):
             if matchobj.group('passwd') == self.passwd:
                 return
             else:
-                raise misc.Error('invalid password: "%s"' % self.passwd)
+                raise clewn.Error, ('invalid password: "%s"' % self.passwd)
         # '0:version=0 "2.3"'
         # '0:startupDone=0'
         else:
@@ -936,12 +937,12 @@ class Netbeans(asynchat.async_chat, object):
                         self.nbversion = string
                         return
                     else:
-                        raise misc.Error(
+                        raise clewn.Error, (
                                 'invalid netbeans version: "%s"' % string)
                 elif event == "startupDone":
                     self.ready = True
                     return
-        raise misc.Error('received unexpected message: "%s"' % msg)
+        raise clewn.Error, ('received unexpected message: "%s"' % msg)
 
     def goto_last(self):
         """Go to the last cursor position."""
