@@ -2,6 +2,8 @@ $Id$
 
 2008-12-26  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* simple.py: The symcompletion and sigint commands assert when run in
+	simple.
 	* netbeans.py application.py: Print an error message when a pyclewn
 	command is issued on a [NoName] buffer. When the command is issued on
 	a buffer loaded from Vim command line, prompt the user to allow the

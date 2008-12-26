@@ -507,6 +507,20 @@ class Simple(application.Application):
         self.varobj.clear()
         self.close()
 
+    def cmd_sigint(self, *args):
+        """Send a <C-C> character to the debugger (not implemented)."""
+        unused = self
+        unused = args
+        self.console_print('Not implemented.\n')
+        self.prompt()
+
+    def cmd_symcompletion(self, *args):
+        """Populate the break and clear commands with symbols completion (not implemented)."""
+        unused = self
+        unused = args
+        self.console_print('Not implemented.\n')
+        self.prompt()
+
     #-----------------------------------------------------------------------
     #   netbeans events
     #-----------------------------------------------------------------------
