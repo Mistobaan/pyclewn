@@ -402,6 +402,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
         """Maximum number of lines in the console buffer"""
         sys.argv.extend(['--maxlines=70'])
         self.cltest_redir(
+            ':edit ${test_file}1\n'
             ':let index = 0\n'
             ':while index < 50\n'
             ':  let index = index + 1\n'
@@ -410,6 +411,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
             ':endwhile\n'
             ':sleep ${time}\n'
             ':sleep ${time}\n'
+            ':edit (clewn)_console | $$\n'
             ':redir! > ${test_out}\n'
             ':file\n'
             ':qa!\n',
@@ -418,12 +420,15 @@ class SimpleCommandsTestCase(ClewnTestCase):
             '"(clewn)_console" [readonly] line 73 of 73'
             )
 
-    def test_firstcommand(self):
-        """The first command on the [NoName] buffer succeeds"""
+    def test_startupfile(self):
+        """The first command on a file loaded at startup succeeds"""
+        self.setup_vim_arg("testsuite/foobar.c")
         self.cltest_redir(
             ':Chelp\n'
             ':sleep ${time}\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
+            ':edit (clewn)_console | $$\n'
             ':w! ${test_out}\n'
             ':qa!\n',
 
@@ -470,7 +475,7 @@ def test_main():
         suite.addTest(SimpleCommandsTestCase('test_quit_posix'))
     suite.addTest(SimpleCommandsTestCase('test_unmapkeys'))
     suite.addTest(SimpleCommandsTestCase('test_maxlines'))
-    suite.addTest(SimpleCommandsTestCase('test_firstcommand'))
+    suite.addTest(SimpleCommandsTestCase('test_startupfile'))
     run_unittest(suite)
 
 if __name__ == "__main__":

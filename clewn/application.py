@@ -96,12 +96,51 @@ augroup clewn
 """                                     | setlocal expandtab"""         \
 """                                     | setlocal nowrap"""            \
 """
+    autocmd VimEnter * silent! call s:BuildList()
+    autocmd BufWinEnter * silent! call s:InBufferList(expand("<afile>:p"))
     autocmd BufWinEnter ${console} silent! nbkey ClewnBuffer.Console.open
     autocmd BufWinLeave ${console} silent! nbkey ClewnBuffer.Console.close
     autocmd BufWinEnter ${variables} silent! nbkey ClewnBuffer.DebuggerVarBuffer.open
     autocmd BufWinLeave ${variables} silent! nbkey ClewnBuffer.DebuggerVarBuffer.close
     autocmd BufWinEnter ${variables} silent! setlocal syntax=dbgvar
 augroup END
+
+"""
+
+FUNCTION_BUFLIST = """
+let s:bufList = {}
+let s:bufLen = 0
+
+" Build the list as an hash of active buffers
+" This is the list of buffers loaded on startup,
+" that must be advertized to pyclewn
+function s:BuildList()
+    let wincount = winnr("$")
+    let index = 1
+    while index <= wincount
+        let s:bufList[expand("#". winbufnr(index) . ":p")] = 1
+        let index = index + 1
+    endwhile
+    let s:bufLen = len(s:bufList)
+endfunction
+
+" Return true when the buffer is in the list, and remove it
+function s:InBufferList(pathname)
+    if s:bufLen && has_key(s:bufList, a:pathname)
+        unlet s:bufList[a:pathname]
+        let s:bufLen = len(s:bufList)
+        return 1
+    endif
+    return 0
+endfunction
+
+" Function that can be used for testing
+" Remove 's:' to expand function scope to runtime
+function! s:PrintBufferList()
+    for key in keys(s:bufList)
+       echo key
+    endfor
+endfunction
 
 """
 
@@ -161,9 +200,31 @@ endfunction
 FUNCTION_NBCOMMAND = """
 " Run the nbkey netbeans Vim command.
 function s:nbcommand(...)
+    if bufname("%") == ""
+        echohl ErrorMsg
+        echo "Cannot run a pyclewn command on the '[No Name]' buffer."
+        echo "Please edit a file first."
+        echohl None
+        return
+    endif
+
     " Allow '' as first arg: the 'C' command followed by a mandatory parameter
     if a:0 != 0
         if a:1 != "" || (a:0 > 1 && a:2 != "")
+            " edit the buffer that was loaded on startup and call input() to
+            " give a chance for gvim72 to process the putBufferNumber netbeans
+            " message in the idle loop before the call to nbkey
+            let l:currentfile = expand("%:p")
+            if s:InBufferList(l:currentfile)
+                exe "edit " . l:currentfile
+                echohl WarningMsg
+                echo "Files loaded on Vim startup must be registered with pyclewn."
+                echo "Registering " . l:currentfile . " with pyclewn."
+                call inputsave()
+                call input("Press any key to continue.")
+                call inputrestore()
+                echohl None
+            endif
             call s:console("${console}")
             let cmd = "nbkey " . join(a:000, ' ')
             exe cmd
@@ -529,6 +590,7 @@ class Application(object):
                 ).substitute(console=netbeans.CONSOLE))
 
             # utility vim functions
+            f.write(FUNCTION_BUFLIST)
             f.write(FUNCTION_SPLIT)
             f.write(string.Template(FUNCTION_CONSOLE).substitute(
                                                     location=location))

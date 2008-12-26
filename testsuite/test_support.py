@@ -66,6 +66,18 @@ class ClewnTestCase(unittest.TestCase):
         if verbose:
             sys.argv.append('--level=nbdebug')
 
+    def setup_vim_arg(self, newarg):
+        """Add a new Vim argument to the existing arguments."""
+        unused = self
+        argv = sys.argv
+        i = argv.index('--cargs')
+        argv.pop(i)
+        assert len(argv) > i + 1
+        args = argv.pop(i)
+        args += " " + newarg
+        argv.append('--cargs')
+        argv.append(args)
+
     def tearDown(self):
         """Cleanup stuff after the test."""
         self.__class__.__port = (self.__port + 1) % 100

@@ -1,7 +1,13 @@
 $Id$
 
-2008-11-22  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2008-12-26  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* netbeans.py application.py: Print an error message when a pyclewn
+	command is issued on a [NoName] buffer. When the command is issued on
+	a buffer loaded from Vim command line, prompt the user to allow the
+	processing of netbeans messages in the Vim idle loop (this is required
+	after the fix in Vim 7.2: netbeans events are handled while updating
+	the screen, causing a crash)
 	* netbeans.py: Fix incorrect display after the Vim command bdelete or
 	bwipeout on the clewn console.
 	* misc.py gdb.py netbeans.py application.py dispatcher.py: Use

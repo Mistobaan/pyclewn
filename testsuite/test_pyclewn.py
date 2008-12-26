@@ -102,7 +102,7 @@ class PyclewnTestCase(ClewnTestCase):
 
             'line=1  id=2  name=3\n'
             'line=2  id=1  name=1\n'
-            '${test_file}1',
+            '${cwd}${test_file}1',
 
             'line 1\n'
             'line 2\n',
