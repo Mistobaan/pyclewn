@@ -1,4 +1,4 @@
-December 26, 2008 - pyclewn 0.7
+January 6, 2009 - pyclewn 0.7
     Changes:
         Pyclewn falls back to pipes when a pseudo tty cannot be setup with gdb.
         On Vim 7.2 and later Vim versions, the first pyclewn command on the
@@ -17,6 +17,8 @@ December 26, 2008 - pyclewn 0.7
         a pseudo tty.
         Fix incorrect display after the Vim command bdelete or bwipeout on the
         clewn console.
+        Fix 'Quit' is printed on the gdb console after the output of the next
+        command.
 
 
 August 16, 2008 - pyclewn 0.6

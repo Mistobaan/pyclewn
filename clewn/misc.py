@@ -57,14 +57,15 @@ RE_ESCAPE = r'["\n\t\r\\]'                                      \
             r'# RE: escaped characters in a string'
 RE_UNESCAPE = r'\\["ntr\\]'                                     \
               r'# RE: escaped characters in a quoted string'
-Unused = QUOTED_STRING
 Unused = NBDEBUG
 Unused = LOG_LEVELS
 
 # compile regexps
+re_quoted = re.compile(QUOTED_STRING, re.VERBOSE)
 re_token_split = re.compile(RE_TOKEN_SPLIT, re.VERBOSE)
 re_escape = re.compile(RE_ESCAPE, re.VERBOSE)
 re_unescape = re.compile(RE_UNESCAPE, re.VERBOSE)
+Unused = re_quoted
 
 def logmethods(name):
     """Return the set of logging methods for the 'name' logger."""

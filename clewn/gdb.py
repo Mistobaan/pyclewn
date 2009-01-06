@@ -39,6 +39,7 @@ import misc
 import clewn
 from misc import (
         misc_any as _any,
+        re_quoted as _re_quoted,
         quote as _quote,
         unquote as _unquote,
         )
@@ -86,7 +87,6 @@ re_version = re.compile(RE_VERSION, re.VERBOSE|re.MULTILINE)
 Unused = re_version
 re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_mirecord = re.compile(RE_MIRECORD, re.VERBOSE)
-re_quoted = re.compile(misc.QUOTED_STRING, re.VERBOSE)
 re_anno_1 = re.compile(RE_ANNO_1, re.VERBOSE)
 
 SYMCOMPLETION = """
@@ -709,8 +709,16 @@ class Gdb(application.Application, ProcessChannel):
         if line.startswith('> ~"'):
             # remove the '> ' prompt after a multiple choice
             line = line[2:]
-        if line[0] in '~@&':
+        if line[0] in '~@':
             self.process_stream_record(line)
+        elif line[0] in '&':
+            # ignore a 'log' stream record
+            matchobj = _re_quoted.match(line[1:])
+            if matchobj:
+                line = _unquote(matchobj.group(1))
+                info(line)
+            else:
+                warning('bad format in gdb/mi log: "%s"', line)
         else:
             matchobj = re_mirecord.match(line)
             # a gdb/mi result or out of band record
@@ -722,13 +730,15 @@ class Gdb(application.Application, ProcessChannel):
             else:
                 # on Windows, the inferior output is redirected by gdb
                 # to the pipe when 'new-console' is not set
-                warning('handle_line: bad format of "%s"', line)
+                warning('handle_line: bad format: "%s"', line)
 
     def process_stream_record(self, line):
         """Process a received gdb/mi stream record."""
-        matchobj = re_quoted.match(line[1:])
+        matchobj = _re_quoted.match(line[1:])
         annotation_lvl1 = re_anno_1.match(line)
-        if matchobj and annotation_lvl1 is None:
+        if annotation_lvl1 is not None:
+            return
+        if matchobj:
             line = _unquote(matchobj.group(1))
             if (not self.stream_record and line == '[0] cancel\n[1] all\n') \
                     or (not self.multiple_choice                            \
@@ -738,8 +748,7 @@ class Gdb(application.Application, ProcessChannel):
                 self.multiple_choice = _timer()
             self.stream_record.append(line)
         else:
-            # ignore bad format
-            pass
+            warning('process_stream_record: bad format: "%s"', line)
 
     def process_mi_record(self, matchobj):
         """Process a received gdb/mi record."""
@@ -1038,7 +1047,7 @@ class Gdb(application.Application, ProcessChannel):
                     ' line:\n'
                     '    :!kill -SIGINT $(pgrep program_name)\n'
                 )
-        self.prompt()
+        self.console_print("Quit\n")
 
     #-----------------------------------------------------------------------
     #   netbeans events

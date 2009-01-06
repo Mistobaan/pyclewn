@@ -53,6 +53,7 @@ import gdb
 import misc
 from misc import (
         misc_any as _any,
+        re_quoted as _re_quoted,
         quote as _quote,
         unquote as _unquote,
         parse_keyval as _parse_keyval,
@@ -645,8 +646,16 @@ class CliCommand(Command):
         return self.send('-interpreter-exec console %s\n', _quote(cmd))
 
     def handle_result(self, line):
-        """Ignore the result."""
-        pass
+        """Handle gdb/mi result, print an error message."""
+        errmsg = 'error,msg='
+        if line.startswith(errmsg):
+            line = line[len(errmsg):]
+            matchobj = _re_quoted.match(line)
+            if matchobj:
+                line = _unquote(matchobj.group(1))
+                self.gdb.console_print('%s\n' % line)
+                return
+        info(line)
 
     def handle_strrecord(self, stream_record):
         """Process the stream records output by the command."""
