@@ -151,7 +151,7 @@ class ProcessChannel(misc.ProcessChannel):
 
             # exec program
             try:
-                os.execvp(self.pgm, self.argv)
+                os.execvp(self.argv[0], self.argv)
             except:
                 os._exit(os.EX_OSERR)
 
@@ -174,7 +174,7 @@ class ProcessChannel(misc.ProcessChannel):
         else:
             pty = misc.FileAsynchat(master, self)
             self.fileasync = (pty, pty)
-            info('starting "%s" with a pseudo tty', self.pgm)
+            info('starting "%s" with a pseudo tty', self.pgm_name)
 
     def popen(self):
         """Spawn a process using pipes."""
@@ -195,7 +195,7 @@ class ProcessChannel(misc.ProcessChannel):
             else:
                 self.ptyopen()
         except OSError:
-            critical('cannot start process "%"', self.pgm); raise
+            critical('cannot start process "%"', self.pgm_name); raise
         info('program argv list: %s', str(self.argv))
 
     def waitpid(self):
@@ -210,15 +210,15 @@ class ProcessChannel(misc.ProcessChannel):
 
                 if os.WCOREDUMP(status):
                     info("process %s terminated with a core dump",
-                            self.pgm)
+                            self.pgm_name)
                 elif os.WIFSIGNALED(status):
                     info("process %s terminated after receiving signal %d",
-                            self.pgm, os.WTERMSIG(status))
+                            self.pgm_name, os.WTERMSIG(status))
                 elif os.WIFEXITED(status):
                     info("process %s terminated with exit %d",
-                            self.pgm, os.WEXITSTATUS(status))
+                            self.pgm_name, os.WEXITSTATUS(status))
                 else:
-                    info("process %s terminated", self.pgm)
+                    info("process %s terminated", self.pgm_name)
 
     def close(self):
         """Close the channel an wait on the process."""

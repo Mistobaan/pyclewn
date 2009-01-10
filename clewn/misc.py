@@ -541,7 +541,7 @@ class ProcessChannel(object):
     Instance attributes:
         argv: tuple or list
             argv arguments
-        pgm: str
+        pgm_name: str
             process name
         fileasync: tuple
             the readable and writable instances of FileAsynchat helpers
@@ -556,7 +556,7 @@ class ProcessChannel(object):
         """Constructor."""
         assert argv
         self.argv = argv
-        self.pgm = os.path.basename(self.argv[0])
+        self.pgm_name = os.path.basename(self.argv[0])
         self.fileasync = None
         self.pid = 0
         self.ttyname = None
@@ -571,14 +571,14 @@ class ProcessChannel(object):
         self.fileasync = (FileAsynchat(proc.stdout, self, True),
                             FileAsynchat(proc.stdin, self, False))
         self.pid = proc.pid
-        info('starting "%s" with two pipes', self.pgm)
+        info('starting "%s" with two pipes', self.pgm_name)
 
     def start(self):
         """Spawn the process and connect its stdio to our fileasync tuple."""
         try:
             self.popen()
         except OSError:
-            critical('cannot start process "%"', self.pgm); raise
+            critical('cannot start process "%"', self.pgm_name); raise
         info('program argv list: %s', str(self.argv))
 
     def close(self):
