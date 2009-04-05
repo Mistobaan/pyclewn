@@ -195,7 +195,7 @@ class ProcessChannel(misc.ProcessChannel):
             else:
                 self.ptyopen()
         except OSError:
-            critical('cannot start process "%"', self.pgm_name); raise
+            critical('cannot start process "%s"', self.pgm_name); raise
         info('program argv list: %s', str(self.argv))
 
     def waitpid(self):
@@ -246,7 +246,7 @@ class PipePeek(misc.PipePeek):
             if err[0] != errno.EINTR:
                 # this may occur on exit
                 # closing the application is handled in ProcessChannel.waitpid
-                error('ignoring failed select syscall: %', err)
+                error('ignoring failed select syscall: %s', err)
             return False
         unused = owtd
         unused = ewtd

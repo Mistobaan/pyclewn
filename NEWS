@@ -1,11 +1,11 @@
-January 6, 2009 - pyclewn 0.7
+April 4, 2009 - pyclewn 0.7
     Changes:
         Pyclewn falls back to pipes when a pseudo tty cannot be setup with gdb.
         On Vim 7.2 and later Vim versions, the first pyclewn command on the
         initial [NoName] buffer is ignored and an error message is printed.
         Also, when the command is issued on a buffer loaded from Vim command
-        line, the user is prompted to allow registering the buffer in Vim idle
-        loop.
+        line, the user is informed that the buffer is being registered to
+        netbeans.
         On pyclewn installation, "gvim" can be replaced with the value of the
         environment variable 'vimcmd', for the program that is run to check
         that the 'netbeans_intg' feature has been compiled in Vim.

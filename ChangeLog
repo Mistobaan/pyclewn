@@ -1,7 +1,9 @@
 $Id$
 
-2009-01-10  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2009-04-04  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* setup.py: Fix test suite does not run with python2.6. Test suite
+	is now run through setup.py.
 	* misc.py misc_posix.py: Fixed wrong argument in the invocation of
 	execvp in ProcessChannel.
 	* misc.py gdb.py gdbmi.py: Ignore gdb/mi log stream records.

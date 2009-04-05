@@ -5,11 +5,15 @@ import sys
 import os
 import string
 import re
+import __builtin__
 from os.path import join
 from distutils.command.install import install as _install
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_scripts import build_scripts as _build_scripts
 from distutils.core import setup
+from distutils.core import Command
+import test.regrtest as regrtest
+
 import pyclewn_install
 from pyclewn_install import vimdir
 from pyclewn_install import vim_features
@@ -133,8 +137,61 @@ class sdist(_sdist):
         keymap_files()
         _sdist.run(self)
 
+class Test(Command):
+    """Run the test suite.
+
+    The testsuite uses the python standard library testing framework with
+    unittest. See test/README and test/regrtest.py in the python distribution.
+
+    """
+
+    user_options = [
+        ('test=', 't',
+            'run one test, for example "--test=gdb", all the tests are run'
+            + ' when this option is not present'),
+        ('detail', 'd',
+            'detailed test output, each test case is printed'),
+    ]
+
+    def initialize_options(self):
+        self.test = None
+        self.detail = False
+
+    def finalize_options(self):
+        if self.test is None:
+            sys.argv[1:] = []
+        else:
+            sys.argv[1:] = ['test_' + self.test]
+        if self.detail:
+            sys.argv[1:1] = ['-v']
+
+    def run (self):
+        """Run the test suite."""
+        TESTDIR = 'testsuite'
+        original_import = __builtin__.__import__
+
+        def import_hook(name, globals=None, locals=None, fromlist=None, level=-1):
+            """Hook to the builtin function __import__.
+
+            There is a bug in the  python standard library testing framework:
+            all tests are imported from the 'test' package regardless of the name
+            of the test directory.  The following function is a workaround that
+            allows the use of TESTDIR as the test directory and package name.
+
+            """
+            if name.startswith('test.test_') and name != 'test.test_support':
+                name = TESTDIR + name[4:]
+            return original_import(name, globals, locals, fromlist)
+
+        __builtin__.__import__ = import_hook
+        regrtest.STDTESTS = []
+        regrtest.main(testdir=TESTDIR)
+
 setup(
-    cmdclass={'sdist': sdist, 'build_scripts': build_scripts, 'install': install},
+    cmdclass={'sdist': sdist,
+              'build_scripts': build_scripts,
+              'install': install,
+              'test': Test},
     requires=['subprocess'],
     scripts=SCRIPTS,
     packages=['clewn', 'clewn.debugger'],

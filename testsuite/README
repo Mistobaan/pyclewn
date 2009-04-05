@@ -8,13 +8,17 @@ lib/pythonx.x/test/README in the Python distribution.
 
     * run all the test cases from the distribution root directory:
 
-            ./regrtest.py
+            python setup.py test
+
+    * get help on 'test' available options:
+
+            python setup.py test --help
 
     * to obtain the logs of a single test in test_simple.py, for example,
       comment out all the other tests in test_main() in this file, and run the
       test file in verbose mode:
 
-            ./regrtest.py -v test_simple.py
+            python setup.py test --test=simple --detail
 
     * always start the test case by editing a file before running a Cxxx command
 

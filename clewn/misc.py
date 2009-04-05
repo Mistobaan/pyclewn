@@ -578,7 +578,7 @@ class ProcessChannel(object):
         try:
             self.popen()
         except OSError:
-            critical('cannot start process "%"', self.pgm_name); raise
+            critical('cannot start process "%s"', self.pgm_name); raise
         info('program argv list: %s', str(self.argv))
 
     def close(self):
