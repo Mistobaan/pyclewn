@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2008 October 31
+*pyclewn.txt*                                   Last change: 2009 April 7
 
 
                             PYCLEWN USER MANUAL
@@ -580,6 +580,12 @@ you can type <Ctl-C> in the console to interrupt the debuggee.
 
 When setting breakpoints on an overloaded method, pyclewn bypasses the gdb
 prompt for the multiple choice and sets automatically all breakpoints.
+
+In order to set a pending breakpoint (for example in a shared library that has
+not yet been loaded by gdb), you must explicitly set the breakpoint pending
+mode to "on", with the command: >
+
+    :Cset breakpoint pending on
 
 After a "detach" gdb command, the frame sign remains highlighted because
 gdb/mi considers the frame as still valid.
