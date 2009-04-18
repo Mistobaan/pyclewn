@@ -172,7 +172,7 @@ class Dispatcher(object):
     def start(self):
         """Start the editor, connect to it, and start the application."""
         # log platform information for debugging
-        info('platform: %s', platform.uname())
+        info('platform: %s', platform.platform())
         if os.name == 'nt':
             info('Windows version: %s', sys.getwindowsversion())
 
@@ -468,11 +468,11 @@ class Dispatcher(object):
 
     def __str__(self):
         """Return a representation of the whole stuff."""
-        string = '\n%s%s' % (pformat('options', self.options),
+        self_str = '\n%s%s' % (pformat('options', self.options),
                             pformat('netbeans', self.nbsock))
         if self.app is not None:
-            string += 'application %s:\n%s\n' % (self.clss.__name__, self.app)
-        return string
+            self_str += 'application %s:\n%s\n' % (self.clss.__name__, self.app)
+        return self_str
 
 
 if __name__ == "__main__":

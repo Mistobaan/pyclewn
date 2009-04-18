@@ -208,7 +208,7 @@ class RootVarObj(object):
         dirty: boolean
             True when there is a change in the varobj objects
         str_content: str
-            string reprentation of the varobj objects
+            string representation of the varobj objects
 
     """
 
@@ -1073,17 +1073,17 @@ class OobGdbCommand(OobCommand, Command):
             return self.send(self.gdb_cmd)
         return False
 
-    def parse(self, string):
-        """Parse a string with the regexp after removing prefix.
+    def parse(self, data):
+        """Parse 'data' with the regexp after removing prefix.
 
         When successful, set the info_attribute.
 
         """
         try:
-            remain = string[string.index(self.prefix) + len(self.prefix):]
+            remain = data[data.index(self.prefix) + len(self.prefix):]
         except ValueError:
             debug('bad prefix in oob parsing of "%s",'
-                    ' requested prefix: "%s"', string.strip(), self.prefix)
+                    ' requested prefix: "%s"', data.strip(), self.prefix)
         else:
             if self.gdblist:
                 # a list of dictionaries

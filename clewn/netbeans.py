@@ -69,7 +69,7 @@ def debug(msg, *args, **kwargs):
     """Force NBDEBUG log level for debug messages."""
     logger.log(misc.NBDEBUG, msg, *args, **kwargs)
 
-def evt_ignore(buf_id, string, arg_list):
+def evt_ignore(buf_id, msg, arg_list):
     """Ignore not implemented received events."""
     pass
 
@@ -81,11 +81,11 @@ def parse_msg(msg):
             True: an event - False: a reply
         buf_id: int
             netbeans buffer number
-        event: string
+        event: str
             event name
         seqno: int
             netbeans sequence number
-        string: str
+        nbstring: str
             the netbeans string
         arg_list: list
             list of remaining args after the netbeans string
@@ -114,19 +114,19 @@ def parse_msg(msg):
         assert False, 'error in regexp'
 
     # a netbeans string
-    string = ''
+    nbstring = ''
     if args and args[0] == _DOUBLEQUOTE:
         end = args.rfind(_DOUBLEQUOTE)
         if end != -1 and end != 0:
-            string = args[1:end]
-            string = _unquote(string)
+            nbstring = args[1:end]
+            nbstring = _unquote(nbstring)
         else:
             end = -1
     else:
         end = -1
     arg_list = args[end+1:].split()
 
-    return (matchobj.re is re_event), buf_id, event, seqno, string, arg_list
+    return (matchobj.re is re_event), buf_id, event, seqno, nbstring, arg_list
 
 def is_clewnbuf(bufname):
     """Return True if bufname is the name of a clewn buffer."""
@@ -634,20 +634,20 @@ class Reply(object):
         self.nbsock.show_balloon(err)
         error(err)
 
-    def __call__(self, seqno, string, arg_list):
+    def __call__(self, seqno, nbstring, arg_list):
         """Process the netbeans reply."""
         unused = self
         unused = seqno
-        unused = string
+        unused = nbstring
         unused = arg_list
         raise NotImplementedError('must be implemented in subclass')
 
 class insertReply(Reply):
     """Check the reply to an insert function."""
 
-    def __call__(self, seqno, string, arg_list):
+    def __call__(self, seqno, nbstring, arg_list):
         """Check the reply to an insert or remove netbeans function."""
-        unused = string
+        unused = nbstring
         if seqno != self.seqno:
              error('%s: invalid sequence number on edit', self.buf.name)
              return
@@ -663,9 +663,9 @@ removeReply = insertReply
 class getLengthReply(Reply):
     """Check the reply to a getLength function."""
 
-    def __call__(self, seqno, string, arg_list):
+    def __call__(self, seqno, nbstring, arg_list):
         """Check the length of the Vim buffer."""
-        unused = string
+        unused = nbstring
         if seqno != self.seqno:
             error('%s: invalid sequence number on getLength', self.buf.name)
             return
@@ -874,7 +874,7 @@ class Netbeans(asynchat.async_chat, object):
             return
 
         # handle variable number of elements in returned tuple
-        is_event, buf_id, event, seqno, string, arg_list =          \
+        is_event, buf_id, event, seqno, nbstring, arg_list =        \
                 (lambda a, b=None, c=None, d=None, e=None, f=None:
                             (a, b, c, d, e, f))(*parse_msg(msg))
 
@@ -883,7 +883,7 @@ class Netbeans(asynchat.async_chat, object):
             pass
         elif is_event:
             evt_handler = getattr(self, "evt_%s" % event, evt_ignore)
-            evt_handler(buf_id, string, arg_list)
+            evt_handler(buf_id, nbstring, arg_list)
 
         # a function reply: process the reply
         else:
@@ -896,7 +896,7 @@ class Netbeans(asynchat.async_chat, object):
                         'got a reply with no matching function request')
             n, reply = self.reply_fifo.pop()
             unused = n
-            reply(seqno, string, arg_list)
+            reply(seqno, nbstring, arg_list)
             self.last_seqno = seqno
 
 
@@ -913,7 +913,7 @@ class Netbeans(asynchat.async_chat, object):
         # '0:startupDone=0'
         else:
             # handle variable number of elements in returned tuple
-            is_event, buf_id, event, seqno, string, arg_list =          \
+            is_event, buf_id, event, seqno, nbstring, arg_list =        \
                     (lambda a, b=None, c=None, d=None, e=None, f=None:
                                 (a, b, c, d, e, f))(*parse_msg(msg))
             unused = arg_list
@@ -922,12 +922,12 @@ class Netbeans(asynchat.async_chat, object):
 
             if is_event:
                 if event == "version":
-                    if string >= NETBEANS_VERSION:
-                        self.nbversion = string
+                    if nbstring >= NETBEANS_VERSION:
+                        self.nbversion = nbstring
                         return
                     else:
                         raise clewn.Error, (
-                                'invalid netbeans version: "%s"' % string)
+                                'invalid netbeans version: "%s"' % nbstring)
                 elif event == "startupDone":
                     self.ready = True
                     return
@@ -942,19 +942,19 @@ class Netbeans(asynchat.async_chat, object):
     #-----------------------------------------------------------------------
     #   Events
     #-----------------------------------------------------------------------
-    def evt_balloonText(self, buf_id, string, arg_list):
+    def evt_balloonText(self, buf_id, nbstring, arg_list):
         """Process a balloonText netbeans event."""
         unused = arg_list
         unused = buf_id
-        if not string:
+        if not nbstring:
             error('empty string in balloonText')
         else:
-            self.app.balloon_text(string)
+            self.app.balloon_text(nbstring)
 
-    def evt_disconnect(self, buf_id, string, arg_list):
+    def evt_disconnect(self, buf_id, nbstring, arg_list):
         """Process a disconnect netbeans event."""
         unused = arg_list
-        unused = string
+        unused = nbstring
         unused = buf_id
         self.close()
 
@@ -1018,7 +1018,7 @@ class Netbeans(asynchat.async_chat, object):
                     return True
         return False
 
-    def evt_keyAtPos(self, buf_id, string, arg_list):
+    def evt_keyAtPos(self, buf_id, nbstring, arg_list):
         """Process a keyAtPos netbeans event."""
         if self.console is None or not self.console.buf.registered:
             self.console = Console(self)
@@ -1030,7 +1030,7 @@ class Netbeans(asynchat.async_chat, object):
         buf = self.app._bset.getbuf(buf_id)
         if buf is None:
             error('invalid bufId: "%d" in keyAtPos', buf_id)
-        elif not string:
+        elif not nbstring:
             warning('empty string in keyAtPos')
         elif len(arg_list) != 2:
             warning('invalid arg in keyAtPos')
@@ -1047,16 +1047,16 @@ class Netbeans(asynchat.async_chat, object):
                     self.last_buf.col = col
 
                 cmd, args = (lambda a='', b='':
-                                    (a, b))(*string.split(None, 1))
+                                    (a, b))(*nbstring.split(None, 1))
 
                 if self.is_editport_evt(cmd):
                     return
 
                 self.app.dispatch_keypos(cmd, args, buf, lnum)
 
-    def evt_killed(self, buf_id, string, arg_list):
+    def evt_killed(self, buf_id, nbstring, arg_list):
         """A file was closed by the user."""
-        unused = string
+        unused = nbstring
         unused = arg_list
         # buffer killed by netbeans, signs are already removed by gvim
         buf = self.app._bset.getbuf(buf_id)

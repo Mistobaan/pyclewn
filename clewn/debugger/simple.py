@@ -102,10 +102,10 @@ class Target(threading.Thread):
         while not self.closed:
             if self.bp.isSet():
                 if self.cnt == 0 and not self.daemon and not self.testrun:
-                    print('Inferior starting.\n')
+                    print >> sys.stderr, 'Inferior starting.\n'
                 self.cnt += 1
                 if not self.daemon and not self.testrun:
-                    print('value %d\n' % self.cnt)
+                    print >> sys.stderr, 'value %d\n' % self.cnt
 
                 # end the step command, when not running
                 if not self.running:
@@ -199,7 +199,7 @@ class Simple(application.Application):
             breakpoint number
         inferior: Target
             the debuggee
-        step_bufname: string
+        step_bufname: str
             name of the buffer we are stepping into, this is the first buffer
             where a breakpoint has been set
         lnum: int

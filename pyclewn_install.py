@@ -34,19 +34,19 @@ def vim_features():
     """Abort if missing required Vim feature."""
     output = clewn.run_vim_cmd(['version'])
 
-    print 'checking netbeans support in gvim:',
+    print >> sys.stderr, 'checking netbeans support in gvim:',
     try:
         output.index('+netbeans_intg')
     except ValueError:
         raise Error, 'netbeans support in gvim is required'
-    print 'yes'
+    print >> sys.stderr, 'yes'
 
-    print 'checking auto commands support in gvim:',
+    print >> sys.stderr, 'checking auto commands support in gvim:',
     try:
         output.index('+autocmd')
     except ValueError:
         raise Error, 'auto commands support in gvim is required'
-    print 'yes'
+    print >> sys.stderr, 'yes'
 
 def vimdir(dir=[]):
     """Return the vim runtime files directory."""
@@ -62,7 +62,7 @@ def vimdir(dir=[]):
 def build_vimhelp():
     """Add pyclewn help to Vim help."""
     helpdir = join(vimdir(), 'doc')
-    print 'running Vim help tags file generation in %s' % helpdir
+    print >> sys.stderr, 'running Vim help tags file generation in %s' % helpdir
     clewn.run_vim_cmd(['helptags ' + helpdir, 'echo v:version'])
 
 def unlink(file):
@@ -82,12 +82,12 @@ def install():
     runtime_dir = join(prefix, 'pyclewn')
     icon_file = join(runtime_dir, ICON_NAME)
     copy_file(icon_file, scripts)
-    print 'copying file %s' % icon_file
+    print >> sys.stderr, 'copying file %s' % icon_file
     unlink(icon_file)
 
     for file in copy_tree(runtime_dir, vimdir()):
-        print 'copying file %s' % file
-    print 'removing directory %s' % runtime_dir
+        print >> sys.stderr, 'copying file %s' % file
+    print >> sys.stderr, 'removing directory %s' % runtime_dir
     remove_tree(runtime_dir)
 
     build_vimhelp()
@@ -114,7 +114,7 @@ def install():
     pyclewn_shortcut = join(desktop_path, PYCLEWN_SHORTCUT)
     if not os.path.exists(pyclewn_shortcut):
         copy_file(PYCLEWN_SHORTCUT, desktop_path)
-        print 'copying pyclewn to the desktop: %s' % pyclewn_shortcut
+        print >> sys.stderr, 'copying pyclewn to the desktop: %s' % pyclewn_shortcut
 
     # cleanup
     unlink(PYCLEWN_SHORTCUT)
@@ -122,7 +122,7 @@ def install():
     unlink(join(scripts, 'pyclewn_install.pyc'))
     unlink(join(scripts, 'pyclewn_install.pyo'))
 
-    print 'pyclewn postinstall completed'
+    print >> sys.stderr, 'pyclewn postinstall completed'
 
 def uninstall():
     prefix = sysconfig.get_config_var('prefix')
@@ -151,4 +151,4 @@ if __name__ == '__main__':
                 uninstall()
         except Exception, err:
             # let the python installer print the error
-            print err
+            print >> sys.stderr, err

@@ -125,20 +125,20 @@ def escape_char(matchobj):
     if matchobj.group(0) == '\\': return r'\\'
     assert False
 
-def quote(string):
-    """Quote 'string' and escape special characters."""
-    return '"%s"' % re_escape.sub(escape_char, string)
+def quote(msg):
+    """Quote 'msg' and escape special characters."""
+    return '"%s"' % re_escape.sub(escape_char, msg)
 
-def dequote(string):
-    """Return the list of whitespace separated tokens from string, handling
+def dequote(msg):
+    """Return the list of whitespace separated tokens from 'msg', handling
     double quoted substrings as a token.
 
     Note: '\' escaped double quotes are not handled.
 
     """
-    split = string.split(DOUBLEQUOTE)
+    split = msg.split(DOUBLEQUOTE)
     if len(split) % 2 != 1:
-        raise Error, ("uneven number of double quotes in '%s'" % string)
+        raise Error, ("uneven number of double quotes in '%s'" % msg)
 
     tok_list = []
     previous = True
@@ -162,9 +162,9 @@ def unescape_char(matchobj):
     if matchobj.group(0) == r'\\': return '\\'
     assert False
 
-def unquote(string):
+def unquote(msg):
     """Remove escapes from escaped characters in a quoted string."""
-    return '%s' % re_unescape.sub(unescape_char, string)
+    return '%s' % re_unescape.sub(unescape_char, msg)
 
 def norm_unixpath(line, ispath=False):
     """Convert backward slashes to forward slashes on Windows.

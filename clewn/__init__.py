@@ -30,7 +30,7 @@ import inspect as _inspect
 try:
     import subprocess
 except ImportError, e:
-    print "%s: upgrade python to version 2.4 or above." % e
+    print >> _sys.stderr, "%s: upgrade python to version 2.4 or above." % e
     _sys.exit(1)
 
 import application as _application
@@ -102,6 +102,6 @@ def python_version():
     return _sys.version_info >= (2, 4)
 
 if not python_version():
-    print python_version.__doc__
+    print >> _sys.stderr, python_version.__doc__
     _sys.exit()
 
