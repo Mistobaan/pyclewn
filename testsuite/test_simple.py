@@ -475,7 +475,8 @@ def test_main():
         suite.addTest(SimpleCommandsTestCase('test_quit_posix'))
     suite.addTest(SimpleCommandsTestCase('test_unmapkeys'))
     suite.addTest(SimpleCommandsTestCase('test_maxlines'))
-    suite.addTest(SimpleCommandsTestCase('test_startupfile'))
+    if os.name != 'nt':
+        suite.addTest(SimpleCommandsTestCase('test_startupfile'))
     run_unittest(suite)
 
 if __name__ == "__main__":
