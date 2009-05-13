@@ -1,3 +1,9 @@
+May 13, 2009 - pyclewn 0.8
+    Bug fix:
+        Recent Fedora Core distributions are missing the Python standard
+        library test.regrtest module. Warn that the regression test suite
+        cannot be run on these platforms and continue the installation.
+
 April 4, 2009 - pyclewn 0.7
     Changes:
         Pyclewn falls back to pipes when a pseudo tty cannot be setup with gdb.

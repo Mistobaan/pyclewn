@@ -1,5 +1,11 @@
 $Id$
 
+2009-05-13  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+	* setup.py: The Fedora Core 9 distribution is missing the Python
+	standard library test.regrtest module.
+	* pyclewn_install.py: Change gdb Windows pathname in shortcut.
+
+===============================================================================
 2009-04-04  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* setup.py: Fix test suite does not run with python2.6. Test suite

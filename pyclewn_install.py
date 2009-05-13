@@ -104,7 +104,7 @@ def install():
         join(scripts, 'pyclewn.bat'),
         'Pyclewn allows using Vim as a front end to a debugger.',
         PYCLEWN_SHORTCUT,
-        r'--pgm=C:\msys\mingw\bin\gdb.exe --daemon',
+        r'--pgm=C:\mingw\bin\gdb.exe --daemon',
         '',
         join(scripts, ICON_NAME),
         0)

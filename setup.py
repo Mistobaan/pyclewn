@@ -12,7 +12,13 @@ from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_scripts import build_scripts as _build_scripts
 from distutils.core import setup
 from distutils.core import Command
-import test.regrtest as regrtest
+try:
+    import test.regrtest as regrtest
+except ImportError, e:
+    print >> sys.stderr, ('Warning: setup.py cannot be used for running the'
+                                    ' regression test suite on this platform')
+    print >> sys.stderr, 'ImportError: %s' % e
+
 
 import pyclewn_install
 from pyclewn_install import vimdir
