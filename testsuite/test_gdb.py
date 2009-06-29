@@ -19,16 +19,16 @@
 #
 # $Id$
 
-"""Test the gdb application.
+"""Test the gdb debugger.
 
 """
 import sys
 import os
 import unittest
-from test.test_support import run_unittest
+import test.test_support as test_support
 
-from clewn.gdb import gdb_version
-from clewn.misc import check_call
+import clewn.gdb as gdb
+import clewn.misc as misc
 from testsuite.test_support import ClewnTestCase, TESTFN_FILE, TESTFN_OUT
 
 if os.name == 'nt':
@@ -36,7 +36,7 @@ if os.name == 'nt':
 else:
     debuggee = 'file ${cwd}testsuite/foobar'
 
-gdb_v = gdb_version('gdb')
+gdb_v = gdb.gdb_version('gdb')
 
 class GdbTestCase(ClewnTestCase):
     """Test the gdb debugger."""
@@ -234,7 +234,7 @@ class GdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':Cdumprepr\n'
             ':sleep ${time}\n'
-            ":edit (clewn)_console | $$ | ?'info'?,/'last_balloon'/w!  ${test_out}\n"
+            ":edit (clewn)_console | $$ | ?'info'?,/'version'/w!  ${test_out}\n"
             ':qa!\n',
 
             "'file': {'file': 'foobar.c',\n"
@@ -630,7 +630,7 @@ class GdbTestCase(ClewnTestCase):
 def test_main():
     """Run all the tests."""
     # run make on the testsuite
-    check_call(['make', '-C', 'testsuite'])
+    misc.check_call(['make', '-C', 'testsuite'])
 
     suite = unittest.TestSuite()
     suite.addTest(GdbTestCase('test_completion'))
@@ -668,7 +668,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_project_option_load'))
     suite.addTest(GdbTestCase('test_project_option_save'))
     suite.addTest(GdbTestCase('test_project_option_vimquit'))
-    run_unittest(suite)
+    test_support.run_unittest(suite)
 
 if __name__ == '__main__':
     test_main()

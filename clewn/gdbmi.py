@@ -47,18 +47,9 @@ import os
 import os.path
 import re
 import cStringIO
-from collections import deque
+import collections
 
-import gdb
-import misc
-from misc import (
-        misc_any as _any,
-        re_quoted as _re_quoted,
-        quote as _quote,
-        unquote as _unquote,
-        parse_keyval as _parse_keyval,
-        norm_unixpath as _norm_unixpath,
-        )
+import clewn.misc as misc
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('mi')
@@ -189,11 +180,11 @@ class VarObjList(dict):
         """Collect all varobj children data."""
         if not self: return
         # follow positional parameters in VAROBJ_FMT
-        tab = [(len(x['name']), len(x['type']), len(x['exp']))
+        table = [(len(x['name']), len(x['type']), len(x['exp']))
                                             for x in self.values()]
-        tab = (max([x[0] for x in tab]),
-                        max([x[1] for x in tab]),
-                        max([x[2] for x in tab]))
+        tab = (max([x[0] for x in table]),
+                        max([x[1] for x in table]),
+                        max([x[2] for x in table]))
         for name in sorted(self.keys()):
             self[name].collect(parents, lnum, stream, indent, tab)
 
@@ -311,7 +302,7 @@ class Info(object):
 
     Instance attributes:
         gdb: gdb.Gdb
-            the Gdb application instance
+            the Gdb debugger instance
         args: list
             the debuggee arguments
         breakpoints: list
@@ -371,7 +362,7 @@ class Info(object):
         # an absolute path name
         if os.path.isabs(name):
             if os.path.exists(name):
-                return _norm_unixpath(name, True)
+                return misc.norm_unixpath(name, True)
             else:
                 # strip off the directory part and continue
                 name = os.path.split(name)[1]
@@ -396,7 +387,7 @@ class Info(object):
                 pathname = os.path.normpath(name)
 
             if os.path.exists(pathname):
-                return _norm_unixpath(pathname, True)
+                return misc.norm_unixpath(pathname, True)
 
         return None
 
@@ -499,7 +490,7 @@ class Result(dict):
         # do not add an OobGdbCommand if the dictionary contains
         # an object of the same class
         if isinstance(command, OobGdbCommand)  \
-                and _any([command.__class__ is obj.__class__
+                and misc.any([command.__class__ is obj.__class__
                         for obj in self.values()]):
             return None
         t = str(self.token)
@@ -572,7 +563,7 @@ class OobList(object):
 
     def iterator(self):
         """Return an iterator over OobCommand and VarObjCmd objects."""
-        self.fifo = deque(self.static_list + self.running_list)
+        self.fifo = collections.deque(self.static_list + self.running_list)
         self.running_list = []
         return self
 
@@ -642,17 +633,17 @@ class CliCommand(Command):
             return False
 
         self.gdb.gotprmpt = False
-        cmd = _norm_unixpath(cmd)
-        return self.send('-interpreter-exec console %s\n', _quote(cmd))
+        cmd = misc.norm_unixpath(cmd)
+        return self.send('-interpreter-exec console %s\n', misc.quote(cmd))
 
     def handle_result(self, line):
         """Handle gdb/mi result, print an error message."""
         errmsg = 'error,msg='
         if line.startswith(errmsg):
             line = line[len(errmsg):]
-            matchobj = _re_quoted.match(line)
+            matchobj = misc.re_quoted.match(line)
             if matchobj:
-                line = _unquote(matchobj.group(1))
+                line = misc.unquote(matchobj.group(1))
                 self.gdb.console_print('%s\n' % line)
                 return
         info(line)
@@ -755,11 +746,11 @@ class VarCreateCommand(MiCommand):
     def sendcmd(self):
         """Send the gdb command."""
         return MiCommand.docmd(self, '-var-create - * %s\n',
-                                        _quote(self.varobj['exp']))
+                                    misc.quote(self.varobj['exp']))
 
     def handle_result(self, line):
         """Process gdb/mi result."""
-        parsed = _parse_keyval(re_varcreate, line)
+        parsed = misc.parse_keyval(re_varcreate, line)
         if parsed is not None and VARCREATE_ATTRIBUTES.issubset(parsed):
             rootvarobj = self.gdb.info.varobj
             varobj = self.varobj
@@ -822,7 +813,7 @@ class ListChildrenCommand(MiCommand):
     def handle_result(self, line):
         """Process gdb/mi result."""
         varlist = [VarObj(x) for x in
-                        [_parse_keyval(re_varlistchildren, list_element)
+                        [misc.parse_keyval(re_varlistchildren, list_element)
                             for list_element in re_dict_list.findall(line)]
                 if x is not None and LIST_CHILDREN_KEYS.issubset(x)]
         for varobj in varlist:
@@ -853,7 +844,7 @@ class ShowBalloon(Command):
         if self.gdb.accepting_cmd():
             self.result = ''
             return self.send('-data-evaluate-expression %s\n',
-                                            _quote(self.text))
+                                        misc.quote(self.text))
         return False
 
     def handle_result(self, line):
@@ -927,7 +918,7 @@ class VarObjCmdEvaluate(VarObjCmd):
 
     def handle_result(self, line):
         """Send the gdb command."""
-        parsed = _parse_keyval(re_varevaluate, line)
+        parsed = misc.parse_keyval(re_varevaluate, line)
         if parsed is not None and VAREVALUATE_ATTRIBUTES.issubset(parsed):
             self.result = line
             value = parsed['value']
@@ -1013,7 +1004,7 @@ class OobGdbCommand(OobCommand, Command):
             optional: not present in all subclasses
             name of the gdb.info method that is called after parsing the result
         trigger: boolean
-            when True, invoke _call__()
+            when True, invoke __call__()
         trigger_list: tuple
             list of commands that trigger the invocation of __call__()
         trigger_prefix: set
@@ -1058,7 +1049,7 @@ class OobGdbCommand(OobCommand, Command):
 
         """
         if not self.trigger_list or     \
-                    _any([cmd.startswith(x) for x in self.trigger_prefix]):
+                    misc.any([cmd.startswith(x) for x in self.trigger_prefix]):
             self.trigger = True
 
     def __call__(self):
@@ -1088,12 +1079,12 @@ class OobGdbCommand(OobCommand, Command):
             if self.gdblist:
                 # a list of dictionaries
                 parsed = [x for x in
-                           [_parse_keyval(self.regexp, list_element)
+                           [misc.parse_keyval(self.regexp, list_element)
                             for list_element in re_dict_list.findall(remain)]
                                  if x is not None and self.reqkeys.issubset(x)]
             else:
                 if self.reqkeys:
-                    parsed = _parse_keyval(self.regexp, remain)
+                    parsed = misc.parse_keyval(self.regexp, remain)
                     if parsed is not None and not self.reqkeys.issubset(parsed):
                         parsed = None
                 else:
@@ -1303,7 +1294,7 @@ class Project(OobCommand):
             # write the project file
             errmsg = ''
             gdb_info = self.gdb.info
-            quitting = (self.gdb.state == gdb.STATE_QUITTING)
+            quitting = (self.gdb.state == self.gdb.STATE_QUITTING)
             if gdb_info.debuggee:
                 try:
                     project = open(self.project_name, 'w+b')
@@ -1313,10 +1304,10 @@ class Project(OobCommand):
                         if not cwd.endswith(os.sep):
                             cwd += os.sep
                         project.write('cd %s\n'
-                            % _norm_unixpath(_unquote(cwd), True))
+                            % misc.norm_unixpath(misc.unquote(cwd), True))
 
                     project.write('file %s\n'
-                            % _norm_unixpath(gdb_info.debuggee[0], True))
+                            % misc.norm_unixpath(gdb_info.debuggee[0], True))
 
                     if gdb_info.args:
                         project.write('set args %s\n' % gdb_info.args[0])
@@ -1354,7 +1345,7 @@ class Quit(OobCommand):
 
     def __call__(self):
         """Quit gdb."""
-        if self.gdb.state == gdb.STATE_QUITTING:
+        if self.gdb.state == self.gdb.STATE_QUITTING:
             self.gdb.write('quit\n')
             self.gdb.console_print('\n===========\n')
         return False

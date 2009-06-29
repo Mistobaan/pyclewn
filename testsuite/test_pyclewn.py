@@ -24,9 +24,8 @@
 """
 import sys
 import unittest
-from test.test_support import run_unittest
+import test.test_support as test_support
 
-import clewn.debugger.simple
 from testsuite.test_support import ClewnTestCase
 
 class PyclewnTestCase(ClewnTestCase):
@@ -111,7 +110,7 @@ class PyclewnTestCase(ClewnTestCase):
             )
 
     def test_restart(self):
-        """The simple application can be restarted"""
+        """The simple debugger can be restarted"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
             ':sleep ${time}\n'
@@ -222,7 +221,7 @@ def test_main():
     suite.addTest(PyclewnTestCase('test_cmdlist'))
     suite.addTest(PyclewnTestCase('test_mapkeys'))
     suite.addTest(PyclewnTestCase('test_delconsole'))
-    run_unittest(suite)
+    test_support.run_unittest(suite)
 
 if __name__ == "__main__":
     test_main()

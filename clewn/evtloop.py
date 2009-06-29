@@ -27,11 +27,12 @@ import select
 import errno
 import asyncore
 if os.name == 'nt':
-    from misc_win import PipePeek
+    from clewn.nt import PipePeek
 else:
-    from misc_posix import PipePeek
+    from clewn.posix import PipePeek
 
-import misc
+import clewn.asyncproc as asyncproc
+import clewn.misc as misc
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('loop')
@@ -68,12 +69,12 @@ def clewn_select(iwtd, owtd, ewtd, timeout, static_select=[]):
     pipe_objects = []
     fdmap = asyncore.socket_map
     # pipes send only read events
-    strip_asyncobj(owtd, misc.FileWrapper, fdmap)
-    strip_asyncobj(ewtd, misc.FileWrapper, fdmap)
+    strip_asyncobj(owtd, asyncproc.FileWrapper, fdmap)
+    strip_asyncobj(ewtd, asyncproc.FileWrapper, fdmap)
 
     # start the peek threads
     for fd in iwtd:
-        asyncobj = get_asyncobj(fd, misc.FileWrapper, fdmap)
+        asyncobj = get_asyncobj(fd, asyncproc.FileWrapper, fdmap)
         if asyncobj is not None:
             assert hasattr(asyncobj, 'reader') and asyncobj.reader
             if not hasattr(asyncobj, 'peeker'):
@@ -84,11 +85,11 @@ def clewn_select(iwtd, owtd, ewtd, timeout, static_select=[]):
             asyncobj.peeker.start_thread()
     if iwtd or owtd or ewtd:
         if not static_select:
-            static_select.append(misc.SelectPeek(fdmap))
+            static_select.append(asyncproc.SelectPeek(fdmap))
         elif not static_select[0].isAlive():
             # when running the testsuite, static_select is the same
             # list across all tests: replace previous dead thread
-            static_select[0] = misc.SelectPeek(fdmap)
+            static_select[0] = asyncproc.SelectPeek(fdmap)
         select_peeker = static_select[0]
         if not select_peeker.isAlive():
             select_peeker = static_select[0]
@@ -101,8 +102,8 @@ def clewn_select(iwtd, owtd, ewtd, timeout, static_select=[]):
     if select_peeker is None and not pipe_objects:
         time.sleep(timeout)
     else:
-        misc._clewn_select_event.wait(timeout)
-        misc._clewn_select_event.clear()
+        asyncproc._clewn_select_event.wait(timeout)
+        asyncproc._clewn_select_event.clear()
 
     # stop the select threads
     iwtd = []

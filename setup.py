@@ -6,12 +6,12 @@ import os
 import string
 import re
 import __builtin__
-from os.path import join
+import distutils.core as core
+
+from os.path import join as pathjoin
 from distutils.command.install import install as _install
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_scripts import build_scripts as _build_scripts
-from distutils.core import setup
-from distutils.core import Command
 try:
     import test.regrtest as regrtest
 except ImportError, e:
@@ -19,15 +19,8 @@ except ImportError, e:
                                     ' regression test suite on this platform')
     print >> sys.stderr, 'ImportError: %s' % e
 
-
 import pyclewn_install
-from pyclewn_install import vimdir
-from pyclewn_install import vim_features
-from pyclewn_install import build_vimhelp
-
-import clewn
-# list of debuggers to include in the distribution
-import clewn.gdb, clewn.debugger.simple
+from clewn import *
 
 DESCRIPTION = """Pyclewn allows using Vim as a front end to a debugger.
 The debugger output is redirected to a Vim window, the pyclewn console.
@@ -54,20 +47,15 @@ else:
     VIMDIR = []
     LONG_DESCRIPTION = DESCRIPTION
 
-def keys_filename(clazz):
-    """Return the pyclewn_keys pathname for a given application class."""
-    ext = clazz.__name__.lower()
-    return 'runtime/.pyclewn_keys.' + ext
-
-PYCLEWN_CLASSES = clewn.class_list()
+DEBUGGERS = ('simple', 'gdb')
 DATA_FILES = [
-    (vimdir(VIMDIR),
+    (pyclewn_install.vimdir(VIMDIR),
         ['runtime/pyclewn.vim']),
-    (join(vimdir(VIMDIR), 'doc'),
+    (pathjoin(pyclewn_install.vimdir(VIMDIR), 'doc'),
         ['runtime/doc/pyclewn.txt']),
-    (join(vimdir(VIMDIR), 'macros'),
-        [keys_filename(clazz) for clazz in PYCLEWN_CLASSES]),
-    (join(vimdir(VIMDIR), 'syntax'),
+    (pathjoin(pyclewn_install.vimdir(VIMDIR), 'macros'),
+        [('runtime/.pyclewn_keys.%s' % d) for d in DEBUGGERS]),
+    (pathjoin(pyclewn_install.vimdir(VIMDIR), 'syntax'),
         ['runtime/syntax/dbgvar.vim'])]
 if os.name == 'nt':
     DATA_FILES.append(pyclewn_install.icon(VIMDIR[0]))
@@ -90,29 +78,29 @@ class install(_install):
         global pythonpath
         pythonpath = self.install_purelib
 
-        vim_features()
+        pyclewn_install.vim_features()
         _install.run(self)
-        build_vimhelp()
+        pyclewn_install.build_vimhelp()
 
 def update_version(filename):
     """Update the version number in the content of filename."""
     content = []
     f = open(filename, 'r+')
     for line in f:
-        line = re_version.sub(r'\g<name>' + clewn.__version__, line)
+        line = re_version.sub(r'\g<name>' + __version__, line)
         content.append(line)
     f.seek(0)
     f.writelines(content)
     f.close()
 
 def keymap_files():
-    """Build key map files for each imported Application subclass."""
+    """Build key map files for each debugger."""
     template = open('runtime/.pyclewn_keys.template').read()
-    for clazz in PYCLEWN_CLASSES:
-        f = open(keys_filename(clazz), 'w')
-        ext = clazz.__name__.lower()
-        f.write(string.Template(template).substitute(clazz=ext))
-        mapkeys = getattr(clazz, ext + '_mapkeys')
+    for d in DEBUGGERS:
+        f = open('runtime/.pyclewn_keys.%s' % d, 'w')
+        f.write(string.Template(template).substitute(clazz=d))
+        module = __import__('clewn.%s' % d,  globals(), locals(), ['MAPKEYS'])
+        mapkeys = getattr(module, 'MAPKEYS')
         for k in sorted(mapkeys):
             if len(mapkeys[k]) == 2:
                 comment = ' # ' + mapkeys[k][1]
@@ -143,7 +131,7 @@ class sdist(_sdist):
         keymap_files()
         _sdist.run(self)
 
-class Test(Command):
+class Test(core.Command):
     """Run the test suite.
 
     The testsuite uses the python standard library testing framework with
@@ -193,19 +181,19 @@ class Test(Command):
         regrtest.STDTESTS = []
         regrtest.main(testdir=TESTDIR)
 
-setup(
+core.setup(
     cmdclass={'sdist': sdist,
               'build_scripts': build_scripts,
               'install': install,
               'test': Test},
     requires=['subprocess'],
     scripts=SCRIPTS,
-    packages=['clewn', 'clewn.debugger'],
+    packages=['clewn'],
     data_files=DATA_FILES,
 
     # meta-data
     name='pyclewn',
-    version=clewn.__version__,
+    version=__version__,
     description='Pyclewn allows using Vim as a front end to a debugger.',
     long_description=LONG_DESCRIPTION,
     platforms='all',

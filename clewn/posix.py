@@ -29,13 +29,19 @@ import select
 import errno
 import fcntl
 import termios
+import platform
 
-import misc
+import clewn.asyncproc as asyncproc
+import clewn.misc as misc
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('posix')
 Unused = warning
 Unused = debug
+
+def platform_data():
+    """Return platform information."""
+    return 'platform: %s' % platform.platform()
 
 def daemonize():
     """Run as a daemon."""
@@ -81,14 +87,14 @@ def sigchld_handler(signum=signal.SIGCHLD, frame=None, process=None, l=[]):
     # takes advantage of the fact that the 'l' default value
     # is evaluated only once
     unused = frame
-    if process is not None and isinstance(process, misc.ProcessChannel):
+    if process is not None and isinstance(process, asyncproc.ProcessChannel):
         l[0:len(l)] = [process]
         return
 
     if len(l) and signum == signal.SIGCHLD:
         l[0].waitpid()
 
-class ProcessChannel(misc.ProcessChannel):
+class ProcessChannel(asyncproc.ProcessChannel):
     """Run a posix process and communicate with it through asynchat.
 
     An attempt is made to start the program with a pseudo tty. We fall back
@@ -104,7 +110,7 @@ class ProcessChannel(misc.ProcessChannel):
 
     def __init__(self, argv):
         """Constructor."""
-        misc.ProcessChannel.__init__(self, argv)
+        asyncproc.ProcessChannel.__init__(self, argv)
         self.sig_handler = None
 
     def forkexec(self):
@@ -172,14 +178,14 @@ class ProcessChannel(misc.ProcessChannel):
             critical("    at %s:%s", filename, lnum)
             self.popen()
         else:
-            pty = misc.FileAsynchat(master, self)
+            pty = asyncproc.FileAsynchat(master, self)
             self.fileasync = (pty, pty)
             info('starting "%s" with a pseudo tty', self.pgm_name)
 
     def popen(self):
         """Spawn a process using pipes."""
         self.ttyname = None
-        misc.ProcessChannel.popen(self)
+        asyncproc.ProcessChannel.popen(self)
 
     def start(self):
         """Start with a pseudo tty and fall back to pipes if that fails."""
@@ -223,7 +229,7 @@ class ProcessChannel(misc.ProcessChannel):
     def close(self):
         """Close the channel an wait on the process."""
         if self.fileasync is not None:
-            misc.ProcessChannel.close(self)
+            asyncproc.ProcessChannel.close(self)
             self.waitpid()
 
     def sendintr(self):
@@ -231,12 +237,12 @@ class ProcessChannel(misc.ProcessChannel):
         if self.ttyname is not None:
             self.fileasync[1].send(self.INTERRUPT_CHAR)
 
-class PipePeek(misc.PipePeek):
+class PipePeek(asyncproc.PipePeek):
     """The pipe peek thread."""
 
     def __init__(self, fd, asyncobj):
         """Constructor."""
-        misc.PipePeek.__init__(self, fd, asyncobj)
+        asyncproc.PipePeek.__init__(self, fd, asyncobj)
 
     def peek(self):
         """Peek the pipe."""
@@ -245,7 +251,7 @@ class PipePeek(misc.PipePeek):
         except select.error, err:
             if err[0] != errno.EINTR:
                 # this may occur on exit
-                # closing the application is handled in ProcessChannel.waitpid
+                # closing the debugger is handled in ProcessChannel.waitpid
                 error('ignoring failed select syscall: %s', err)
             return False
         unused = owtd

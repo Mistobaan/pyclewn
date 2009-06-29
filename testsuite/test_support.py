@@ -25,17 +25,17 @@ import sys
 import os
 import string
 import unittest
-from test.test_support import TESTFN, verify, verbose
+import test.test_support as test_support
 
-from clewn.dispatcher import main
+import clewn.vim as vim
 
 SLEEP_TIME = '300m'
 if os.name == 'nt' or os.environ.has_key('CLEWN_PIPES'):
     SLEEP_TIME = '1400m'
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
-TESTFN_FILE = TESTFN + '_file_'
-TESTFN_OUT = TESTFN + '_out'
+TESTFN_FILE = test_support.TESTFN + '_file_'
+TESTFN_OUT = test_support.TESTFN + '_out'
 
 class ClewnTestCase(unittest.TestCase):
     """Pyclewn test case abstract class.
@@ -61,9 +61,9 @@ class ClewnTestCase(unittest.TestCase):
                 '-u NONE '
                 '-U NONE '
                 '--noplugin '
-                '-s %s' % (port, TESTFN),
+                '-s %s' % (port, test_support.TESTFN),
         ]
-        if verbose:
+        if test_support.verbose:
             sys.argv.append('--level=nbdebug')
 
     def setup_vim_arg(self, newarg):
@@ -82,7 +82,7 @@ class ClewnTestCase(unittest.TestCase):
         """Cleanup stuff after the test."""
         self.__class__.__port = (self.__port + 1) % 100
         for name in os.listdir(os.getcwd()):
-            if name.startswith(TESTFN):
+            if name.startswith(test_support.TESTFN):
                 try:
                     os.unlink(name)
                 except:
@@ -111,7 +111,7 @@ class ClewnTestCase(unittest.TestCase):
             cmd = ':sleep ${time}\n' + cmd
 
         # write the commands
-        fp = open(TESTFN, 'w')
+        fp = open(test_support.TESTFN, 'w')
         fp.write(string.Template(cmd).substitute(time=SLEEP_TIME,
                                                     test_file=TESTFN_FILE,
                                                     test_out=TESTFN_OUT))
@@ -124,7 +124,7 @@ class ClewnTestCase(unittest.TestCase):
             fp.close()
 
         # process the commands
-        main()
+        vim.main(True)
 
         # check the result
         fp = open(outfile, 'r')
@@ -143,7 +143,7 @@ class ClewnTestCase(unittest.TestCase):
         if os.name == 'nt' and not checked:
             expected = expected.replace('\\', '/')
             checked = ' '.join(expected.split()) in ' '.join(output.split())
-        verify(checked,
+        test_support.verify(checked,
                 "\n\n...Expected:\n%s \n\n...Got:\n%s" % (expected, output))
 
     def cltest_redir(self, cmd, expected, *test):

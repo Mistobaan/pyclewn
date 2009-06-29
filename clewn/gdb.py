@@ -19,7 +19,7 @@
 #
 # $Id$
 
-"""The Gdb application is a frontend to GDB/MI.
+"""The Gdb debugger is a frontend to GDB/MI.
 """
 
 import sys
@@ -29,25 +29,17 @@ import subprocess
 import re
 import string
 import time
-from collections import deque
+import collections
 
-# gdb states
-STATE_INIT, STATE_RUNNING, STATE_QUITTING = range(3)
-
-import gdbmi
-import misc
-import clewn
-from misc import (
-        misc_any as _any,
-        re_quoted as _re_quoted,
-        quote as _quote,
-        unquote as _unquote,
-        )
-import application
+from clewn import *
+import clewn.asyncproc as asyncproc
+import clewn.gdbmi as gdbmi
+import clewn.misc as misc
+import clewn.debugger as debugger
 if os.name == 'posix':
-    from misc_posix import ProcessChannel
+    from clewn.posix import ProcessChannel
 else:
-    from misc import ProcessChannel
+    from asyncproc import ProcessChannel
 
 if os.name == 'nt':
     # On Windows, the best timer is time.clock()
@@ -70,6 +62,35 @@ set annotate 1
 if os.name == 'nt':
     GDB_INIT += 'set new-console on\n'
 SYMBOL_COMPLETION_TIMEOUT = 20 # seconds
+
+# list of key mappings, used to build the .pyclewn_keys.gdb file
+#     key : (mapping, comment)
+MAPKEYS = {
+    'C-Z' : ('sigint',
+                'kill the inferior running program'),
+    'S-B' : ('info breakpoints',),
+    'S-L' : ('info locals',),
+    'S-A' : ('info args',),
+    'S-S' : ('step',),
+    'C-N' : ('next',),
+    'S-F' : ('finish',),
+    'S-R' : ('run',),
+    'S-Q' : ('quit',),
+    'S-C' : ('continue',),
+    'S-X' : ('foldvar ${lnum}',
+                'expand/collapse a watched variable'),
+    'S-W' : ('where',),
+    'C-U' : ('up',),
+    'C-D' : ('down',),
+    'C-B' : ('break "${fname}":${lnum}',
+                'set breakpoint at current line'),
+    'C-E' : ('clear "${fname}":${lnum}',
+                'clear breakpoint at current line'),
+    'C-P' : ('print ${text}',
+                'print value of selection at mouse position'),
+    'C-X' : ('print *${text}',
+                'print value referenced by word at mouse position'),
+}
 
 RE_VERSION = r'GNU\s*gdb[^\d]*(?P<version>[0-9.]+)'            \
              r'# RE: gdb version'
@@ -224,7 +245,7 @@ def gdb_version(pgm):
             f = open(os.ttyname(0), 'rw')
             f.close()
         except IOError, err:
-            raise clewn.Error, ("Gdb cannot open the terminal: %s" % err)
+            raise ClewnError, ("Gdb cannot open the terminal: %s" % err)
 
     version = None
     header = gdb_batch(pgm, 'show version')
@@ -269,11 +290,7 @@ class GlobalSetup(misc.Singleton):
         gdbname: str
             gdb program name to execute
         cmds: dict
-            In the commands dictionary, the key is the command name and the
-            value is the command completion which can be either:
-                []              no completion
-                True            file name completion
-                non empty list  the 1st argument completion list
+            See the description of the Debugger 'cmds' attribute dictionary.
         f_ack: closed file object
             temporary file used to acknowledge the end of writing to f_clist
         f_clist: closed file object
@@ -390,6 +407,8 @@ class GlobalSetup(misc.Singleton):
         dash_cmds = []  # list of gdb commands including a '-'
         firstarg_complt = ''
 
+        nocomplt_cmds = (self.illegal_cmds + self.filename_complt +
+                                                        self.symbol_complt)
         # get the list of gdb commands
         for cmd in gdb_batch(self.gdbname, 'complete').splitlines():
             # sanitize gdb output: remove empty lines and truncate multiple tokens
@@ -399,9 +418,7 @@ class GlobalSetup(misc.Singleton):
             else:
                 cmd = cmd.split()[0]
 
-            if cmd in self.illegal_cmds     \
-                    + self.filename_complt  \
-                    + self.symbol_complt:
+            if cmd in nocomplt_cmds:
                 continue
             elif '-' in cmd:
                 dash_cmds.append(cmd)
@@ -425,9 +442,9 @@ class GlobalSetup(misc.Singleton):
 
         # add file name completion commands
         for cmd in self.filename_complt:
-            self.cmds[cmd] = True
+            self.cmds[cmd] = None
         for cmd in self.symbol_complt:
-            self.cmds[cmd] = True
+            self.cmds[cmd] = None
 
         # add commands including a '-' and that can't be made to a vim command
         self.cmds[''] = dash_cmds
@@ -455,14 +472,18 @@ class GlobalSetup(misc.Singleton):
                                         [misc.smallpref_inlist(x, setargs)
                                             for x in self.illegal_setargs])
 
-class Gdb(application.Application, ProcessChannel):
-    """The Gdb application is a frontend to GDB/MI.
+class Gdb(debugger.Debugger, ProcessChannel):
+    """The Gdb debugger is a frontend to GDB/MI.
 
     Instance attributes:
         version: str
             current gdb version
         state: enum
             gdb state
+        pgm: str
+            gdb command or pathname
+        arglist: list
+            gdb command line arguments
         globaal: GlobalSetup
             gdb global data
         results: gdbmi.Result
@@ -500,59 +521,26 @@ class Gdb(application.Application, ProcessChannel):
             when True, store the commands in the cmd_fifo
         project: string
             project file pathname
+        foldlnum: int
+            line number of the current fold operation
 
     """
 
-    # command line options
-    opt = '-g'
-    long_opt = '--gdb'
-    help = 'select the gdb application (the default)'           \
-           ', with a mandatory, possibly empty, PARAM_LIST'
-    param = True
-    metavar = 'PARAM_LIST'
-    param_list = ()
+    # gdb states
+    STATE_INIT, STATE_RUNNING, STATE_QUITTING = range(3)
 
-    # list of key mappings, used to build the .pyclewn_keys.simple file
-    #     key : (mapping, comment)
-    gdb_mapkeys = {
-        'C-Z' : ('sigint',
-                    'kill the inferior running program'),
-        'S-B' : ('info breakpoints',),
-        'S-L' : ('info locals',),
-        'S-A' : ('info args',),
-        'S-S' : ('step',),
-        'C-N' : ('next',),
-        'S-F' : ('finish',),
-        'S-R' : ('run',),
-        'S-Q' : ('quit',),
-        'S-C' : ('continue',),
-        'S-X' : ('foldvar ${lnum}',
-                    'expand/collapse a watched variable'),
-        'S-W' : ('where',),
-        'C-U' : ('up',),
-        'C-D' : ('down',),
-        'C-B' : ('break "${fname}":${lnum}',
-                    'set breakpoint at current line'),
-        'C-E' : ('clear "${fname}":${lnum}',
-                    'clear breakpoint at current line'),
-        'C-P' : ('print ${text}',
-                    'print value of selection at mouse position'),
-        'C-X' : ('print *${text}',
-                    'print value referenced by word at mouse position'),
-    }
-
-    def __init__(self, nbsock, daemon, pgm, arglist):
-        """.Constructor."""
-        application.Application.__init__(self, nbsock, daemon)
+    def __init__(self, *args):
+        """Constructor."""
+        debugger.Debugger.__init__(self, *args)
         self.pyclewn_cmds.update(
             {   'foldvar':(),
                 'project':True
             })
-        self.mapkeys.update(self.gdb_mapkeys)
+        self.mapkeys.update(MAPKEYS)
 
-        self.state = STATE_INIT
-        self.pgm = pgm or 'gdb'
-        self.arglist = arglist
+        self.state = self.STATE_INIT
+        self.pgm = self.options.pgm or 'gdb'
+        self.arglist = self.options.args
         self.version = gdb_version(self.pgm)
         self.f_init = None
         ProcessChannel.__init__(self, self.getargv())
@@ -572,14 +560,15 @@ class Gdb(application.Application, ProcessChannel):
         self.firstcmdline = None
         self.time = _timer()
         self.multiple_choice = 0
-        self.cmd_fifo = deque()
+        self.cmd_fifo = collections.deque()
         self.async = False
         self.project = ''
-        self.parse_paramlist()
+        self.foldlnum = None
+        self.parse_paramlist(self.options.gdb_parameters)
 
-    def parse_paramlist(self):
+    def parse_paramlist(self, parameters):
         """Process the class parameter list."""
-        for param in self.param_list:
+        for param in [x.strip() for x in parameters.split(',') if x]:
             try:
                 if param.lower() == 'async':
                     self.async = True
@@ -595,17 +584,17 @@ class Gdb(application.Application, ProcessChannel):
                                         f = open(pathname, 'r+b')
                                         f.close()
                                     except IOError, err:
-                                        raise clewn.Error, (
+                                        raise ClewnError, (
                                                     'project file: %s:' % err)
                                 self.project = pathname
                                 continue
-                            raise clewn.Error, (
+                            raise ClewnError, (
                                         'cannot have two project file names:'
                                                     ' %s and ' % self.project)
-                        raise clewn.Error, 'not a valid project file pathname:'
-                    raise clewn.Error, (
+                        raise ClewnError, 'not a valid project file pathname:'
+                    raise ClewnError, (
                                 'invalid parameter for the \'--gdb\' option:')
-            except clewn.Error, err:
+            except ClewnError, err:
                 critical('%s %s', err, param)
                 sys.exit(1)
 
@@ -616,7 +605,9 @@ class Gdb(application.Application, ProcessChannel):
         # use pyclewn tty as the debuggee standard input and output
         # may be overriden by --args option on pyclewn command line
         if os.name != 'nt':
-            if not self.daemon and hasattr(os, 'isatty') and os.isatty(0):
+            if not self.options.daemon        \
+                    and hasattr(os, 'isatty') \
+                    and os.isatty(0):
                 terminal = os.ttyname(0)
             else:
                 terminal = os.devnull
@@ -643,19 +634,19 @@ class Gdb(application.Application, ProcessChannel):
 
         """
         return string.Template(SYMCOMPLETION).substitute(pre=prefix,
-                            ack_tmpfile=_quote(self.globaal.f_ack.name),
-                            complete_tmpfile=_quote(self.globaal.f_clist.name),
-                            complete_timeout=SYMBOL_COMPLETION_TIMEOUT)
+                        ack_tmpfile=misc.quote(self.globaal.f_ack.name),
+                        complete_tmpfile=misc.quote(self.globaal.f_clist.name),
+                        complete_timeout=SYMBOL_COMPLETION_TIMEOUT)
 
-    def start(self):
+    def _start(self):
         """Start gdb."""
-        application.Application.start(self)
+        debugger.Debugger._start(self)
         ProcessChannel.start(self)
 
     def prompt(self):
         """Print the prompt."""
         if self.gotprmpt:   # print prompt only after gdb has started
-            application.Application.prompt(self)
+            debugger.Debugger.prompt(self)
 
     def timer(self):
         """Process tasks on timer events.
@@ -673,23 +664,7 @@ class Gdb(application.Application, ProcessChannel):
 
         if self.cmd_fifo and self.accepting_cmd():
             (method, cmd, args) = self.cmd_fifo.popleft()
-            application.Application.do_cmd(self, method, cmd, args)
-
-    def update_dbgvarbuf(self):
-        """Update the variables buffer and set the cursor when needed."""
-        # race condition: must note the state of the buffer before
-        # updating the buffer, since this will change its visible state
-        # temporarily
-        dbgvarbuf = self.nbsock.dbgvarbuf
-        visible = dbgvarbuf.visible
-        lnum = dbgvarbuf.foldlnum
-        if self.info.varobj.dirty or dbgvarbuf.dirty:
-            dbgvarbuf.update(self.info.varobj.collect())
-            # set the cursor on the current fold when visible
-            if lnum is not None and visible:
-                self.nbsock.send_cmd(dbgvarbuf.buf, 'setDot', '%d/0' % lnum)
-        if lnum is not None:
-            dbgvarbuf.foldlnum = None
+            debugger.Debugger._do_cmd(self, method, cmd, args)
 
     def accepting_cmd(self):
         """Return True when gdb is ready to process a new command."""
@@ -713,9 +688,9 @@ class Gdb(application.Application, ProcessChannel):
             self.process_stream_record(line)
         elif line[0] in '&':
             # ignore a 'log' stream record
-            matchobj = _re_quoted.match(line[1:])
+            matchobj = misc.re_quoted.match(line[1:])
             if matchobj:
-                line = _unquote(matchobj.group(1))
+                line = misc.unquote(matchobj.group(1))
                 info(line)
             else:
                 warning('bad format in gdb/mi log: "%s"', line)
@@ -734,12 +709,12 @@ class Gdb(application.Application, ProcessChannel):
 
     def process_stream_record(self, line):
         """Process a received gdb/mi stream record."""
-        matchobj = _re_quoted.match(line[1:])
+        matchobj = misc.re_quoted.match(line[1:])
         annotation_lvl1 = re_anno_1.match(line)
         if annotation_lvl1 is not None:
             return
         if matchobj:
-            line = _unquote(matchobj.group(1))
+            line = misc.unquote(matchobj.group(1))
             if (not self.stream_record and line == '[0] cancel\n[1] all\n') \
                     or (not self.multiple_choice                            \
                             and len(self.stream_record) == 1                \
@@ -759,9 +734,9 @@ class Gdb(application.Application, ProcessChannel):
             if token == self.token:
                 # ignore received duplicate token
                 pass
-            elif self.state != STATE_QUITTING:
+            elif self.state != self.STATE_QUITTING:
                 # may occur on quitting with the debuggee still running
-                raise clewn.Error, ('invalid token "%s"' % token)
+                raise ClewnError, ('invalid token "%s"' % token)
         else:
             self.token = token
             self.lastcmd = cmd
@@ -782,7 +757,7 @@ class Gdb(application.Application, ProcessChannel):
             self.time = _timer()
             self.oob = self.oob_list.iterator()
             if len(self.results):
-                if self.state != STATE_QUITTING:
+                if self.state != self.STATE_QUITTING:
                     # may occur on quitting with the debuggee still running
                     error('all cmds have not been processed in results')
                 self.results.clear()
@@ -805,15 +780,19 @@ class Gdb(application.Application, ProcessChannel):
                         break
             except StopIteration:
                 self.oob = None
-                self.update_dbgvarbuf()
+                varobj = self.info.varobj
+                self.update_dbgvarbuf(varobj.collect,
+                                        varobj.dirty, self.foldlnum)
+                self.foldlnum = None
+
                 t = _timer()
                 info('oob commands execution: %f second'
                                             % (t - self.time))
                 self.time = t
 
                 # source the project file
-                if self.state == STATE_INIT:
-                    self.state = STATE_RUNNING
+                if self.state == self.STATE_INIT:
+                    self.state = self.STATE_RUNNING
                     if self.project:
                         self.clicmd_notify('source %s' % self.project)
                         return
@@ -848,19 +827,18 @@ class Gdb(application.Application, ProcessChannel):
 
     def close(self):
         """Close gdb."""
-        if self.state == STATE_RUNNING:
+        if self.state == self.STATE_RUNNING:
             self.cmd_quit()
             return
 
         if not self.closed:
-            application.Application.close(self)
+            debugger.Debugger.close(self)
             ProcessChannel.close(self)
 
             # clear varobj
             rootvarobj = self.info.varobj
             rootvarobj.clear()
-            if self.nbsock.dbgvarbuf is not None:
-                self.nbsock.dbgvarbuf.update(rootvarobj.collect())
+            self.update_dbgvarbuf(rootvarobj.collect, True)
 
             # remove temporary files
             del self.f_init
@@ -869,7 +847,7 @@ class Gdb(application.Application, ProcessChannel):
     #   commands
     #-----------------------------------------------------------------------
 
-    def do_cmd(self, method, cmd, args):
+    def _do_cmd(self, method, cmd, args):
         """Process 'cmd' and its 'args' with 'method'.
 
         Execute directly the command when running in non-async mode.
@@ -877,12 +855,12 @@ class Gdb(application.Application, ProcessChannel):
         or queue the command to the fifo.
         """
         if not self.async:
-            application.Application.do_cmd(self, method, cmd, args)
+            debugger.Debugger._do_cmd(self, method, cmd, args)
             return
 
         if method == self.cmd_sigint:
             self.cmd_fifo.clear()
-            application.Application.do_cmd(self, method, cmd, args)
+            debugger.Debugger._do_cmd(self, method, cmd, args)
             return
 
         # queue the command as a tuple
@@ -906,7 +884,7 @@ class Gdb(application.Application, ProcessChannel):
     def default_cmd_processing(self, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""
         assert cmd == self.curcmdline.split()[0]
-        if _any([cmd.startswith(x)
+        if misc.any([cmd.startswith(x)
                 for x in self.globaal.illegal_cmds_prefix]):
             self.console_print('Illegal command in pyclewn.\n')
             self.prompt()
@@ -914,16 +892,16 @@ class Gdb(application.Application, ProcessChannel):
 
         if cmd == 'set' and args:
             firstarg = args.split()[0]
-            if _any([firstarg.startswith(x)
+            if misc.any([firstarg.startswith(x)
                     for x in self.globaal.illegal_setargs_prefix]):
                 self.console_print('Illegal argument in pyclewn.\n')
                 self.prompt()
                 return
 
         # turn off the frame sign after a run command
-        if _any([cmd.startswith(x)
+        if misc.any([cmd.startswith(x)
                     for x in self.globaal.run_cmds_prefix])     \
-                or _any([cmd == x
+                or misc.any([cmd == x
                     for x in ('d', 'r', 'c', 's', 'n', 'u', 'j')]):
             self.info.update_frame(hide=True)
 
@@ -937,7 +915,7 @@ class Gdb(application.Application, ProcessChannel):
         cmd, line = args
         if not line:
             self.console_print('Pyclewn specific commands:\n')
-            application.Application.cmd_help(self, cmd)
+            debugger.Debugger.cmd_help(self, cmd)
             self.console_print('\nGdb help:\n')
         self.default_cmd_processing(cmd, line)
 
@@ -949,15 +927,9 @@ class Gdb(application.Application, ProcessChannel):
     def cmd_dbgvar(self, cmd, args):
         """Add a variable to the debugger variable buffer."""
         unused = cmd
-        registering = False
-        if not self.nbsock.dbgvarbuf.buf.registered:
-            self.nbsock.dbgvarbuf.register()
-            registering = True
         varobj = gdbmi.VarObj({'exp': args})
         gdbmi.VarCreateCommand(self, varobj).sendcmd()
         self.oob_list.push(gdbmi.VarObjCmdEvaluate(self, varobj))
-        if registering:
-            self.nbsock.goto_last()
 
     def cmd_delvar(self, cmd, args):
         """Delete a variable from the debugger variable buffer."""
@@ -1002,7 +974,7 @@ class Gdb(application.Application, ProcessChannel):
                 # expand
                 else:
                     gdbmi.ListChildrenCommand(self, varobj).sendcmd()
-                self.nbsock.dbgvarbuf.foldlnum = lnum
+                self.foldlnum = lnum
                 return
             else:
                 errmsg = 'Not a valid line number.'
@@ -1026,7 +998,7 @@ class Gdb(application.Application, ProcessChannel):
         # 'continue' statement, the project file is not saved.
         # The clicmd_notify nop command must not be run in this case, to
         # avoid breaking pyclewn state (assert on self.gotprmpt).
-        self.state = STATE_QUITTING
+        self.state = self.STATE_QUITTING
         self.sendintr()
         if self.gotprmpt and self.oob == None:
             self.clicmd_notify('project %s' % self.project,
@@ -1055,7 +1027,7 @@ class Gdb(application.Application, ProcessChannel):
 
     def balloon_text(self, text):
         """Process a netbeans balloonText event."""
-        application.Application.balloon_text(self, text)
+        debugger.Debugger.balloon_text(self, text)
         if self.info.frame:
             gdbmi.ShowBalloon(self, text).sendcmd()
 

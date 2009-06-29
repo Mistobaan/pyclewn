@@ -22,86 +22,19 @@
 """The clewn package.
 
 """
-import os
-import os.path
-import tempfile
-import sys as _sys
-import inspect as _inspect
-try:
-    import subprocess
-except ImportError, e:
-    print >> _sys.stderr, "%s: upgrade python to version 2.4 or above." % e
-    _sys.exit(1)
+import sys
 
-import application as _application
+__all__ = ['__version__', '__svn__', 'ClewnError']
 
 __version__ = '0.7'
 __svn__ = '.' + '$Revision$'.strip('$').split()[1]
-unused = __svn__
-VIM_ARGS = ['-u', 'NONE', '-esX', '-c', 'set cpo&vim']
+Unused = __svn__
 
-class Error(Exception):
-    """Base class for exceptions in pyclewn."""
-    pass
+class ClewnError(Exception):
+    """Base class for pyclewn exceptions."""
 
-def run_vim_cmd(cmd_list, pathname=None):
-    """Run a list of vim commands and return its output."""
-    assert isinstance(cmd_list, (list, tuple))
-
-    if pathname is None:
-        if os.environ.has_key('vimcmd'):
-            pathname = os.environ['vimcmd']
-        else:
-            pathname = 'gvim'
-
-    tmpname = f = content = None
-    fd, tmpname = tempfile.mkstemp(prefix='runvimcmd', suffix='.clewn')
-    cmd_list[0:0] = ['redir! >' + tmpname]
-    cmd_list.extend(['quit'])
-    args = [pathname]
-    args.extend(VIM_ARGS)
-    for cmd in cmd_list:
-        args.extend(['-c', cmd])
-    try:
-        try:
-            subprocess.Popen(args).wait()
-            f = os.fdopen(fd)
-            content = f.read()
-        except (OSError, IOError):
-            print >> _sys.stderr, \
-                ("Failed to run gvim as:\n'%s'" % " ".join(args))
-            raise
-    finally:
-        if f:
-            f.close()
-        if tmpname and os.path.exists(tmpname):
-            try:
-                os.unlink(tmpname)
-            except OSError:
-                pass
-    if not content:
-        raise Error, ("No result to gvim command:\n'%s'" % " ".join(args))
-    return content
-
-def class_list():
-    """Return the list of Application subclasses in the clewn package."""
-    classes = []
-    for name in _sys.modules:
-        if name.startswith('clewn.'):
-            module = _sys.modules[name]
-            if module:
-                classes.extend([obj for obj in module.__dict__.values()
-                        if _inspect.isclass(obj)
-                            and issubclass(obj, _application.Application)
-                            and obj is not _application.Application])
-    return classes
-
-def python_version():
-    """Python 2.4 or above is required by pyclewn."""
-    # the subprocess module is required (new in python 2.4)
-    return _sys.version_info >= (2, 4)
-
-if not python_version():
-    print >> _sys.stderr, python_version.__doc__
-    _sys.exit()
+# the subprocess module is required (new in python 2.4)
+if sys.version_info < (2, 4):
+    print >> sys.stderr, "Python 2.4 or above is required by pyclewn."
+    sys.exit(1)
 

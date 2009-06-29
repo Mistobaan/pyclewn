@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2009 April 7
+*pyclewn.txt*                                   Last change: 2009 June 27
 
 
                             PYCLEWN USER MANUAL
@@ -781,67 +781,300 @@ by the|:colorscheme|currently in use.
 ==============================================================================
 8. Extending pyclewn                                *pyclewn-extending*
 
+NAME
+    debugger
 
-To implement a new debugger in pyclewn:
+FILE
+    clewn/debugger.py
 
-    1 - Add a module in the clewn.debugger package that implements a subclass
-        of clewn.Application.
+DESCRIPTION
+    This module provides the basic infrastructure for using Vim as a
+    front-end to a debugger.
 
-    2 - Update the pyclewn script to import the new clewn.Application
-        subclass.
+    The basic idea behind this infrastructure is to subclass the 'Debugger'
+    abstract class, list all the debugger commands and implement the
+    processing of these commands in 'cmd_<command_name>' methods in the
+    subclass. When the method is not implemented, the processing of the
+    command is dispatched to the 'default_cmd_processing' method. These
+    methods may call the 'Debugger' API methods to control Vim. For example,
+    'add_bp' may be called to set a breakpoint in a buffer in Vim, or
+    'console_print' may be called to write the output of a command in the
+    Vim debugger console.
 
-    3 - Update the pyclewn documentation at runtime/doc/pyclewn.txt
+    The 'Debugger' subclass is made available to the user after adding an
+    option to the 'parse_options' method in the 'Vim' class, see vim.py.
 
-    4 - Run pychecker.sh and add tests to the testsuite
+    The 'Simple' class in simple.py provides a simple example of a fake
+    debugger front-end.
 
-    5 - Update setup.py to import the new clewn.Application subclass. The
-        .pyclewn_keys.{debugger} keys map file is automatically created when
-        building the pyclewn source distribution with: >
+CLASSES
+    __builtin__.object
+        Debugger
 
-            python setup.py sdist
-
-
-The interface between pyclewn and the debugger is documented in application.py.
-This module contains the abstract class clewn.Application. The abstract class
-clewn.Application provides the following methods to control gvim (see
-application.py for the documentation):
-
-console_print       print on the pyclewn gvim console
-show_balloon        display a balloon in gvim
-add_bp              add a breakpoint sign
-delete_bp           delete a breakpoint sign
-update_bp           change the state of a breakpoint sign
-delete_all          remove signs
-show_frame          show the sign of the line in the current frame
-close               close the application and remove all signs
-
-The (clewn)_dbgvar buffer is loaded by invoking its register method, and the
-buffer content is updated with its update method. See the simple.py module for
-an example.
-
-
-Summary of the components of a subclass of clewn.Application that must be
-implemented (the simple.py module can be used as an example):
-
-    . class attributes that describe the available command line options
-
-    . a dictionary of the debugger commands and their first argument
-      completion
-
-    . a list of illegal commands
-
-    . a dictionary of the keys and their mappings
-
-    . the implementation of the methods:
-        default_cmd_processing
-        pre_cmd
-        post_cmd
-
-    . the implementation of methods cmd_<name> for the debugger <name>
-      commands; when the implementation of a method is missing for a debugger
-      command, pyclewn invokes the default_cmd_processing method whose
-      implementation is required
-
+    class Debugger(__builtin__.object)
+     |  Abstract base class for pyclewn debuggers.
+     |
+     |  The debugger commands received through netbeans 'keyAtPos' events
+     |  are dispatched to methods whose name starts with the 'cmd_' prefix.
+     |
+     |  The signature of the cmd_<command_name> methods are:
+     |
+     |      cmd_<command_name>(self, str cmd, str args)
+     |          cmd: the command name
+     |          args: the arguments of the command
+     |
+     |  The '__init__' method of the subclass must call the '__init__'
+     |  method of 'Debugger' as its first statement and forward the method
+     |  parameters as an opaque list. The __init__ method must update the
+     |  'cmds' and 'mapkeys' dict attributes with its own commands and key
+     |  mappings.
+     |
+     |  Instance attributes:
+     |      cmds: dict
+     |          The debugger command names are the keys. The values are the
+     |          sequence of available completions on the command first
+     |          argument. The sequence is possibly empty, meaning no
+     |          completion. When the value is not a sequence (for example
+     |          None), this indicates file name completion.
+     |      mapkeys: dict
+     |          Key names are the dictionary keys. See the 'keyCommand'
+     |          event in Vim netbeans documentation for the definition of a
+     |          key name. The values are a tuple made of two strings
+     |          (command, comment):
+     |              'command' is the debugger command mapped to this key
+     |              'comment' is an optional comment
+     |          One can use template substitution on 'command', see the file
+     |          runtime/.pyclewn_keys.template for a description of this
+     |          feature.
+     |      options: optparse.Values
+     |          The pyclewn command line parameters.
+     |      started: boolean
+     |          True when the debugger is started.
+     |      closed: boolean
+     |          True when the debugger is closed.
+     |      pyclewn_cmds: dict
+     |          The subset of 'cmds' that are pyclewn specific commands.
+     |      __nbsock: netbeans.Netbeans
+     |          The netbeans asynchat socket.
+     |      _last_balloon: str
+     |          The last balloonText event received.
+     |      _prompt_str: str
+     |          The prompt printed on the console.
+     |
+     |  Methods defined here:
+     |
+     |  __init__(self, nbsock, options)
+     |      Initialize instance variables and the prompt.
+     |
+     |  __str__(self)
+     |      Return the string representation.
+     |
+     |  add_bp(self, bp_id, pathname, lnum)
+     |      Add a breakpoint to a Vim buffer at lnum.
+     |
+     |      Load the buffer in Vim and set an highlighted sign at 'lnum'.
+     |
+     |      Method parameters:
+     |          bp_id: object
+     |              The debugger breakpoint id.
+     |          pathname: str
+     |              The absolute pathname to the Vim buffer.
+     |          lnum: int
+     |              The line number in the Vim buffer.
+     |
+     |  balloon_text(self, text)
+     |      Process a netbeans balloonText event.
+     |
+     |      Used when 'ballooneval' is set and the mouse pointer rests on
+     |      some text for a moment.
+     |
+     |      Method parameter:
+     |          text: str
+     |              The text under the mouse pointer.
+     |
+     |  close(self)
+     |      Close the debugger and remove all signs in Vim.
+     |
+     |  cmd_dbgvar(self, cmd, args)
+     |      Add a variable to the debugger variable buffer.
+     |
+     |  cmd_delvar(self, cmd, args)
+     |      Delete a variable from the debugger variable buffer.
+     |
+     |  cmd_dumprepr(self, *args)
+     |      Print debugging information on netbeans and the debugger in
+     |      the Vim debugger console.
+     |
+     |  cmd_help(self, *args)
+     |      Print help on all pyclewn commands in the Vim debugger
+     |      console.
+     |
+     |  cmd_mapkeys(self, *args)
+     |      Map the pyclewn keys.
+     |
+     |  cmd_sigint(self, *args)
+     |      Send a <C-C> character to the debugger (not implemented).
+     |
+     |  cmd_symcompletion(self, *args)
+     |      Populate the break and clear commands with symbols completion (not implemented).
+     |
+     |  cmd_unmapkeys(self, *args)
+     |      Unmap the pyclewn keys.
+     |
+     |      This is actually a Vim command and it does not involve pyclewn.
+     |
+     |  console_print(self, format, *args)
+     |      Print a format string and its arguments to the console.
+     |
+     |      Method parameters:
+     |          format: str
+     |              The message format string.
+     |          args: str
+     |              The arguments which are merged into 'format' using the
+     |              python string formatting operator.
+     |
+     |  default_cmd_processing(self, cmd, args)
+     |      Fall back method for commands not handled by a 'cmd_<name>'
+     |      method.
+     |
+     |      This method must be implemented in a subclass.
+     |
+     |      Method parameters:
+     |          cmd: str
+     |              The command name.
+     |          args: str
+     |              The arguments of the command.
+     |
+     |  delete_all(self, pathname=None, lnum=None)
+     |      Delete all the breakpoints in a Vim buffer or in all buffers.
+     |
+     |      Delete all the breakpoints in a Vim buffer at 'lnum'.
+     |      Delete all the breakpoints in a Vim buffer when 'lnum' is None.
+     |      Delete all the breakpoints in all the buffers when 'pathname' is
+     |      None.
+     |
+     |      Method parameters:
+     |          pathname: str
+     |              The absolute pathname to the Vim buffer.
+     |          lnum: int
+     |              The line number in the Vim buffer.
+     |
+     |  delete_bp(self, bp_id)
+     |      Delete a breakpoint.
+     |
+     |      The breakpoint must have been already set in a Vim buffer with
+     |      'add_bp'.
+     |
+     |      Method parameter:
+     |          bp_id: object
+     |              The debugger breakpoint id.
+     |
+     |  get_lnum_list(self, pathname)
+     |      Return a list of line numbers of all enabled breakpoints in a
+     |      Vim buffer.
+     |
+     |      A line number may be duplicated in the list.
+     |      This is used by Simple and may not be useful to other debuggers.
+     |
+     |      Method parameter:
+     |          pathname: str
+     |              The absolute pathname to the Vim buffer.
+     |
+     |  post_cmd(self, cmd, args)
+     |      The method called after each invocation of a 'cmd_<name>'
+     |      method.
+     |
+     |      This method must be implemented in a subclass.
+     |
+     |      Method parameters:
+     |          cmd: str
+     |              The command name.
+     |          args: str
+     |              The arguments of the command.
+     |
+     |  pre_cmd(self, cmd, args)
+     |      The method called before each invocation of a 'cmd_<name>'
+     |      method.
+     |
+     |      This method must be implemented in a subclass.
+     |
+     |      Method parameters:
+     |          cmd: str
+     |              The command name.
+     |          args: str
+     |              The arguments of the command.
+     |
+     |  prompt(self)
+     |      Print the prompt in the Vim debugger console.
+     |
+     |  show_balloon(self, text)
+     |      Show 'text' in the Vim balloon.
+     |
+     |      Method parameter:
+     |          text: str
+     |              The text to show in the balloon.
+     |
+     |  show_frame(self, pathname=None, lnum=1)
+     |      Show the frame highlighted sign in a Vim buffer.
+     |
+     |      The frame sign is unique.
+     |      Remove the frame sign when 'pathname' is None.
+     |
+     |      Method parameters:
+     |          pathname: str
+     |              The absolute pathname to the Vim buffer.
+     |          lnum: int
+     |              The line number in the Vim buffer.
+     |
+     |  timer(self)
+     |      Handle a timer event sent from the dispatch loop.
+     |
+     |  update_bp(self, bp_id, disabled=False)
+     |      Update the enable/disable state of a breakpoint.
+     |
+     |      The breakpoint must have been already set in a Vim buffer with
+     |      'add_bp'.
+     |      Return True when successful.
+     |
+     |      Method parameters:
+     |          bp_id: object
+     |              The debugger breakpoint id.
+     |          disabled: bool
+     |              When True, set the breakpoint as disabled.
+     |
+     |  update_dbgvarbuf(self, getdata, dirty, lnum=None)
+     |      Update the variables buffer in Vim.
+     |
+     |      Update the variables buffer in Vim when one the following
+     |      conditions is
+     |      True:
+     |          * 'dirty' is True
+     |          * the content of the Vim variables buffer and the content of
+     |            pyclewn 'dbgvarbuf' are not consistent after an error in the
+     |            netbeans protocol occured
+     |      Set the Vim cursor at 'lnum' after the buffer has been updated.
+     |
+     |      Method parameters:
+     |          getdata: callable
+     |              A callable that returns the content of the variables
+     |              buffer as a string.
+     |          dirty: bool
+     |              When True, force updating the buffer.
+     |          lnum: int
+     |              The line number in the Vim buffer.
+     |
+     |  vim_script_custom(self, prefix)
+     |      Return debugger specific Vim statements as a string.
+     |
+     |      A Vim script is run on Vim start-up, for example to define all
+     |      the debugger commands in Vim. This method may be overriden to
+     |      add some debugger specific Vim statements or functions to this
+     |      script.
+     |
+     |      Method parameter:
+     |          prefix: str
+     |              The prefix used for the debugger commands in Vim.
+     |
 
 ==============================================================================
 $Id$

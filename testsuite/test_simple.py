@@ -19,15 +19,14 @@
 #
 # $Id$
 
-"""Test the simple application.
+"""Test the simple debugger.
 
 """
 import os
 import sys
 import unittest
-from test.test_support import run_unittest
+import test.test_support as test_support
 
-import clewn.debugger.simple
 from testsuite.test_support import ClewnTestCase
 
 class SimpleCommandsTestCase(ClewnTestCase):
@@ -171,15 +170,9 @@ class SimpleCommandsTestCase(ClewnTestCase):
             ':edit (clewn)_console | $$ | ?\'_bset\'?,?\'lnum\'?w!  ${test_out}\n'
             ':qa!\n',
 
-            "{'_bset': {'(clewn)_console': {},\n"
-            "           '(clewn)_dbgvar': {},\n"
-            "           '${cwd}@test_file_1': {}},\n"
-            " 'arglist': None,\n"
             " 'bp_id': 0,\n"
             " 'closed': False,\n"
-            " 'daemon': False,\n"
             " 'inferior': Target: {'running': False, 'closed': False},\n"
-            " 'last_balloon': '',\n"
             " 'lnum': 0,",
 
             'line 1\n'
@@ -223,7 +216,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
             'dbgvar -- Add a variable to the debugger variable buffer.\n'
             'delvar -- Delete a variable from the debugger variable buffer.\n'
             'disable -- Disable one breakpoint.\n'
-            'dumprepr -- Print debugging information on netbeans and the application.\n'
+            'dumprepr -- Print debugging information on netbeans and the debugger in\n'
             'enable -- Enable one breakpoint.\n'
             'help -- Print help on the simple commands.\n'
             'interrupt -- Interrupt the execution of the debugged program.\n'
@@ -233,7 +226,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
             'sigint -- Send a <C-C> character to the debugger (not implemented).\n'
             'step -- Step program until it reaches a different source line.\n'
             'symcompletion -- Populate the break and clear commands with symbols completion (not implemented).\n'
-            'unmapkeys -- Unmap the pyclewn keys, this vim command does not invoke pyclewn.\n',
+            'unmapkeys -- Unmap the pyclewn keys.\n',
 
             'line 1\n'
             )
@@ -292,72 +285,6 @@ class SimpleCommandsTestCase(ClewnTestCase):
             ':qa!\n',
 
             'foobar',
-
-            'line 1\n'
-            )
-
-    def test_quit_posix(self):
-        """The quit command"""
-        self.cltest_redir(
-            ':edit ${test_file}1\n'
-            ':sleep ${time}\n'
-            ':Cbreak ${test_file}1:1\n'
-            ':Cstep\n'
-            ':Cdumprepr\n'
-            ':sleep ${time}\n'
-            ':edit (clewn)_console | $$ | ?\'_bset\'?,?\'inferior\': Target:?w! ${test_out}\n'
-            ':Cquit\n'
-            ':Cdumprepr\n'
-            ':sleep ${time}\n'
-            ':edit (clewn)_console | $$ | ?\'_bset\'?,?\'inferior\': Target:?w!  >> ${test_out}\n'
-            ':qa!\n',
-
-            "{'_bset': {'(clewn)_console': {},\n"
-            "           '(clewn)_dbgvar': {},\n"
-            "           '${cwd}@test_file_1': {1: bp enabled at line 1,\n"
-            "                                     'frame': frame at line 1}},\n"
-            " 'arglist': None,\n"
-            " 'bp_id': 1,\n"
-            " 'closed': False,\n"
-            " 'daemon': False,\n"
-            " 'inferior': Target: {'running': False, 'closed': False},\n"
-            "{'_bset': {'(clewn)_console': {},\n"
-            "           '(clewn)_dbgvar': {},\n"
-            "           '${cwd}@test_file_1': {}},\n"
-            " 'arglist': None,\n"
-            " 'bp_id': 0,\n"
-            " 'closed': False,\n"
-            " 'daemon': False,\n"
-            " 'inferior': Target: {'running': False, 'closed': False},\n",
-
-            'line 1\n'
-            )
-
-    def test_quit(self):
-        """The quit command"""
-        self.cltest_redir(
-            ':edit ${test_file}1\n'
-            ':sleep ${time}\n'
-            ':Cbreak ${test_file}1:1\n'
-            ':Cstep\n'
-            ':Cdumprepr\n'
-            ':sleep ${time}\n'
-            ':edit (clewn)_console | $$ | ?\'_bset\'?,?\'arglist\': None,?w! ${test_out}\n'
-            ':Cquit\n'
-            ':Cdumprepr\n'
-            ':sleep ${time}\n'
-            ':edit (clewn)_console | $$ | ?\'_bset\'?,?\'arglist\': None,?w!  >> ${test_out}\n'
-            ':qa!\n',
-
-            "{'_bset': {'(clewn)_console': {},\n"
-            "           '(clewn)_dbgvar': {},\n"
-            "           '${cwd}@test_file_1': {1: bp enabled at line 1,\n"
-            "                                     'frame': frame at line 1}},\n"
-            " 'arglist': None,\n"
-            "{'_bset': {'(clewn)_console': {},\n"
-            "           '(clewn)_dbgvar': {},\n"
-            "           '${cwd}@test_file_1': {}},\n"
-            " 'arglist': None,\n",
 
             'line 1\n'
             )
@@ -439,7 +366,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
             'dbgvar -- Add a variable to the debugger variable buffer.\n'
             'delvar -- Delete a variable from the debugger variable buffer.\n'
             'disable -- Disable one breakpoint.\n'
-            'dumprepr -- Print debugging information on netbeans and the application.\n'
+            'dumprepr -- Print debugging information on netbeans and the debugger in\n'
             'enable -- Enable one breakpoint.\n'
             'help -- Print help on the simple commands.\n'
             'interrupt -- Interrupt the execution of the debugged program.\n'
@@ -449,9 +376,8 @@ class SimpleCommandsTestCase(ClewnTestCase):
             'sigint -- Send a <C-C> character to the debugger (not implemented).\n'
             'step -- Step program until it reaches a different source line.\n'
             'symcompletion -- Populate the break and clear commands with symbols completion (not implemented).\n'
-            'unmapkeys -- Unmap the pyclewn keys, this vim command does not invoke pyclewn.'
+            'unmapkeys -- Unmap the pyclewn keys.'
             )
-
 
 def test_main():
     """Run all the tests."""
@@ -469,15 +395,11 @@ def test_main():
     suite.addTest(SimpleCommandsTestCase('test_step'))
     suite.addTest(SimpleCommandsTestCase('test_mapkeys'))
     suite.addTest(SimpleCommandsTestCase('test_print'))
-    if os.name == 'nt':
-        suite.addTest(SimpleCommandsTestCase('test_quit'))
-    else:
-        suite.addTest(SimpleCommandsTestCase('test_quit_posix'))
     suite.addTest(SimpleCommandsTestCase('test_unmapkeys'))
     suite.addTest(SimpleCommandsTestCase('test_maxlines'))
     if os.name != 'nt':
         suite.addTest(SimpleCommandsTestCase('test_startupfile'))
-    run_unittest(suite)
+    test_support.run_unittest(suite)
 
 if __name__ == "__main__":
     test_main()

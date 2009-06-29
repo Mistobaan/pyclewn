@@ -28,7 +28,7 @@ continue command and send an interrupt.  One can step into the current buffer
 from the first line up to the first enabled breakpoint. There is no run
 command, use continue instead.
 
-The quit command removes all the signs set by pyclewn in gvim. After the quit
+The quit command removes all the signs set by pyclewn in Vim. After the quit
 command, the dispatcher instantiates a new instance of Simple.
 
 """
@@ -36,16 +36,43 @@ import sys
 import threading
 import time
 
-import clewn
-import clewn.misc
-import clewn.application as application
+import clewn.misc as misc
+import clewn.debugger as debugger
 
 # set the logging methods
-(critical, error, warning, info, debug) = clewn.misc.logmethods('simp')
+(critical, error, warning, info, debug) = misc.logmethods('simp')
 Unused = error
 Unused = warning
 Unused = debug
 
+# list of key mappings, used to build the .pyclewn_keys.simple file
+#     key : (mapping, comment)
+MAPKEYS = {
+    'C-B' : ('break ${fname}:${lnum}',
+                'set breakpoint at current line'),
+    'C-E' : ('clear ${fname}:${lnum}',
+                'clear breakpoint at current line'),
+    'C-P' : ('print ${text}',
+                'print value of selection at mouse position'),
+    'C-Z' : ('interrupt',
+                'interrupt the execution of the target'),
+    'S-C' : ('continue',),
+    'S-Q' : ('quit',),
+    'S-S' : ('step',),
+}
+
+# list of the simple commands mapped to vim user commands C<command>
+SIMPLE_CMDS = {
+    'break'     : None,   # file name completion
+    'clear'     : None,   # file name completion
+    'continue'  : (),
+    'disable'   : (),
+    'enable'    : (),
+    'interrupt' : (),
+    'print'     : (),
+    'quit'      : (),
+    'step'      : (),
+}
 
 class Target(threading.Thread):
     """Simulate the debuggee behaviour in another thread."""
@@ -125,6 +152,8 @@ class Varobj(object):
             the currently hilited name
         hilite: boolean
             when True, current is hilited
+        dirty: boolean
+            True when there is a change in the varobj instance
 
     """
 
@@ -133,12 +162,14 @@ class Varobj(object):
         self.var = {}
         self.current = None
         self.hilite = False
+        self.dirty = False
 
     def add(self, name):
         """Add a varobj."""
         self.var[name] = 1
         self.current = name
         self.hilite = True
+        self.dirty = True
 
     def _next(self):
         """Return the next candidate for hilite."""
@@ -158,11 +189,13 @@ class Varobj(object):
         if self.current is not None:
             self.var[self.current] += 1
             self.hilite = True
+            self.dirty = True
 
     def delete(self, name):
         """Delete a varobj."""
         try:
             del self.var[name]
+            self.dirty = True
             if name == self.current:
                 self.current = None
                 self.hilite = False
@@ -176,6 +209,8 @@ class Varobj(object):
 
     def clear(self):
         """Clear all varobjs."""
+        if self.var:
+            self.dirty = True
         self.var.clear()
         self.current = None
         self.hilite = False
@@ -189,10 +224,11 @@ class Varobj(object):
             else:
                 hilite = '='
             varstr += '%12s ={%s} %d\n' % (name, hilite, value)
+        self.dirty = False
         return varstr
 
-class Simple(application.Application):
-    """The Simple application is a concrete subclass of Application.
+class Simple(debugger.Debugger):
+    """The Simple debugger is a concrete subclass of Debugger.
 
     Instance attributes:
         bp_id: int
@@ -209,70 +245,30 @@ class Simple(application.Application):
 
     """
 
-    # command line options
-    opt = '-s'
-    long_opt = '--simple'
-    help = 'select the simple application'
-
-    # list of the simple commands mapped to vim user commands C<command>
-    # command completion:
-    #   () or [] = no completion,
-    #   True = file name completion,
-    #   non empty tuple or list = first argument completion list
-    simple_cmds = {
-        'break'     : True,   # file name completion
-        'clear'     : True,   # file name completion
-        'continue'  : (),
-        'disable'   : (),
-        'enable'    : (),
-        'interrupt' : (),
-        'print'     : (),
-        'quit'      : (),
-        'step'      : (),
-    }
-
-    # list of key mappings, used to build the .pyclewn_keys.simple file
-    #     key : (mapping, comment)
-    simple_mapkeys = {
-        'C-B' : ('break ${fname}:${lnum}',
-                    'set breakpoint at current line'),
-        'C-E' : ('clear ${fname}:${lnum}',
-                    'clear breakpoint at current line'),
-        'C-P' : ('print ${text}',
-                    'print value of selection at mouse position'),
-        'C-Z' : ('interrupt',
-                    'interrupt the execution of the target'),
-        'S-C' : ('continue',),
-        'S-Q' : ('quit',),
-        'S-S' : ('step',),
-    }
-
-    def __init__(self, nbsock, daemon, pgm, arglist):
+    def __init__(self, *args):
         """Constructor."""
-        application.Application.__init__(self, nbsock, daemon)
-        unused = pgm
-        unused = arglist
-        self.cmds.update(self.simple_cmds)
-        self.mapkeys.update(self.simple_mapkeys)
+        debugger.Debugger.__init__(self, *args)
+        self.cmds.update(SIMPLE_CMDS)
+        self.mapkeys.update(MAPKEYS)
         self.bp_id = 0
         self.inferior = None
         self.step_bufname = None
         self.lnum = 0
         self.varobj = Varobj()
 
-    def start(self):
-        """Start the application."""
-        application.Application.start(self)
+    def _start(self):
+        """Start the debugger."""
+        debugger.Debugger._start(self)
         self.prompt()
 
         # start the debuggee
         if self.inferior is None:
-            self.inferior = Target(self.daemon)
+            self.inferior = Target(self.options.daemon)
             self.inferior.start()
 
     def close(self):
-        """Close the application."""
-        application.Application.close(self)
+        """Close the debugger."""
+        debugger.Debugger.close(self)
 
         # close the debuggee
         if self.inferior is not None:
@@ -313,15 +309,14 @@ class Simple(application.Application):
 
     def post_cmd(self, cmd, args):
         """The method called after each invocation of a 'cmd_xxx' method."""
-        # although it may seem tempting, do not call prompt() here because
+        unused = cmd
+        unused = args
         # to preserve window order appearance, all the writing to the
         # console must be done before starting to handle the (clewn)_dbgvar
         # buffer when processing Cdbgvar
-
         # update the vim debugger variable buffer with the variables values
-        unused = cmd
-        unused = args
-        self.nbsock.dbgvarbuf.update(str(self.varobj))
+        varobj = self.varobj
+        self.update_dbgvarbuf(varobj.__str__, varobj.dirty)
 
     def default_cmd_processing(self, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""
@@ -339,7 +334,7 @@ class Simple(application.Application):
         unused = cmd
         result = 'Invalid arguments.\n'
 
-        name, lnum = self.name_lnum(args)
+        name, lnum = debugger.name_lnum(args)
         if name is None:
             return
         if name:
@@ -365,7 +360,7 @@ class Simple(application.Application):
         unused = cmd
         result = 'Invalid arguments.\n'
 
-        name, lnum = self.name_lnum(args)
+        name, lnum = debugger.name_lnum(args)
         if name is None:
             return
         if name:
@@ -393,20 +388,9 @@ class Simple(application.Application):
         # two arguments are required
         if len(args) != 2:
             self.console_print('Invalid arguments.\n')
-        self.prompt()
-
-        # (clewn)_dbgvar vim buffer is loaded after after the last
-        # console_print so as to preserve the window order appearance
-        registered = False
-        if not self.nbsock.dbgvarbuf.buf.registered:
-            self.nbsock.dbgvarbuf.register()
-            registered = True
-
-        # the second argument is ignored by Simple
-        if len(args) == 2:
+        else:
             self.varobj.add(args[0])
-        elif registered:
-            self.nbsock.goto_last()
+        self.prompt()
 
     def cmd_delvar(self, cmd, args):
         """Delete a variable from the debugger variable buffer."""
@@ -421,7 +405,7 @@ class Simple(application.Application):
 
     def cmd_help(self, *args):
         """Print help on the simple commands."""
-        application.Application.cmd_help(self, *args)
+        debugger.Debugger.cmd_help(self, *args)
         self.prompt()
 
     def set_bpstate(self, cmd, args, enable):
@@ -533,6 +517,6 @@ class Simple(application.Application):
         the mouse pointer. Here we just show the text in a balloon.
 
         """
-        application.Application.balloon_text(self, text)
+        debugger.Debugger.balloon_text(self, text)
         self.show_balloon('value: "%s"' % text)
 

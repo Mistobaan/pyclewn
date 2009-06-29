@@ -76,7 +76,7 @@ constant1 = 1
 stringIteration = 1
 
 # bool: warn when setting a variable to different types
-inconsistentTypes = 0
+inconsistentTypes = 1
 
 # bool: warn when setting a tuple of variables to a non-sequence (a, b = None)
 unpackNonSequence = 1
@@ -220,10 +220,9 @@ checkImplicitReturns = 1
 #	  'module3.my_class': 'no-initreturn', }
 suppressions = {
 	'netbeans.parse_msg': 'no-returnvalues',
-	'netbeans.FrameAnnotation.init': 'no-override',
+	'buffer.FrameAnnotation.init': 'no-override',
 	'gdb.GlobalSetup.init': 'no-override',
 	'gdbmi.OobGdbCommand': 'no-classattr',
-	'netbeans.Server': 'no-callinit',
     }
 
 # dict: suppress warnings where keys can be regular expressions

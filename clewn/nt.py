@@ -22,6 +22,8 @@
 """Pyclewn windows miscellaneous classes and functions."""
 
 import os
+import sys
+import platform
 assert os.name == 'nt'
 
 import msvcrt
@@ -30,21 +32,27 @@ import win32con
 import win32gui
 import win32console
 
-import misc
+import clewn.asyncproc as asyncproc
+import clewn.misc as misc
 
 # set the logging methods
-(critical, error, warning, info, debug) = misc.logmethods('win')
+(critical, error, warning, info, debug) = misc.logmethods('nt')
 Unused = error
 Unused = warning
 Unused = info
 Unused = debug
 
-class PipePeek(misc.PipePeek):
+def platform_data():
+    """Return Windows platform information."""
+    return ('platform: %s\nWindows version: %s'
+                    % (platform.platform(), sys.getwindowsversion()))
+
+class PipePeek(asyncproc.PipePeek):
     """The pipe peek thread."""
 
     def __init__(self, fd, asyncobj):
         """Constructor."""
-        misc.PipePeek.__init__(self, fd, asyncobj)
+        asyncproc.PipePeek.__init__(self, fd, asyncobj)
         try:
             self.handle = msvcrt.get_osfhandle(fd)
         except IOError:
@@ -57,9 +65,9 @@ class PipePeek(misc.PipePeek):
         except Exception, why:
             # this may occur on exit
             debug('got Exception %s', why)
-            info('closing application after failed PeekNamedPipe syscall')
+            info('closing debugger after failed PeekNamedPipe syscall')
             # the main thread is busy waiting on _clewn_select_event in the
-            # asyncore poll loop, so it's ok to close the application in
+            # asyncore poll loop, so it's ok to close the debugger in
             # this thread
             self.asyncobj.channel.close()
             return False

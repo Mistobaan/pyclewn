@@ -1,6 +1,8 @@
 $Id$
 
-2009-05-13  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2009-06-29  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+	* all files: Clean up the python debugger interface and use pydoc to
+	document it.
 	* setup.py: The Fedora Core 9 distribution is missing the Python
 	standard library test.regrtest module.
 	* pyclewn_install.py: Change gdb Windows pathname in shortcut.

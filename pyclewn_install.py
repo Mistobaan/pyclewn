@@ -6,46 +6,39 @@
 import sys
 import os
 import os.path
-from os.path import join
-from distutils import sysconfig
-from distutils.dir_util import copy_tree
-from distutils.dir_util import remove_tree
-from distutils.file_util import copy_file
+import distutils.sysconfig as sysconfig
+import distutils.dir_util as dir_util
+from os.path import join as pathjoin
 
-import clewn
+import clewn.vim as vim
 
 ICON_NAME = 'clewn.ico'
 PYCLEWN_SHORTCUT = 'Pyclewn.lnk'
 
-class Error(Exception):
+class ClewnInstallError(Exception):
     """Pyclewn install exceptions."""
     pass
 
-try:
-    import subprocess
-except ImportError, e:
-    raise Error, ("%s: upgrade python to version 2.4 or above." % e)
-
 def icon(vimdir):
     """Return icon file tuple to be used as data file in distutils setup."""
-    return (vimdir, [join('images', ICON_NAME)])
+    return (vimdir, [pathjoin('images', ICON_NAME)])
 
 def vim_features():
     """Abort if missing required Vim feature."""
-    output = clewn.run_vim_cmd(['version'])
+    output = vim.exec_vimcmd(['version'])
 
     print >> sys.stderr, 'checking netbeans support in gvim:',
     try:
         output.index('+netbeans_intg')
     except ValueError:
-        raise Error, 'netbeans support in gvim is required'
+        raise ClewnInstallError, 'netbeans support in gvim is required'
     print >> sys.stderr, 'yes'
 
     print >> sys.stderr, 'checking auto commands support in gvim:',
     try:
         output.index('+autocmd')
     except ValueError:
-        raise Error, 'auto commands support in gvim is required'
+        raise ClewnInstallError, 'auto commands support in gvim is required'
     print >> sys.stderr, 'yes'
 
 def vimdir(dir=[]):
@@ -55,91 +48,92 @@ def vimdir(dir=[]):
         if os.environ.has_key('vimdir'):
             dir.append(os.environ['vimdir'])
         else:
-            path = clewn.run_vim_cmd(['echon $VIM'])
-            dir.append(join(path, 'vimfiles'))
+            path = vim.exec_vimcmd(['echon $VIM'])
+            dir.append(pathjoin(path, 'vimfiles'))
     return dir[0]
 
 def build_vimhelp():
     """Add pyclewn help to Vim help."""
-    helpdir = join(vimdir(), 'doc')
+    helpdir = pathjoin(vimdir(), 'doc')
     print >> sys.stderr, 'running Vim help tags file generation in %s' % helpdir
-    clewn.run_vim_cmd(['helptags ' + helpdir, 'echo v:version'])
+    vim.exec_vimcmd(['helptags ' + helpdir, 'echo v:version'])
 
-def unlink(file):
+def unlink(filename):
     """Delete a file."""
     try:
-        os.unlink(file)
+        os.unlink(filename)
     except OSError:
         pass
 
 def install():
     """Write the bat file and copy the runtime files."""
     prefix = sysconfig.get_config_var('prefix')
-    scripts = join(prefix, 'scripts')
+    scripts = pathjoin(prefix, 'scripts')
     vim_features()
 
     # install runtime files
-    runtime_dir = join(prefix, 'pyclewn')
-    icon_file = join(runtime_dir, ICON_NAME)
-    copy_file(icon_file, scripts)
+    runtime_dir = pathjoin(prefix, 'pyclewn')
+    icon_file = pathjoin(runtime_dir, ICON_NAME)
+    dir_util.copy_file(icon_file, scripts)
     print >> sys.stderr, 'copying file %s' % icon_file
     unlink(icon_file)
 
-    for file in copy_tree(runtime_dir, vimdir()):
-        print >> sys.stderr, 'copying file %s' % file
+    for filename in dir_util.copy_tree(runtime_dir, vimdir()):
+        print >> sys.stderr, 'copying file %s' % filename
     print >> sys.stderr, 'removing directory %s' % runtime_dir
-    remove_tree(runtime_dir)
+    dir_util.remove_tree(runtime_dir)
 
     build_vimhelp()
 
     # create pyclewn.bat
-    pyexe = join(prefix, 'python.exe')
-    scriptpy = join(scripts, 'pyclewn')
-    f = open(join(scripts, 'pyclewn.bat'), 'w')
+    pyexe = pathjoin(prefix, 'python.exe')
+    scriptpy = pathjoin(scripts, 'pyclewn')
+    f = open(pathjoin(scripts, 'pyclewn.bat'), 'w')
     f.write("@%s %s %%*\n" % (pyexe, scriptpy))
     f.close()
 
     # create Windows shortcut
     create_shortcut(
-        join(scripts, 'pyclewn.bat'),
+        pathjoin(scripts, 'pyclewn.bat'),
         'Pyclewn allows using Vim as a front end to a debugger.',
         PYCLEWN_SHORTCUT,
         r'--pgm=C:\mingw\bin\gdb.exe --daemon',
         '',
-        join(scripts, ICON_NAME),
+        pathjoin(scripts, ICON_NAME),
         0)
 
     # copy shortcut to Desktop when it does not exist
     desktop_path = get_special_folder_path('CSIDL_DESKTOPDIRECTORY')
-    pyclewn_shortcut = join(desktop_path, PYCLEWN_SHORTCUT)
+    pyclewn_shortcut = pathjoin(desktop_path, PYCLEWN_SHORTCUT)
     if not os.path.exists(pyclewn_shortcut):
-        copy_file(PYCLEWN_SHORTCUT, desktop_path)
+        dir_util.copy_file(PYCLEWN_SHORTCUT, desktop_path)
         print >> sys.stderr, 'copying pyclewn to the desktop: %s' % pyclewn_shortcut
 
     # cleanup
     unlink(PYCLEWN_SHORTCUT)
-    unlink(join(scripts, 'pyclewn_install.py'))
-    unlink(join(scripts, 'pyclewn_install.pyc'))
-    unlink(join(scripts, 'pyclewn_install.pyo'))
+    unlink(pathjoin(scripts, 'pyclewn_install.py'))
+    unlink(pathjoin(scripts, 'pyclewn_install.pyc'))
+    unlink(pathjoin(scripts, 'pyclewn_install.pyo'))
 
     print >> sys.stderr, 'pyclewn postinstall completed'
 
 def uninstall():
+    """Uninstall on Windows."""
     prefix = sysconfig.get_config_var('prefix')
-    scripts = join(prefix, 'scripts')
+    scripts = pathjoin(prefix, 'scripts')
 
     # remove scripts, icon and shortcut
-    unlink(join(scripts, 'pyclewn'))
-    unlink(join(scripts, 'pyclewn.bat'))
-    unlink(join(scripts, ICON_NAME))
-    unlink(join(scripts, 'pyclewn_install.py'))
+    unlink(pathjoin(scripts, 'pyclewn'))
+    unlink(pathjoin(scripts, 'pyclewn.bat'))
+    unlink(pathjoin(scripts, ICON_NAME))
+    unlink(pathjoin(scripts, 'pyclewn_install.py'))
     desktop_path = get_special_folder_path('CSIDL_DESKTOPDIRECTORY')
-    unlink(join(desktop_path, PYCLEWN_SHORTCUT))
+    unlink(pathjoin(desktop_path, PYCLEWN_SHORTCUT))
 
     # remove vim files and rebuild vim help
-    unlink(join(join(vimdir(), 'doc'), 'pyclewn.txt'))
-    unlink(join(join(vimdir(), 'syntax'), 'dbgvar.vim'))
-    unlink(join(vimdir(), 'pyclewn.vim'))
+    unlink(pathjoin(pathjoin(vimdir(), 'doc'), 'pyclewn.txt'))
+    unlink(pathjoin(pathjoin(vimdir(), 'syntax'), 'dbgvar.vim'))
+    unlink(pathjoin(vimdir(), 'pyclewn.vim'))
     build_vimhelp()
 
 if __name__ == '__main__':
