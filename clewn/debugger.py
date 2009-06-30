@@ -746,7 +746,7 @@ class Debugger(object):
                     else:
                         self.mapkeys[k] = (v.strip(),)
                 elif not re_comment.match(line):
-                    raise ClewnError, ('invalid line in %s: %s' % (path, line))
+                    raise ClewnError('invalid line in %s: %s' % (path, line))
             f.close()
         except IOError:
             critical('reading %s', path); raise

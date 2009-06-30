@@ -122,7 +122,7 @@ def dequote(msg):
     """
     split = msg.split(DOUBLEQUOTE)
     if len(split) % 2 != 1:
-        raise ClewnError, "uneven number of double quotes in '%s'" % msg
+        raise ClewnError("uneven number of double quotes in '%s'" % msg)
 
     tok_list = []
     previous = True

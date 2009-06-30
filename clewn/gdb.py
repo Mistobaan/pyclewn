@@ -245,7 +245,7 @@ def gdb_version(pgm):
             f = open(os.ttyname(0), 'rw')
             f.close()
         except IOError, err:
-            raise ClewnError, ("Gdb cannot open the terminal: %s" % err)
+            raise ClewnError("Gdb cannot open the terminal: %s" % err)
 
     version = None
     header = gdb_batch(pgm, 'show version')
@@ -584,16 +584,16 @@ class Gdb(debugger.Debugger, ProcessChannel):
                                         f = open(pathname, 'r+b')
                                         f.close()
                                     except IOError, err:
-                                        raise ClewnError, (
+                                        raise ClewnError(
                                                     'project file: %s:' % err)
                                 self.project = pathname
                                 continue
-                            raise ClewnError, (
+                            raise ClewnError(
                                         'cannot have two project file names:'
                                                     ' %s and ' % self.project)
-                        raise ClewnError, 'not a valid project file pathname:'
-                    raise ClewnError, (
-                                'invalid parameter for the \'--gdb\' option:')
+                        raise ClewnError('not a valid project file pathname')
+                    raise ClewnError(
+                                'invalid parameter for the \'--gdb\' option')
             except ClewnError, err:
                 critical('%s %s', err, param)
                 sys.exit(1)
@@ -736,7 +736,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 pass
             elif self.state != self.STATE_QUITTING:
                 # may occur on quitting with the debuggee still running
-                raise ClewnError, ('invalid token "%s"' % token)
+                raise ClewnError('invalid token "%s"' % token)
         else:
             self.token = token
             self.lastcmd = cmd

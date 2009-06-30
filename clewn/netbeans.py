@@ -675,7 +675,7 @@ class Netbeans(asynchat.async_chat, object):
                 return
 
             if self.reply_fifo.is_empty():
-                raise ClewnError, (
+                raise ClewnError(
                         'got a reply with no matching function request')
             n, reply = self.reply_fifo.pop()
             unused = n
@@ -691,7 +691,7 @@ class Netbeans(asynchat.async_chat, object):
             if matchobj.group('passwd') == self.passwd:
                 return
             else:
-                raise ClewnError, 'invalid password: "%s"' % self.passwd
+                raise ClewnError('invalid password: "%s"' % self.passwd)
         # '0:version=0 "2.3"'
         # '0:startupDone=0'
         else:
@@ -709,12 +709,12 @@ class Netbeans(asynchat.async_chat, object):
                         self.nbversion = nbstring
                         return
                     else:
-                        raise ClewnError, (
+                        raise ClewnError(
                                 'invalid netbeans version: "%s"' % nbstring)
                 elif event == "startupDone":
                     self.ready = True
                     return
-        raise ClewnError, 'received unexpected message: "%s"' % msg
+        raise ClewnError('received unexpected message: "%s"' % msg)
 
     def goto_last(self):
         """Go to the last cursor position."""

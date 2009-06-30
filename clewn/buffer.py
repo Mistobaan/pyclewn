@@ -279,18 +279,23 @@ class BufferSet(dict):
         self.anno_dict = {}
 
     def add_anno(self, anno_id, pathname, lnum):
-        """Add the annotation to the global list and to the buffer annotation list."""
-        assert lnum > 0
-        assert not anno_id in self.anno_dict.keys()
-        assert os.path.isabs(pathname), \
-                'absolute pathname required for: "%s"' % pathname
+        """Add the annotation to the global list and to the buffer annotation
+        list."""
+        if not isinstance(lnum, int) or lnum <= 0:
+            raise ValueError('"lnum" must be strictly positive: %s' % lnum)
+        if anno_id in self.anno_dict.keys():
+            raise KeyError('"anno_id" already exists:  %s' % anno_id)
+        if not os.path.isabs(pathname):
+            raise ValueError(
+                '"pathname" is not an absolute path: %s' % pathname)
         buf = self[pathname]
         self.anno_dict[anno_id] = buf
         buf.add_anno(anno_id, lnum)
 
     def update_anno(self, anno_id, disabled=False):
         """Update the annotation."""
-        assert anno_id in self.anno_dict.keys()
+        if anno_id not in self.anno_dict.keys():
+            raise KeyError('"anno_id" does not exist:  %s' % anno_id)
         self.anno_dict[anno_id].update(anno_id, disabled)
 
     def delete_anno(self, anno_id):
@@ -298,7 +303,8 @@ class BufferSet(dict):
         annotation list.
 
         """
-        assert anno_id in self.anno_dict.keys()
+        if anno_id not in self.anno_dict.keys():
+            raise KeyError('"anno_id" does not exist:  %s' % anno_id)
         self.anno_dict[anno_id].delete_anno(anno_id)
         del self.anno_dict[anno_id]
 
@@ -309,7 +315,8 @@ class BufferSet(dict):
         Remove the frame annotation when pathname is None.
 
         """
-        assert lnum > 0
+        if not isinstance(lnum, int) or lnum <= 0:
+            raise ValueError('"lnum" must be strictly positive: %s' % lnum)
         if FRAME_ANNO_ID in self.anno_dict.keys():
             self.delete_anno(FRAME_ANNO_ID)
         if pathname:
@@ -317,7 +324,8 @@ class BufferSet(dict):
 
     def add_bp(self, bp_id, pathname, lnum):
         """Add the breakpoint to the global list and to the buffer annotation list."""
-        assert lnum > 0
+        if not isinstance(lnum, int) or lnum <= 0:
+            raise ValueError('"lnum" must be strictly positive: %s' % lnum)
         if not bp_id in self.anno_dict.keys():
             self.add_anno(bp_id, pathname, lnum)
         else:
@@ -355,9 +363,9 @@ class BufferSet(dict):
         """
         if pathname is None:
             lnum = None
-        else:
-            assert os.path.isabs(pathname), \
-                    'absolute pathname required for: "%s"' % pathname
+        elif not os.path.isabs(pathname):
+            raise ValueError(
+                '"pathname" is not an absolute path: %s' % pathname)
 
         deleted = []
         for buf in self.buf_list:
@@ -402,10 +410,11 @@ class BufferSet(dict):
         The pathname parameter must be an absolute path name.
 
         """
-        assert isinstance(pathname, str)
-        assert os.path.isabs(pathname)              \
-                or is_clewnbuf(pathname),           \
-                'absolute pathname required: "%s"' % pathname
+        if not isinstance(pathname, str)          \
+                or (not os.path.isabs(pathname)   \
+                    and not is_clewnbuf(pathname)):
+            raise ValueError(
+                '"pathname" is not an absolute path: %s' % pathname)
         if not pathname in self:
             # netbeans buffer numbers start at one
             buf = Buffer(pathname, len(self.buf_list) + 1, self.nbsock)

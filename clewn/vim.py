@@ -95,7 +95,7 @@ def exec_vimcmd(commands, pathname=None):
             except OSError:
                 pass
     if output is None:
-        raise ClewnError, "error starting Vim with:\n'%s'" % ' '.join(args)
+        raise ClewnError("error starting Vim with:\n'%s'" % ' '.join(args))
     return output
 
 def pformat(name, obj):
