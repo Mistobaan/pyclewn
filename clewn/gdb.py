@@ -533,8 +533,13 @@ class Gdb(debugger.Debugger, ProcessChannel):
         """Constructor."""
         debugger.Debugger.__init__(self, *args)
         self.pyclewn_cmds.update(
-            {   'foldvar':(),
-                'project':True
+            {
+                'dbgvar':(),
+                'delvar':(),
+                'foldvar':(),
+                'project':True,
+                'sigint':(),
+                'symcompletion':(),
             })
         self.mapkeys.update(MAPKEYS)
 

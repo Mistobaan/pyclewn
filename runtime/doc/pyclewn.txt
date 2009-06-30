@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2009 June 27
+*pyclewn.txt*                                   Last change: 2009 June 30
 
 
                             PYCLEWN USER MANUAL
@@ -781,6 +781,7 @@ by the|:colorscheme|currently in use.
 ==============================================================================
 8. Extending pyclewn                                *pyclewn-extending*
 
+
 NAME
     debugger
 
@@ -895,12 +896,6 @@ CLASSES
      |  close(self)
      |      Close the debugger and remove all signs in Vim.
      |
-     |  cmd_dbgvar(self, cmd, args)
-     |      Add a variable to the debugger variable buffer.
-     |
-     |  cmd_delvar(self, cmd, args)
-     |      Delete a variable from the debugger variable buffer.
-     |
      |  cmd_dumprepr(self, *args)
      |      Print debugging information on netbeans and the debugger in
      |      the Vim debugger console.
@@ -911,12 +906,6 @@ CLASSES
      |
      |  cmd_mapkeys(self, *args)
      |      Map the pyclewn keys.
-     |
-     |  cmd_sigint(self, *args)
-     |      Send a <C-C> character to the debugger (not implemented).
-     |
-     |  cmd_symcompletion(self, *args)
-     |      Populate the break and clear commands with symbols completion (not implemented).
      |
      |  cmd_unmapkeys(self, *args)
      |      Unmap the pyclewn keys.
@@ -1075,6 +1064,7 @@ CLASSES
      |          prefix: str
      |              The prefix used for the debugger commands in Vim.
      |
+
 
 ==============================================================================
 $Id$

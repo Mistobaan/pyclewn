@@ -293,13 +293,9 @@ class Debugger(object):
         self.options = options
 
         self.cmds = {
-            'dbgvar':(),
-            'delvar':(),
             'dumprepr':(),
             'help':(),
             'mapkeys':(),
-            'sigint':(),
-            'symcompletion':(),
             'unmapkeys':(),
         }
         self.pyclewn_cmds = self.cmds
@@ -799,32 +795,6 @@ class Debugger(object):
 
         """
         pass
-
-    def cmd_dbgvar(self, cmd, args):
-        """Add a variable to the debugger variable buffer."""
-        unused = self
-        unused = cmd
-        unused = args
-        raise NotImplementedError('must be implemented in subclass')
-
-    def cmd_delvar(self, cmd, args):
-        """Delete a variable from the debugger variable buffer."""
-        unused = self
-        unused = cmd
-        unused = args
-        raise NotImplementedError('must be implemented in subclass')
-
-    def cmd_sigint(self, *args):
-        """Send a <C-C> character to the debugger (not implemented)."""
-        unused = self
-        unused = args
-        assert False, 'not implemented'
-
-    def cmd_symcompletion(self, *args):
-        """Populate the break and clear commands with symbols completion (not implemented)."""
-        unused = self
-        unused = args
-        assert False, 'not implemented'
 
     def __str__(self):
         """Return the string representation."""

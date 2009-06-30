@@ -248,6 +248,13 @@ class Simple(debugger.Debugger):
     def __init__(self, *args):
         """Constructor."""
         debugger.Debugger.__init__(self, *args)
+        self.pyclewn_cmds.update(
+            {
+                'dbgvar':(),
+                'delvar':(),
+                'sigint':(),
+                'symcompletion':(),
+            })
         self.cmds.update(SIMPLE_CMDS)
         self.mapkeys.update(MAPKEYS)
         self.bp_id = 0
