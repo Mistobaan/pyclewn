@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2009 June 30
+*pyclewn.txt*                                   Last change: 2009 July 3
 
 
                             PYCLEWN USER MANUAL
@@ -857,6 +857,11 @@ CLASSES
      |          The subset of 'cmds' that are pyclewn specific commands.
      |      __nbsock: netbeans.Netbeans
      |          The netbeans asynchat socket.
+     |      _jobs: list
+     |          list of pending jobs to run on a timer event in the
+     |          dispatch loop
+     |      _jobs_enabled: bool
+     |          process enqueued jobs when True
      |      _last_balloon: str
      |          The last balloonText event received.
      |      _prompt_str: str
@@ -1015,8 +1020,17 @@ CLASSES
      |          lnum: int
      |              The line number in the Vim buffer.
      |
-     |  timer(self)
-     |      Handle a timer event sent from the dispatch loop.
+     |  timer(self, callme, delta)
+     |      Schedule the 'callme' job at 'delta' time from now.
+     |
+     |      The timer granularity is LOOP_TIMEOUT, so it does not make sense
+     |      to request a 'delta' time less than LOOP_TIMEOUT.
+     |
+     |      Method parameters:
+     |          callme: callable
+     |              the job being scheduled
+     |          delta: float
+     |              time interval
      |
      |  update_bp(self, bp_id, disabled=False)
      |      Update the enable/disable state of a breakpoint.
@@ -1064,6 +1078,10 @@ CLASSES
      |          prefix: str
      |              The prefix used for the debugger commands in Vim.
      |
+
+FUNCTIONS
+    restart_timer(timeout)
+        Decorator to re-schedule the method at 'timeout', after it has run.
 
 
 ==============================================================================

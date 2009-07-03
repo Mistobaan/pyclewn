@@ -1,6 +1,9 @@
 $Id$
 
 2009-06-29  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* vim.py gdb.py debugger.py: Jobs and their scheduling time are queued
+	in an heap queue, and processed by the dispatch loop.
 	* debugger.py gdb.py simple.py: Remove the following methods from the
 	netbeans api and the Debugger class: cmd_dbgvar, cmd_delvar,
 	cmd_sigint and cmd_symcompletion.

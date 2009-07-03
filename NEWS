@@ -1,6 +1,7 @@
 June 29, 2009 - pyclewn 1.0
     Changes:
         Clean up the python debugger interface and use pydoc to document it.
+        Replace the existing 'timer' method with a flexible job scheduling.
 
     Bug fix:
         Recent Fedora Core distributions are missing the Python standard

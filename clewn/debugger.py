@@ -43,6 +43,8 @@ debugger front-end.
 import os
 import os.path
 import re
+import time
+import heapq
 import string
 import copy
 
@@ -50,7 +52,9 @@ from clewn import *
 import clewn.misc as misc
 import clewn.netbeans as netbeans
 
-__all__ = ['Debugger']
+__all__ = ['LOOP_TIMEOUT', 'restart_timer', 'Debugger']
+LOOP_TIMEOUT = .040
+
 RE_KEY = r'^\s*(?P<key>[Ff]\d{1,2}|[A-Z]|[C-c]-[A-Za-z])\s*'    \
          r':\s*(?P<value>[^#]*)'                                \
          r'# RE: key:value line in .pyclewn_keys'
@@ -234,6 +238,19 @@ def name_lnum(name_lnum):
         lnum = int(matchobj.group('lnum'))
     return name, lnum
 
+def restart_timer(timeout):
+    """Decorator to re-schedule the method at 'timeout', after it has run."""
+    def decorator(f):
+        """The decorator."""
+        def _newf(*args, **kwargs):
+            """The decorated method."""
+            self = args[0]
+            job = getattr(self, f.func_name)
+            ret = f(*args, **kwargs)
+            self.timer(job, timeout)
+            return ret
+        return _newf
+    return decorator
 
 class Debugger(object):
     """Abstract base class for pyclewn debuggers.
@@ -280,6 +297,11 @@ class Debugger(object):
             The subset of 'cmds' that are pyclewn specific commands.
         __nbsock: netbeans.Netbeans
             The netbeans asynchat socket.
+        _jobs: list
+            list of pending jobs to run on a timer event in the
+            dispatch loop
+        _jobs_enabled: bool
+            process enqueued jobs when True
         _last_balloon: str
             The last balloonText event received.
         _prompt_str: str
@@ -303,6 +325,8 @@ class Debugger(object):
         self.cmds[''] = []
         self.started = False
         self.closed = False
+        self._jobs = []
+        self._jobs_enabled = False
         self._last_balloon = ''
         self._prompt_str = '(%s) ' % self.__class__.__name__.lower()
 
@@ -363,10 +387,6 @@ class Debugger(object):
         unused = cmd
         unused = args
         raise NotImplementedError('must be implemented in subclass')
-
-    def timer(self):
-        """Handle a timer event sent from the dispatch loop."""
-        pass
 
     def vim_script_custom(self, prefix):
         """Return debugger specific Vim statements as a string.
@@ -558,6 +578,21 @@ class Debugger(object):
         if self.started and console.buf.registered:
             console.eofprint(format, *args)
 
+    def timer(self, callme, delta):
+        """Schedule the 'callme' job at 'delta' time from now.
+
+        The timer granularity is LOOP_TIMEOUT, so it does not make sense
+        to request a 'delta' time less than LOOP_TIMEOUT.
+
+        Method parameters:
+            callme: callable
+                the job being scheduled
+            delta: float
+                time interval
+
+        """
+        heapq.heappush(self._jobs, (time.time() + delta, callme))
+
     def close(self):
         """Close the debugger and remove all signs in Vim."""
         if not self.closed:
@@ -677,6 +712,26 @@ class Debugger(object):
                 f.close()
 
         return f
+
+    def _call_jobs(self):
+        """Call the scheduled jobs.
+
+        This method is called in Vim dispatch loop.
+        Return the timeout for the next iteration of the event loop.
+
+        """
+        timeout = LOOP_TIMEOUT
+        if not self._jobs_enabled and self.__nbsock.ready:
+            self._jobs_enabled = True
+        if self._jobs_enabled:
+            now = time.time()
+            while self._jobs and now >= self._jobs[0][0]:
+                callme = heapq.heappop(self._jobs)[1]
+                callme()
+                now = time.time()
+            if self._jobs:
+                timeout = min(timeout, abs(self._jobs[0][0] - now))
+        return timeout
 
     def _do_cmd(self, method, cmd, args):
         """Process 'cmd' and its 'args' with 'method'."""

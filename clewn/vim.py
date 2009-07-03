@@ -445,8 +445,8 @@ class Vim(object):
                 self.netbeans.set_debugger(self.debugger)
                 info('new "%s" instance', self.clazz.__name__.lower())
 
-            evtloop.poll(self.socket_map, timeout=.100)
-            self.debugger.timer()
+            timeout = self.debugger._call_jobs()
+            evtloop.poll(self.socket_map, timeout=timeout)
 
     def __str__(self):
         """Return a representation of the whole stuff."""
