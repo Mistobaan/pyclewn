@@ -35,7 +35,7 @@ from clewn import *
 
 try:
     MAXFD = os.sysconf("SC_OPEN_MAX")
-except:
+except ValueError:
     MAXFD = 256
 
 DOUBLEQUOTE = '"'
@@ -266,7 +266,7 @@ def close_fds():
     for i in xrange(3, MAXFD):
         try:
             os.close(i)
-        except:
+        except OSError:
             pass
 
 def last_traceback():

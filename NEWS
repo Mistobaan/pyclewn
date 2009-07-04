@@ -1,5 +1,7 @@
-June 29, 2009 - pyclewn 1.0
+July 4, 2009 - pyclewn 1.0
     Changes:
+        Replace the `vimcmd` environment variable with the `EDITOR` environment
+        variable.
         Clean up the python debugger interface and use pydoc to document it.
         Replace the existing 'timer' method with a flexible job scheduling.
 

@@ -577,34 +577,32 @@ class Gdb(debugger.Debugger, ProcessChannel):
     def parse_paramlist(self, parameters):
         """Process the class parameter list."""
         for param in [x.strip() for x in parameters.split(',') if x]:
-            try:
-                if param.lower() == 'async':
-                    self.async = True
-                else:
-                    pathname = os.path.expanduser(param)
-                    if os.path.isabs(pathname)          \
-                                or pathname.startswith(os.path.curdir):
-                        if not os.path.isdir(pathname)  \
-                                and os.path.isdir(os.path.dirname(pathname)):
-                            if not self.project:
-                                if os.path.isfile(pathname):
-                                    try:
-                                        f = open(pathname, 'r+b')
-                                        f.close()
-                                    except IOError, err:
-                                        raise ClewnError(
-                                                    'project file: %s:' % err)
-                                self.project = pathname
-                                continue
-                            raise ClewnError(
-                                        'cannot have two project file names:'
-                                                    ' %s and ' % self.project)
-                        raise ClewnError('not a valid project file pathname')
+            if param.lower() == 'async':
+                self.async = True
+                continue
+
+            pathname = os.path.expanduser(param)
+            if os.path.isabs(pathname)          \
+                        or pathname.startswith(os.path.curdir):
+                if not os.path.isdir(pathname)  \
+                        and os.path.isdir(os.path.dirname(pathname)):
+                    if not self.project:
+                        if os.path.isfile(pathname):
+                            try:
+                                f = open(pathname, 'r+b')
+                                f.close()
+                            except IOError, err:
+                                raise ClewnError(
+                                        'project file %s: %s' % (param, err))
+                        self.project = pathname
+                        continue
                     raise ClewnError(
-                                'invalid parameter for the \'--gdb\' option')
-            except ClewnError, err:
-                critical('%s %s', err, param)
-                sys.exit(1)
+                                'cannot have two project file names:'
+                                        ' %s and %s' % (self.project, param))
+                raise ClewnError(
+                        'not a valid project file pathname: %s' % param)
+            raise ClewnError(
+                    'invalid parameter for the \'--gdb\' option: %s' % param)
 
     def getargv(self):
         """Return the gdb argv list."""

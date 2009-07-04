@@ -62,13 +62,10 @@ and checking that this command displays '+netbeans_intg'."""
 Unused = error
 Unused = warning
 
-def exec_vimcmd(commands, pathname=None):
+def exec_vimcmd(commands, pathname=''):
     """Run a list of Vim 'commands' and return the commands output."""
-    if pathname is None:
-        if os.environ.has_key('vimcmd'):
-            pathname = os.environ['vimcmd']
-        else:
-            pathname = 'gvim'
+    if not pathname:
+        pathname = os.environ.get('EDITOR', 'gvim')
 
     args = [pathname, '-u', 'NONE', '-esX', '-c', 'set cpo&vim']
     fd, tmpname = tempfile.mkstemp(prefix='runvimcmd', suffix='.clewn')
@@ -304,6 +301,7 @@ class Vim(object):
             else:
                 parser.values.args = args
 
+        editor = os.environ.get('EDITOR', 'gvim')
         formatter = optparse.IndentedHelpFormatter(max_help_position=30)
         parser = optparse.OptionParser(
                         version='%prog ' + __version__,
@@ -320,7 +318,7 @@ class Vim(object):
         parser.add_option('-d', '--daemon',
                 action="store_true", dest='daemon', default=False,
                 help='run as a daemon (default \'%default\')')
-        parser.add_option('-e', '--editor', dest='vim', default='gvim',
+        parser.add_option('-e', '--editor', dest='vim', default=editor,
                 help='set Vim pathname to VIM (default \'%default\')')
         parser.add_option('-c', '--cargs', dest='vim_args', metavar='ARGS',
                 type='string', action='callback', callback=args_callback,

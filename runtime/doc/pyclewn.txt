@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2009 July 3
+*pyclewn.txt*                                   Last change: 2009 July 4
 
 
                             PYCLEWN USER MANUAL
@@ -145,9 +145,8 @@ options:
   -d, --daemon                run as a daemon (default 'False')
   -p PGM, --pgm=PGM           set the debugger program to PGM
   -a ARGS, --args=ARGS        set the debugger program arguments to ARGS
-  -e EDITOR, --editor=EDITOR  set the editor program to EDITOR (default
-                              gvim)
-  -c ARGS, --cargs=ARGS       set the editor program arguments to ARGS
+  -e EDITOR, --editor=EDITOR  set the Vim program to EDITOR
+  -c ARGS, --cargs=ARGS       set the Vim program arguments to ARGS
   -w LOCATION, --window=LOCATION
                               open the debugger console window at LOCATION
                               which may be one of (top, bottom, left,
@@ -227,9 +226,13 @@ The full description of the command line options follows:
                     pyclewn -a '--args foobar "this is foobar argument"'
 
 -e {EDITOR}
---editor={EDITOR}   Set the editor program to EDITOR (default gvim). EDITOR
-                    must be in one of the directories listed in the PATH
-                    environment variable.
+--editor={EDITOR}   Set the editor program to EDITOR. EDITOR must be in one
+                    of the directories listed in the PATH environment variable.
+                    When this command line option is not set, pyclewn uses the
+                    value of the EDITOR environment variable, and if this
+                    environment variable is not set either, then pyclewn
+                    defaults to using "gvim" as the name of the program to
+                    spawn.
 
 -c {ARGS}
 --cargs={ARGS}      Set the editor program arguments to ARGS, possibly double

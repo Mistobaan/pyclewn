@@ -141,7 +141,7 @@ class ProcessChannel(asyncproc.ProcessChannel):
             try:
                 fcntl.ioctl(slave_fd, termios.TIOCSCTTY)
                 info("terminal control with TIOCSCTTY ioctl call")
-            except:
+            except IOError:
                 # this might work (it does on Linux)
                 if slave_fd != 0: os.close(0)
                 if slave_fd != 1: os.close(1)
@@ -158,7 +158,7 @@ class ProcessChannel(asyncproc.ProcessChannel):
             # exec program
             try:
                 os.execvp(self.argv[0], self.argv)
-            except:
+            except OSError:
                 os._exit(os.EX_OSERR)
 
         return master_fd

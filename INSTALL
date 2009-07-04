@@ -10,6 +10,12 @@ REQUIRED:
 
 Note that netbeans does not run on the console vim, you must use gvim.
 
+The pyclewn installer checks the Vim version, checks that Vim has been compiled
+with the 'netbeans_intg' and 'autocmd' features, and installs pyclewn help in
+Vim. This is done by executing VIM as a shell command during the installation
+process, with VIM being the value of the 'EDITOR' environment variable or being
+"gvim" if this environment variable does not exist.
+
 
 INSTALL ON UNIX:
 ---------------
@@ -22,12 +28,6 @@ run the setup script to install pyclewn:
 
 You can now use the ":help pyclewn" command within vim, to access the
 documentation.
-
-Note: The pyclewn installer checks the Vim version and checks that Vim has
-been compiled with the 'netbeans_intg' and 'autocmd' features. This is done by
-executing "gvim" as a shell command. Instead of "gvim", it is possible to
-execute a different name or full pathname by setting the environment variable
-'vimcmd' to this value.
 
 
 LOCAL INSTALLATION ON UNIX:

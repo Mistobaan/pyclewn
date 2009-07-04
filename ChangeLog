@@ -2,6 +2,8 @@ $Id$
 
 2009-06-29  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* vim.py: Replace the `vimcmd` environment variable with the
+	`EDITOR` environment variable.
 	* vim.py gdb.py debugger.py: Jobs and their scheduling time are queued
 	in an heap queue, and processed by the dispatch loop.
 	* debugger.py gdb.py simple.py: Remove the following methods from the

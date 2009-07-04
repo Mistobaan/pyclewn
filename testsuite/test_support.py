@@ -85,7 +85,7 @@ class ClewnTestCase(unittest.TestCase):
             if name.startswith(test_support.TESTFN):
                 try:
                     os.unlink(name)
-                except:
+                except OSError:
                     pass
 
     def clewn_test(self, cmd, expected, outfile, *test):
