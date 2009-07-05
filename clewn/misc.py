@@ -44,7 +44,7 @@ NBDEBUG = 5
 NBDEBUG_LEVEL_NAME = 'nbdebug'
 LOG_LEVELS = 'critical, error, warning, info, debug or ' + NBDEBUG_LEVEL_NAME
 
-RE_TOKEN_SPLIT = r'"((?:\\"|[^"])+)"|\s*(\S+)\s*'               \
+RE_TOKEN_SPLIT = r'\s*"((?:\\"|[^"])+)"\s*|\s*([^ ^"]+)\s*'     \
                  r'# RE: split a string in tokens, handling quotes'
 RE_ESCAPE = r'["\n\t\r\\]'                                      \
             r'# RE: escaped characters in a string'
@@ -117,25 +117,16 @@ def dequote(msg):
     """Return the list of whitespace separated tokens from 'msg', handling
     double quoted substrings as a token.
 
-    Note: '\' escaped double quotes are not handled.
+    >>> print dequote(r'"a c" b v "this \\"is\\" foobar argument" Y ')
+    ['a c', 'b', 'v', 'this "is" foobar argument', 'Y']
 
     """
     split = msg.split(DOUBLEQUOTE)
     if len(split) % 2 != 1:
         raise ClewnError("uneven number of double quotes in '%s'" % msg)
 
-    tok_list = []
-    previous = True
-    for token in split:
-        token.strip()
-        if token and previous:
-            previous = False
-            tok_list[len(tok_list):] = token.split()
-        else:
-            previous = True
-            if token:
-                tok_list.append(token)
-    return tok_list
+    match = re_token_split.findall(msg)
+    return [unquote(x) or y for x, y in match]
 
 def unescape_char(matchobj):
     """Remove escape on special characters in quoted string."""
@@ -351,4 +342,12 @@ class Singleton(object):
     def init(self, *args, **kwds):
         """Override in subclass."""
         pass
+
+def _test():
+    """Run the doctests."""
+    import doctest
+    doctest.testmod()
+
+if __name__ == "__main__":
+    _test()
 

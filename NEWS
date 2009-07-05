@@ -1,4 +1,4 @@
-July 4, 2009 - pyclewn 1.0
+July 5, 2009 - pyclewn 1.0
     Changes:
         Replace the `vimcmd` environment variable with the `EDITOR` environment
         variable.
@@ -6,6 +6,7 @@ July 4, 2009 - pyclewn 1.0
         Replace the existing 'timer' method with a flexible job scheduling.
 
     Bug fix:
+        Fix quoted command line arguments are not properly parsed.
         Recent Fedora Core distributions are missing the Python standard
         library test.regrtest module. Warn that the regression test suite
         cannot be run on these platforms and continue the installation.
