@@ -1,15 +1,16 @@
 July 5, 2009 - pyclewn 1.0
     Changes:
-        Replace the `vimcmd` environment variable with the `EDITOR` environment
-        variable.
         Clean up the python debugger interface and use pydoc to document it.
         Replace the existing 'timer' method with a flexible job scheduling.
+        Replace the `vimcmd` environment variable with the `EDITOR` environment
+        variable.
 
     Bug fix:
-        Fix quoted command line arguments are not properly parsed.
         Recent Fedora Core distributions are missing the Python standard
         library test.regrtest module. Warn that the regression test suite
         cannot be run on these platforms and continue the installation.
+        Fix quoted command line arguments are not properly parsed.
+        Fix content of gdbmi results within quotes must be unquoted.
 
 
 April 4, 2009 - pyclewn 0.7

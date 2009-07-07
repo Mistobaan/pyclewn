@@ -1,7 +1,9 @@
 $Id$
 
-2009-07-05  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2009-07-07  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* gdbmi.py: Fix content of gdbmi results within quotes must be
+	unquoted.
 	* misc.py: Fix quoted command line arguments are not properly parsed.
 	* vim.py: Replace the `vimcmd` environment variable with the
 	`EDITOR` environment variable.

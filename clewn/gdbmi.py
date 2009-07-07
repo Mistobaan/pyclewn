@@ -848,10 +848,10 @@ class ShowBalloon(Command):
         return False
 
     def handle_result(self, line):
-        """Send the gdb command."""
+        """Process gdb/mi result."""
         matchobj = re_evaluate.match(line)
         if matchobj:
-            self.result = matchobj.group('value')
+            self.result = misc.unquote(matchobj.group('value'))
             if self.result:
                 self.gdb.show_balloon('%s = "%s"' % (self.text, self.result))
 
