@@ -246,7 +246,7 @@ class ClewnBuffer(object):
 
         """
         send_function = self.nbsock.send_function
-        if self.nbsock.remove_bug:
+        if self.nbsock.remove_bug == '0':
             send_function(self.buf, 'insert',
                             '%s %s' % (str(offset), misc.quote('\n')))
             send_function(self.buf, 'remove',
@@ -550,8 +550,8 @@ class Netbeans(asynchat.async_chat, object):
             last reply sequence number
         server: Server
             server socket listening on the netbeans port
-        remove_bug: boolean
-            True with vim 7.1 before patch 207
+        remove_bug: str
+            '0' with vim 7.1 before patch 207
         max_lines: int
             Console maximum number of lines
 
@@ -575,7 +575,7 @@ class Netbeans(asynchat.async_chat, object):
         self.ibuff = []
         self.seqno = 0
         self.last_seqno = 0
-        self.remove_bug = True
+        self.remove_bug = '0'
         self.max_lines = CONSOLE_MAXLINES
 
         self.server = Server(self)
@@ -934,7 +934,7 @@ class Netbeans(asynchat.async_chat, object):
         status = ''
         if self.ready:
             status = 'ready, netbeans version "%s"'                         \
-                     ' (vim "netbeans remove function" bug: %s), remote '   \
+                     ' (vim "netbeans remove function" bug: "%s"), remote ' \
                      % (self.nbversion, self.remove_bug)
         elif not self.connected and self.addr:
             status = 'listening to '
