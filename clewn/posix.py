@@ -34,6 +34,11 @@ import platform
 import clewn.asyncproc as asyncproc
 import clewn.misc as misc
 
+try:
+    MAXFD = os.sysconf("SC_OPEN_MAX")
+except ValueError:
+    MAXFD = 256
+
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('posix')
 Unused = warning
@@ -42,6 +47,14 @@ Unused = debug
 def platform_data():
     """Return platform information."""
     return 'platform: %s' % platform.platform()
+
+def close_fds():
+    """Close all file descriptors except stdin, stdout and stderr."""
+    for i in xrange(3, MAXFD):
+        try:
+            os.close(i)
+        except OSError:
+            pass
 
 def daemonize():
     """Run as a daemon."""
@@ -153,7 +166,7 @@ class ProcessChannel(asyncproc.ProcessChannel):
             os.dup2(slave_fd, 0)
             os.dup2(slave_fd, 1)
             os.dup2(slave_fd, 2)
-            misc.close_fds()
+            close_fds()
 
             # exec program
             try:

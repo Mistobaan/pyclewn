@@ -66,7 +66,7 @@ class PipePeek(asyncproc.PipePeek):
             # this may occur on exit
             debug('got Exception %s', why)
             info('closing debugger after failed PeekNamedPipe syscall')
-            # the main thread is busy waiting on _clewn_select_event in the
+            # the main thread is busy waiting on the select_event in the
             # asyncore poll loop, so it's ok to close the debugger in
             # this thread
             self.asyncobj.channel.close()

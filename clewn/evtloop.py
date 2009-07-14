@@ -64,6 +64,7 @@ def clewn_select(iwtd, owtd, ewtd, timeout, static_select=[]):
     """Windows select emulation on pipes and sockets.
 
     The select_peeker thread, once created, is never destroyed.
+
     """
     select_peeker = None
     pipe_objects = []
@@ -102,8 +103,7 @@ def clewn_select(iwtd, owtd, ewtd, timeout, static_select=[]):
     if select_peeker is None and not pipe_objects:
         time.sleep(timeout)
     else:
-        asyncproc._clewn_select_event.wait(timeout)
-        asyncproc._clewn_select_event.clear()
+        asyncproc.Peek.select_event.isSet(timeout)
 
     # stop the select threads
     iwtd = []
@@ -115,6 +115,7 @@ def clewn_select(iwtd, owtd, ewtd, timeout, static_select=[]):
         asyncobj.peeker.stop_thread()
         if asyncobj.peeker.read_event:
             iwtd.append(asyncobj.socket.fileno())
+    asyncproc.Peek.select_event.clear()
 
     return iwtd, owtd, ewtd
 

@@ -29,9 +29,12 @@ import test.test_support as test_support
 
 import clewn.vim as vim
 
-SLEEP_TIME = '400m'
-if os.name == 'nt' or os.environ.has_key('CLEWN_PIPES'):
+if os.name == 'nt':
     SLEEP_TIME = '1400m'
+elif os.environ.has_key('CLEWN_PIPES'):
+    SLEEP_TIME = '600m'
+else:
+    SLEEP_TIME = '400m'
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
 TESTFN_FILE = test_support.TESTFN + '_file_'

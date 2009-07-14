@@ -1,7 +1,9 @@
 $Id$
 
-2009-07-11  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2009-07-14  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* asyncproc.py evtloop.py: Do not use threading.Event and improve
+	select emulation performance on linux.
 	* netbeans.py: Fix netbeans.remove_bug is a string, not a boolean.
 	* gdbmi.py: Fix content of gdbmi results within quotes must be
 	unquoted.

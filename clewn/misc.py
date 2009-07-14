@@ -33,11 +33,6 @@ import pprint
 
 from clewn import *
 
-try:
-    MAXFD = os.sysconf("SC_OPEN_MAX")
-except ValueError:
-    MAXFD = 256
-
 DOUBLEQUOTE = '"'
 QUOTED_STRING = r'"((?:\\"|[^"])+)"'
 NBDEBUG = 5
@@ -249,14 +244,6 @@ def unlink(filename):
     if filename and os.path.exists(filename):
         try:
             os.unlink(filename)
-        except OSError:
-            pass
-
-def close_fds():
-    """Close all file descriptors except stdin, stdout and stderr."""
-    for i in xrange(3, MAXFD):
-        try:
-            os.close(i)
         except OSError:
             pass
 

@@ -1,9 +1,10 @@
-July 5, 2009 - pyclewn 1.0
+July 14, 2009 - pyclewn 1.0
     Changes:
         Clean up the python debugger interface and use pydoc to document it.
         Replace the existing 'timer' method with a flexible job scheduling.
         Replace the `vimcmd` environment variable with the `EDITOR` environment
         variable.
+        Improve select emulation performance on linux by a factor of 2.
 
     Bug fix:
         Recent Fedora Core distributions are missing the Python standard
