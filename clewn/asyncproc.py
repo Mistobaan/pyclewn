@@ -43,47 +43,11 @@ import clewn.misc as misc
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('proc')
+Unused = warning
 Unused = debug
 
 # Peek thread states
 STS_STARTED, STS_STOPPED = range(2)
-
-class Event(object):
-    """An event is used to synchronize or to signal threads."""
-
-    def __init__(self):
-        """Constructor."""
-        self._semaphore = threading.Semaphore(value=0)
-
-    def isSet(self, timeout=0.0):
-        """Test wether the event has been notified.
-
-        Return True when the event has been notified.
-        Block until the event event has been notified or the timeout has
-        expired.
-
-        Method parameter:
-            timeout: float
-                timeout parameter
-
-        """
-        stop = time.time() + timeout
-        while True:
-            if self._semaphore.acquire(blocking=False):
-                return True
-            time.sleep(.001)
-            if not timeout or time.time() >= stop:
-                break
-        return False
-
-    def clear(self):
-        """Clear the event."""
-        while self._semaphore.acquire(blocking=False):
-            pass
-
-    def notify(self):
-        """Notify the event to a thread calling 'isSet'."""
-        self._semaphore.release()
 
 class FileWrapper(object):
     """Emulate a socket with a file descriptor or file object.
@@ -329,16 +293,16 @@ class Peek(threading.Thread):
 
     """
 
-    select_event = Event()
+    select_event = threading.Event()
 
     def __init__(self, name):
         """Constructor."""
         threading.Thread.__init__(self, name=name)
         self.state = STS_STOPPED
-        self.start_peeking = Event()
-        self.stop_peeking = Event()
-        self.have_started = Event()
-        self.have_stopped = Event()
+        self.start_peeking = threading.Event()
+        self.stop_peeking = threading.Event()
+        self.have_started = threading.Event()
+        self.have_stopped = threading.Event()
 
     def run(self):
         """The thread peeks the file object(s).
@@ -353,23 +317,20 @@ class Peek(threading.Thread):
         """
         info('thread started: %s', self)
         while self.isRunning():
-            try:
-                while self.isRunning() and not self.start_peeking.isSet():
-                    pass
-            finally:
-                self.have_started.notify()
+            self.wait_event('start_peeking')
+            self.have_started.set()
 
-            try:
-                while self.isRunning():
-                    if self.peek():
-                        self.select_event.notify()
-                        self.wait_event('stop_peeking')
+            while self.isRunning():
+                if self.peek():
+                    self.select_event.set()
+                    self.wait_event('stop_peeking')
+                    break
+                else:
+                    if self.stop_peeking.isSet():
+                        self.stop_peeking.clear()
                         break
-                    else:
-                        if self.stop_peeking.isSet():
-                            break
-            finally:
-                self.have_stopped.notify()
+                time.sleep(.001) # allow a thread context switch
+            self.have_stopped.set()
 
         # logger may be closed when terminating pyclewn
         if not isinstance(self, SelectPeek):
@@ -392,19 +353,15 @@ class Peek(threading.Thread):
     def wait_event(self, event_name):
         """Block forever waiting on 'event_name'."""
         event = getattr(self, event_name)
-        while self.isRunning():
-            # wait 10 seconds before reporting an error
-            if not event.isSet(10):
-                warning('no "%s" event sent to: %s', event_name, self)
-            else:
-                return
-        warning('"%s" event interrupted in: %s', event_name, self)
+        while self.isRunning() and not event.isSet():
+            event.wait(.010)
+        event.clear()
 
     def start_thread(self):
         """Called by clewn_select to start the thread."""
         if self.isAlive():
             # debug('ask the thread to start: %s', self)
-            self.start_peeking.notify()
+            self.start_peeking.set()
 
             # debug('wait until thread have_started: %s', self)
             self.wait_event('have_started')
@@ -418,7 +375,7 @@ class Peek(threading.Thread):
             return
         if self.isAlive():
             # debug('ask the thread to stop: %s', self)
-            self.stop_peeking.notify()
+            self.stop_peeking.set()
 
             # debug('wait until thread have_stopped: %s', self)
             self.wait_event('have_stopped')

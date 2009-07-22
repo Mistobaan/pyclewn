@@ -103,7 +103,7 @@ def clewn_select(iwtd, owtd, ewtd, timeout, static_select=[]):
     if select_peeker is None and not pipe_objects:
         time.sleep(timeout)
     else:
-        asyncproc.Peek.select_event.isSet(timeout)
+        asyncproc.Peek.select_event.wait(timeout)
 
     # stop the select threads
     iwtd = []
