@@ -1008,8 +1008,11 @@ class Gdb(debugger.Debugger, ProcessChannel):
         self.state = self.STATE_QUITTING
         self.sendintr()
         if self.gotprmpt and self.oob == None:
-            self.clicmd_notify('project %s' % self.project,
-                                    console=False, gdb=False)
+            if self.project:
+                self.clicmd_notify('project %s' % self.project,
+                                        console=False, gdb=False)
+            else:
+                self.clicmd_notify('dummy', console=False, gdb=False)
 
     def cmd_sigint(self, *args):
         """Send a <C-C> character to the debugger."""
