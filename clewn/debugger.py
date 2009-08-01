@@ -242,11 +242,10 @@ def restart_timer(timeout):
     """Decorator to re-schedule the method at 'timeout', after it has run."""
     def decorator(f):
         """The decorator."""
-        def _newf(*args, **kwargs):
+        def _newf(self, *args, **kwargs):
             """The decorated method."""
-            self = args[0]
             job = getattr(self, f.func_name)
-            ret = f(*args, **kwargs)
+            ret = f(self, *args, **kwargs)
             self.timer(job, timeout)
             return ret
         return _newf
@@ -306,6 +305,8 @@ class Debugger(object):
             The last balloonText event received.
         _prompt_str: str
             The prompt printed on the console.
+        _consbuffered: boolean
+            True when output to the vim debugger console is buffered
 
     """
 
@@ -329,6 +330,10 @@ class Debugger(object):
         self._jobs_enabled = False
         self._last_balloon = ''
         self._prompt_str = '(%s) ' % self.__class__.__name__.lower()
+        self._consbuffered = False
+
+        # schedule the first 'debugger_background_jobs' method
+        self.timer(self.debugger_background_jobs, LOOP_TIMEOUT)
 
     #-----------------------------------------------------------------------
     #   Overidden methods by the Debugger subclass.
@@ -561,7 +566,14 @@ class Debugger(object):
 
     def prompt(self):
         """Print the prompt in the Vim debugger console."""
+        # no buffering until the first prompt:
+        # workaround to a bug in netbeans/Vim that does not redraw the
+        # console on the first 'insert'
+        self._consbuffered = True
         self.console_print(self._prompt_str)
+        console = self.__nbsock.console
+        if self.started and console.buf.registered:
+            console.flush()
 
     def console_print(self, format, *args):
         """Print a format string and its arguments to the console.
@@ -576,7 +588,9 @@ class Debugger(object):
         """
         console = self.__nbsock.console
         if self.started and console.buf.registered:
-            console.eofprint(format, *args)
+            console.append(format, *args)
+            if not self._consbuffered:
+                console.flush()
 
     def timer(self, callme, delta):
         """Schedule the 'callme' job at 'delta' time from now.
@@ -616,6 +630,13 @@ class Debugger(object):
             self.console_print(
                 'Pyclewn version %s starting a new instance of %s.\n\n',
                         __version__, self.__class__.__name__.lower())
+
+    @restart_timer(LOOP_TIMEOUT)
+    def debugger_background_jobs(self):
+        """Flush the console buffer."""
+        console = self.__nbsock.console
+        if self.started and console.buf.registered and self._consbuffered:
+            console.flush(time.time())
 
     def _get_cmds(self):
         """Return the commands dictionary."""

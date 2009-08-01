@@ -571,8 +571,8 @@ class Gdb(debugger.Debugger, ProcessChannel):
         self.foldlnum = None
         self.parse_paramlist(self.options.gdb_parameters)
 
-        # schedule the first 'run_job' method
-        self.timer(self.run_job, debugger.LOOP_TIMEOUT)
+        # schedule the first 'gdb_background_jobs' method
+        self.timer(self.gdb_background_jobs, debugger.LOOP_TIMEOUT)
 
     def parse_paramlist(self, parameters):
         """Process the class parameter list."""
@@ -655,7 +655,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
             debugger.Debugger.prompt(self)
 
     @debugger.restart_timer(debugger.LOOP_TIMEOUT)
-    def run_job(self):
+    def gdb_background_jobs(self):
         """Run a scheduled job on a timer event.
 
         Set all breakpoints on a multiple choice after a timeout.

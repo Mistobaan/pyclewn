@@ -21,6 +21,7 @@
 """The netbeans protocol implementation."""
 
 import sys
+import time
 import os.path
 import logging
 import re
@@ -183,6 +184,9 @@ class ClewnBuffer(object):
             the netbeans asynchat socket
         visible: boolean
             when True, the buffer is displayed in a Vim window
+        editing: boolean
+            when True, the buffer is being edited with netbeans
+            'insert' or 'remove' functions
         nonempty_last: boolean
             when True, the last line in the vim buffer is non empty
         len: int
@@ -200,6 +204,7 @@ class ClewnBuffer(object):
         self.buf.editport = self
         self.nbsock = nbsock
         self.visible = False
+        self.editing = False
         self.nonempty_last = False
         self.len = 0
         self.dirty = False
@@ -210,17 +215,35 @@ class ClewnBuffer(object):
         self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
         self.buf.registered = True
 
-    def append(self, msg):
+    def send_function(self, function, args):
+        """Send a netbeans function."""
+        nbsock = self.nbsock
+        if not self.editing and function in ('insert', 'remove'):
+            nbsock.send_cmd(None, 'startAtomic')
+            nbsock.send_cmd(self.buf, 'setReadOnly', 'F')
+            self.editing = True
+        nbsock.send_function(self.buf, function, args)
+
+    def terminate_editing(self):
+        """Terminate editing a ClewnBuffer."""
+        if self.editing:
+            nbsock = self.nbsock
+            nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
+            nbsock.goto_last()
+            nbsock.send_cmd(None, 'endAtomic')
+            self.editing = False
+
+    def append(self, msg, *args):
         """Append text to the end of the editport."""
         if not self.buf.registered:
             return
         if self.nonempty_last:
             self.nonempty_last = False
             self.len -= 1
-        self.nbsock.send_cmd(self.buf, 'setReadOnly', 'F')
-        self.nbsock.send_function(self.buf, 'insert',
-                                    '%s %s' % (str(self.len), misc.quote(msg)))
-        self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
+        if args:
+            msg = msg % args
+        self.send_function('insert', '%s %s' % (str(self.len), misc.quote(msg)))
+
         if not msg.endswith('\n'):
             self.nonempty_last = True
             self.len += 1
@@ -229,6 +252,7 @@ class ClewnBuffer(object):
         # show the last line if the buffer is displayed in a Vim window
         if self.visible:
             self.nbsock.send_cmd(self.buf, 'setDot', str(self.len - 1))
+        self.terminate_editing()
 
     def update(self, content):
         """Update the buffer content in Vim."""
@@ -245,15 +269,12 @@ class ClewnBuffer(object):
         It is Ok with a more recent vim version.
 
         """
-        send_function = self.nbsock.send_function
+        send_function = self.send_function
         if self.nbsock.remove_bug == '0':
-            send_function(self.buf, 'insert',
-                            '%s %s' % (str(offset), misc.quote('\n')))
-            send_function(self.buf, 'remove',
-                            '%s %s' % (str(offset), str(count + 1)))
+            send_function('insert', '%s %s' % (str(offset), misc.quote('\n')))
+            send_function('remove', '%s %s' % (str(offset), str(count + 1)))
         else:
-            send_function(self.buf, 'remove',
-                            '%s %s' % (str(offset), str(count)))
+            send_function('remove', '%s %s' % (str(offset), str(count)))
 
     def clear(self, count=-1):
         """Clear the ClewnBuffer instance.
@@ -270,25 +291,14 @@ class ClewnBuffer(object):
         assert 0 <= count <= self.len
         if count:
             if self.buf.registered:
-                self.nbsock.send_cmd(self.buf, 'setReadOnly', 'F')
                 self.remove(0, count)
-                self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
             self.len -= count
             if self.len == 0:
                 self.nonempty_last = False
             elif self.visible:
                 self.nbsock.send_cmd(self.buf, 'setDot', str(self.len - 1))
+            self.terminate_editing()
             info('%s length: %d bytes', self.buf.name, self.len)
-
-    def eofprint(self, msg, *args):
-        """Print at end of buffer and restore previous cursor position."""
-        self.nbsock.send_cmd(None, 'startAtomic')
-        if args:
-            msg = msg % args
-        self.append(msg)
-
-        self.nbsock.goto_last()
-        self.nbsock.send_cmd(None, 'endAtomic')
 
 class Console(ClewnBuffer):
     """The clewn console.
@@ -296,6 +306,10 @@ class Console(ClewnBuffer):
     Instance attributes:
         line_cluster: LineCluster
             the object handling the Console maximum number of lines
+        buffer: str
+            the buffered console output
+        time: float
+            last time data was added to the buffer
 
     """
 
@@ -304,11 +318,31 @@ class Console(ClewnBuffer):
         ClewnBuffer.__init__(self, CONSOLE, nbsock)
         self.visible = True
         self.line_cluster = LineCluster(10, self.nbsock.max_lines / 10)
+        self.buffer = ''
+        self.time = time.time()
+        self.count = 0
 
-    def append(self, msg):
-        """Append text to the end of the editport."""
-        ClewnBuffer.append(self, msg)
-        self.clear(self.line_cluster.append(msg))
+    def append(self, msg, *args):
+        """Add a formatted string to the buffer."""
+        if args:
+            msg = msg % args
+        self.count += self.line_cluster.append(msg)
+        self.buffer += msg
+        self.time = time.time()
+
+    def flush(self, now=None):
+        """Flush the buffer to Vim.
+
+        When 'now' is None, flush the buffer unconditionally, otherwise flush it
+        after a timeout.
+
+        """
+        if self.buffer and (now is None or now - self.time > 0.500):
+            ClewnBuffer.append(self, self.buffer)
+            self.buffer = ''
+            if self.count:
+                self.clear(self.count)
+                self.count = 0
 
 class DebuggerVarBuffer(ClewnBuffer):
     """The debugger variable buffer.
@@ -327,8 +361,10 @@ class DebuggerVarBuffer(ClewnBuffer):
         self.linelist = []
         self.differ = difflib.Differ()
 
-    def append(self, msg):
+    def append(self, msg, *args):
         """Append 'msg' to the end of the buffer."""
+        if args:
+            msg = msg % args
         assert msg.endswith('\n')
         ClewnBuffer.append(self, msg)
         self.linelist.extend(msg.splitlines(1))
@@ -345,10 +381,8 @@ class DebuggerVarBuffer(ClewnBuffer):
             return
 
         offset = 0
-        readonly = True
         newlist = content.splitlines(1)
-        send_cmd = self.nbsock.send_cmd
-        send_function = self.nbsock.send_function
+        send_function = self.send_function
         try:
             for line in self.differ.compare(self.linelist, newlist):
                 assert len(line) > 2
@@ -356,20 +390,12 @@ class DebuggerVarBuffer(ClewnBuffer):
                 if line.startswith('  '):
                     offset += len(line) - 2
                 elif line.startswith('+ '):
-                    if readonly:
-                        send_cmd(None, 'startAtomic')
-                        send_cmd(self.buf, 'setReadOnly', 'F')
-                        readonly = False
                     delta = len(line) - 2
-
-                    send_function(self.buf, 'insert',
+                    send_function('insert',
                             '%s %s' % (str(offset), misc.quote(line[2:])))
                     self.len += delta
                     offset += delta
                 elif line.startswith('- '):
-                    if readonly:
-                        send_cmd(self.buf, 'setReadOnly', 'F')
-                        readonly = False
                     delta = len(line) - 2
                     self.remove(offset, delta)
                     self.len -= delta
@@ -378,10 +404,7 @@ class DebuggerVarBuffer(ClewnBuffer):
                 else:
                     assert False, "line not prefixed by the differ instance"
         finally:
-            if not readonly:
-                send_cmd(self.buf, 'setReadOnly', 'T')
-                self.nbsock.goto_last()
-                send_cmd(None, 'endAtomic')
+            self.terminate_editing()
 
         self.linelist = newlist
 

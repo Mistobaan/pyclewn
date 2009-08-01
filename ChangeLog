@@ -1,7 +1,9 @@
 $Id$
 
-2009-07-25  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2009-08-01  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* netbeans.py debugger.py gdb.py: Minimize Vim screen redraws when
+	updating the debugger console window.
 	* gdb.py: On quitting, do not query some gdb info when no project
 	file is defined.
 	* asyncproc.py evtloop.py: Do use threading.Event, the low performance
