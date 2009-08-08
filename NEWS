@@ -15,6 +15,9 @@ Changes
   variable.
 * Improve select emulation performance on linux by a factor of 2.
 * Minimize Vim screen redraws when updating the debugger console window.
+* The pyclewn sourceforge web site is now created with `sphinx
+  <http://sphinx.pocoo.org/>`_ using `reStructuredText
+  <http://docutils.sf.net/rst.html>`_ markup.
 
 Bug fixes
 ^^^^^^^^^
