@@ -1,0 +1,44 @@
+{% extends "!layout.html" %}
+
+{% block header %}
+<div style="background-color: white; padding: 0px 10px 0px 15px">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<COLGROUP span="1" width="1*">
+<COLGROUP span="3" width="0*">
+<tr>
+  <td  align="left">
+    <img src="{{ pathto("_static/pyclewn.png", 1) }}" align="left" alt="Pyclewn"/>
+  </td>
+  <td>
+    <a href="http://www.vim.org"><img src="{{ pathto("_static/vim.png", 1) }}" alt="Vim logo"/></a>
+  </td>
+  <td>
+    <a href="http://www.gnu.org/software/gdb/gdb.html"><img src="{{ pathto("_static/gdb.png", 1) }}" alt="gdb logo"/></a>
+  </td>
+  <td>
+    <a href="http://www.python.org"><img src="{{ pathto("_static/python-powered-h-50x65.png", 1) }}" alt="python logo"/></a>
+  </td>
+</tr>
+</table>
+</div>
+{% endblock %}
+
+{% block rootrellink %}
+    <li><a href="{{ pathto('index') }}">home</a>&nbsp;|&nbsp;</li>
+    <li><a href="{{ pathto('news') }}">news</a>&nbsp;|&nbsp;</li>
+    <li><a href="{{ pathto('install') }}">install</a>&nbsp;|&nbsp;</li>
+    <li><a href="{{ pathto('faq') }}">faq</a>&nbsp;|&nbsp;</li>
+    <li><a href="{{ pathto('_static/pyclewn') }}">documentation</a>&nbsp;|&nbsp;</li>
+    <li><a href="http://sourceforge.net/project/screenshots.php?group_id=212808">screenshots</a></li>
+{% endblock %}
+
+{% if pagename == "index" %}
+  {% set display_toc = "" %}
+  {% set show_source = "" %}
+  {% set title = "Home" %}
+  {# no 'next' in the relbar #}
+  {% set rellinks = "" %}
+{% endif %}
+{% set prev = "" %}
+{% set next = "" %}
+
