@@ -26,7 +26,7 @@ setup script to install pyclewn::
 
     tar xzf pyclewn-0.7.tar.gz
     cd pyclewn-0.7
-    python setup.py install
+    python setup.py install --force
 
 You can now use the ``:help pyclewn`` command within vim, to get access to the
 documentation.
@@ -45,7 +45,7 @@ Pyclewn binaries
 Local installation of the pyclewn binaries is done using the distutils ``home
 scheme`` as follows (pyclewn is installed in $HOME/bin)::
 
-    python setup.py install --home=$HOME
+    python setup.py install --force --home=$HOME
 
 Vim runtime files
 ^^^^^^^^^^^^^^^^^
@@ -54,7 +54,7 @@ Local installation of the runtime file is done by setting the ``vimdir``
 environment variable set to your personal vim runtime directory during
 installation::
 
-    vimdir=$HOME/.vim python setup.py install
+    vimdir=$HOME/.vim python setup.py install --force
 
 Both binaries and runtime
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -62,7 +62,7 @@ Both binaries and runtime
 Local installation of the pyclewn binaries and the runtime file is done with
 the command::
 
-    vimdir=$HOME/.vim python setup.py install --home=$HOME
+    vimdir=$HOME/.vim python setup.py install --force --home=$HOME
 
 Install on Windows
 ------------------

@@ -1,7 +1,9 @@
 $Id$
 
-2009-08-01  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2009-08-12  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* setup.py: Fix a 'debugger' name conflict in the installation over a
+	previous version 0.7.
 	* netbeans.py debugger.py gdb.py: Minimize Vim screen redraws when
 	updating the debugger console window.
 	* gdb.py: On quitting, do not query some gdb info when no project

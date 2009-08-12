@@ -3,6 +3,7 @@
 
 import sys
 import os
+import os.path
 import string
 import re
 import __builtin__
@@ -77,6 +78,11 @@ class install(_install):
     def run(self):
         global pythonpath
         pythonpath = self.install_purelib
+        # rename the 'debugger' directory present in old versions
+        debugger_dir = os.path.join(pythonpath, 'clewn', 'debugger')
+        if os.path.isdir(debugger_dir):
+            print >> sys.stderr, 'renaming the debugger directory'
+            os.rename(debugger_dir, debugger_dir + '.orig')
 
         pyclewn_install.vim_features()
         _install.run(self)
