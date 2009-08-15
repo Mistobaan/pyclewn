@@ -126,8 +126,9 @@ endfunction
 """
 
 FUNCTION_SPLIT = """
-" Split a window and return to the initial window
-"   location may be: 'top' (default), 'bottom', 'left' or 'right'
+" Split a window and return to the initial window,
+" if 'location' is not ''
+"   'location' may be: '', 'top', 'bottom', 'left' or 'right'
 function s:split(bufname, location)
     let nr = 1
     let split = "split"
@@ -150,7 +151,9 @@ function s:split(bufname, location)
         else
             let prevbuf_winnr = prevbuf_winnr + 1
 	endif
-	exe nr . "wincmd w"
+	if a:location != ""
+	    exe nr . "wincmd w"
+	endif
     endif
     exe &previewheight . split . " " . a:bufname
     let &splitright = spr
@@ -161,18 +164,18 @@ endfunc
 """
 
 FUNCTION_CONSOLE = """
-" Split a window and display the console with previewheight.
-function s:console(console_name)
+" Split a window and display a buffer with previewheight.
+function s:winsplit(bufname, location)
     " The console window does not exist
-    if bufwinnr(a:console_name) == -1
-        call s:split(a:console_name, "${location}")
+    if bufwinnr(a:bufname) == -1
+        call s:split(a:bufname, a:location)
     " Split the console window (when the only window)
     " this is required to prevent Vim display toggling between
     " clewn console and the last buffer where the cursor was
     " positionned (clewn does not know that this buffer is not
     " anymore displayed)
-    elseif winnr("$$") == 1
-        call s:split("", "${location}")
+    elseif winnr("$") == 1
+        call s:split("", a:location)
     endif
 endfunction
 
@@ -206,13 +209,20 @@ function s:nbcommand(...)
                 call inputrestore()
                 echohl None
             endif
-            call s:console("${console}")
+            call s:winsplit("${console}", "${location}")
+            ${split_dbgvar_buf}
             let cmd = "nbkey " . join(a:000, ' ')
             exe cmd
         endif
     endif
 endfunction
 
+"""
+
+SPLIT_DBGVAR_BUF = """
+            if a:1 == "dbgvar"
+                call s:winsplit("${dbgvar_buf}", "")
+            endif
 """
 
 # set the logging methods
@@ -673,14 +683,15 @@ class Debugger(object):
 
             # popup gdb console on pyclewn mapped keys
             f.write(string.Template(
-                'cnoremap nbkey call <SID>console("${console}") <Bar> nbkey'
-                ).substitute(console=netbeans.CONSOLE))
+                'cnoremap nbkey call <SID>winsplit'
+                '("${console}", "${location}") <Bar> nbkey'
+                ).substitute(console=netbeans.CONSOLE,
+                            location=options.location))
 
             # utility vim functions
             f.write(FUNCTION_BUFLIST)
             f.write(FUNCTION_SPLIT)
-            f.write(string.Template(FUNCTION_CONSOLE).substitute(
-                                                location=options.location))
+            f.write(FUNCTION_CONSOLE)
 
             # unmapkeys script
             f.write('function s:unmapkeys()\n')
@@ -689,8 +700,14 @@ class Debugger(object):
             f.write('endfunction\n')
 
             # setup pyclewn vim user defined commands
+            split_dbgvar_buf = ''
+            if self.__nbsock.getLength_bug != '0':
+                split_dbgvar_buf = string.Template(SPLIT_DBGVAR_BUF).substitute(
+                                        dbgvar_buf=netbeans.VARIABLES_BUFFER)
             f.write(string.Template(FUNCTION_NBCOMMAND).substitute(
-                                                    console=netbeans.CONSOLE))
+                                        console=netbeans.CONSOLE,
+                                        location=options.location,
+                                        split_dbgvar_buf=split_dbgvar_buf))
             noCompletion = string.Template('command -bar -nargs=* ${pre}${cmd} '
                                     'call s:nbcommand("${cmd}", <f-args>)\n')
             fileCompletion = string.Template('command -bar -nargs=* '

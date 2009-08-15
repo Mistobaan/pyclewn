@@ -407,7 +407,7 @@ class GdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':Cdelvar var1.value\n'
             ':sleep ${time}\n'
-            ":edit (clewn)_dbgvar | 1,$$w!  ${test_out}\n"
+            ":buffer (clewn)_dbgvar | 1,$$w!  ${test_out}\n"
             ':qa!\n',
 
             "[-] var1: (map_t) map ={=} {...}\n"

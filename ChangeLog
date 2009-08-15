@@ -1,7 +1,9 @@
 $Id$
 
-2009-08-12  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2009-08-15  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* vim.py netbeans.py debugger.py: Split the current Vim window and
+	display the variables window after running the ``Cdbgvar`` command.
 	* setup.py: Fix a 'debugger' name conflict in the installation over a
 	previous version 0.7.
 	* netbeans.py debugger.py gdb.py: Minimize Vim screen redraws when

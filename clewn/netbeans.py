@@ -193,6 +193,8 @@ class ClewnBuffer(object):
             buffer length
         dirty: boolean
             when True, must update the vim buffer
+        getLength_count: int
+            count of netbeans 'getLength' functions without a reply
 
     """
 
@@ -208,6 +210,7 @@ class ClewnBuffer(object):
         self.nonempty_last = False
         self.len = 0
         self.dirty = False
+        self.getLength_count = 0
 
     def register(self):
         """Register the buffer with netbeans vim."""
@@ -466,6 +469,13 @@ removeReply = insertReply
 class getLengthReply(Reply):
     """Check the reply to a getLength function."""
 
+    def __init__(self, buf, seqno, nbsock):
+        """Constructor."""
+        Reply.__init__(self, buf, seqno, nbsock)
+        clewnbuffer = buf.editport
+        assert clewnbuffer is not None
+        clewnbuffer.getLength_count += 1
+
     def __call__(self, seqno, nbstring, arg_list):
         """Check the length of the Vim buffer."""
         unused = nbstring
@@ -476,12 +486,15 @@ class getLengthReply(Reply):
         assert clewnbuffer is not None
         assert len(arg_list) == 1
         length = int(arg_list[0])
+        clewnbuffer.getLength_count -= 1
         if clewnbuffer.len != length:
-            err= '%s: invalid buffer length.\n'     \
-                 '(pyclewn:%d - vim: %d)' %         \
-                 (self.buf.name, clewnbuffer.len, length)
-            clewnbuffer.len = length
-            self.clear_onerror(err)
+            err= ('%s: invalid buffer length (pyclewn:%d - vim: %d)'
+                        % (self.buf.name, clewnbuffer.len, length))
+            if clewnbuffer.getLength_count == 0:
+                clewnbuffer.len = length
+                self.clear_onerror(err)
+            else:
+                debug('ignoring: %s', err)
 
 class Server(asyncore.dispatcher):
     """Accept a connection on the netbeans port
@@ -575,6 +588,8 @@ class Netbeans(asynchat.async_chat, object):
             server socket listening on the netbeans port
         remove_bug: str
             '0' with vim 7.1 before patch 207
+        getLength_bug: str
+            '0' with vim 7.2 before patch 245
         max_lines: int
             Console maximum number of lines
 
@@ -599,6 +614,7 @@ class Netbeans(asynchat.async_chat, object):
         self.seqno = 0
         self.last_seqno = 0
         self.remove_bug = '0'
+        self.getLength_bug = '0'
         self.max_lines = CONSOLE_MAXLINES
 
         self.server = Server(self)
@@ -927,6 +943,17 @@ class Netbeans(asynchat.async_chat, object):
 
         self.send_request('%d:%s/%d%s%s\n', buf, function, args)
 
+        # Due to the asynchronous exchanges between pyclewn and Vim, the reply
+        # to a nebeans 'getLength' function may arrive after the call to an
+        # 'insert' or 'remove' netbeans function. In that case the length
+        # reported by Vim is outdated. The workaround is to force a new
+        # 'getLength' after insert/remove (in that case only), and to ignore
+        # nested 'getLength' replies (all replies except the last one).
+        if function == 'insert' or function == 'remove':
+            clewnbuffer = buf.editport
+            if clewnbuffer is not None and clewnbuffer.getLength_count != 0:
+                self.send_function(buf, 'getLength')
+
     def send_request(self, fmt, buf, request, args):
         """Send a netbeans function or command."""
         self.seqno += 1
@@ -956,9 +983,10 @@ class Netbeans(asynchat.async_chat, object):
         """Return the string representation."""
         status = ''
         if self.ready:
-            status = 'ready, netbeans version "%s"'                         \
-                     ' (vim "netbeans remove function" bug: "%s"), remote ' \
-                     % (self.nbversion, self.remove_bug)
+            status = 'ready, netbeans version "%s"'                     \
+                     ' (vim "netbeans remove function" bug: "%s",'      \
+                     ' vim "netbeans getLength" bug: "%s"), remote '       \
+                     % (self.nbversion, self.remove_bug, self.getLength_bug)
         elif not self.connected and self.addr:
             status = 'listening to '
         elif self.connected:

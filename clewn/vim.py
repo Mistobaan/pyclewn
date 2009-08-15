@@ -175,7 +175,9 @@ class Vim(object):
     def vim_version(self):
         """Check Vim version."""
         # test if Vim contains the netbeans 'remove' bug
+        # test if Vim contains the netbeans 'getLength' bug
         cmds = ['echo v:version > 701 || v:version == 701 && has("patch207")',
+                'echo v:version > 702 || v:version == 702 && has("patch245")',
                 'echo v:version',
                 'runtime pyclewn.vim',
                 'if exists("g:pyclewn_version")'
@@ -186,10 +188,14 @@ class Vim(object):
         output = [x.strip('\r') for x in output]
         length = len(output)
         version = ''
-        if length == 3:
-            self.netbeans.remove_bug, vimver, version = output
-        elif length == 2:
-            self.netbeans.remove_bug, vimver = output
+        if length == 4:
+            (self.netbeans.remove_bug,
+             self.netbeans.getLength_bug,
+             vimver, version) = output
+        elif length == 3:
+            (self.netbeans.remove_bug,
+             self.netbeans.getLength_bug,
+             vimver) = output
         else:
             critical('output of %s: %s', cmds, output)
             sys.exit(1)
