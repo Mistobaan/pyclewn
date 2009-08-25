@@ -17,7 +17,6 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id$
 
 """Low level module providing async_chat process communication and the use of
 pipes for communicating with the forked process.

@@ -2,7 +2,6 @@
 " Language:	debugger variables window syntax file
 " Maintainer:	<xdegaye at users dot sourceforge dot net>
 " Last Change:	Oct 8 2007
-" $Id: dbgvar.vim 173 2007-10-16 18:56:57Z xavier $
 
 if exists("b:current_syntax")
     finish

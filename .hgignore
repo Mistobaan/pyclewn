@@ -1,0 +1,13 @@
+syntax: glob
+
+*.orig
+*.pyc
+*.swp
+clewn/__version__.py
+runtime/.pyclewn_keys.gdb
+runtime/.pyclewn_keys.simple
+testsuite/foobar
+testsuite/overloaded
+MANIFEST
+logfile
+

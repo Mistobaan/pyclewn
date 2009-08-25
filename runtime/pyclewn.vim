@@ -3,7 +3,6 @@
 "
 " Configure VIM to be used with pyclewn and netBeans
 "
-" $Id$
 
 if exists("b:did_pyclewn")
     finish

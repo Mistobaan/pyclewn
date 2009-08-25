@@ -17,7 +17,6 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id$
 
 """
 A Vim instance starts a Debugger instance and dispatches the netbeans messages
@@ -441,7 +440,7 @@ class Vim(object):
                     if self.options.daemon:
                         daemonize()
                     info('pyclewn version %s and the %s debugger',
-                        __version__ + __svn__, self.clazz.__name__)
+                        __version__, self.clazz.__name__)
 
             # instantiate a new debugger
             elif self.debugger.closed and self.netbeans.connected:

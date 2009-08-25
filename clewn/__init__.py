@@ -17,18 +17,19 @@
 # Free Software Foundation, Inc.,
 # 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
 #
-# $Id$
 
 """The clewn package.
 
 """
 import sys
+try:
+    import clewn.__version__
+    __version__ = clewn.__version__.version
+except ImportError:
+    __version__ = 'unknown'
 
-__all__ = ['__version__', '__svn__', 'ClewnError']
-
-__version__ = '0.7'
-__svn__ = '.' + '$Revision$'.strip('$').split()[1]
-Unused = __svn__
+__all__ = ['__version__', 'ClewnError']
+Unused = __version__
 
 class ClewnError(Exception):
     """Base class for pyclewn exceptions."""
