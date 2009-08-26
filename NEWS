@@ -4,7 +4,7 @@ News
 Pyclewn 1.0
 -----------
 
-.. August 15, 2009
+.. August 26, 2009
 
 New features
 ^^^^^^^^^^^^
@@ -26,6 +26,7 @@ Changes
 * The pyclewn sourceforge web site is now created with `sphinx
   <http://sphinx.pocoo.org/>`_ using `reStructuredText
   <http://docutils.sf.net/rst.html>`_ markup.
+* Switch from Subversion to Mercurial as pyclewn Source Code Management (SCM).
 
 Bug fixes
 ^^^^^^^^^

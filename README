@@ -105,7 +105,7 @@ The following table lists the differences between
    news
    install
    faq
-   svn
+   mercurial
 
 .. vim:filetype=rst:tw=78:ts=8:et:
 
