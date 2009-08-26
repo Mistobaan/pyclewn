@@ -638,7 +638,7 @@ class Debugger(object):
             self.started = True
             self.console_print(
                 'Pyclewn version %s starting a new instance of %s.\n\n',
-                        __version__, self.__class__.__name__.lower())
+                        __tag__, self.__class__.__name__.lower())
 
     @restart_timer(LOOP_TIMEOUT)
     def debugger_background_jobs(self):

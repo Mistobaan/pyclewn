@@ -201,7 +201,7 @@ class Vim(object):
         info('Vim version: %s', vimver)
 
         # check pyclewn version
-        pyclewn_version = 'pyclewn-' + __version__
+        pyclewn_version = 'pyclewn-' + __tag__
         if version != pyclewn_version:
             critical('pyclewn.vim version does not match pyclewn\'s:\n'\
                         '\t\tpyclewn version: "%s"\n'\
@@ -309,7 +309,7 @@ class Vim(object):
         editor = os.environ.get('EDITOR', 'gvim')
         formatter = optparse.IndentedHelpFormatter(max_help_position=30)
         parser = optparse.OptionParser(
-                        version='%prog ' + __version__,
+                        version='%prog ' + __tag__,
                         usage='usage: python %prog [options]',
                         formatter=formatter)
 
@@ -439,8 +439,11 @@ class Vim(object):
                     # print on the console
                     if self.options.daemon:
                         daemonize()
+                    version = __tag__
+                    if __changeset__:
+                        version += '.' + __changeset__
                     info('pyclewn version %s and the %s debugger',
-                        __version__, self.clazz.__name__)
+                                        version, self.clazz.__name__)
 
             # instantiate a new debugger
             elif self.debugger.closed and self.netbeans.connected:

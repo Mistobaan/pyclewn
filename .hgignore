@@ -11,3 +11,7 @@ testsuite/overloaded
 MANIFEST
 logfile
 
+syntax: regexp
+
+^dist\/.*$
+

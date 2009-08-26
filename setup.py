@@ -92,7 +92,7 @@ def update_version(filename):
     content = []
     f = open(filename, 'r+')
     for line in f:
-        line = re_version.sub(r'\g<name>' + __version__, line)
+        line = re_version.sub(r'\g<name>' + __tag__, line)
         content.append(line)
     f.seek(0)
     f.writelines(content)
@@ -198,7 +198,7 @@ core.setup(
 
     # meta-data
     name='pyclewn',
-    version=__version__,
+    version=__tag__,
     description='Pyclewn allows using Vim as a front end to a debugger.',
     long_description=LONG_DESCRIPTION,
     platforms='all',

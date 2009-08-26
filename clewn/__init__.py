@@ -24,12 +24,15 @@
 import sys
 try:
     import clewn.__version__
-    __version__ = clewn.__version__.version
+    __tag__ = clewn.__version__.tag
+    __changeset__ = clewn.__version__.changeset
 except ImportError:
-    __version__ = 'unknown'
+    __tag__ = 'unknown'
+    __changeset__ = ''
 
-__all__ = ['__version__', 'ClewnError']
-Unused = __version__
+__all__ = ['__tag__', '__changeset__', 'ClewnError']
+Unused = __tag__
+Unused = __changeset__
 
 class ClewnError(Exception):
     """Base class for pyclewn exceptions."""
