@@ -17,9 +17,9 @@ The following command will clone pyclewn repository in a local directory named
 
         $ hg clone http://pyclewn.hg.sourceforge.net/hgweb/pyclewn/pyclewn
 
-A commit hook must be setup to update the ``clewn/__version__.py`` file after
-each commit or update. To setup the hook, add the following lines to your
-``.hg/hgrc`` file, and run the ``hg update`` command::
+A version hook must be setup to update the ``clewn/__version__.py`` file after
+each commit or update. To setup the hook, add the following lines to the
+repository ``.hg/hgrc`` file, and run the ``hg update`` command::
 
     [hooks]
     commit.version = /bin/sh -c "`hg root`/version-hook.py commit clewn/__version__.py"

@@ -11,7 +11,7 @@ New features
 
 * Split the current Vim window and display the variables window after running
   the ``Cdbgvar`` command. This feature is enabled when the running Vim
-  version is above 7.2.245 (Vim 7.2 with patch 245).
+  version is above 7.2.253 (Vim 7.2 with patch 253).
 
 
 Changes

@@ -176,7 +176,7 @@ class Vim(object):
         # test if Vim contains the netbeans 'remove' bug
         # test if Vim contains the netbeans 'getLength' bug
         cmds = ['echo v:version > 701 || v:version == 701 && has("patch207")',
-                'echo v:version > 702 || v:version == 702 && has("patch245")',
+                'echo v:version > 702 || v:version == 702 && has("patch253")',
                 'echo v:version',
                 'runtime pyclewn.vim',
                 'if exists("g:pyclewn_version")'

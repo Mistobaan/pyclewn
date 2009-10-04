@@ -588,7 +588,7 @@ class Netbeans(asynchat.async_chat, object):
         remove_bug: str
             '0' with vim 7.1 before patch 207
         getLength_bug: str
-            '0' with vim 7.2 before patch 245
+            '0' with vim 7.2 before patch 253
         max_lines: int
             Console maximum number of lines
 

@@ -92,7 +92,6 @@ def clewn_select(iwtd, owtd, ewtd, timeout, static_select=[]):
             static_select[0] = asyncproc.SelectPeek(fdmap)
         select_peeker = static_select[0]
         if not select_peeker.isAlive():
-            select_peeker = static_select[0]
             select_peeker.start()
 
         select_peeker.set_waitable(iwtd, owtd, ewtd)
