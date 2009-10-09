@@ -1,5 +1,10 @@
 $Id$
 
+2009-10-09  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* gdb.py: Fix crash when running without a console.
+
+===============================================================================
 2009-04-04  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* setup.py: Fix test suite does not run with python2.6. Test suite

@@ -1,3 +1,8 @@
+October 9, 2009 - pyclewn 0.7.1
+    Bug fix:
+        Fix crash when running without a console after starting from the menu
+        of a X11 window manager.
+
 April 4, 2009 - pyclewn 0.7
     Changes:
         Pyclewn falls back to pipes when a pseudo tty cannot be setup with gdb.
