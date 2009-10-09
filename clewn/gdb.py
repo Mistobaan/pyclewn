@@ -241,10 +241,15 @@ def gdb_version(pgm):
     # (gdb does the same on forking the debuggee)
     if hasattr(os, 'ttyname'):
         try:
-            f = open(os.ttyname(0), 'rw')
-            f.close()
-        except IOError, err:
-            raise ClewnError("Gdb cannot open the terminal: %s" % err)
+            ttyname = os.ttyname(0)
+        except OSError, err:
+            info('No terminal associated with stdin: %s', err)
+        else:
+            try:
+                f = open(ttyname, 'rw')
+                f.close()
+            except IOError, err:
+                raise ClewnError("Gdb cannot open the terminal: %s" % err)
 
     version = None
     header = gdb_batch(pgm, 'show version')

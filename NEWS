@@ -4,7 +4,7 @@ News
 Pyclewn 1.0
 -----------
 
-.. August 26, 2009
+.. October 9, 2009
 
 New features
 ^^^^^^^^^^^^
@@ -31,6 +31,8 @@ Changes
 Bug fixes
 ^^^^^^^^^
 
+* Fix crash when running without a console after starting from the menu of a
+  X11 window manager.
 * Recent Fedora Core distributions are missing the Python standard library
   ``test.regrtest`` module. Warn that the regression test suite cannot be run
   on these platforms and continue the installation.

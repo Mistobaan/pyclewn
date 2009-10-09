@@ -1,6 +1,7 @@
 
-2009-08-15  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2009-10-09  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* gdb.py: Fix crash when running without a console.
 	* vim.py netbeans.py debugger.py: Split the current Vim window and
 	display the variables window after running the ``Cdbgvar`` command.
 	* setup.py: Fix a 'debugger' name conflict in the installation over a
