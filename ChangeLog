@@ -1,6 +1,8 @@
 
 2009-10-09  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* gdbmi.py misc.py: Fix watched array elements are displayed in
+	lexicographical order instead of numeric order.
 	* gdb.py: Fix crash when running without a console.
 	* vim.py netbeans.py debugger.py: Split the current Vim window and
 	display the variables window after running the ``Cdbgvar`` command.

@@ -29,6 +29,7 @@ import logging
 import subprocess
 import atexit
 import pprint
+import itertools
 
 from clewn import *
 
@@ -46,6 +47,7 @@ RE_UNESCAPE = r'\\["ntr\\]'                                     \
               r'# RE: escaped characters in a quoted string'
 Unused = NBDEBUG
 Unused = LOG_LEVELS
+MISSING = object()
 
 # compile regexps
 re_quoted = re.compile(QUOTED_STRING, re.VERBOSE)
@@ -328,6 +330,123 @@ class Singleton(object):
     def init(self, *args, **kwds):
         """Override in subclass."""
         pass
+
+class OrderedDict(dict):
+    """An ordered dictionary.
+
+    Ordered dictionaries are just like regular dictionaries but they
+    remember the order that items were inserted. When iterating over an
+    ordered dictionary, the items are returned in the order their keys were
+    first added.
+    """
+
+    def __init__(self, *args, **kwds):
+        """Constructor."""
+        if len(args) > 1:
+            raise TypeError('expected at most 1 arguments, got %d' % len(args))
+        if not hasattr(self, '_keys'):
+            self._keys = []
+        self.update(*args, **kwds)
+
+    def clear(self):
+        """Remove all items."""
+        del self._keys[:]
+        dict.clear(self)
+
+    def update(self, other=None, **kwargs):
+        """Update and overwrite key/value pairs."""
+        # make progressively weaker assumptions about "other"
+        if other is None:
+            pass
+        elif hasattr(other, 'iteritems'):
+            for k, v in other.iteritems():
+                self[k] = v
+        elif hasattr(other, 'keys'):
+            for k in other.keys():
+                self[k] = other[k]
+        else:
+            for k, v in other:
+                self[k] = v
+        if kwargs:
+            self.update(kwargs)
+
+    def copy(self):
+        """A  shallow copy."""
+        return self.__class__(self)
+
+    def keys(self):
+        """An ordered copy of the list of keys."""
+        return self._keys[:]
+
+    def values(self):
+        """An ordered of the list of values by keys."""
+        return map(self.get, self._keys)
+
+    def items(self):
+        """An ordered copy of the list of (key, value) pairs."""
+        return zip(self._keys, self.values())
+
+    def iteritems(self):
+        """Return an ordered iterator over (key, value) pairs."""
+        return itertools.izip(self._keys, self.itervalues())
+
+    def pop(self, key, default=MISSING):
+        """self[key] if key in self, else default (and remove key)."""
+        if key in self:
+            self._keys.remove(key)
+            return dict.pop(self, key)
+        elif default is MISSING:
+            return dict.pop(self, key)
+        return default
+
+    def popitem(self):
+        """Remove the (key, value) pair of the last added key."""
+        if not self:
+            raise KeyError('dictionary is empty')
+        key = self._keys.pop()
+        value = dict.pop(self, key)
+        return key, value
+
+    def setdefault(self, key, failobj=None):
+        """self[key] if key in self, else failobj (also setting it)."""
+        value = dict.setdefault(self, key, failobj)
+        if key not in self._keys:
+            self._keys.append(key)
+        return value
+
+    def itervalues(self):
+        """Return an ordered iterator over the values."""
+        return itertools.imap(self.get, self._keys)
+
+    def __setitem__(self, key, value):
+        """Called to implement assignment to self[key]."""
+        if key not in self:
+            self._keys.append(key)
+        dict.__setitem__(self, key, value)
+
+    @classmethod
+    def fromkeys(cls, iterable, value=None):
+        """Create a new dictionary with keys from seq and values set to value."""
+        d = cls()
+        for key in iterable:
+            d[key] = value
+        return d
+
+    def __delitem__(self, key):
+        """Called to implement deletion of self[key]."""
+        dict.__delitem__(self, key)
+        self._keys.remove(key)
+
+    def __iter__(self):
+        """Return an ordered iterator over the keys."""
+        return iter(self._keys)
+    iterkeys = __iter__
+
+    def __repr__(self):
+        """Return the string representation."""
+        if not self:
+            return '%s()' % (self.__class__.__name__,)
+        return '%s(%r)' % (self.__class__.__name__, self.items())
 
 def _test():
     """Run the doctests."""

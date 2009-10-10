@@ -4,7 +4,7 @@ News
 Pyclewn 1.0
 -----------
 
-.. October 9, 2009
+.. October 10, 2009
 
 New features
 ^^^^^^^^^^^^
@@ -31,13 +31,15 @@ Changes
 Bug fixes
 ^^^^^^^^^
 
-* Fix crash when running without a console after starting from the menu of a
-  X11 window manager.
 * Recent Fedora Core distributions are missing the Python standard library
   ``test.regrtest`` module. Warn that the regression test suite cannot be run
   on these platforms and continue the installation.
 * Fix quoted command line arguments are not properly parsed.
 * Fix content of gdbmi results within quotes must be unquoted.
+* Fix crash when running without a console after starting from the menu of a
+  X11 window manager.
+* Fix watched array elements are displayed in lexicographical order instead of
+  numeric order.
 
 Pyclewn 0.7
 -----------

@@ -172,7 +172,7 @@ def fullname(name, source_dict):
         pass
     return ''
 
-class VarObjList(dict):
+class VarObjList(misc.OrderedDict):
     """A dictionary of {name:VarObj instance}."""
 
     def collect(self, parents, lnum, stream, indent=0):
@@ -184,7 +184,7 @@ class VarObjList(dict):
         tab = (max([x[0] for x in table]),
                         max([x[1] for x in table]),
                         max([x[2] for x in table]))
-        for name in sorted(self.keys()):
+        for name in self.keys():
             self[name].collect(parents, lnum, stream, indent, tab)
 
 class RootVarObj(object):
