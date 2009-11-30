@@ -1,6 +1,7 @@
 
-2009-10-09  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2009-11-29  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* gdb.py gdbmi.py : Fix gdb 7.0 causes exception on break.
 	* gdbmi.py misc.py: Fix watched array elements are displayed in
 	lexicographical order instead of numeric order.
 	* gdb.py: Fix crash when running without a console.

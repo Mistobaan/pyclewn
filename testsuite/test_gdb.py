@@ -248,6 +248,32 @@ class GdbTestCase(ClewnTestCase):
             "             'pathname': '${cwd}testsuite/foobar.c'},\n"
             )
 
+    def test_oob_command_v_70(self):
+        """Checking result of oob commands"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak main\n'
+            ':Crun\n'
+            ':sleep ${time}\n'
+            ':Cdumprepr\n'
+            ':sleep ${time}\n'
+            ":edit (clewn)_console | $$ | ?'info'?,/'version'/w!  ${test_out}\n"
+            ':qa!\n',
+
+            "'file': {'file': 'foobar.c',\n"
+            "         'fullname': '${cwd}testsuite/foobar.c',\n"
+            "         'line': '9'},\n"
+            "'frame': {'file': 'foobar.c',\n"
+            "          'fullname': '${cwd}testsuite/foobar.c',\n"
+            "          'func': 'main',\n"
+            "          'level': '0',\n"
+            "          'line': '9'},\n"
+            "'frameloc': {'lnum': 9,\n"
+            "             'pathname': '${cwd}testsuite/foobar.c'},\n"
+            )
+
     def test_frame_sign(self):
         """Check frame sign"""
         self.cltest_redir(
@@ -646,8 +672,10 @@ def test_main():
     suite.addTest(GdbTestCase('test_symbols_completion'))
     if gdb_v.split('.') < '6.4'.split('.'):
         suite.addTest(GdbTestCase('test_oob_command'))
-    else:
+    elif gdb_v.split('.') < '7.0'.split('.'):
         suite.addTest(GdbTestCase('test_oob_command_v_64'))
+    else:
+        suite.addTest(GdbTestCase('test_oob_command_v_70'))
     suite.addTest(GdbTestCase('test_frame_sign'))
     suite.addTest(GdbTestCase('test_annotation_lvl1'))
     suite.addTest(GdbTestCase('test_disable_bp'))

@@ -176,16 +176,28 @@ class VarObjList(misc.OrderedDict):
     """A dictionary of {name:VarObj instance}."""
 
     def collect(self, parents, lnum, stream, indent=0):
-        """Collect all varobj children data."""
-        if not self: return
+        """Collect all varobj children data.
+
+        Return True when dbgvarbuf must be set as dirty
+        at the next update run (for syntax highlighting).
+
+        """
+        if not self:
+            return False
+
         # follow positional parameters in VAROBJ_FMT
         table = [(len(x['name']), len(x['type']), len(x['exp']))
                                             for x in self.values()]
         tab = (max([x[0] for x in table]),
                         max([x[1] for x in table]),
                         max([x[2] for x in table]))
+
+        dirty = False
         for name in self.keys():
-            self[name].collect(parents, lnum, stream, indent, tab)
+            status = self[name].collect(parents, lnum, stream, indent, tab)
+            if status:
+                dirty = True
+        return dirty
 
 class RootVarObj(object):
     """The root of the tree of varobj objects.
@@ -248,7 +260,7 @@ class RootVarObj(object):
             self.parents = {}
             lnum = [0]
             output = cStringIO.StringIO()
-            self.root.collect(self.parents, lnum, output)
+            self.dirty = self.root.collect(self.parents, lnum, output)
             self.str_content = output.getvalue()
             output.close()
         return self.str_content
@@ -270,9 +282,11 @@ class VarObj(dict):
 
     def collect(self, parents, lnum, stream, indent, tab):
         """Collect varobj data."""
+        dirty = False
         if self.chged:
             self['chged'] = '={*}'
             self.chged = False
+            dirty = True
         elif self['in_scope'] != 'true':
             self['chged'] = '={-}'
         else:
@@ -292,6 +306,8 @@ class VarObj(dict):
         if self['children']:
             assert self['numchild'] != 0
             self['children'].collect(parents, lnum, stream, indent + 2)
+
+        return dirty
 
 class Info(object):
     """Container for the debuggee state information.
@@ -326,8 +342,6 @@ class Info(object):
             root of the tree of varobj objects
         changelist: list
             list of changed varobjs
-        setnext_dirty: boolean
-            when True, set varobj to dirty on next run
 
     """
 
@@ -346,7 +360,6 @@ class Info(object):
         self.sources = []
         self.varobj = RootVarObj()
         self.changelist = []
-        self.setnext_dirty = False
         # _root_varobj is only used for pretty printing with Cdumprepr
         self._root_varobj = self.varobj.root
 
@@ -460,9 +473,6 @@ class Info(object):
         if self.changelist:
             self.varobj.dirty = True
             self.changelist = []
-        elif self.setnext_dirty:
-            self.setnext_dirty = False
-            self.varobj.dirty = True
 
     def __repr__(self):
         """Return the pretty formated self dictionary."""
@@ -544,10 +554,10 @@ class OobList(object):
             FrameCli(gdb),      # after File
             Frame(gdb),
             PgmFile(gdb),
+            VarUpdate(gdb),     # not last after gdb 7.0
             Pwd(gdb),
             Sources(gdb),
             Breakpoints(gdb),   # after File and Sources
-            VarUpdate(gdb),
             Project(gdb),
             Quit(gdb),
         ]
@@ -559,6 +569,12 @@ class OobList(object):
     def __iter__(self):
         """Return an iterator over the list of OobCommand objects."""
         return self.static_list.__iter__()
+
+    def __len__(self):
+        """Length of the OobList."""
+        if self.fifo is not None:
+            return len(self.fifo)
+        return 0
 
     def iterator(self):
         """Return an iterator over OobCommand and VarObjCmd objects."""
@@ -923,7 +939,7 @@ class VarObjCmdEvaluate(VarObjCmd):
             value = parsed['value']
             if value != self.varobj['value']:
                 self.varobj.chged = True
-                self.gdb.info.setnext_dirty = True
+                self.gdb.info.varobj.dirty = True
                 self.varobj['value'] = value
 
 class VarObjCmdDelete(VarObjCmd):

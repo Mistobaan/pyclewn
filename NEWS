@@ -4,7 +4,7 @@ News
 Pyclewn 1.0
 -----------
 
-.. October 10, 2009
+.. November 29, 2009
 
 New features
 ^^^^^^^^^^^^
@@ -26,7 +26,7 @@ Changes
 * The pyclewn sourceforge web site is now created with `sphinx
   <http://sphinx.pocoo.org/>`_ using `reStructuredText
   <http://docutils.sf.net/rst.html>`_ markup.
-* Switch from Subversion to Mercurial as pyclewn Source Code Management (SCM).
+* Switch from Subversion to Mercurial as pyclewn SCM (Source Code Management).
 
 Bug fixes
 ^^^^^^^^^
@@ -40,6 +40,7 @@ Bug fixes
   X11 window manager.
 * Fix watched array elements are displayed in lexicographical order instead of
   numeric order.
+* Fix gdb 7.0 causes exception on break.
 
 Pyclewn 0.7
 -----------
