@@ -41,6 +41,7 @@ Bug fixes
 * Fix watched array elements are displayed in lexicographical order instead of
   numeric order.
 * Fix gdb 7.0 causes exception on break.
+* Fix regression test suite hangs on futex.
 
 Pyclewn 0.7
 -----------

@@ -23,6 +23,8 @@
 import os
 assert os.name == 'posix'
 
+import sys
+import logging
 import signal
 import select
 import errno
@@ -226,17 +228,23 @@ class ProcessChannel(asyncproc.ProcessChannel):
                     signal.signal(signal.SIGCHLD, self.sig_handler)
                 self.close()
 
-                if os.WCOREDUMP(status):
-                    info("process %s terminated with a core dump",
-                            self.pgm_name)
-                elif os.WIFSIGNALED(status):
-                    info("process %s terminated after receiving signal %d",
-                            self.pgm_name, os.WTERMSIG(status))
-                elif os.WIFEXITED(status):
-                    info("process %s terminated with exit %d",
-                            self.pgm_name, os.WEXITSTATUS(status))
-                else:
-                    info("process %s terminated", self.pgm_name)
+                if logging.getLogger().getEffectiveLevel() <= logging.INFO:
+                    if os.WCOREDUMP(status):
+                        print >> sys.stderr, (
+                            "process %s terminated with a core dump"
+                            % self.pgm_name)
+                    elif os.WIFSIGNALED(status):
+                        print >> sys.stderr, (
+                            "process %s terminated after receiving signal %d"
+                            % (self.pgm_name, os.WTERMSIG(status)))
+                    elif os.WIFEXITED(status):
+                        print >> sys.stderr, (
+                            "process %s terminated with exit %d"
+                            % (self.pgm_name, os.WEXITSTATUS(status)))
+                    else:
+                        print >> sys.stderr, (
+                            "process %s terminated"
+                            % self.pgm_name)
 
     def close(self):
         """Close the channel an wait on the process."""
