@@ -117,6 +117,8 @@ class ProcessChannel(asyncproc.ProcessChannel):
     Instance attributes:
         sig_handler: function
             default SIGCHLD signal handler
+        debug: boolean
+            when True, print logs
 
     """
 
@@ -126,6 +128,7 @@ class ProcessChannel(asyncproc.ProcessChannel):
         """Constructor."""
         asyncproc.ProcessChannel.__init__(self, argv)
         self.sig_handler = None
+        self.debug = (logging.getLogger().getEffectiveLevel() <= logging.INFO)
 
     def forkexec(self):
         """Fork and exec the program after setting the pseudo tty attributes.
@@ -228,7 +231,7 @@ class ProcessChannel(asyncproc.ProcessChannel):
                     signal.signal(signal.SIGCHLD, self.sig_handler)
                 self.close()
 
-                if logging.getLogger().getEffectiveLevel() <= logging.INFO:
+                if self.debug:
                     if os.WCOREDUMP(status):
                         print >> sys.stderr, (
                             "process %s terminated with a core dump"

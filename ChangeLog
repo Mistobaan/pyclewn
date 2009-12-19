@@ -1,5 +1,5 @@
 
-2009-12-02  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2009-12-19  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* posix.py: Fix regression test suite hangs on futex.
 	* gdb.py gdbmi.py: Fix gdb 7.0 causes exception on break.
