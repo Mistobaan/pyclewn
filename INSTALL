@@ -16,7 +16,7 @@ Required
 |            | distributions).                       |
 +------------+---------------------------------------+
 
-Note that netbeans does not run on the console vim, you must use gvim.
+Note that netbeans does not run yet on vim console, you must use gvim.
 
 Install on unix
 ---------------
@@ -24,8 +24,8 @@ Install on unix
 Unpack the tarball, change directory to the distribution directory and run the
 setup script to install pyclewn::
 
-    tar xzf pyclewn-0.7.tar.gz
-    cd pyclewn-0.7
+    tar xzf pyclewn-1.0.tar.gz
+    cd pyclewn-1.0
     python setup.py install --force
 
 You can now use the ``:help pyclewn`` command within vim, to get access to the
@@ -81,7 +81,7 @@ directory to ``%PATH%``::
     Control Panel > System > Advanced tab
     Advanced tab > Enviroment Variables > Edit "PATH"
 
-To install pyclewn, double-click on the installer: pyclewn-0.7.win32.exe. This
+To install pyclewn, double-click on the installer: pyclewn-1.0.win32.exe. This
 will install pyclewn, configure Vim and create a shortcut on the Desktop. The
 installation is complete after the following message is printed by the
 installer: ``pyclewn postinstall completed``. You can now use the ``:help
@@ -92,6 +92,10 @@ update the gdb full pathname when gdb has not been installed in the standard
 MinGW location.
 
 Pyclewn may be uninstalled with the Control Panel.
+
+Please note that the installation will fail when you upgrade to version 1.0 if
+you did not uninstall the previous pyclewn version with the Control Panel.
+This will not be required when upgrading to the next versions.
 
 .. vim:filetype=rst:tw=78:ts=8:et:
 

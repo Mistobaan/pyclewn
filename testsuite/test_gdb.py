@@ -213,7 +213,7 @@ class GdbTestCase(ClewnTestCase):
             ':Crun\n'
             ':Cdumprepr\n'
             ':sleep ${time}\n'
-            ":edit (clewn)_console | $$ | ?'info'?,/'last_balloon'/w!  ${test_out}\n"
+            ":edit (clewn)_console | $$ | ?'info'?,/'version'/w!  ${test_out}\n"
             ':qa!\n',
 
             "'file': {'file': 'foobar.c',\n"

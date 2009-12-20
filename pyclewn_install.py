@@ -8,6 +8,7 @@ import os.path
 import distutils.sysconfig as sysconfig
 import distutils.dir_util as dir_util
 from os.path import join as pathjoin
+from distutils.file_util import copy_file
 
 import clewn.vim as vim
 
@@ -73,7 +74,7 @@ def install():
     # install runtime files
     runtime_dir = pathjoin(prefix, 'pyclewn')
     icon_file = pathjoin(runtime_dir, ICON_NAME)
-    dir_util.copy_file(icon_file, scripts)
+    copy_file(icon_file, scripts)
     print >> sys.stderr, 'copying file %s' % icon_file
     unlink(icon_file)
 
@@ -105,7 +106,7 @@ def install():
     desktop_path = get_special_folder_path('CSIDL_DESKTOPDIRECTORY')
     pyclewn_shortcut = pathjoin(desktop_path, PYCLEWN_SHORTCUT)
     if not os.path.exists(pyclewn_shortcut):
-        dir_util.copy_file(PYCLEWN_SHORTCUT, desktop_path)
+        copy_file(PYCLEWN_SHORTCUT, desktop_path)
         print >> sys.stderr, 'copying pyclewn to the desktop: %s' % pyclewn_shortcut
 
     # cleanup

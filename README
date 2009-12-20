@@ -83,7 +83,6 @@ The following table lists the differences between
     +---------------+-------------+-----------------------+------------------------+
     | debuggers     | gdb         | gdb                   | gdb                    |
     |               |             |                       |                        |
-    |               |             |                       | future: pdb, ...       |
     +---------------+-------------+-----------------------+------------------------+
     | gd features   |             | watched variables     | tight integration      |
     |               |             |                       | with vim               |

@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2009 July 4
+*pyclewn.txt*                                   Last change: 2009 December 19
 
 
                             PYCLEWN USER MANUAL
@@ -869,6 +869,8 @@ CLASSES
      |          The last balloonText event received.
      |      _prompt_str: str
      |          The prompt printed on the console.
+     |      _consbuffered: boolean
+     |          True when output to the vim debugger console is buffered
      |
      |  Methods defined here:
      |
@@ -929,6 +931,9 @@ CLASSES
      |          args: str
      |              The arguments which are merged into 'format' using the
      |              python string formatting operator.
+     |
+     |  debugger_background_jobs = _newf(self, *args, **kwargs)
+     |      The decorated method.
      |
      |  default_cmd_processing(self, cmd, args)
      |      Fall back method for commands not handled by a 'cmd_<name>'
