@@ -1,6 +1,23 @@
 News
 ====
 
+Pyclewn 1.1
+-----------
+
+.. December 28, 2009
+
+New features
+^^^^^^^^^^^^
+
+Changes
+^^^^^^^
+
+* The console vim buffer and the watched variables buffer are set with
+  'noswapfile' option.
+
+Bug fixes
+^^^^^^^^^
+
 Pyclewn 1.0
 -----------
 

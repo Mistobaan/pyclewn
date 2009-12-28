@@ -1,4 +1,10 @@
 
+2009-12-28  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* debugger.py: set the 'noswapfile' option on the console vim buffer
+	and the watched variables buffer.
+
+===============================================================================
 2009-12-19  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* posix.py: Fix regression test suite hangs on futex.

@@ -72,6 +72,7 @@ augroup clewn
     autocmd!
     autocmd BufWinEnter (clewn)_* silent! setlocal bufhidden=hide"""    \
 """                                     | setlocal buftype=nofile"""    \
+"""                                     | setlocal noswapfile"""        \
 """                                     | setlocal fileformat=unix"""   \
 """                                     | setlocal expandtab"""         \
 """                                     | setlocal nowrap"""            \
