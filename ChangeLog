@@ -1,6 +1,7 @@
 
-2009-12-28  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2009-12-31  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* vim.py gdb.py buffer.py: support vim running in a terminal.
 	* debugger.py: set the 'noswapfile' option on the console vim buffer
 	and the watched variables buffer.
 

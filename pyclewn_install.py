@@ -27,18 +27,18 @@ def vim_features():
     """Abort if missing required Vim feature."""
     output = vim.exec_vimcmd(['version'])
 
-    print >> sys.stderr, 'checking netbeans support in gvim:',
+    print >> sys.stderr, 'checking netbeans support in vim:',
     try:
         output.index('+netbeans_intg')
     except ValueError:
-        raise ClewnInstallError, 'netbeans support in gvim is required'
+        raise ClewnInstallError, 'netbeans support in vim is required'
     print >> sys.stderr, 'yes'
 
-    print >> sys.stderr, 'checking auto commands support in gvim:',
+    print >> sys.stderr, 'checking auto commands support in vim:',
     try:
         output.index('+autocmd')
     except ValueError:
-        raise ClewnInstallError, 'auto commands support in gvim is required'
+        raise ClewnInstallError, 'auto commands support in vim is required'
     print >> sys.stderr, 'yes'
 
 def vimdir(dir=[]):

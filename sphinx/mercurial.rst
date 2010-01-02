@@ -29,8 +29,7 @@ Check the pyclewn mailing list for patches or releases announcements, and
 update your repository and work area by running the following commands in the
 pyclewn directory::
 
-        $ hg pull
-        $ hg update
+        $ hg pull --update
 
 Building from source
 --------------------

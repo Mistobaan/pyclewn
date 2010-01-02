@@ -615,12 +615,16 @@ class Gdb(debugger.Debugger, ProcessChannel):
         """Return the gdb argv list."""
         argv = [self.pgm]
 
-        # use pyclewn tty as the debuggee standard input and output
-        # may be overriden by --args option on pyclewn command line
+        # Use pyclewn tty as the debuggee standard input and output,
+        # but not when vim is run as 'vim' or 'vi'.
+        # May be overriden by --args option on pyclewn command line.
+        vim_pgm = os.path.basename(self.options.vim)
         if os.name != 'nt':
-            if not self.options.daemon        \
-                    and hasattr(os, 'isatty') \
-                    and os.isatty(0):
+            if (not self.options.daemon
+                    and vim_pgm != 'vim'
+                    and vim_pgm != 'vi'
+                    and hasattr(os, 'isatty')
+                    and os.isatty(0)):
                 terminal = os.ttyname(0)
             else:
                 terminal = os.devnull

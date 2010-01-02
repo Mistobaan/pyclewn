@@ -23,6 +23,7 @@
 """
 import os
 import sys
+import os.path
 import unittest
 import test.test_support as test_support
 
@@ -397,7 +398,11 @@ def test_main():
     suite.addTest(SimpleCommandsTestCase('test_unmapkeys'))
     suite.addTest(SimpleCommandsTestCase('test_maxlines'))
     if os.name != 'nt':
-        suite.addTest(SimpleCommandsTestCase('test_startupfile'))
+        vim_pgm = ''
+        if os.environ.has_key('EDITOR'):
+            vim_pgm = os.path.basename(os.environ['EDITOR'])
+        if vim_pgm != 'vim':
+            suite.addTest(SimpleCommandsTestCase('test_startupfile'))
     test_support.run_unittest(suite)
 
 if __name__ == "__main__":

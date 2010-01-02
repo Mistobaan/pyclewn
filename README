@@ -6,10 +6,10 @@ The debugger output is redirected to a vim window, the pyclewn console. The
 debugger commands are mapped to vim user-defined commands with a common letter
 prefix, and with completion available on the commands and their first argument.
 
-On unix, the controlling terminal of the program to debug is the terminal used
-to launch pyclewn, or any other terminal when the debugger allows it, for
-example after using the ``attach`` or ``tty`` gdb commands. On Windows, gdb pops
-up a console attached to the program to debug.
+On unix when running gvim, the controlling terminal of the program to debug is
+the terminal used to launch pyclewn. Any other terminal can be used when the
+debugger allows it, for example after using the ``attach`` or ``tty`` gdb
+commands. On Windows, gdb pops up a console attached to the program to debug.
 
 Features
 --------
@@ -27,7 +27,7 @@ Features
   Pyclewn automatically finds the source file for the breakpoint if it exists,
   and tells vim to load and display the file and highlight the line.
 
-* The value of an expression or variable is displayed in a balloon in vim when
+* The value of an expression or variable is displayed in a balloon in gvim when
   the mouse pointer is hovering over the selected expression or the variable.
 
 * An expression can be watched in a vim window. The expression value is
@@ -49,7 +49,9 @@ Features
    Pyclewn uses the ``netbeans`` protocol to interact with vim. Vim currently
    only supports netbeans in ``gvim``, its graphical implementation. The
    implementation of netbeans in ``plain vim`` (vim running in a terminal), is
-   a work in progress.
+   available as a Mercurial Queues patch for the official Vim release and for
+   the latest development source tree. See
+   `vim patches <http://pyclewn.sourceforge.net/vim-patches.html>`_.
 
 Comparison of clewn, vimGdb and pyclewn
 ---------------------------------------
@@ -68,12 +70,12 @@ The following table lists the differences between
     | langage       | C           | C                     | python 2.4 and         |
     |               |             |                       | above                  |
     +---------------+-------------+-----------------------+------------------------+
-    | vim mode      | vim in a    | gvim                  | gvim                   |
-    |               | terminal,   |                       |                        |
-    |               | gvim        |                       |                        |
+    | vim mode      | vim in a    | gvim                  | vim in a               |
+    |               | terminal,   |                       | terminal,              |
+    |               | gvim        |                       | gvim                   |
     +---------------+-------------+-----------------------+------------------------+
     | vim interface | a vim patch | a standalone program  | a standalone program   |
-    |               |             | connected to gvim with| connected to gvim with |
+    |               |             | connected to gvim with| connected to vim with  |
     |               |             | a netbeans socket     | a netbeans socket      |
     +---------------+-------------+-----------------------+------------------------+
     | vim version   | a different | vim 6.3 and above     | vim 7.0 and above      |
@@ -105,6 +107,7 @@ The following table lists the differences between
    install
    faq
    mercurial
+   vim-patches
 
 .. vim:filetype=rst:tw=78:ts=8:et:
 

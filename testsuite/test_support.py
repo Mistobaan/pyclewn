@@ -58,13 +58,15 @@ class ClewnTestCase(unittest.TestCase):
             '-c',                       # argv[0], a script
             '--netbeans=:%d' % port,    # netbeans port
             '--file=' + LOGFILE,
-            '--cargs',                  # gvim args
+            '--cargs',                  # vim args
             '-nb:127.0.0.1:%d:changeme '
                 '-u NONE '
                 '-U NONE '
                 '--noplugin '
                 '-s %s' % (port, test_support.TESTFN),
         ]
+        if os.environ.has_key('EDITOR'):
+            sys.argv.append('--editor=%s' % os.environ['EDITOR'])
         if test_support.verbose:
             sys.argv.append('--level=nbdebug')
 
@@ -95,22 +97,20 @@ class ClewnTestCase(unittest.TestCase):
 
         arguments:
             cmd: str
-                the commands sourced by gvim
+                the commands sourced by vim
             expected: str
                 an expected string that must be found in outfile
             outfile: str
                 the output file
             test: argument list
-                the content of the test files that gvim is loading
+                the content of the test files that vim is loading
 
         The result check ignores changes in the amount of white space
         (including new lines).
 
         """
         unused = self
-        if os.name == 'nt' or os.environ.has_key('CLEWN_PIPES'):
-            # some Windows tests fail sometimes without this sleeping
-            cmd = ':sleep ${time}\n' + cmd
+        cmd = ':sleep ${time}\n' + cmd
 
         # write the commands
         fp = open(test_support.TESTFN, 'w')

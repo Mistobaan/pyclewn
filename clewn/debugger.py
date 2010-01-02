@@ -196,7 +196,7 @@ function s:nbcommand(...)
     if a:0 != 0
         if a:1 != "" || (a:0 > 1 && a:2 != "")
             " edit the buffer that was loaded on startup and call input() to
-            " give a chance for gvim72 to process the putBufferNumber netbeans
+            " give a chance for vim72 to process the putBufferNumber netbeans
             " message in the idle loop before the call to nbkey
             let l:currentfile = expand("%:p")
             if s:InBufferList(l:currentfile)

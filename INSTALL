@@ -5,7 +5,7 @@ Required
 --------
 
 +------------+---------------------------------------+
-| python     | gvim                                  |
+| python     | vim                                   |
 +============+=======================================+
 | python 2.4 | Vim 7.0 or above with the             |
 | or above   | **netbeans_intg** feature enabled,    |
@@ -15,8 +15,6 @@ Required
 |            | enabled on most                       |
 |            | distributions).                       |
 +------------+---------------------------------------+
-
-Note that netbeans does not run yet on vim console, you must use gvim.
 
 Install on unix
 ---------------
@@ -74,8 +72,8 @@ The following software must have been installed on Windows:
 * the win32 python package from http://starship.python.net/crew/mhammond/
 * MinGW and the MinGW components MSYS and gdb from http://www.mingw.org/
 
-Gvim must be in the PATH before starting the installation, otherwise the
-installation will fail. Use the Control Panel on Windows XP to add the gvim
+Vim must be in the PATH before starting the installation, otherwise the
+installation will fail. Use the Control Panel on Windows XP to add the vim
 directory to ``%PATH%``::
 
     Control Panel > System > Advanced tab

@@ -245,7 +245,6 @@ class Vim(object):
                 or not                  \
                 [a for a in self.options.vim_args if a.startswith('-nb')]:
             args[:0] = ['-nb']
-        args[:0] = ['-g']       # it is safe to have multiple options '-g'
         args[:0] = [self.options.vim]
 
         # uncomment next lines to run Valgrind on Vim

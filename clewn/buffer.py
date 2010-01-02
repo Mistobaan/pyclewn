@@ -93,8 +93,11 @@ class Buffer(dict):
         if not self.frame_tnum:
             self.type_num += 1
             self.frame_tnum = self.type_num
+            color = '15710005'
+            if self.nbsock.nbversion >= '2.5':
+                color = 'Magenta'
             self.nbsock.send_cmd(self, 'defineAnnoType',
-                '%d "frame" "" "=>" none %d' % (self.frame_tnum, 0xefb735))
+                '%d "frame" "" "=>" none %s' % (self.frame_tnum, color))
         return self.frame_tnum
 
     def define_bpanno(self):
@@ -102,10 +105,15 @@ class Buffer(dict):
         if not self.bp_tnum:
             self.bp_tnum = self.type_num + 1
             self.type_num += 2 # two annotations are defined in sequence
+            bpena_color = '802287'
+            bpdis_color = '4190027'
+            if self.nbsock.nbversion >= '2.5':
+                bpena_color = 'Blue'
+                bpdis_color = 'Green'
             self.nbsock.send_cmd(self, 'defineAnnoType',
-                '%d "bpEnabled" "" "bp" none %d' % (self.bp_tnum, 0x0c3def))
+                '%d "bpEnabled" "" "bp" none %s' % (self.bp_tnum, bpena_color))
             self.nbsock.send_cmd(self, "defineAnnoType",
-                '%d "bpDisabled" "" "bp" none %d' % (self.type_num , 0x3fef4b))
+                '%d "bpDisabled" "" "bp" none %s' % (self.type_num , bpdis_color))
         return self.bp_tnum
 
     def add_anno(self, anno_id, lnum):
