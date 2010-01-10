@@ -52,44 +52,31 @@ Maintain a patched Vim development tree
 
 The goal is to maintain a Vim Mercurial repository synchronized with the latest
 Vim development tree, and a Mercurial Queues patch synchronized with pyclewn
-vim-patches. Whenever you want to update the Vim development tree:
+vim-patches. Whenever you want to update from the Vim development tree:
 
 * the patches are first popped out
-* changes are pulled into the Vim repository
+* changes are pulled into your Vim repository
 * changes are pulled into pyclewn vim-patches
 * the patches are pushed back
-
-Since Vim does not use Mercurial yet, the Vim Mercurial repository is built
-from a subversion work area. The entire process will be much simpler when Vim
-uses Mercurial.
 
 Initial setup
 ^^^^^^^^^^^^^
 
-The following assumes that Vim subversion HEAD is at ``vim-7.2.ddd``, and that
+The following assumes that Vim latest patch is ``vim-7.2.ddd``, and that
 ``vim-7.2.nnn`` is the closest pyclewn vim-patches tag smaller or equal to
 ``vim-7.2.ddd``.
 
-#. Get Vim source from subversion::
+#. Clone Vim development tree and clone a working copy::
 
-   $ svn co https://vim.svn.sourceforge.net/svnroot/vim/vim7
-
-#. Build the hg repository in the subversion repository and clone it (first
-   look into subversion logs to get the latest Vim patch number, ``vim-7.2.ddd``
-   for the commit message)::
-
-   $ cd vim7
-   $ hg init
-   $ svn log | less # for the commit message
-   $ hg commit -q --addremove --exclude 're:.*\.svn\/.*' -m vim-7.2.ddd
-   $ cd ..; hg clone vim7 vim-hg
+   $ hg clone --noupdate http://vim.googlecode.com/hg/ vim-master
+   $ hg clone vim-master vim-working
 
 #. Enable Mercurial Queues extension by editing your ``~/.hgrc`` and adding::
 
     [extensions]
     hgext.mq =
 
-#. Edit ``vim-hg/.hg/hgrc`` and add the following hooks::
+#. Edit ``vim-working/.hg/hgrc`` and add the following hooks::
 
     [hooks]
     # Prevent "hg pull" if MQ patches are applied.
@@ -97,11 +84,23 @@ The following assumes that Vim subversion HEAD is at ``vim-7.2.ddd``, and that
     # Prevent "hg push" if MQ patches are applied.
     preoutgoing.mq-no-push = ! hg qtop > /dev/null 2>&1
 
-#. Get pyclewn vim-patches and push all patches (see above how to browse the
-   repository to get ``vim-7.2.nnn``)::
+#. Get pyclewn vim-patches::
 
-   $ cd vim-hg
-   $ hg clone --rev vim-7.2.nnn http://pyclewn.hg.sourceforge.net/hgweb/pyclewn/vim-patches .hg/patches
+   $ cd vim-working
+   $ hg clone http://pyclewn.hg.sourceforge.net/hgweb/pyclewn/vim-patches .hg/patches
+
+#. Browse Vim logs to get the latest Vim patch number ``vim-7.2.ddd``,
+   and run the ``mq tags`` command to list the vim-patches tags and to find
+   ``vim-7.2.nnn`` which is the closest pyclewn vim-patches tag smaller or
+   equal to ``vim-7.2.ddd``::
+
+   $ hg log
+   $ alias mq='hg -R $(hg root)/.hg/patches'
+   $ mq tags
+
+#. Update vim-patches to ``vim-7.2.nnn``, and push all patches::
+
+   $ mq update --rev vim-7.2.nnn
    $ hg qpush --all
 
 #. Build Vim.
@@ -109,36 +108,40 @@ The following assumes that Vim subversion HEAD is at ``vim-7.2.ddd``, and that
 Update Vim tree
 ^^^^^^^^^^^^^^^
 
-The following assumes that Vim subversion HEAD is at ``vim-7.2.ddd``, and that
+The following assumes that Vim latest patch is ``vim-7.2.ddd``, and that
 ``vim-7.2.nnn`` is the closest pyclewn vim-patches tag smaller or equal to
 ``vim-7.2.ddd``.
 
 #. Pop all the patches::
 
-   $ cd vim-hg; hg qpop --all
+   $ cd vim-working
+   $ hg qpop --all
+   $ cd ..
 
-#. Synchronize the changes from subversion and pull them into vim-hg::
+#. Pull Vim changes into vim-working::
 
-   $ cd vim7
-   $ hg locate -0 | xargs -0 rm
-   $ cs src; make distclean; cd ..
-   $ svn update -r HEAD
-   $ svn log | less # for the commit message
-   $ hg commit --addremove --exclude 're:.*\.svn\/.*' -m vim-7.2.ddd
-   $ cd ../vim-hg; hg pull --update
+   $ cd vim-master
+   $ hg pull
+   $ cd ../vim-working
+   $ hg pull --update
 
-#. Pull the latest vim-patches. Get the list of all available tags (the result
-   of command ``mq tags``), and update with the ``vim-7.2.nnn`` tag that is the
-   closest pyclewn vim-patches tag smaller or equal to ``vim-7.2.ddd``::
+#. Pull vim-patches changes::
 
-   $ cd vim-hg
    $ alias mq='hg -R $(hg root)/.hg/patches'
    $ mq pull
+
+#. Browse Vim logs to get the latest Vim patch number ``vim-7.2.ddd``,
+   and run the ``mq tags`` command to list the vim-patches tags and to find
+   ``vim-7.2.nnn`` which is the closest pyclewn vim-patches tag smaller or
+   equal to ``vim-7.2.ddd``::
+
+   $ hg log
+   $ alias mq='hg -R $(hg root)/.hg/patches'
    $ mq tags
+
+#. Update vim-patches to ``vim-7.2.nnn``, and push all patches::
+
    $ mq update --rev vim-7.2.nnn
-
-#. Push back the patches::
-
    $ hg qpush --all
 
 #. Build Vim.
