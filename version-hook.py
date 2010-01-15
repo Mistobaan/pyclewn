@@ -104,6 +104,16 @@ if __name__ == '__main__':
     if os.environ.get('HG_ERROR') == '1':
         sys.exit(0)
 
+    # abort when mq patches are being applied, to avoid error:
+    #   mq status file refers to unknown node ddd...
+    #   warning: commit.version hook exited with status 1
+    try:
+        if command(['hg', 'qapplied']):
+            sys.exit(0)
+    except HookError:
+        # mq extension not installed
+        pass
+
     parser = optparse.OptionParser(usage=
                     'usage: %prog [options] commit | update [filename]\n\n'
                      + globals()['__doc__'])

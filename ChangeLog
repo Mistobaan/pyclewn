@@ -1,6 +1,8 @@
 
 2010-01-15  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* version-hook.py: do not run the version hook when mq patches have
+	been applied.
 	* debugger.py: Extend the set of available key modifiers in key
 	mappings (Sergey Khorev).
 

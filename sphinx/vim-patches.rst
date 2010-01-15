@@ -1,3 +1,5 @@
+.. _vim-patches-label:
+
 Vim patches
 ===========
 
@@ -5,17 +7,15 @@ Browsing Vim patches
 --------------------
 
 Vim patches are Mercurial Queues patches. You can browse the `Vim patches
-mercurial repository
-<http://pyclewn.hg.sourceforge.net/hgweb/pyclewn/vim-patches>`_ on line.
+mercurial repository`_ on line.
 
-Clicking on `tags
-<http://pyclewn.hg.sourceforge.net/hgweb/pyclewn/vim-patches/tags>`_ provides
-the list of all available tags. Each tag corresponds to an official Vim release
-or a snapshot of Vim development source tree. In this ``tags`` page, select the
-tag of your choice and click on the corresponding ``files`` link. In this new
-page, click on the ``series`` file to get the list of patches for this version
-and the order in which the patches are applied. The first line of each patch
-file contains a short description of the patch.
+Clicking on tags_ provides the list of all available tags. Each tag corresponds
+to an official Vim release or a snapshot of Vim development source tree. In
+this ``tags`` page, select the tag of your choice and click on the
+corresponding ``files`` link. In this new page, click on the ``series`` file to
+get the list of patches for this version and the order in which the patches are
+applied. The first line of each patch file contains a short description of the
+patch.
 
 List of Vim patches:
 
@@ -149,13 +149,17 @@ The following assumes that Vim latest patch is ``vim-7.2.ddd``, and that
 Documentation
 -------------
 
-Documentation on Mercurial can be found at `Mercurial: The Definitive Guide
-<http://hgbook.red-bean.com/read/>`_.
+Documentation on Mercurial can be found at `Mercurial: The Definitive Guide`_.
 
 Documentation on Mercurial Queues can be found at `Managing change with
-Mercurial Queues
-<http://hgbook.red-bean.com/read/managing-change-with-mercurial-queues.html>`_
+Mercurial Queues`_.
 
 Documentation on accessing the repository can be found at `SourceForge
-documentation
-<http://sourceforge.net/apps/trac/sourceforge/wiki/Mercurial>`_.
+documentation`_.
+
+.. _`Vim patches mercurial repository`: http://pyclewn.hg.sourceforge.net/hgweb/pyclewn/vim-patches
+.. _tags: http://pyclewn.hg.sourceforge.net/hgweb/pyclewn/vim-patches/tags
+.. _`Mercurial: The Definitive Guide`: http://hgbook.red-bean.com/read/
+.. _`Managing change with Mercurial Queues`: http://hgbook.red-bean.com/read/managing-change-with-mercurial-queues.html
+.. _`SourceForge documentation`: http://sourceforge.net/apps/trac/sourceforge/wiki/Mercurial
+.. vim:filetype=rst:tw=78:ts=8:et:

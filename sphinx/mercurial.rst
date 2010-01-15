@@ -4,8 +4,7 @@ Mercurial
 Browsing pyclewn code
 ---------------------
 
-Browse the `pyclewn mercurial repository
-<http://pyclewn.hg.sourceforge.net/hgweb/pyclewn/pyclewn>`_ on line.
+Browse the `pyclewn mercurial repository`_ on line.
 This shows the most recent version of the files in pyclewn. You can also view
 the diffs and the revision logs for each file.
 
@@ -42,9 +41,13 @@ the ``dist`` directory::
 Documentation
 -------------
 
-Documentation on Mercurial can be found at `Mercurial: The Definitive Guide
-<http://hgbook.red-bean.com/read/>`_.
+Documentation on Mercurial can be found at `Mercurial: The Definitive Guide`_.
 
 Documentation on accessing the repository can be found at `SourceForge
-documentation
-<http://sourceforge.net/apps/trac/sourceforge/wiki/Mercurial>`_.
+documentation`_.
+
+
+.. _`pyclewn mercurial repository`: http://pyclewn.hg.sourceforge.net/hgweb/pyclewn/pyclewn
+.. _`Mercurial: The Definitive Guide`: http://hgbook.red-bean.com/read/
+.. _`SourceForge documentation`: http://sourceforge.net/apps/trac/sourceforge/wiki/Mercurial
+.. vim:filetype=rst:tw=78:ts=8:et:

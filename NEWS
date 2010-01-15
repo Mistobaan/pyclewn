@@ -24,7 +24,7 @@ New features
   when running in a terminal. The implementation of netbeans in ``plain vim``
   (vim running in a terminal), is available as a Mercurial Queues patch for
   the official Vim release and for the latest development source tree.  See
-  `vim patches <http://pyclewn.sourceforge.net/vim-patches.html>`_.
+  :ref:`vim-patches-label`.
 
 Changes
 ^^^^^^^
@@ -54,9 +54,8 @@ Changes
   variable.
 * Improve select emulation performance on linux by a factor of 2.
 * Minimize Vim screen redraws when updating the debugger console window.
-* The pyclewn sourceforge web site is now created with `sphinx
-  <http://sphinx.pocoo.org/>`_ using `reStructuredText
-  <http://docutils.sf.net/rst.html>`_ markup.
+* The pyclewn sourceforge web site is now created with sphinx_ using
+  reStructuredText_ markup.
 * Switch from Subversion to Mercurial as pyclewn SCM (Source Code Management).
 
 Bug fixes
@@ -183,5 +182,7 @@ Pyclewn 0.3
 
 Initial release.
 
+.. _sphinx: http://sphinx.pocoo.org/
+.. _reStructuredText: http://docutils.sf.net/rst.html
 .. vim:filetype=rst:tw=78:ts=8:et:
 
