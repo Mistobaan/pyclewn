@@ -54,12 +54,22 @@ import clewn.netbeans as netbeans
 __all__ = ['LOOP_TIMEOUT', 'restart_timer', 'Debugger']
 LOOP_TIMEOUT = .040
 
-RE_KEY = r'^\s*(?P<key>[Ff]\d{1,2}|[A-Z]|[C-c]-[A-Za-z])\s*'    \
-         r':\s*(?P<value>[^#]*)'                                \
-         r'# RE: key:value line in .pyclewn_keys'
-RE_COMMENT = r'^\s*([#].*|\s*)$'                                \
+RE_KEY =    \
+    r'^\s*(?P<key>'                                                     \
+        r'(?# Fn, C-Fn, S-Fn, M-Fn, C-S-Fn, C-M-Fn, S-M-Fn,C-S-M-Fn:)'  \
+        r'(?:[Cc]-)?(?:[Ss]-)?(?:[Mm]-)?[Ff]\d{1,2}'                    \
+        r'(?# C-A, C-S-A, C-S-M-A, C-M-A:)'                             \
+        r'|(?:[Cc]-)(?:[Ss]-)?(?:[Mm]-)?[A-Za-z]'                       \
+        r'(?# S-A, S-M-A:)'                                             \
+        r'|(?:[Ss]-)(?:[Mm]-)?[A-Za-z]'                                 \
+        r'(?#M-A:)'                                                     \
+        r'|(?:[Mm]-)[A-Za-z]'                                           \
+    r')'        \
+    r'\s*:\s*(?P<value>[^#]*)'                                          \
+    r'# RE: key:value line in .pyclewn_keys'
+RE_COMMENT = r'^\s*([#].*|\s*)$'                                    \
              r'# RE: a comment line'
-RE_FILENAMELNUM = r'^(?P<name>\S+):(?P<lnum>\d+)$'              \
+RE_FILENAMELNUM = r'^(?P<name>\S+):(?P<lnum>\d+)$'                  \
                   r'# RE: pathname:lnum'
 
 # compile regexps

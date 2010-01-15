@@ -1,4 +1,10 @@
 
+2010-01-15  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* debugger.py: Extend the set of available key modifiers in key
+	mappings (Sergey Khorev).
+
+===============================================================================
 2009-12-31  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* vim.py gdb.py buffer.py: support vim running in a terminal.

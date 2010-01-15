@@ -18,8 +18,11 @@
 # default mapping, use an empty GDB command.
 #
 # Supported key names:
-#       . key functions: F1 to F20, example: `F11:continue'
-#       . uppercase characters, example: 'S-Q:quit'
-#       . control characters, example: 'C-U:up'
+#       . key function: F1 to F20
+#             e.g., `F11:continue'
+#       . modifier (C-,S-,M-) + function key
+#             e.g., `C-F5:run'
+#       . modifier (or modifiers) + character
+#             e.g., `S-Q:quit', `C-S-B:info breakpoints'
 #
 #
