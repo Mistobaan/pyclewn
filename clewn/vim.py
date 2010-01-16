@@ -34,6 +34,7 @@ import asyncore
 import inspect
 import optparse
 import logging
+import errno
 
 from clewn import *
 import clewn.misc as misc
@@ -79,8 +80,14 @@ def exec_vimcmd(commands, pathname=''):
             subprocess.Popen(args).wait()
             f = os.fdopen(fd)
             output = f.read()
-        except (OSError, IOError):
-            print >> sys.stderr, "Failed to run Vim as:\n'%s'" % ' '.join(args)
+        except (OSError, IOError), err:
+            if isinstance(err, OSError) and err.errno == errno.ENOENT:
+                print >> sys.stderr, "Failed to run '%s' as Vim." % args[0]
+                print >> sys.stderr, ("Please run 'pyclewn"
+                                      " --editor=/path/to/(g)vim'.\n")
+            else:
+                print >> sys.stderr, ("Failed to run Vim as:\n'%s'\n" %
+                                       str(args))
             raise
     finally:
         if f is not None:

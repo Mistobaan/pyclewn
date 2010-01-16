@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2009 December 31
+*pyclewn.txt*                                   Last change: 2010 January 16
 
 
                             PYCLEWN USER MANUAL
@@ -228,7 +228,8 @@ The full description of the command line options follows:
 
 -e {EDITOR}
 --editor={EDITOR}   Set the editor program to EDITOR. EDITOR must be in one
-                    of the directories listed in the PATH environment variable.
+                    of the directories listed in the PATH environment
+                    variable, or the full pathname to vim or gvim executable.
                     When this command line option is not set, pyclewn uses the
                     value of the EDITOR environment variable, and if this
                     environment variable is not set either, then pyclewn
