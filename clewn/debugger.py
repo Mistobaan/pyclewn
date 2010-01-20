@@ -87,8 +87,7 @@ augroup clewn
 """                                     | setlocal expandtab"""         \
 """                                     | setlocal nowrap"""            \
 """
-    autocmd VimEnter * silent! call s:BuildList()
-    autocmd BufWinEnter * silent! call s:InBufferList(expand("<afile>:p"))
+    ${bufferlist_autocmd}
     autocmd BufWinEnter ${console} silent! nbkey ClewnBuffer.Console.open
     autocmd BufWinLeave ${console} silent! nbkey ClewnBuffer.Console.close
     autocmd BufWinEnter ${variables} silent! nbkey ClewnBuffer.DebuggerVarBuffer.open
@@ -96,6 +95,11 @@ augroup clewn
     autocmd BufWinEnter ${variables} silent! setlocal syntax=dbgvar
 augroup END
 
+"""
+
+BUFFERLIST_AUTOCMD = """
+    autocmd VimEnter * silent! call s:BuildList()
+    autocmd BufWinEnter * silent! call s:InBufferList(expand("<afile>:p"))
 """
 
 FUNCTION_BUFLIST = """
@@ -192,6 +196,26 @@ endfunction
 """
 
 FUNCTION_NBCOMMAND = """
+" Run the nbkey netbeans Vim command.
+function s:nbcommand(...)
+    " Allow '' as first arg: the 'C' command followed by a mandatory parameter
+    if a:0 != 0
+        if a:1 != "" || (a:0 > 1 && a:2 != "")
+            if bufname("%") == ""
+                edit ${console}
+            else
+                call s:winsplit("${console}", "${location}")
+            endif
+            ${split_dbgvar_buf}
+            let cmd = "nbkey " . join(a:000, ' ')
+            exe cmd
+        endif
+    endif
+endfunction
+
+"""
+
+FUNCTION_NBCOMMAND_RESTRICT = """
 " Run the nbkey netbeans Vim command.
 function s:nbcommand(...)
     if bufname("%") == ""
@@ -687,9 +711,13 @@ class Debugger(object):
             f.write('set cpo&vim\n')
 
             # vim autocommands
+            bufferlist_autocmd = ''
+            if options.noname_fix == '0':
+                bufferlist_autocmd = BUFFERLIST_AUTOCMD
             f.write(string.Template(AUTOCOMMANDS).substitute(
                                         console=netbeans.CONSOLE,
-                                        variables=netbeans.VARIABLES_BUFFER))
+                                        variables=netbeans.VARIABLES_BUFFER,
+                                        bufferlist_autocmd=bufferlist_autocmd))
 
             # popup gdb console on pyclewn mapped keys
             f.write(string.Template(
@@ -699,7 +727,8 @@ class Debugger(object):
                             location=options.location))
 
             # utility vim functions
-            f.write(FUNCTION_BUFLIST)
+            if options.noname_fix == '0':
+                f.write(FUNCTION_BUFLIST)
             f.write(FUNCTION_SPLIT)
             f.write(FUNCTION_CONSOLE)
 
@@ -710,11 +739,16 @@ class Debugger(object):
             f.write('endfunction\n')
 
             # setup pyclewn vim user defined commands
+            if options.noname_fix != '0':
+                function_nbcommand = FUNCTION_NBCOMMAND
+            else:
+                function_nbcommand = FUNCTION_NBCOMMAND_RESTRICT
+
             split_dbgvar_buf = ''
-            if self.__nbsock.getLength_bug != '0':
+            if self.__nbsock.getLength_fix != '0':
                 split_dbgvar_buf = string.Template(SPLIT_DBGVAR_BUF).substitute(
                                         dbgvar_buf=netbeans.VARIABLES_BUFFER)
-            f.write(string.Template(FUNCTION_NBCOMMAND).substitute(
+            f.write(string.Template(function_nbcommand).substitute(
                                         console=netbeans.CONSOLE,
                                         location=options.location,
                                         split_dbgvar_buf=split_dbgvar_buf))

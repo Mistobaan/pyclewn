@@ -138,7 +138,7 @@ checkOverridenMethods = 1
 checkSpecialMethods = 1
 
 # int: warnings for code complexity, max value before generating a warning
-maxLines = 100
+maxLines = 120
 maxBranches = 10
 maxReturns = 10
 maxArgs = 10

@@ -4,13 +4,17 @@ News
 Pyclewn 1.2
 -----------
 
-.. January 15, 2010
+.. January 20, 2010
 
 Changes
 ^^^^^^^
 
 * Extend the set of available key modifiers in key mappings, to all the key
   modifiers supported by Vim netbeans (Sergey Khorev).
+* Allow commands in the initial buffer and on buffers loaded from the command
+  line. This feature is enabled when the running Vim version is above 7.2.334
+  (Vim 7.2 with patch 334).
+
 
 Pyclewn 1.1
 -----------
