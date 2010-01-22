@@ -651,6 +651,20 @@ class GdbTestCase(ClewnTestCase):
             'break ${cwd}testsuite/foobar.c:9\n'
             )
 
+    def test_quit_display(self):
+        """The quit command prints a separation line"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cquit\n'
+            ':sleep ${time}\n'
+            ':edit (clewn)_console | $$ | w!  ${test_out}\n'
+            ':qa!\n',
+
+            '===========\n'
+            )
+
 
 def test_main():
     """Run all the tests."""
@@ -695,6 +709,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_project_option_load'))
     suite.addTest(GdbTestCase('test_project_option_save'))
     suite.addTest(GdbTestCase('test_project_option_vimquit'))
+    suite.addTest(GdbTestCase('test_quit_display'))
     test_support.run_unittest(suite)
 
 if __name__ == '__main__':

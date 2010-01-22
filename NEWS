@@ -4,7 +4,7 @@ News
 Pyclewn 1.2
 -----------
 
-.. January 20, 2010
+.. January 22, 2010
 
 Changes
 ^^^^^^^
@@ -15,6 +15,11 @@ Changes
   line. This feature is enabled when the running Vim version is above 7.2.334
   (Vim 7.2 with patch 334).
 
+Bug fix
+^^^^^^^
+
+* Fix the display of the gdb console window and the dbgvar window, after the
+  gdb 'quit' command has been entered.
 
 Pyclewn 1.1
 -----------

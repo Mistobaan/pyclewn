@@ -886,8 +886,8 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
             # clear varobj
             rootvarobj = self.info.varobj
-            rootvarobj.clear()
-            self.update_dbgvarbuf(rootvarobj.collect, True)
+            cleared = rootvarobj.clear()
+            self.update_dbgvarbuf(rootvarobj.collect, cleared)
 
             # remove temporary files
             del self.f_init

@@ -1,6 +1,9 @@
 
-2010-01-20  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2010-01-22  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* gdb.py gdbmi.py: Switch to not buffering the output to the console,
+	when gdb is closing. Do not clean up the '(clewn)_dbgvar' buffer when
+	it was never used.
 	* vim.py debugger.py: Allow commands in the initial buffer and on
 	buffers loaded from the command line.
 	* vim.py: Improve the error message when catching the exception if

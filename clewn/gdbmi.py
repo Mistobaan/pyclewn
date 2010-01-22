@@ -222,11 +222,19 @@ class RootVarObj(object):
         self.str_content = ''
 
     def clear(self):
-        """Clear all varobj elements."""
+        """Clear all varobj elements.
+
+        Return False when there were no varobj elements to remove.
+
+        """
+        if not self.root:
+            return False
+
         self.root.clear()
         self.parents = {}
         self.dirty = True
         self.str_content = ''
+        return True
 
     def leaf(self, childname):
         """Return childname VarObj and the VarObjList of the parent of childname.
@@ -1362,6 +1370,11 @@ class Quit(OobCommand):
         """Quit gdb."""
         if self.gdb.state == self.gdb.STATE_QUITTING:
             self.gdb.write('quit\n')
+
+            # the Debugger instance is closing, its dispatch loop timer is
+            # closing as well and we cannot rely on this timer anymore to handle
+            # buffering on the console, so switch to no buffering
+            self.gdb._consbuffered = False
             self.gdb.console_print('\n===========\n')
         return False
 
