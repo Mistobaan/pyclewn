@@ -33,9 +33,8 @@ terminal when the debugger allows it.
 
 WINDOWS_INSTALL = """BEFORE INSTALLING:
 Please make sure that Vim is in the PATH, otherwise the installation
-will fail. Use the Control Panel on Windows XP to add the vim directory
-to %PATH%:
-Control Panel > System > Advanced tab > Envt Variables > Edit "PATH"
+will fail (see installation notes at
+http://pyclewn.sourceforge.net/install.html).
 """
 
 if os.name == 'nt':

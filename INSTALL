@@ -77,7 +77,12 @@ installation will fail. Use the Control Panel on Windows XP to add the vim
 directory to ``%PATH%``::
 
     Control Panel > System > Advanced tab
-    Advanced tab > Enviroment Variables > Edit "PATH"
+    Advanced tab > Environment Variables > Edit "PATH"
+
+On Vista, add the ``PATH`` environment variable to your account, and set its
+value to::
+
+    C:\path\to\vim72;%PATH%
 
 To install pyclewn, double-click on the installer: pyclewn-1.1.win32.exe. This
 will install pyclewn, configure Vim and create a shortcut on the Desktop. The
