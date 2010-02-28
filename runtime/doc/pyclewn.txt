@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2010 January 16
+*pyclewn.txt*                                   Last change: 2010 February 28
 
 
                             PYCLEWN USER MANUAL
@@ -677,7 +677,11 @@ All|Ccommand|can be mapped to vim keys using the vim|:map-commands|.
 For example, to set a breakpoint at the current cursor position: >
 
     :map <F8> :exe "Cbreak " . expand("%:p") . ":" . line(".")<CR>
-.
+
+Or to print the value of the variable under the cursor: >
+
+    :map <F8> :exe "Cprint " . expand("<cword>") <CR>
+
 
                                                     *Cmapkeys*
 Pyclewn key mappings:
@@ -687,6 +691,11 @@ by reading a configuration file. This is done when the|Cmapkeys|vim command is
 run. The pyclewn keys mapping is mostly useful for the pyclewn casual user.
 When the configuration file cannot be found, pyclewn sets the default key
 mappings. See|gdb-keys|for the list of default key mappings for gdb.
+
+Please note that pyclewn relies on the vim|balloon-eval|feature to get the
+text under the mouse position when expanding the ${text} macro. This feature
+is not available with vim console. So in this case you must build your own
+key mapping as in the above example.
 
 The configuration file is named .pyclewn_keys.{debugger}, where debugger is
 the name of the debugger. The default placement for this file is
