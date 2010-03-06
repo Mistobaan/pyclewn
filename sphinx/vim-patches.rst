@@ -17,11 +17,22 @@ get the list of patches for this version and the order in which the patches are
 applied. The first line of each patch file contains a short description of the
 patch.
 
-List of Vim patches:
+**List of Vim patches**:
 
-* console-netbeans
-    Netbeans support of Vim in a terminal. Enable pyclewn or other applications
-    to implement a front end to a debugger when Vim is run in a terminal.
++------------------+---------------+---------------------------------------+
+| Patch            | Available     | Description                           |
+|                  | since         |                                       |
++==================+===============+=======================================+
+| console-netbeans |``vim 7.2``    | Netbeans support of Vim in a terminal.|
+|                  |               | Enable pyclewn or other applications  |
+|                  |               | to implement a front end to a         |
+|                  |               | debugger when Vim is run in a         |
+|                  |               | terminal.                             |
++------------------+---------------+---------------------------------------+
+| nbstart-command  |``vim 7.2.377``| The new ``nbstart`` and ``nbclose``   |
+|                  |               | commands allow starting and closing   |
+|                  |               | a Netbeans session from within Vim.   |
++------------------+---------------+---------------------------------------+
 
 Patch a Vim tarball
 -------------------
