@@ -183,6 +183,14 @@ class Vim(object):
         # test if Vim contains the netbeans 'remove' fix
         # test if Vim contains the netbeans 'getLength' fix
         # test if Vim contains the netbeans 'cmd on NoName buffer ignored' fix
+
+        # pyclewn is started from within vim
+        if not self.options.vim:
+            self.netbeans.remove_fix = '1'
+            self.netbeans.getLength_fix = '1'
+            self.options.noname_fix = '1'
+            return
+
         cmds = ['echo v:version > 701 || v:version == 701 && has("patch207")',
                 'echo v:version > 702 || v:version == 702 && has("patch253")',
                 'echo v:version > 702 || v:version == 702 && has("patch334")',
@@ -221,29 +229,8 @@ class Vim(object):
             sys.exit(1)
         info('pyclewn.vim version: %s', version)
 
-    def start(self):
-        """Start Vim, connect to it, and start the debugger."""
-        # log platform information for debugging
-        info(platform_data())
-
-        # instantiate the debugger
-        self.debugger = self.clazz(self.netbeans, self.options)
-
-        # read keys mappings
-        self.debugger._read_keysfile()
-
-        # listen on netbeans port
-        conn = list(CONNECTION_DEFAULTs)
-        if self.options.netbeans:
-            conn = self.options.netbeans.split(':')
-            conn[1:] = conn[1:] or [CONNECTION_DEFAULTs[1]]
-            conn[2:] = conn[2:] or [CONNECTION_DEFAULTs[2]]
-        assert len(conn) == 3, 'too many netbeans connection parameters'
-        conn[1] = conn[1] or CONNECTION_DEFAULTs[1]
-        self.netbeans.nb_listen(*conn)
-        info(self.netbeans)
-
-        # start Vim
+    def spawn_vim(self):
+        """Spawn vim."""
         self.vim_version()
         args = self.options.vim_args or []
         self.f_script = self.debugger._vim_script(self.options)
@@ -268,6 +255,36 @@ class Vim(object):
                                 close_fds=(os.name != 'nt'))
         except OSError:
             critical('cannot start Vim'); raise
+
+    def start(self):
+        """Start Vim, connect to it, and start the debugger."""
+        # log platform information for debugging
+        info(platform_data())
+
+        # instantiate the debugger
+        self.debugger = self.clazz(self.netbeans, self.options)
+
+        # read keys mappings
+        self.debugger._read_keysfile()
+
+        # listen on netbeans port
+        conn = list(CONNECTION_DEFAULTs)
+        if self.options.netbeans:
+            conn = self.options.netbeans.split(':')
+            conn[1:] = conn[1:] or [CONNECTION_DEFAULTs[1]]
+            conn[2:] = conn[2:] or [CONNECTION_DEFAULTs[2]]
+        assert len(conn) == 3, 'too many netbeans connection parameters'
+        conn[1] = conn[1] or CONNECTION_DEFAULTs[1]
+        self.netbeans.nb_listen(*conn)
+        info(self.netbeans)
+
+        if self.options.vim:
+            self.spawn_vim()
+        # pyclewn is started from within vim
+        else:
+            self.vim_version()
+            script = self.debugger._vim_script(self.options)
+            info('building the Vim script file: %s', script)
 
         # run the dispatch loop
         self.loop()
@@ -334,7 +351,9 @@ class Vim(object):
                 action="store_true", dest='daemon', default=False,
                 help='run as a daemon (default \'%default\')')
         parser.add_option('-e', '--editor', dest='vim', default=editor,
-                help='set Vim pathname to VIM (default \'%default\')')
+                help='set Vim pathname to VIM (default \'%default\');'
+                + ' Vim is not spawned by pyclewn when this parameter is'
+                + ' set to an empty string')
         parser.add_option('-c', '--cargs', dest='vim_args', metavar='ARGS',
                 type='string', action='callback', callback=args_callback,
                 help='set Vim arguments to ARGS')

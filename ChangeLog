@@ -1,6 +1,7 @@
 
-2010-01-22  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2010-02-24  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* vim.py debugger.py: Allow pyclewn to be spawned from within vim.
 	* gdb.py gdbmi.py: Switch to not buffering the output to the console,
 	when gdb is closing. Do not clean up the '(clewn)_dbgvar' buffer when
 	it was never used.

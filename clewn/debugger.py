@@ -198,6 +198,13 @@ endfunction
 FUNCTION_NBCOMMAND = """
 " Run the nbkey netbeans Vim command.
 function s:nbcommand(...)
+    if !has("netbeans_enabled")
+        echohl ErrorMsg
+        echo "Error: netbeans is not connected."
+        echohl None
+        return
+    endif
+
     " Allow '' as first arg: the 'C' command followed by a mandatory parameter
     if a:0 != 0
         if a:1 != "" || (a:0 > 1 && a:2 != "")
@@ -239,7 +246,7 @@ function s:nbcommand(...)
                 echo "Files loaded on Vim startup must be registered with pyclewn."
                 echo "Registering " . l:currentfile . " with pyclewn."
                 call inputsave()
-                call input("Press any key to continue.")
+                call input("Press the <Enter> key to continue.")
                 call inputrestore()
                 echohl None
             endif
@@ -704,7 +711,14 @@ class Debugger(object):
         prefix = options.prefix.capitalize()
         f = None
         try:
-            f = misc.TmpFile('vimscript')
+            # pyclewn is started from within vim
+            if not options.vim:
+                if options.vim_args:
+                    f = open(options.vim_args[0], 'w')
+                else:
+                    return None
+            else:
+                f = misc.TmpFile('vimscript')
 
             # set 'cpo' option to its vim default value
             f.write('let s:cpo_save=&cpo\n')
