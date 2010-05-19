@@ -1,6 +1,18 @@
 News
 ====
 
+Pyclewn 1.3
+-----------
+
+.. May 19, 2010
+
+New feature
+^^^^^^^^^^^
+
+* A new command named ``setfmtvar`` may be used to set the output format of a
+  watched variable or one of its children, for example to ``hexadecimal`` or
+  ``binary``.
+
 Pyclewn 1.2
 -----------
 

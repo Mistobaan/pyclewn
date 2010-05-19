@@ -104,6 +104,9 @@ RE_VARCREATE = keyval_pattern(VARCREATE_ATTRIBUTES,
 RE_VARDELETE = r'^done,ndeleted="(?P<ndeleted>\d+)"$'                       \
                r'# done,ndeleted="1"'
 
+RE_SETFMTVAR = r'^done,format="\w+",value="(?P<value>.*)"$'                 \
+               r'# done,format="binary",value="1111001000101110110001011110"'
+
 RE_VARLISTCHILDREN = keyval_pattern(VARLISTCHILDREN_ATTRIBUTES)
 
 RE_VAREVALUATE = keyval_pattern(VAREVALUATE_ATTRIBUTES, 'done,value="14"')
@@ -143,6 +146,7 @@ re_evaluate = re.compile(RE_EVALUATE, re.VERBOSE)
 re_dict_list = re.compile(RE_DICT_LIST, re.VERBOSE)
 re_varcreate = re.compile(RE_VARCREATE, re.VERBOSE)
 re_vardelete = re.compile(RE_VARDELETE, re.VERBOSE)
+re_setfmtvar = re.compile(RE_SETFMTVAR, re.VERBOSE)
 re_varlistchildren = re.compile(RE_VARLISTCHILDREN, re.VERBOSE)
 re_varevaluate = re.compile(RE_VAREVALUATE, re.VERBOSE)
 re_args = re.compile(RE_ARGS, re.VERBOSE)
@@ -809,6 +813,21 @@ class VarDeleteCommand(MiCommand):
                     self.gdb.console_print(
                                 '%s watched variables have been deleted\n',
                                                                 self.result)
+
+class VarSetFormatCommand(MiCommand):
+    """Set the output format of the value of the watched variable."""
+
+    def sendcmd(self, format):
+        """Send the gdb command."""
+        return MiCommand.docmd(self, '-var-set-format %s %s\n',
+                                        self.varobj['name'], format)
+
+    def handle_result(self, line):
+        """Process gdb/mi result."""
+        matchobj = re_setfmtvar.match(line)
+        if matchobj:
+            self.gdb.console_print('%s = %s\n',
+                        self.varobj['name'], matchobj.group('value'))
 
 class NumChildrenCommand(MiCommand):
     """Get how many children this object has."""

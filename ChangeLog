@@ -1,4 +1,10 @@
 
+2010-05-19  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* gdb.py gdbmi.py: Map the new pyclewn command 'setfmtvar' to the
+	gdb/mi command '-var-set-format'.
+
+===============================================================================
 2010-02-24  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* vim.py debugger.py: Allow pyclewn to be spawned from within vim.

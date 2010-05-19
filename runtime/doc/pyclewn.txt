@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2010 March 6
+*pyclewn.txt*                                   Last change: 2010 May 19
 
 
                             PYCLEWN USER MANUAL
@@ -472,6 +472,8 @@ commands that are listed here:
 
     *|Cproject|      save the current gdb settings to a project file
 
+    *|Csetfmtvar|    set the output format of the value of a watched variable
+
     * Csigint        send a <C-C> character to the debugger to interrupt the
                      running program that is being debugged; only with gdb,
                      and when pyclewn and gdb communicate over a pseudo
@@ -830,6 +832,28 @@ For example: >
 
 When the watched variable is a structure or class instance and it has been
 expanded, all its children are also deleted.
+
+
+                                                    *Csetfmtvar*
+Set the output format of the value of the watched variable <name>
+to be <format>: >
+
+    :Csetfmtvar <name> <format>
+
+Parameter <name> is the gdb/mi name of the watched variable or one of its
+children.
+Parameter <format> is one of the strings in the following list:
+
+    {binary | decimal | hexadecimal | octal | natural}
+
+The "natural" format is the default format chosen automatically based on the
+variable type (like "decimal" for an int, "hexadecimal" for pointers, etc.).
+For a variable with children, the format is set only on the variable itself,
+and the children are not affected.
+
+Note: The setting of the format of a child watched variable is lost after
+folding one of its parents (because the child is actually not watched anymore
+by gdb after the folding).
 
 
 Highlighting:

@@ -61,6 +61,7 @@ set annotate 1
 if os.name == 'nt':
     GDB_INIT += 'set new-console on\n'
 SYMBOL_COMPLETION_TIMEOUT = 20 # seconds
+SETFMTVAR_FORMATS = ('binary', 'decimal', 'hexadecimal', 'octal', 'natural')
 
 # list of key mappings, used to build the .pyclewn_keys.gdb file
 #     key : (mapping, comment)
@@ -543,6 +544,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 'dbgvar':(),
                 'delvar':(),
                 'foldvar':(),
+                'setfmtvar':(),
                 'project':True,
                 'sigint':(),
                 'symcompletion':(),
@@ -1029,6 +1031,30 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 errmsg = 'Not a valid line number.'
         if errmsg:
             self.console_print('%s\n' % errmsg)
+        self.prompt()
+
+    def cmd_setfmtvar(self, cmd, args):
+        """Set the output format of the value of the watched variable."""
+        unused = cmd
+        args = args.split()
+        # two arguments are required
+        if len(args) != 2:
+            self.console_print('Invalid arguments.\n')
+        else:
+            name = args[0]
+            format = args[1]
+            if format not in SETFMTVAR_FORMATS:
+                self.console_print(
+                    '\'%s\' is an invalid format, must be one of %s.\n'
+                                            % (format, SETFMTVAR_FORMATS))
+            else:
+                (varobj, varlist) = self.info.varobj.leaf(name)
+                unused = varlist
+                if varobj is not None:
+                    gdbmi.VarSetFormatCommand(self, varobj).sendcmd(format)
+                    self.oob_list.push(gdbmi.VarObjCmdEvaluate(self, varobj))
+                    return
+                self.console_print('"%s" not found.\n' % name)
         self.prompt()
 
     def cmd_project(self, cmd, args):
