@@ -6,9 +6,13 @@
 
 " The following variables define how pyclewn is started when
 " the ':Pyclewn' vim command is run.
+" They may be changed to match your preferences.
 let s:pgm = "pyclewn"
 let s:args = "--gdb= --pgm=gdb --args= --window=top --maxlines=10000"
 let s:connection = "localhost:3219:changeme"
+" Uncomment the following line to print full traces in a file named 'logfile'
+" for debugging purpose.
+" let s:args .= " --level=nbdebug --file=logfile"
 
 if exists("s:did_pyclewn")
     finish
@@ -45,6 +49,14 @@ function s:start()
         let s:tmpfile = ""
     else
         let s:tmpfile = tempname()
+    endif
+
+    " remove console and dbgvar buffers from previous session
+    if bufexists("(clewn)_console")
+        bwipeout (clewn)_console
+    endif
+    if bufexists("(clewn)_dbgvar")
+        bwipeout (clewn)_dbgvar
     endif
 
     " start pyclewn and netbeans

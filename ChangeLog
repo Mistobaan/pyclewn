@@ -1,6 +1,8 @@
 
-2010-05-19  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2010-05-27  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* pyclewn.vim: The ':Pyclewn' command wipes out both console and
+	dbgvar buffers when they exist, before starting netbeans.
 	* gdb.py gdbmi.py: Map the new pyclewn command 'setfmtvar' to the
 	gdb/mi command '-var-set-format'.
 
