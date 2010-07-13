@@ -1,6 +1,32 @@
 FAQ
 ===
 
+Standard/error output in gdb console
+------------------------------------
+
+*I'm starting vim in a screen session inside Putty and gdb doesn't display
+what's printed on the standard and error outputs*
+
+When using vim, the debuggee output is redirected to ``/dev/null``. So
+in this case you must tell gdb to redirect the debuggee output to
+another terminal.
+
+Start two putty sessions:
+
+* on the first one run the command ``tty`` to get the name of the terminal.
+  Assume for example that the command output is::
+
+    /dev/pts/2
+
+* on the second session, run vim, start pyclewn and gdb, and run the command::
+
+    :Cset inferior-tty /dev/pts/2
+
+* some gdb versions do not support the ``set inferior-tty`` command, in this
+  case use the ``tty`` command instead
+
+Now all debuggee output goes to the first putty terminal.
+
 ImportError on install
 ----------------------
 
