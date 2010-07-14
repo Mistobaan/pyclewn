@@ -23,9 +23,9 @@
 """
 import sys
 import unittest
-import test.test_support as test_support
+import testsuite.test_support as test_support
 
-from testsuite.test_support import ClewnTestCase
+from test_support import ClewnTestCase
 
 class PyclewnTestCase(ClewnTestCase):
     """Test pyclewn."""
@@ -220,7 +220,7 @@ def test_main():
     suite.addTest(PyclewnTestCase('test_cmdlist'))
     suite.addTest(PyclewnTestCase('test_mapkeys'))
     suite.addTest(PyclewnTestCase('test_delconsole'))
-    test_support.run_unittest(suite)
+    test_support.run_suite(suite)
 
 if __name__ == "__main__":
     test_main()

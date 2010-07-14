@@ -24,11 +24,11 @@
 import sys
 import os
 import unittest
-import test.test_support as test_support
+import testsuite.test_support as test_support
 
 import clewn.gdb as gdb
 import clewn.misc as misc
-from testsuite.test_support import ClewnTestCase, TESTFN_FILE, TESTFN_OUT
+from test_support import ClewnTestCase, TESTFN_FILE, TESTFN_OUT
 
 if os.name == 'nt':
     debuggee = 'file ${cwd}testsuite/foobar.exe'
@@ -710,7 +710,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_project_option_save'))
     suite.addTest(GdbTestCase('test_project_option_vimquit'))
     suite.addTest(GdbTestCase('test_quit_display'))
-    test_support.run_unittest(suite)
+    test_support.run_suite(suite)
 
 if __name__ == '__main__':
     test_main()

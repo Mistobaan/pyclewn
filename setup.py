@@ -6,12 +6,6 @@ import os.path
 import string
 import re
 import __builtin__
-try:
-    import test.regrtest as regrtest
-except ImportError, e:
-    print >> sys.stderr, ('Warning: setup.py cannot be used for running the'
-                                    ' regression test suite on this platform')
-    print >> sys.stderr, 'ImportError: %s' % e
 import distutils.core as core
 
 from os.path import join as pathjoin
@@ -19,6 +13,7 @@ from distutils.command.install import install as _install
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_scripts import build_scripts as _build_scripts
 
+import testsuite.regrtest as regrtest
 import pyclewn_install
 from clewn import *
 
@@ -137,53 +132,30 @@ class sdist(_sdist):
 
 class Test(core.Command):
     """Run the test suite.
-
-    The testsuite uses the python standard library testing framework with
-    unittest. See test/README and test/regrtest.py in the python distribution.
-
     """
 
     user_options = [
         ('test=', 't',
-            'run one test, for example "--test=gdb", all the tests are run'
-            + ' when this option is not present'),
+            'run a comma separated list of tests, for example             '
+            '"--test=simple,gdb", all the tests are run when this option'
+            ' is not present'),
         ('detail', 'd',
             'detailed test output, each test case is printed'),
     ]
 
     def initialize_options(self):
         self.test = None
-        self.detail = False
+        self.detail = 0
 
     def finalize_options(self):
-        if self.test is None:
-            sys.argv[1:] = []
-        else:
-            sys.argv[1:] = ['test_' + self.test]
+        if self.test is not None:
+            self.test = ['test_' + t for t in self.test.split(',')]
         if self.detail:
-            sys.argv[1:1] = ['-v']
+            self.detail = 1
 
     def run (self):
         """Run the test suite."""
-        TESTDIR = 'testsuite'
-        original_import = __builtin__.__import__
-
-        def import_hook(name, globals=None, locals=None, fromlist=None, level=-1):
-            """Hook to the builtin function __import__.
-
-            There is a bug in the  python standard library testing framework:
-            all tests are imported from the 'test' package regardless of the name
-            of the test directory.  The following function is a workaround that
-            allows the use of TESTDIR as the test directory and package name.
-
-            """
-            if name.startswith('test.test_') and name != 'test.test_support':
-                name = TESTDIR + name[4:]
-            return original_import(name, globals, locals, fromlist)
-
-        __builtin__.__import__ = import_hook
-        regrtest.STDTESTS = []
-        regrtest.main(testdir=TESTDIR)
+        regrtest.run('testsuite', self.test, self.detail)
 
 core.setup(
     cmdclass={'sdist': sdist,

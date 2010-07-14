@@ -2,9 +2,7 @@
 Writing Pyclewn Regression Tests
 +++++++++++++++++++++++++++++++++
 
-The Pyclewn regression tests use the Python unittests framework. Refer to the
-unittests package documentation, and to the README at
-lib/pythonx.x/test/README in the Python distribution.
+The Pyclewn regression tests use the Python unittests framework.
 
     * run all the test cases from the distribution root directory:
 

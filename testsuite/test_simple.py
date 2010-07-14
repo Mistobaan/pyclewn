@@ -25,9 +25,9 @@ import os
 import sys
 import os.path
 import unittest
-import test.test_support as test_support
+import testsuite.test_support as test_support
 
-from testsuite.test_support import ClewnTestCase
+from test_support import ClewnTestCase
 
 class SimpleCommandsTestCase(ClewnTestCase):
     """Test the Simple commands."""
@@ -403,7 +403,7 @@ def test_main():
             vim_pgm = os.path.basename(os.environ['EDITOR'])
         if vim_pgm != 'vim':
             suite.addTest(SimpleCommandsTestCase('test_startupfile'))
-    test_support.run_unittest(suite)
+    test_support.run_suite(suite)
 
 if __name__ == "__main__":
     test_main()

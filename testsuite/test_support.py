@@ -24,9 +24,10 @@ import sys
 import os
 import string
 import unittest
-import test.test_support as test_support
 
 import clewn.vim as vim
+
+verbose = 0              # flag set by regrtest.py
 
 if os.name == 'nt':
     SLEEP_TIME = '1400m'
@@ -36,8 +37,29 @@ else:
     SLEEP_TIME = '400m'
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
-TESTFN_FILE = test_support.TESTFN + '_file_'
-TESTFN_OUT = test_support.TESTFN + '_out'
+
+# Filename used for testing
+if os.name == 'java':
+    # Jython disallows @ in module names
+    TESTFN = '$test'
+elif os.name == 'riscos':
+    TESTFN = 'testfile'
+else:
+    TESTFN = '@test'
+TESTFN_FILE = TESTFN + '_file_'
+TESTFN_OUT = TESTFN + '_out'
+
+class TestFailed(Exception):
+    """Test failed."""
+
+class BasicTestRunner:
+    """BasicTestRunner."""
+    def run(self, test):
+        """Run the test."""
+        unused = self
+        result = unittest.TestResult()
+        test(result)
+        return result
 
 class ClewnTestCase(unittest.TestCase):
     """Pyclewn test case abstract class.
@@ -63,11 +85,11 @@ class ClewnTestCase(unittest.TestCase):
                 '-u NONE '
                 '-U NONE '
                 '--noplugin '
-                '-s %s' % (port, test_support.TESTFN),
+                '-s %s' % (port, TESTFN),
         ]
         if os.environ.has_key('EDITOR'):
             sys.argv.append('--editor=%s' % os.environ['EDITOR'])
-        if test_support.verbose:
+        if verbose:
             sys.argv.append('--level=nbdebug')
 
     def setup_vim_arg(self, newarg):
@@ -86,7 +108,7 @@ class ClewnTestCase(unittest.TestCase):
         """Cleanup stuff after the test."""
         self.__class__.__port = (self.__port + 1) % 100
         for name in os.listdir(os.getcwd()):
-            if name.startswith(test_support.TESTFN):
+            if name.startswith(TESTFN):
                 try:
                     os.unlink(name)
                 except OSError:
@@ -113,7 +135,7 @@ class ClewnTestCase(unittest.TestCase):
         cmd = ':sleep ${time}\n' + cmd
 
         # write the commands
-        fp = open(test_support.TESTFN, 'w')
+        fp = open(TESTFN, 'w')
         fp.write(string.Template(cmd).substitute(time=SLEEP_TIME,
                                                     test_file=TESTFN_FILE,
                                                     test_out=TESTFN_OUT))
@@ -145,7 +167,7 @@ class ClewnTestCase(unittest.TestCase):
         if os.name == 'nt' and not checked:
             expected = expected.replace('\\', '/')
             checked = ' '.join(expected.split()) in ' '.join(output.split())
-        test_support.verify(checked,
+        verify(checked,
                 "\n\n...Expected:\n%s \n\n...Got:\n%s" % (expected, output))
 
     def cltest_redir(self, cmd, expected, *test):
@@ -157,4 +179,49 @@ class ClewnTestCase(unittest.TestCase):
         sys.argv.append('--level=%s' % level)
         self.clewn_test(cmd, expected, LOGFILE, *test)
 
+def verify(condition, reason='test failed'):
+    """Verify that condition is true. If not, raise TestFailed.
+
+       The optional argument reason can be given to provide
+       a better error text.
+    """
+
+    if not condition:
+        raise TestFailed(reason)
+
+def run_suite(suite):
+    """Run tests from a unittest.TestSuite-derived class."""
+    if verbose:
+        result = unittest.TextTestRunner(sys.stdout, verbosity=2).run(suite)
+    else:
+        result = BasicTestRunner().run(suite)
+
+    if not result.wasSuccessful():
+        if len(result.errors) == 1 and not result.failures:
+            err = result.errors[0][1]
+        elif len(result.failures) == 1 and not result.errors:
+            err = result.failures[0][1]
+        else:
+            err = "errors occurred; run in verbose mode for details"
+        raise TestFailed(err)
+
+# Make sure we can write to TESTFN, try in /tmp if we can't
+f = None
+try:
+    f = open(TESTFN, 'w+')
+except IOError:
+    TMP_TESTFN = os.path.join('/tmp', TESTFN)
+    try:
+        f = open(TMP_TESTFN, 'w+')
+        TESTFN = TMP_TESTFN
+        del TMP_TESTFN
+    except IOError:
+        print ('WARNING: tests will fail, unable to write to: %s or %s' %
+                (TESTFN, TMP_TESTFN))
+if f is not None:
+    f.close()
+    try:
+        os.unlink(TESTFN)
+    except:
+        pass
 
