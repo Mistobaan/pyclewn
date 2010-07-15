@@ -38,14 +38,8 @@ else:
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
 
-# Filename used for testing
-if os.name == 'java':
-    # Jython disallows @ in module names
-    TESTFN = '$test'
-elif os.name == 'riscos':
-    TESTFN = 'testfile'
-else:
-    TESTFN = '@test'
+# filenames used for testing
+TESTFN = '@test'
 TESTFN_FILE = TESTFN + '_file_'
 TESTFN_OUT = TESTFN + '_out'
 
@@ -204,24 +198,4 @@ def run_suite(suite):
         else:
             err = "errors occurred; run in verbose mode for details"
         raise TestFailed(err)
-
-# Make sure we can write to TESTFN, try in /tmp if we can't
-f = None
-try:
-    f = open(TESTFN, 'w+')
-except IOError:
-    TMP_TESTFN = os.path.join('/tmp', TESTFN)
-    try:
-        f = open(TMP_TESTFN, 'w+')
-        TESTFN = TMP_TESTFN
-        del TMP_TESTFN
-    except IOError:
-        print ('WARNING: tests will fail, unable to write to: %s or %s' %
-                (TESTFN, TMP_TESTFN))
-if f is not None:
-    f.close()
-    try:
-        os.unlink(TESTFN)
-    except:
-        pass
 

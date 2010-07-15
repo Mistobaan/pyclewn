@@ -1,6 +1,9 @@
 
-2010-07-13  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2010-07-14  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* setup.py regrtest.py test_support.py: The 'test' package is meant
+	for Python core developers only, so do not use it anymore and
+	implement our own test_support module.
 	* setup.py: Workaround to a RuntimeError Python 2.7 bug when importing
 	regrtest.
 	* pyclewn.vim: The ':Pyclewn' command wipes out both console and

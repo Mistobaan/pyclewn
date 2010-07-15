@@ -24,7 +24,6 @@ import os
 import sys
 import cStringIO
 import traceback
-import shutil
 import textwrap
 
 from testsuite import test_support
@@ -89,7 +88,6 @@ def run(testdir, tests=None, verbose=0):
 
     sys.exit(len(bad) > 0)
 
-
 NOTTESTS = [
     'test_support',
     ]
@@ -118,13 +116,6 @@ def runtest(test, abstest, verbose):
          1  test passed
     """
 
-    try:
-        return runtest_inner(test, abstest, verbose)
-    finally:
-        cleanup_test_droppings(test, verbose)
-
-def runtest_inner(test, abstest, verbose):
-    """Run a single test.."""
     if verbose:
         capture_stdout = None
     else:
@@ -168,37 +159,6 @@ def runtest_inner(test, abstest, verbose):
         print "*" * 70
         sys.stdout.flush()
         return 0
-
-def cleanup_test_droppings(testname, verbose):
-    """Clean up after test has been run."""
-
-    # Try to clean up junk commonly left behind.  While tests shouldn't leave
-    # any files or directories behind, when a test fails that can be tedious
-    # for it to arrange.  The consequences can be especially nasty on Windows,
-    # since if a test leaves a file open, it cannot be deleted by name (while
-    # there's nothing we can do about that here either, we can display the
-    # name of the offending test, which is a real help).
-    for name in (test_support.TESTFN,
-                 "db_home",
-                ):
-        if not os.path.exists(name):
-            continue
-
-        if os.path.isdir(name):
-            kind, nuker = "directory", shutil.rmtree
-        elif os.path.isfile(name):
-            kind, nuker = "file", os.unlink
-        else:
-            raise SystemError("os.path says %r exists but is neither "
-                              "directory nor file" % name)
-
-        if verbose:
-            print "%r left behind %s %r" % (testname, kind, name)
-        try:
-            nuker(name)
-        except Exception, msg:
-            print >> sys.stderr, ("%r left behind %s %r and it couldn't be "
-                "removed: %s" % (testname, kind, name, msg))
 
 def count(n, word):
     """Pretty print count word."""
