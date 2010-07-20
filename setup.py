@@ -34,25 +34,23 @@ http://pyclewn.sourceforge.net/install.html).
 
 if os.name == 'nt':
     SCRIPTS = ['pyclewn', 'pyclewn_install.py']
-    VIMDIR = ['pyclewn']
+    vimdir = 'pyclewn'
     LONG_DESCRIPTION = WINDOWS_INSTALL
 else:
     SCRIPTS = ['pyclewn']
-    VIMDIR = []
+    vimdir = pyclewn_install.vimdir()
     LONG_DESCRIPTION = DESCRIPTION
 
 DEBUGGERS = ('simple', 'gdb')
 DATA_FILES = [
-    (pyclewn_install.vimdir(VIMDIR),
-        ['runtime/pyclewn.vim']),
-    (pathjoin(pyclewn_install.vimdir(VIMDIR), 'doc'),
-        ['runtime/doc/pyclewn.txt']),
-    (pathjoin(pyclewn_install.vimdir(VIMDIR), 'macros'),
+    (vimdir, ['runtime/pyclewn.vim']),
+    (pathjoin(vimdir, 'doc'), ['runtime/doc/pyclewn.txt']),
+    (pathjoin(vimdir, 'macros'),
         [('runtime/.pyclewn_keys.%s' % d) for d in DEBUGGERS]),
-    (pathjoin(pyclewn_install.vimdir(VIMDIR), 'syntax'),
-        ['runtime/syntax/dbgvar.vim'])]
+    (pathjoin(vimdir, 'syntax'), ['runtime/syntax/dbgvar.vim']),
+    ]
 if os.name == 'nt':
-    DATA_FILES.append(pyclewn_install.icon(VIMDIR[0]))
+    DATA_FILES.append(pyclewn_install.icon(vimdir))
 
 RE_VERSION = r'(?P<name>pyclewn-)(?P<num>\d+\.\d+)'     \
              r'# RE: pyclewn-d.d'

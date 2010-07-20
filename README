@@ -64,7 +64,7 @@ The following table lists the differences between clewn_, vimGdb_ and pyclewn.
     |               |             |                       | supported by python,   |
     |               |             |                       | Windows                |
     +---------------+-------------+-----------------------+------------------------+
-    | langage       | C           | C                     | python 2.4 and         |
+    | language      | C           | C                     | python 2.4 and         |
     |               |             |                       | above                  |
     +---------------+-------------+-----------------------+------------------------+
     | vim mode      | vim in a    | gvim                  | vim in a               |

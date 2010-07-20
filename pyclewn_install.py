@@ -11,6 +11,7 @@ from os.path import join as pathjoin
 from distutils.file_util import copy_file
 
 import clewn.vim as vim
+import clewn.misc as misc
 
 ICON_NAME = 'clewn.ico'
 PYCLEWN_SHORTCUT = 'Pyclewn.lnk'
@@ -41,16 +42,21 @@ def vim_features():
         raise ClewnInstallError, 'auto commands support in vim is required'
     print >> sys.stderr, 'yes'
 
-def vimdir(dir=[]):
+@misc.previous_evaluation
+def vimdir():
     """Return the vim runtime files directory."""
-    # do it only once
-    if not dir:
-        if os.environ.has_key('vimdir'):
-            dir.append(os.environ['vimdir'])
-        else:
-            path = vim.exec_vimcmd(['echon $VIM'])
-            dir.append(pathjoin(path, 'vimfiles'))
-    return dir[0]
+    if os.environ.has_key('vimdir'):
+        dir = os.environ['vimdir']
+    else:
+        path = vim.exec_vimcmd(['echon $VIM'])
+        path = path.strip(' \t\r\n')
+        if not os.path.isdir(path):
+            nodir = ('Invalid data files path. $VIM="%s" is returned'
+                ' by Vim, but this is not an existing directory.' % path)
+            raise ClewnInstallError, nodir
+        dir = pathjoin(path, 'vimfiles')
+    print 'Vim user data files location: "%s"' % dir
+    return dir
 
 def build_vimhelp():
     """Add pyclewn help to Vim help."""

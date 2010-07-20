@@ -1,6 +1,9 @@
 
 2010-07-14  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* setup.py pyclewn_install.py: Strip the white spaces from $VIM on
+	installing, and abort the installation when the result is not an
+	existing directory.
 	* setup.py regrtest.py test_support.py: The 'test' package is meant
 	for Python core developers only, so do not use it anymore and
 	implement our own test_support module.
