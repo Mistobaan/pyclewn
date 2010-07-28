@@ -198,11 +198,14 @@ def unwrap_stream_record(lines):
     unwrapped = []
     for line in lines.splitlines():
         if line:
-            if line.startswith('~"') and line.endswith(r'\n"'):
+            # ignore an ASYNC-RECORD
+            if line[0] in '*+=':
+                continue
+            elif line.startswith('~"') and line.endswith(r'\n"'):
                 line = line[2:-3]
             else:
                 return lines
-        unwrapped.append(line)
+            unwrapped.append(line)
     return '\n'.join(unwrapped)
 
 def gdb_batch(pgm, job):
@@ -415,9 +418,8 @@ class GlobalSetup(misc.Singleton):
         nocomplt_cmds = (self.illegal_cmds + self.filename_complt +
                                                         self.symbol_complt)
         # get the list of gdb commands
-        for cmd in gdb_batch(self.gdbname, 'complete').splitlines():
-            # sanitize gdb output: remove empty lines and truncate multiple tokens
-            cmd = unwrap_stream_record(cmd)
+        cmdlist = unwrap_stream_record(gdb_batch(self.gdbname, 'complete'))
+        for cmd in cmdlist.splitlines():
             if not cmd:
                 continue
             else:
@@ -432,8 +434,9 @@ class GlobalSetup(misc.Singleton):
                 firstarg_complt += 'complete %s \n' % cmd
 
         # get first arg completion commands
-        for result in gdb_batch(self.gdbname, firstarg_complt).splitlines():
-            matchobj = re_completion.match(unwrap_stream_record(result))
+        cmdlist = unwrap_stream_record(gdb_batch(self.gdbname, firstarg_complt))
+        for result in cmdlist.splitlines():
+            matchobj = re_completion.match(result)
             if matchobj:
                 cmd = matchobj.group('cmd')
                 arg = matchobj.group('arg')

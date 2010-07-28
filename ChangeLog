@@ -1,6 +1,8 @@
 
-2010-07-14  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2010-07-28  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* gdb.py: Fix handling gdb ASYNC-RECORDs in the output of the
+	'complete' command in gdb 7.2.
 	* setup.py pyclewn_install.py: Strip the white spaces from $VIM on
 	installing, and abort the installation when the result is not an
 	existing directory.
