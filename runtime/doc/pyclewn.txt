@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2010 May 19
+*pyclewn.txt*                                   Last change: 2010 August 8
 
 
                             PYCLEWN USER MANUAL

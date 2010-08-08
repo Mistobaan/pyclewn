@@ -20,7 +20,7 @@ endif
 let s:did_pyclewn = 1
 
 " pyclewn version
-let g:pyclewn_version = "pyclewn-1.2"
+let g:pyclewn_version = "pyclewn-1.3"
 
 " enable balloon_eval
 if has("balloon_eval")

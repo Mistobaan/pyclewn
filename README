@@ -27,6 +27,9 @@ Features
   Pyclewn automatically finds the source file for the breakpoint if it exists,
   and tells vim to load and display the file and highlight the line.
 
+* Multiple consecutive pyclewn sessions can be started from within vim with
+  the ``:Pyclewn`` command.
+
 * The value of an expression or variable is displayed in a balloon in gvim when
   the mouse pointer is hovering over the selected expression or the variable.
 
@@ -46,11 +49,12 @@ Features
 
 .. note::
 
-   Pyclewn uses the ``netbeans`` protocol to interact with vim. Vim currently
-   only supports netbeans in ``gvim``, its graphical implementation. The
-   implementation of netbeans in ``plain vim`` (vim running in a terminal), is
-   available as a Mercurial Queues patch for the official Vim release and for
-   the latest development source tree. See :ref:`vim-patches-label`.
+   Pyclewn uses the ``netbeans`` protocol to interact with vim. Vim
+   implementation of netbeans in ``plain vim`` (vim running in a terminal) is
+   available since vim version 7.3.
+
+   The vim ``:nbstart`` command that allows pyclewn to be started from within
+   vim, is available since vim version 7.3.
 
 Comparison of clewn, vimGdb and pyclewn
 ---------------------------------------
@@ -74,6 +78,9 @@ The following table lists the differences between clewn_, vimGdb_ and pyclewn.
     | vim interface | a vim patch | a standalone program  | a standalone program   |
     |               |             | connected to gvim with| connected to vim with  |
     |               |             | a netbeans socket     | a netbeans socket      |
+    |               |             |                       |                        |
+    |               |             |                       | pyclewn may be started |
+    |               |             |                       | from within vim        |
     +---------------+-------------+-----------------------+------------------------+
     | vim version   | a different | vim 6.3 and above     | vim 7.0 and above      |
     |               | patch for   |                       |                        |
@@ -83,7 +90,7 @@ The following table lists the differences between clewn_, vimGdb_ and pyclewn.
     | debuggers     | gdb         | gdb                   | gdb                    |
     |               |             |                       |                        |
     +---------------+-------------+-----------------------+------------------------+
-    | gd features   |             | watched variables     | tight integration      |
+    | gdb features  |             | watched variables     | tight integration      |
     |               |             |                       | with vim               |
     |               |             | project file          |                        |
     |               |             |                       | gdb/mi interface       |

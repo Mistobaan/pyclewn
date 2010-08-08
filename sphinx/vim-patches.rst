@@ -34,6 +34,11 @@ patch.
 |                  |               | a Netbeans session from within Vim.   |
 +------------------+---------------+---------------------------------------+
 
+.. note::
+
+   The ``console-netbeans`` and ``nbstart-command`` patches have been
+   implemented in vim version 7.3, therefore these two patches are obsolete.
+
 Patch a Vim tarball
 -------------------
 
