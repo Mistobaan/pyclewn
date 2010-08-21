@@ -288,7 +288,7 @@ class GdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             "Signs for testsuite/foobar.c:\n"
-            "    line=9  id=2  name=3\n"
+            "    line=9  id=3  name=3\n"
             "    line=9  id=1  name=1\n"
             )
 
@@ -324,7 +324,7 @@ class GdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             "Signs for testsuite/foobar.c:\n"
-            "line=9  id=1  name=2\n"
+            "line=9  id=2  name=2\n"
             )
 
     def test_delete_once(self):
@@ -343,7 +343,7 @@ class GdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             "Signs for testsuite/foobar.c:\n"
-            "line=10  id=2  name=3\n"
+            "line=10  id=3  name=3\n"
             )
 
     def test_breakpoint_open_file(self):
@@ -377,7 +377,7 @@ class GdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             "Signs for testsuite/foobar.c:\n"
-            "line=9  id=2  name=1\n"
+            "line=9  id=3  name=3\n"
             )
 
     def test_clear_on_frame(self):
@@ -395,7 +395,7 @@ class GdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             "Signs for testsuite/foobar.c:\n"
-            "line=9  id=2  name=3\n"
+            "line=9  id=3  name=3\n"
             )
 
     def test_break_completion(self):
@@ -518,14 +518,20 @@ class GdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
             ':sign place\n'
+            ':sign list\n'
             ':qa!\n',
 
             '--- Signs ---\n'
             'Signs for testsuite/foobar.c:\n'
-            '    line=9  id=3  name=3\n'
+            '    line=9  id=5  name=5\n'
             '    line=9  id=1  name=1\n'
             'Signs for ${cwd}testsuite/foo.c:\n'
-            '    line=30  id=2  name=1\n'
+            '    line=30  id=3  name=3\n'
+            'sign 1 text=1  texthl=NB_1\n'
+            'sign 2 text=1  texthl=NB_2\n'
+            'sign 3 text=2  texthl=NB_3\n'
+            'sign 4 text=2  texthl=NB_4\n'
+            'sign 5 text==> texthl=NB_0\n'
             )
 
     def test_multiple_choice(self):
@@ -544,8 +550,8 @@ class GdbTestCase(ClewnTestCase):
 
             '--- Signs ---\n'
             'Signs for testsuite/overloaded.cc:\n'
-            '    line=3  id=2  name=1\n'
-            '    line=4  id=3  name=1\n'
+            '    line=3  id=3  name=3\n'
+            '    line=4  id=5  name=5\n'
             '    line=5  id=1  name=1\n'
             )
 
@@ -604,7 +610,7 @@ class GdbTestCase(ClewnTestCase):
             'Signs for testsuite/foobar.c:\n'
             '    line=9  id=1  name=1\n'
             'Signs for ${cwd}testsuite/foo.c:\n'
-            '    line=30  id=2  name=1\n',
+            '    line=30  id=3  name=3\n',
 
             'cd testsuite\n'
             'file foobar\n'

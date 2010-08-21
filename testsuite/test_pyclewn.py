@@ -70,7 +70,7 @@ class PyclewnTestCase(ClewnTestCase):
             ':echo bufname("%")\n'
             ':qa!\n',
 
-            'line=1  id=2  name=3\n'
+            'line=1  id=3  name=3\n'
             'line=2  id=1  name=1\n'
             '${test_file}1',
 
@@ -98,7 +98,7 @@ class PyclewnTestCase(ClewnTestCase):
             ':echo bufname("%")\n'
             ':qa!\n',
 
-            'line=1  id=2  name=3\n'
+            'line=1  id=3  name=3\n'
             'line=2  id=1  name=1\n'
             '${cwd}${test_file}1',
 
@@ -126,7 +126,7 @@ class PyclewnTestCase(ClewnTestCase):
             'Breakpoint 1 at file ${cwd}${test_file}1, line 2.\n'
             '--- Signs ---\n'
             'Signs for ${test_file}1:\n'
-            '    line=2  id=2  name=1\n',
+            '    line=2  id=3  name=3\n',
 
             'line 1\n'
             'line 2\n'

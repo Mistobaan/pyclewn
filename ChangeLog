@@ -1,4 +1,10 @@
 
+2010-08-21  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* buffer.py: Show the gdb breakpoint numbers (the last two > digits of
+	them) in the source margin instead of 'bp'.
+
+===============================================================================
 2010-07-28  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* gdb.py: Fix handling gdb ASYNC-RECORDs in the output of the

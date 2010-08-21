@@ -68,8 +68,8 @@ class SimpleCommandsTestCase(ClewnTestCase):
             ':sign place\n'
             ':qa!\n',
 
-            'line=2  id=3  name=1\n'
-            'line=2  id=2  name=1',
+            'line=2  id=5  name=5\n'
+            'line=2  id=3  name=3',
 
             'line 1\n'
             'line 2\n'
@@ -155,7 +155,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
             ':sign place\n'
             ':qa!\n',
 
-            'line=1  id=1  name=2',
+            'line=1  id=2  name=2',
 
             'line 1\n'
             )
@@ -193,8 +193,8 @@ class SimpleCommandsTestCase(ClewnTestCase):
             ':sign place\n'
             ':qa!\n',
 
-            'line=1  id=1  name=2\n'
-            'line=2  id=2  name=1',
+            'line=1  id=2  name=2\n'
+            'line=2  id=3  name=3',
 
             'line 1\n'
             'line 2\n'
@@ -301,7 +301,7 @@ class SimpleCommandsTestCase(ClewnTestCase):
             ':sign place\n'
             ':qa!\n',
 
-            'line=1  id=2  name=3\n'
+            'line=1  id=3  name=3\n'
             'line=2  id=1  name=1',
 
             'line 1\n'

@@ -1,6 +1,17 @@
 News
 ====
 
+Pyclewn 1.4
+-----------
+
+.. August 21, 2010
+
+New feature
+^^^^^^^^^^^
+
+* Show the gdb breakpoint numbers (the last two > digits of them) in the
+  source margin instead of 'bp'.
+
 Pyclewn 1.3
 -----------
 
