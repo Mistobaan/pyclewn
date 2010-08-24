@@ -201,7 +201,7 @@ class Vim(object):
                 'echo v:version > 702 || v:version == 702 && has("patch253")',
                 'echo v:version > 702 || v:version == 702 && has("patch334")',
                 'echo v:version',
-                'runtime pyclewn.vim',
+                'runtime plugin/pyclewn.vim',
                 'if exists("g:pyclewn_version")'
                     ' | echo g:pyclewn_version'
                     ' | endif',
@@ -243,8 +243,6 @@ class Vim(object):
         info('sourcing the Vim script file: %s', self.f_script.name)
         args[:0] = [self.f_script.name]
         args[:0] = ['-S']
-        args[:0] = ['runtime pyclewn.vim']
-        args[:0] = ['-c']
         if not self.options.vim_args \
                 or not                  \
                 [a for a in self.options.vim_args if a.startswith('-nb')]:

@@ -43,7 +43,8 @@ else:
 
 DEBUGGERS = ('simple', 'gdb')
 DATA_FILES = [
-    (vimdir, ['runtime/pyclewn.vim']),
+    (pathjoin(vimdir, 'plugin'), ['runtime/plugin/pyclewn.vim']),
+    (pathjoin(vimdir, 'autoload'), ['runtime/autoload/pyclewn.vim']),
     (pathjoin(vimdir, 'doc'), ['runtime/doc/pyclewn.txt']),
     (pathjoin(vimdir, 'macros'),
         [('runtime/.pyclewn_keys.%s' % d) for d in DEBUGGERS]),
@@ -123,7 +124,7 @@ class build_scripts(_build_scripts):
 class sdist(_sdist):
     """Specialized sdister."""
     def run(self):
-        update_version('runtime/pyclewn.vim')
+        update_version('runtime/plugin/pyclewn.vim')
         update_version('INSTALL')
         keymap_files()
         _sdist.run(self)

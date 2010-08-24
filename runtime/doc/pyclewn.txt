@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2010 August 23
+*pyclewn.txt*                                   Last change: 2010 August 24
 
 
                             PYCLEWN USER MANUAL
@@ -311,20 +311,13 @@ mainly used for regression testing.
 
 Configuration:
 --------------
-First, source the pyclewn script to enable the|:Pyclewn|command: >
 
-    :runtime pyclewn.vim
+The|:Pyclewn|command is provided by the vim plugin installed as the
+"pyclewn.vim" file in vim plugin directory.
 
-To avoid entering this command each time vim is started, add it to
-your|.vimrc|.
-
-To customize the way pyclewn is started by vim, you may change the variables
-at the beginning of pyclewn.vim. For example assuming that pyclewn has been
-downloaded to /tmp, modify /tmp/pyclewn-n.n/runtime/pyclewn.vim and source
-the modified script with the command: >
-
-    :source /tmp/pyclewn-n.n/runtime/pyclewn.vim
-
+Pyclewn command line arguments and connection details may be set with the
+"pyclewn_args" and the "pyclewn_connection" vim global variables. For further
+customization you can edit the "pyclewn.vim" file in vim autoload directory.
 
 Running pyclewn:
 ----------------

@@ -3,25 +3,33 @@
 "
 " Configure VIM to be used with pyclewn and netbeans
 "
-
-" The following variables define how pyclewn is started when
-" the ':Pyclewn' vim command is run.
-" They may be changed to match your preferences.
-let s:pgm = "pyclewn"
-let s:args = "--gdb= --pgm=gdb --args= --window=top --maxlines=10000"
-\            . " --background=Cyan,Green,Magenta"
-let s:connection = "localhost:3219:changeme"
-" Uncomment the following line to print full traces in a file named 'logfile'
-" for debugging purpose.
-" let s:args .= " --level=nbdebug --file=logfile"
-
 if exists("s:did_pyclewn")
     finish
 endif
 let s:did_pyclewn = 1
 
-" pyclewn version
-let g:pyclewn_version = "pyclewn-1.3"
+" The following variables define how pyclewn is started when
+" the ':Pyclewn' vim command is run.
+" They may be changed to match your preferences.
+
+let s:pgm = "pyclewn"
+
+if exists("pyclewn_args")
+  let s:args = pyclewn_args
+else
+  let s:args = "--gdb= --pgm=gdb --args= --window=top --maxlines=10000"
+\            . " --background=Cyan,Green,Magenta"
+endif
+
+if exists("pyclewn_connection")
+  let s:connection = pyclewn_connection
+else
+  let s:connection = "localhost:3219:changeme"
+endif
+
+" Uncomment the following line to print full traces in a file named 'logfile'
+" for debugging purpose.
+" let s:args .= " --level=nbdebug --file=logfile"
 
 " enable balloon_eval
 if has("balloon_eval")
@@ -30,7 +38,6 @@ if has("balloon_eval")
 endif
 
 " The 'Pyclewn' command starts pyclewn and vim netbeans interface.
-command -nargs=0 Pyclewn call s:startclewn()
 let s:fixed = "--daemon --editor= --netbeans=" . s:connection . " --cargs="
 
 " Start pyclewn and vim netbeans interface.
@@ -85,7 +92,7 @@ function s:start()
     endif
 endfunction
 
-function s:startclewn()
+function pyclewn#StartClewn()
     try
         call s:start()
     catch /.*/

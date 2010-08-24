@@ -1,6 +1,8 @@
 
-2010-08-23  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2010-08-24  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* vim.py setup.py pyclewn_install.py: Use the standard layout for vim
+	runtime files (Sergey Khorev).
 	* vim.py netbeans.py buffer.py: Add a new option to the command line
 	that allows the setting of the background colors for the bp enabled
 	sign, the bp disabled sign and the frame sign.

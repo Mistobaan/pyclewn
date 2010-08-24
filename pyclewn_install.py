@@ -139,7 +139,8 @@ def uninstall():
     # remove vim files and rebuild vim help
     unlink(pathjoin(pathjoin(vimdir(), 'doc'), 'pyclewn.txt'))
     unlink(pathjoin(pathjoin(vimdir(), 'syntax'), 'dbgvar.vim'))
-    unlink(pathjoin(vimdir(), 'pyclewn.vim'))
+    unlink(pathjoin(pathjoin(vimdir(), 'plugin'), 'pyclewn.vim'))
+    unlink(pathjoin(pathjoin(vimdir(), 'autoload'), 'pyclewn.vim'))
     build_vimhelp()
 
 if __name__ == '__main__':
