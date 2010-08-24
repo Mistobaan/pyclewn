@@ -591,6 +591,9 @@ class Netbeans(asynchat.async_chat, object):
             '0' with vim 7.2 before patch 253
         max_lines: int
             Console maximum number of lines
+        bg_colors: tuple
+            The three sign background colors of the bp enabled, bp disabled and
+            the frame (in this order)
 
     """
 
@@ -615,6 +618,7 @@ class Netbeans(asynchat.async_chat, object):
         self.remove_fix = '0'
         self.getLength_fix = '0'
         self.max_lines = CONSOLE_MAXLINES
+        self.bg_colors = ('Cyan', 'Green', 'Magenta')
 
         self.server = Server(self)
         self.set_terminator('\n')
@@ -745,6 +749,8 @@ class Netbeans(asynchat.async_chat, object):
                 if event == "version":
                     if nbstring >= NETBEANS_VERSION:
                         self.nbversion = nbstring
+                        if self.nbversion < '2.5':
+                            self.bg_colors = ('802287', '4190027', '15710005')
                         return
                     else:
                         raise ClewnError(

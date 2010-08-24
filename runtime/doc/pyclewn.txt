@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2010 August 8
+*pyclewn.txt*                                   Last change: 2010 August 23
 
 
                             PYCLEWN USER MANUAL
@@ -158,6 +158,11 @@ options:
   -m LNUM, --maxlines=LNUM    set the maximum number of lines of the debugger
                               console window to LNUM (default 10000 lines)
   -x PREFIX, --prefix=PREFIX  set the commands prefix to PREFIX (default|C|)
+  -b COLORS, --background=COLORS
+                              COLORS is a comma separated list of the three
+                              colors of the breakpoint enabled, breakpoint
+                              disabled and frame sign background colors, in
+                              this order (default 'Cyan,Green,Magenta')
   -n CONN, --netbeans=CONN    set netBeans connection parameters to CONN with
                               CONN as 'host[:port[:passwd]]', (the default is
                               ':3219:changeme' where the empty host represents
@@ -261,6 +266,18 @@ The full description of the command line options follows:
 --prefix={PREFIX}   Set the user defined vim commands prefix to PREFIX
                     (default|C|). The prefix may be more than one letter
                     long. The first letter must be upper case.
+
+-b {COLORS}
+--background={COLORS}
+                    COLORS is a comma separated list of the three colors of
+                    the breakpoint enabled, breakpoint disabled and frame sign
+                    background colors, in this order (default
+                    'Cyan,Green,Magenta'). The color names are case sensitive.
+                    See|highlight-ctermbg|for the list of the valid color
+                    names.
+
+                    This option has no effect when vim version is vim72 or
+                    older.
 
 -n {CONN}
 --netbeans={CONN}   Set netBeans connection parameters to CONN with CONN as

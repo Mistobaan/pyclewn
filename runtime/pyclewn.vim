@@ -9,6 +9,7 @@
 " They may be changed to match your preferences.
 let s:pgm = "pyclewn"
 let s:args = "--gdb= --pgm=gdb --args= --window=top --maxlines=10000"
+\            . " --background=Cyan,Green,Magenta"
 let s:connection = "localhost:3219:changeme"
 " Uncomment the following line to print full traces in a file named 'logfile'
 " for debugging purpose.

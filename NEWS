@@ -4,13 +4,22 @@ News
 Pyclewn 1.4
 -----------
 
-.. August 21, 2010
+.. August 23, 2010
 
-New feature
-^^^^^^^^^^^
+New features
+^^^^^^^^^^^^
 
-* Show the gdb breakpoint numbers (the last two > digits of them) in the
-  source margin instead of 'bp'.
+* Add the ``--background`` command line option, allowing the setting of the
+  background colors for the bp enabled sign, the bp disabled sign and the
+  frame sign.
+* Show the last two digits of the gdb breakpoint numbers in the source margin
+  instead of ``bp``.
+
+Changes
+^^^^^^^
+
+* ``Cyan`` is the default background color for enabled breakpoint signs,
+  instead of ``Blue`` previously.
 
 Pyclewn 1.3
 -----------

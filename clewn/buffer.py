@@ -98,11 +98,8 @@ class Buffer(dict):
         """Define the frame annotation."""
         if self.frame_typeNum == 0:
             self.frame_typeNum = self.last_typeNum
-            color = '15710005'
-            if self.nbsock.nbversion >= '2.5':
-                color = 'Magenta'
             self.nbsock.send_cmd(self, 'defineAnnoType',
-                '0 "0" "" "=>" none %s' % color)
+                '0 "0" "" "=>" none %s' % self.nbsock.bg_colors[2])
 
     def add_anno(self, anno_id, lnum):
         """Add an annotation."""
@@ -193,17 +190,14 @@ class Annotation(object):
         """Define the two annotations for breakpoints."""
         if not self.defined:
             self.defined = True
-            bpena_color = '802287'
-            bpdis_color = '4190027'
-            if self.nbsock.nbversion >= '2.5':
-                bpena_color = 'Blue'
-                bpdis_color = 'Green'
             self.nbsock.send_cmd(self.buf, 'defineAnnoType',
                 '0 "%d" "" "%s" none %s'
-                % (self.enabled_sernum, str(self.bp)[-2:], bpena_color))
+                % (self.enabled_sernum, str(self.bp)[-2:],
+                   self.nbsock.bg_colors[0]))
             self.nbsock.send_cmd(self.buf, "defineAnnoType",
                 '0 "%d" "" "%s" none %s'
-                % (self.disabled_sernum, str(self.bp)[-2:], bpdis_color))
+                % (self.disabled_sernum, str(self.bp)[-2:],
+                   self.nbsock.bg_colors[1]))
 
     def update(self, disabled=False):
         """Update the annotation."""

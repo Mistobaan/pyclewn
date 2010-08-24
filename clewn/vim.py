@@ -57,6 +57,12 @@ Please check that the netbeans_intg feature is compiled
 in your Vim version by running the Vim command ':version',
 and checking that this command displays '+netbeans_intg'."""
 
+BG_COLORS =( 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 'DarkRed',
+             'DarkMagenta', 'Brown', 'DarkYellow', 'LightGray', 'LightGrey',
+             'Gray', 'Grey', 'DarkGray', 'DarkGrey', 'Blue', 'LightBlue',
+             'Green', 'LightGreen', 'Cyan', 'LightCyan', 'Red', 'LightRed',
+             'Magenta', 'LightMagenta', 'Yellow', 'LightYellow', 'White',)
+
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('vim')
 Unused = error
@@ -333,6 +339,18 @@ class Vim(object):
             else:
                 parser.values.args = args
 
+        def bpcolor_callback(option, opt_str, value, parser):
+            unused = option
+            unused = opt_str
+            colors = value.split(',')
+            if len(colors) != 3:
+                raise optparse.OptionValueError('Three colors are required for'
+                ' the \'--background\' option.')
+            if not set(colors).issubset(BG_COLORS):
+                raise optparse.OptionValueError('These colors are invalid: %s.'
+                    % str(tuple(set(colors).difference(BG_COLORS))))
+            parser.values.bg_colors = colors
+
         editor = os.environ.get('EDITOR', 'gvim')
         formatter = optparse.IndentedHelpFormatter(max_help_position=30)
         parser = optparse.OptionParser(
@@ -373,6 +391,13 @@ class Vim(object):
                 ' window to LNUM (default %default lines)')
         parser.add_option('-x', '--prefix', dest='prefix', default='C',
                 help='set the commands prefix to PREFIX (default \'%default\')')
+        parser.add_option('-b', '--background', dest='bg_colors',
+                type='string', action='callback', callback=bpcolor_callback,
+                metavar='COLORS',
+                help='COLORS is a comma separated list of the three colors of'
+                ' the breakpoint enabled, breakpoint disabled and frame sign'
+                ' background colors, in this order'
+                ' (default \'Cyan,Green,Magenta\')')
         parser.add_option('-n', '--netbeans',
                 metavar='CONN',
                 help='set netBeans connection parameters to CONN with CONN as'
@@ -403,6 +428,9 @@ class Vim(object):
         if self.options.max_lines <= 0:
             parser.error('invalid number for maxlines option')
         self.netbeans.max_lines = self.options.max_lines
+
+        if self.options.bg_colors:
+            self.netbeans.bg_colors = self.options.bg_colors
 
         level = self.options.logLevel.upper()
         if level:
