@@ -5,6 +5,7 @@
 import sys
 import os
 import os.path
+import string
 import distutils.sysconfig as sysconfig
 import distutils.dir_util as dir_util
 from os.path import join as pathjoin
@@ -71,6 +72,17 @@ def unlink(filename):
     except OSError:
         pass
 
+def substitute_autoload(runtime_dir, mapping):
+    """Substitute templates in the autoload plugin."""
+    plugin = pathjoin(pathjoin(runtime_dir, 'autoload'), 'pyclewn.vim')
+    f = open(plugin)
+    content = f.read()
+    f.close()
+    content = string.Template(content).substitute(mapping)
+    f = open(plugin, 'w')
+    f.write(content)
+    f.close()
+
 def install():
     """Write the bat file and copy the runtime files."""
     prefix = sysconfig.get_config_var('prefix')
@@ -84,6 +96,11 @@ def install():
     print >> sys.stderr, 'copying file %s' % icon_file
     unlink(icon_file)
 
+    # substitute templates in the autoload plugin
+    clewnbat = pathjoin(scripts, 'pyclewn.bat')
+    mapping = {'pgm': misc.quote(clewnbat), 'start': 'start '}
+    substitute_autoload(runtime_dir, mapping)
+
     for filename in dir_util.copy_tree(runtime_dir, vimdir()):
         print >> sys.stderr, 'copying file %s' % filename
     print >> sys.stderr, 'removing directory %s' % runtime_dir
@@ -94,13 +111,13 @@ def install():
     # create pyclewn.bat
     pyexe = pathjoin(prefix, 'python.exe')
     scriptpy = pathjoin(scripts, 'pyclewn')
-    f = open(pathjoin(scripts, 'pyclewn.bat'), 'w')
-    f.write("@%s %s %%*\n" % (pyexe, scriptpy))
+    f = open(clewnbat, 'w')
+    f.write("@start %s %s %%*\n" % (pyexe, scriptpy))
     f.close()
 
     # create Windows shortcut
     create_shortcut(
-        pathjoin(scripts, 'pyclewn.bat'),
+        clewnbat,
         'Pyclewn allows using Vim as a front end to a debugger.',
         PYCLEWN_SHORTCUT,
         r'--pgm=C:\mingw\bin\gdb.exe --daemon',

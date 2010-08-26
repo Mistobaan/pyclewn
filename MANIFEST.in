@@ -10,9 +10,7 @@ include runtime/doc/pyclewn.txt
 include runtime/syntax/dbgvar.vim
 include images/*
 include pyclewn_install.py
-include pychecker.py
 include .pycheckrc
-include regrtest.py
 include testsuite/*.py
 include testsuite/*.c
 include testsuite/*.cc

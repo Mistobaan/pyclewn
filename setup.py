@@ -76,6 +76,12 @@ class install(_install):
             print >> sys.stderr, 'renaming the debugger directory'
             os.rename(debugger_dir, debugger_dir + '.orig')
 
+        # substitute templates in the autoload plugin
+        # this is done in the post-install script in Windows
+        if os.name != 'nt':
+            mapping = {'pgm': '"pyclewn"', 'start': ''}
+            pyclewn_install.substitute_autoload('runtime', mapping)
+
         pyclewn_install.vim_features()
         _install.run(self)
         pyclewn_install.build_vimhelp()

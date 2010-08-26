@@ -12,7 +12,7 @@ let s:did_pyclewn = 1
 " the ':Pyclewn' vim command is run.
 " They may be changed to match your preferences.
 
-let s:pgm = "pyclewn"
+let s:pgm = ${pgm}
 
 if exists("pyclewn_args")
   let s:args = pyclewn_args
@@ -69,7 +69,7 @@ function s:start()
 
     " start pyclewn and netbeans
     call s:info("Starting pyclewn, please wait...\n")
-    exe "silent !" . s:pgm . " " . s:args . " " . s:fixed . s:tmpfile . " &"
+    exe "silent !${start}" . s:pgm . " " . s:args . " " . s:fixed . s:tmpfile . " &"
     call s:info("'pyclewn' has been started.\n")
     call s:info("Running nbstart, <C-C> to interrupt.\n")
     " allow pyclewn to start its dispatch loop, otherwise we will have to

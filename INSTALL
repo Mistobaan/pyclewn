@@ -82,7 +82,7 @@ directory to ``%PATH%``::
 On Vista, add the ``PATH`` environment variable to your account, and set its
 value to::
 
-    C:\path\to\vim72;%PATH%
+    C:\path\to\vim73;%PATH%
 
 To install pyclewn, double-click on the installer: pyclewn-1.3.win32.exe. This
 will install pyclewn, configure Vim and create a shortcut on the Desktop. The
@@ -93,6 +93,11 @@ pyclewn`` command within vim, to access the documentation.
 You may have to edit the installed shortcut (right-click > Properties) to
 update the gdb full pathname when gdb has not been installed in the standard
 MinGW location.
+
+When you run pyclewn from within gvim (vim version 7.3 or newer) with the
+``:Pyclewn`` vim command, the directory of ``gdb.exe`` must be in Windows
+``%PATH%``, or the full pathname of gdb must be entered in
+``autoload\pyclewn.vim``.
 
 Pyclewn may be uninstalled with the Control Panel.
 

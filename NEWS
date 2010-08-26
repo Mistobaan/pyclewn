@@ -4,7 +4,7 @@ News
 Pyclewn 1.4
 -----------
 
-.. August 24, 2010
+.. August 25, 2010
 
 New features
 ^^^^^^^^^^^^
@@ -22,6 +22,11 @@ Changes
   run ``:runtime pyclewn.vim`` as was required previously (Sergey Khorev).
 * ``Cyan`` is the default background color for enabled breakpoint signs,
   instead of ``Blue`` previously.
+
+Bug fixes
+^^^^^^^^^
+
+* Fix the ``:Pyclewn`` command does not work on Windows.
 
 Pyclewn 1.3
 -----------
