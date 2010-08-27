@@ -31,12 +31,6 @@ endif
 " for debugging purpose.
 " let s:args .= " --level=nbdebug --file=logfile"
 
-" enable balloon_eval
-if has("balloon_eval")
-    set ballooneval
-    set balloondelay=100
-endif
-
 " The 'Pyclewn' command starts pyclewn and vim netbeans interface.
 let s:fixed = "--daemon --editor= --netbeans=" . s:connection . " --cargs="
 
