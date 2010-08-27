@@ -4,7 +4,7 @@ News
 Pyclewn 1.4
 -----------
 
-.. August 25, 2010
+.. August 27, 2010
 
 New features
 ^^^^^^^^^^^^
@@ -26,6 +26,7 @@ Changes
 Bug fixes
 ^^^^^^^^^
 
+* Fix cannot fold a watched variable with gdb 7.1.
 * Fix the ``:Pyclewn`` command does not work on Windows.
 
 Pyclewn 1.3

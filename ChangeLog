@@ -1,6 +1,7 @@
 
-2010-08-25  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2010-08-27  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* gdb.py: Fix cannot fold watched variable with gdb 7.1.
 	* setup.py pyclewn_install.py autoload/pyclewn.vim: Fix the :Pyclewn
 	command does not work on Windows.
 	* vim.py setup.py pyclewn_install.py: Use the standard layout for vim

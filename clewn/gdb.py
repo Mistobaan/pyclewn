@@ -798,7 +798,8 @@ class Gdb(debugger.Debugger, ProcessChannel):
                     self.terminate_cmd(timeit)
                 else:
                     if (len(self.oob) == 0
-                            and isinstance(cmd, gdbmi.VarObjCmdEvaluate)):
+                            and (isinstance(cmd, gdbmi.VarObjCmdEvaluate)
+                                or isinstance(cmd, gdbmi.VarObjCmdDelete))):
                         self.terminate_cmd(True)
 
     def process_prompt(self):

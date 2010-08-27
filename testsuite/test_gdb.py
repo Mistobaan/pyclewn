@@ -439,6 +439,34 @@ class GdbTestCase(ClewnTestCase):
             "   *  var1.key: (int) key ={=} 1\n"
             )
 
+    def test_varobj_fold(self):
+        """Check varobj folding"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak foo\n'
+            ':Crun\n'
+            ':Cstep\n'
+            ':Cstep\n'
+            ':Cstep\n'
+            ':Cdbgvar map\n'
+            ':Cdbgvar map\n'
+            ':sleep ${time}\n'
+            ':Cfoldvar 2\n'
+            ':sleep ${time}\n'
+            ':Cfoldvar 1\n'
+            ':sleep ${time}\n'
+            ':Cfoldvar 1\n'
+            ':sleep ${time}\n'
+            ':buffer (clewn)_dbgvar | 1,3w!  ${test_out}\n'
+            ':qa!\n',
+
+            "[+] var1: (map_t) map ={=} {...}\n"
+            "[-] var2: (map_t) map ={=} {...}\n"
+            "   *  var2.key  : (int   ) key   ={=} 1\n"
+            )
+
     def test_varobj_hilite(self):
         """Check varobj hiliting"""
         self.cltest_redir(
@@ -705,6 +733,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_clear_on_frame'))
     suite.addTest(GdbTestCase('test_break_completion'))
     suite.addTest(GdbTestCase('test_varobj'))
+    suite.addTest(GdbTestCase('test_varobj_fold'))
     suite.addTest(GdbTestCase('test_varobj_hilite'))
     suite.addTest(GdbTestCase('test_tabedit_bug'))
     suite.addTest(GdbTestCase('test_watch_print'))
