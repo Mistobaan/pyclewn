@@ -659,7 +659,7 @@ class CliCommand(Command):
                     "gdb busy: command discarded, please retry\n")
             return False
 
-        self.gdb.gotprmpt = False
+        self.gdb.gdb_busy = True
         cmd = misc.norm_unixpath(cmd)
         return self.send('-interpreter-exec console %s\n', misc.quote(cmd))
 
@@ -757,10 +757,14 @@ class MiCommand(Command):
 
     def docmd(self, fmt, *args):
         """Send the gdb command."""
-        if self.gdb.accepting_cmd():
-            self.result = ''
-            return self.send(fmt, *args)
-        return False
+        if not self.gdb.accepting_cmd():
+            self.gdb.console_print(
+                    "gdb busy: command discarded, please retry\n")
+            return False
+
+        self.gdb.gdb_busy = True
+        self.result = ''
+        return self.send(fmt, *args)
 
     def handle_strrecord(self, stream_record):
         """Process the gdb/mi stream records."""
@@ -885,6 +889,7 @@ class ShowBalloon(Command):
         """Send the gdb command."""
         if self.gdb.accepting_cmd():
             self.result = ''
+            self.gdb.gdb_busy = True
             return self.send('-data-evaluate-expression %s\n',
                                         misc.quote(self.text))
         return False

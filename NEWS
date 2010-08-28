@@ -4,7 +4,7 @@ News
 Pyclewn 1.4
 -----------
 
-.. August 27, 2010
+.. August 28, 2010
 
 New features
 ^^^^^^^^^^^^
@@ -26,6 +26,9 @@ Changes
 Bug fixes
 ^^^^^^^^^
 
+* Fix when folding a watched variable and hitting continue, pyclewn raises
+  the exception ``invalid token`` after producing the error message ``all cmds
+  have not been processed in results``.
 * Fix cannot fold a watched variable with gdb 7.1.
 * Fix the ``:Pyclewn`` command does not work on Windows.
 

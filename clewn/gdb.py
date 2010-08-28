@@ -502,14 +502,16 @@ class Gdb(debugger.Debugger, ProcessChannel):
             the CliCommand instance
         info: gdbmi.Info
             container for the debuggee state information
-        gotprmpt: boolean
-            True after receiving the prompt from gdb/mi
+        gdb_busy: boolean
+            False when gdb is ready to accept commands
         oob: iterator
             iterator over the list of OobCommand and VarObjCmd instances
         stream_record: list
             list of gdb/mi stream records output by a command
-        lastcmd: gdbmi.MiCommand or gdbmi.CliCommand
-            the last Command instance whose result has been processed
+        lastcmd: gdbmi.MiCommand or gdbmi.CliCommand or gdbmi.ShowBalloon
+                 instance
+            + the last Command instance whose result is being processed
+            + the empty string '' on startup or after a SIGINT
         token: string
             the token of the last gdb/mi result or out of band record
         curcmdline: str
@@ -567,7 +569,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
         self.results = gdbmi.Result()
         self.oob_list = gdbmi.OobList(self)
         self.cli = gdbmi.CliCommand(self)
-        self.gotprmpt = False
+        self.gdb_busy = True
         self.oob = None
         self.stream_record = []
         self.lastcmd = ''
@@ -667,7 +669,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
     def prompt(self):
         """Print the prompt."""
-        if self.gotprmpt:   # print prompt only after gdb has started
+        if not self.gdb_busy:   # print prompt only after gdb has started
             debugger.Debugger.prompt(self)
 
     @debugger.restart_timer(debugger.LOOP_TIMEOUT)
@@ -691,16 +693,34 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
     def accepting_cmd(self):
         """Return True when gdb is ready to process a new command."""
-        return self.gotprmpt and self.oob is None
+        return not self.gdb_busy and self.oob is None
 
-    def terminate_cmd(self, timeit):
+    def terminate_cmd(self):
         """Do the command end processing."""
+        self.gdb_busy = False
+        self.multiple_choice = 0
+        if self.doprompt:
+            self.doprompt = False
+            self.prompt()
+
+        # source the project file
+        if self.state == self.STATE_INIT:
+            self.state = self.STATE_RUNNING
+            if self.project:
+                self.clicmd_notify('source %s' % self.project)
+                return
+
+        # send the first cli command line
+        if self.firstcmdline:
+            self.clicmd_notify(self.firstcmdline)
+        self.firstcmdline = ''
+
         varobj = self.info.varobj
         debugger.Debugger.update_dbgvarbuf(
                 self, varobj.collect, varobj.dirty, self.foldlnum)
         self.foldlnum = None
 
-        if timeit and self.time is not None:
+        if self.time is not None:
             info('oob commands execution: %f second' % (_timer() - self.time))
             self.time = None
 
@@ -783,24 +803,14 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 raise ClewnError('invalid token "%s"' % token)
         else:
             self.token = token
-            if isinstance(cmd, (gdbmi.CliCommand, gdbmi.MiCommand)):
+            if isinstance(cmd, (gdbmi.CliCommand, gdbmi.MiCommand,
+                                                gdbmi.ShowBalloon)):
                 self.lastcmd = cmd
 
             self.handle_strrecord(cmd)
             cmd.handle_result(result)
 
-            # with gdb 7.0, prompts are not anymore synchronisation points
-            if self.version.split('.') >= '7.0'.split('.'):
-                if self.oob is None:
-                    timeit = True
-                    if isinstance(cmd, (gdbmi.CliCommand, gdbmi.ShowBalloon)):
-                        timeit = False
-                    self.terminate_cmd(timeit)
-                else:
-                    if (len(self.oob) == 0
-                            and (isinstance(cmd, gdbmi.VarObjCmdEvaluate)
-                                or isinstance(cmd, gdbmi.VarObjCmdDelete))):
-                        self.terminate_cmd(True)
+            self.process_oob()
 
     def process_prompt(self):
         """Process the gdb/mi prompt."""
@@ -808,6 +818,12 @@ class Gdb(debugger.Debugger, ProcessChannel):
         cmd = self.lastcmd or self.cli
         self.handle_strrecord(cmd)
 
+        # starting or after a SIGINT
+        if self.lastcmd == '':
+            self.process_oob()
+
+    def process_oob(self):
+        """Process OobCommands."""
         # got the prompt for a user command
         if self.lastcmd is not None:
             # prepare the next sequence of oob commands
@@ -819,15 +835,12 @@ class Gdb(debugger.Debugger, ProcessChannel):
                     error('all cmds have not been processed in results')
                 self.results.clear()
 
-            if not isinstance(self.lastcmd, gdbmi.CliCommandNoPrompt):
+            if not isinstance(self.lastcmd, (gdbmi.CliCommandNoPrompt,
+                                                    gdbmi.ShowBalloon)):
                 self.doprompt = True
 
             self.lastcmd = None
 
-        self.process_oob()
-
-    def process_oob(self):
-        """Process OobCommands."""
         # send the next oob command
         if self.oob is not None:
             try:
@@ -837,25 +850,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
                         break
             except StopIteration:
                 self.oob = None
-                if self.version.split('.') < '7.0'.split('.'):
-                    self.terminate_cmd(True)
-                self.gotprmpt = True
-                self.multiple_choice = 0
-                if self.doprompt:
-                    self.doprompt = False
-                    self.prompt()
-
-                # source the project file
-                if self.state == self.STATE_INIT:
-                    self.state = self.STATE_RUNNING
-                    if self.project:
-                        self.clicmd_notify('source %s' % self.project)
-                        return
-
-                # send the first cli command line
-                if self.firstcmdline:
-                    self.clicmd_notify(self.firstcmdline)
-                self.firstcmdline = ''
+                self.terminate_cmd()
 
     def clicmd_notify(self, cmd, console=True, gdb=True):
         """Send a cli command after having notified the OobCommands.
@@ -909,6 +904,9 @@ class Gdb(debugger.Debugger, ProcessChannel):
         Otherwise, flush the cmd_fifo on receiving a sigint and send it,
         or queue the command to the fifo.
         """
+        if method == self.cmd_sigint:
+            self.lastcmd = ''
+
         if not self.async:
             debugger.Debugger._do_cmd(self, method, cmd, args)
             return
@@ -983,8 +981,8 @@ class Gdb(debugger.Debugger, ProcessChannel):
         """Add a variable to the debugger variable buffer."""
         unused = cmd
         varobj = gdbmi.VarObj({'exp': args})
-        gdbmi.VarCreateCommand(self, varobj).sendcmd()
-        self.oob_list.push(gdbmi.VarObjCmdEvaluate(self, varobj))
+        if gdbmi.VarCreateCommand(self, varobj).sendcmd():
+            self.oob_list.push(gdbmi.VarObjCmdEvaluate(self, varobj))
 
     def cmd_delvar(self, cmd, args):
         """Delete a variable from the debugger variable buffer."""
@@ -1025,10 +1023,12 @@ class Gdb(debugger.Debugger, ProcessChannel):
                     for child in varobj['children'].values():
                         self.oob_list.push(gdbmi.VarObjCmdDelete(self, child))
                     # nop command used to trigger execution of the oob_list
-                    gdbmi.NumChildrenCommand(self, varobj).sendcmd()
+                    if not gdbmi.NumChildrenCommand(self, varobj).sendcmd():
+                        return
                 # expand
                 else:
-                    gdbmi.ListChildrenCommand(self, varobj).sendcmd()
+                    if not gdbmi.ListChildrenCommand(self, varobj).sendcmd():
+                        return
                 self.foldlnum = lnum
                 return
             else:
@@ -1055,8 +1055,8 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 (varobj, varlist) = self.info.varobj.leaf(name)
                 unused = varlist
                 if varobj is not None:
-                    gdbmi.VarSetFormatCommand(self, varobj).sendcmd(format)
-                    self.oob_list.push(gdbmi.VarObjCmdEvaluate(self, varobj))
+                    if gdbmi.VarSetFormatCommand(self, varobj).sendcmd(format):
+                        self.oob_list.push(gdbmi.VarObjCmdEvaluate(self, varobj))
                     return
                 self.console_print('"%s" not found.\n' % name)
         self.prompt()
@@ -1068,7 +1068,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
             self.prompt()
             return
         self.clicmd_notify('%s %s\n' % (cmd, args), console=False, gdb=False)
-        self.gotprmpt = True
+        self.gdb_busy = False
 
     def cmd_quit(self, *args):
         """Quit gdb."""
@@ -1077,10 +1077,10 @@ class Gdb(debugger.Debugger, ProcessChannel):
         # When oob commands are being processed, or gdb is busy in a
         # 'continue' statement, the project file is not saved.
         # The clicmd_notify nop command must not be run in this case, to
-        # avoid breaking pyclewn state (assert on self.gotprmpt).
+        # avoid breaking pyclewn state (assert on self.gdb_busy).
         self.state = self.STATE_QUITTING
         self.sendintr()
-        if self.gotprmpt and self.oob is None:
+        if not self.gdb_busy and self.oob is None:
             if self.project:
                 self.clicmd_notify('project %s' % self.project,
                                         console=False, gdb=False)
