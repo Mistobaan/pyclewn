@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2010 August 24
+*pyclewn.txt*                                   Last change: 2010 August 28
 
 
                             PYCLEWN USER MANUAL
@@ -292,7 +292,8 @@ The full description of the command line options follows:
 --level={LEVEL}     Set the log level to LEVEL: critical, error, warning, info,
                     debug or nbdebug (default error). Level nbdebug is very
                     verbose and logs all the netbeans pdu as well as all the
-                    debug traces.
+                    debug traces. Setting this option also causes the logs to
+                    be written on stderr.
 
 -f {FILE}
 --file={FILE}       Set the log file name to FILE.

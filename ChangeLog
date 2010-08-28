@@ -1,6 +1,7 @@
 
 2010-08-28  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* vim.py: Fix error messages scramble vim (not gvim) display.
 	* gdb.py gdbmi.py: Fix exception after folding a watched variable.
 	* gdb.py: Fix cannot fold watched variable with gdb 7.1.
 	* setup.py pyclewn_install.py autoload/pyclewn.vim: Fix the :Pyclewn

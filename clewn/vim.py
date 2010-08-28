@@ -454,12 +454,6 @@ class Vim(object):
             root.manager.emittedNoHandlerWarning = True
             fmt = logging.Formatter('%(name)-4s %(levelname)-7s %(message)s')
 
-            # add an handler to stderr, except when running the testsuite
-            if not self.testrun:
-                hdlr_stream = logging.StreamHandler(sys.stderr)
-                hdlr_stream.setFormatter(fmt)
-                root.addHandler(hdlr_stream)
-
             if self.options.logFile:
                 try:
                     hdlr_file = logging.FileHandler(self.options.logFile, 'w')
@@ -474,6 +468,13 @@ class Vim(object):
             level = logging.ERROR
             if self.options.logLevel:
                 level = self.options.logLevel
+
+                # add an handler to stderr, except when running the testsuite
+                if not self.testrun:
+                    hdlr_stream = logging.StreamHandler(sys.stderr)
+                    hdlr_stream.setFormatter(fmt)
+                    root.addHandler(hdlr_stream)
+
             root.setLevel(level)
 
     def loop(self):

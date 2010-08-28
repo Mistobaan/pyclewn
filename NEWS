@@ -26,6 +26,7 @@ Changes
 Bug fixes
 ^^^^^^^^^
 
+* Fix error messages scramble vim (not gvim) display.
 * Fix when folding a watched variable and hitting continue, pyclewn raises
   the exception ``invalid token`` after producing the error message ``all cmds
   have not been processed in results``.
