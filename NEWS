@@ -4,11 +4,14 @@ News
 Pyclewn 1.4
 -----------
 
-.. August 28, 2010
+.. September 25, 2010
 
 New features
 ^^^^^^^^^^^^
 
+* The new ``Ccwindow`` command opens a vim quickfix window holding the list of
+  the breakpoints with their current state. The quickfix window allows moving
+  directly to any breakpoint.
 * Add the ``--background`` command line option, allowing the setting of the
   background colors for the bp enabled sign, the bp disabled sign and the
   frame sign.

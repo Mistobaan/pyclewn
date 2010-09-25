@@ -417,6 +417,8 @@ class Info(object):
 
     def update_breakpoints(self):
         """Update the breakpoints."""
+        is_changed = False
+
         # build the breakpoints dictionary
         bp_dictionary = {}
         for bp in self.breakpoints:
@@ -429,6 +431,7 @@ class Info(object):
         for num in (nset & oldset):
             state = bp_dictionary[num]['enabled']
             if state != self.bp_dictionary[num]['enabled']:
+                is_changed = True
                 enabled = (state == 'y')
                 self.gdb.update_bp(int(num), not enabled)
 
@@ -445,6 +448,23 @@ class Info(object):
                 self.gdb.add_bp(int(num), pathname, lnum)
 
         self.bp_dictionary = bp_dictionary
+
+        if (oldset - nset) or (nset - oldset):
+            is_changed = True
+        if is_changed:
+            f_bps = open(self.gdb.globaal.f_bps.name, 'w')
+            for num in sorted(bp_dictionary.keys()):
+                pathname = self.get_fullpath(bp_dictionary[num]['file'])
+                if pathname is not None:
+                    lnum = bp_dictionary[num]['line']
+                    state = bp_dictionary[num]['enabled']
+                    if state == 'y':
+                        state = 'enabled'
+                    else:
+                        state = 'disabled'
+                    f_bps.write('%s:%s:breakpoint %s %s\n'
+                                        % (pathname, lnum, num, state))
+            f_bps.close()
 
     def update_frame(self, hide=False):
         """Update the frame sign."""

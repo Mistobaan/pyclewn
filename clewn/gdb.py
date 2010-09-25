@@ -110,6 +110,23 @@ re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_mirecord = re.compile(RE_MIRECORD, re.VERBOSE)
 re_anno_1 = re.compile(RE_ANNO_1, re.VERBOSE)
 
+CWINDOW = """
+" open the quickfix window of breakpoints
+function s:cwindow()
+    let l:gp=&gp
+    let l:gfm=&gfm
+    set gp=${gp}
+    set gfm=%f:%l:%m
+    grep
+    let &gp=l:gp
+    let &gfm=l:gfm
+    cwindow
+endfunction
+
+command! -bar ${pre}cwindow call s:cwindow()
+
+"""
+
 SYMCOMPLETION = """
 " print a warning message on vim command line
 function s:message(msg)
@@ -299,6 +316,8 @@ class GlobalSetup(misc.Singleton):
             gdb program name to execute
         cmds: dict
             See the description of the Debugger 'cmds' attribute dictionary.
+        f_bps: closed file object
+            temporary file used to store the list of breakpoints
         f_ack: closed file object
             temporary file used to acknowledge the end of writing to f_clist
         f_clist: closed file object
@@ -320,6 +339,7 @@ class GlobalSetup(misc.Singleton):
     _illegal_cmds_prefix = None
     _run_cmds_prefix = None
     _illegal_setargs_prefix = None
+    _f_bps = None
     _f_ack = None
     _f_clist = None
 
@@ -386,6 +406,7 @@ class GlobalSetup(misc.Singleton):
         self._run_cmds_prefix = self.run_cmds_prefix
         self._illegal_setargs_prefix = self.illegal_setargs_prefix
 
+        self._f_bps = tmpfile()
         self._f_ack = tmpfile()
         self._f_clist = tmpfile()
 
@@ -399,6 +420,7 @@ class GlobalSetup(misc.Singleton):
         self.illegal_cmds_prefix = self._illegal_cmds_prefix
         self.run_cmds_prefix = self._run_cmds_prefix
         self.illegal_setargs_prefix = self._illegal_setargs_prefix
+        self.f_bps = self._f_bps
         self.f_ack = self._f_ack
         self.f_clist = self._f_clist
 
@@ -552,6 +574,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 'setfmtvar':(),
                 'project':True,
                 'sigint':(),
+                'cwindow':(),
                 'symcompletion':(),
             })
         self.mapkeys.update(MAPKEYS)
@@ -657,10 +680,19 @@ class Gdb(debugger.Debugger, ProcessChannel):
         gdb commands.
 
         """
-        return string.Template(SYMCOMPLETION).substitute(pre=prefix,
+        symcompletion = string.Template(SYMCOMPLETION).substitute(pre=prefix,
                         ack_tmpfile=misc.quote(self.globaal.f_ack.name),
                         complete_tmpfile=misc.quote(self.globaal.f_clist.name),
                         complete_timeout=SYMBOL_COMPLETION_TIMEOUT)
+
+        if os.name == 'nt':
+            grepprg = 'cmd\\ /c\\ type'
+        else:
+            grepprg = 'cat'
+        grepprg += '\\ ' + self.globaal.f_bps.name
+        cwindow = string.Template(CWINDOW).substitute(pre=prefix, gp=grepprg)
+
+        return symcompletion + cwindow
 
     def _start(self):
         """Start gdb."""
@@ -971,6 +1003,12 @@ class Gdb(debugger.Debugger, ProcessChannel):
             debugger.Debugger.cmd_help(self, cmd)
             self.console_print('\nGdb help:\n')
         self.default_cmd_processing(cmd, line)
+
+    def cmd_cwindow(self, *args):
+        """List the breakpoints in a quickfix window."""
+        # never called dummy method, its documentation is used for the help
+        unused = self
+        unused = args
 
     def cmd_symcompletion(self, *args):
         """Populate the break and clear commands with symbols completion."""

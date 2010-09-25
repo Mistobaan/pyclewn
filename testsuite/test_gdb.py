@@ -699,6 +699,27 @@ class GdbTestCase(ClewnTestCase):
             '===========\n'
             )
 
+    def test_cwindow_command(self):
+        """The cwindow command opens the quickfix window of breakpoints"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak foo\n'
+            ':Cbreak bar\n'
+            ':Cbreak bar\n'
+            ':Cdisable 1\n'
+            ':Cdelete 2\n'
+            ':sleep ${time}\n'
+            ':Ccwindow\n'
+            ':sleep ${time}\n'
+            ":1,$$w! >> ${test_out}\n"
+            ':qa!\n',
+
+            "${cwd}testsuite/foo.c|30| breakpoint 1 disabled\n"
+            "${cwd}testsuite/bar.c|5| breakpoint 3 enabled\n"
+            )
+
 
 def test_main():
     """Run all the tests."""
@@ -745,6 +766,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_project_option_save'))
     suite.addTest(GdbTestCase('test_project_option_vimquit'))
     suite.addTest(GdbTestCase('test_quit_display'))
+    suite.addTest(GdbTestCase('test_cwindow_command'))
     test_support.run_suite(suite)
 
 if __name__ == '__main__':

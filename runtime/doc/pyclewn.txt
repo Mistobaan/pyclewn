@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2010 August 28
+*pyclewn.txt*                                   Last change: 2010 September 25
 
 
                             PYCLEWN USER MANUAL
@@ -463,6 +463,11 @@ Pyclewn commands:
 -----------------
 The|Ccommand|list includes all the debugger commands and some pyclewn specific
 commands that are listed here:
+
+    *|Ccwindow|       opens a vim quickfix window holding the list of the
+                      breakpoints with their current state; the quickfix
+                      window allows moving directly to any breakpoint
+                      (requires the vim|+quickfix|feature)
 
     *|Cdbgvar|       add a watched variable or expression to the
                     (clewn)_dbgvar buffer
