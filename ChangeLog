@@ -1,6 +1,9 @@
 
-2010-09-25  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2010-09-26  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* gdbmi.py: Fix the highlighting of a watched variable child is not
+	reset when the value of the child object does not change, after
+	stepping for example.
 	* gdb.py gdbmi.py: The new cwindow command.
 	* vim.py: Fix error messages scramble vim (not gvim) display.
 	* gdb.py gdbmi.py: Fix exception after folding a watched variable.

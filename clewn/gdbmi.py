@@ -183,7 +183,7 @@ class VarObjList(misc.OrderedDict):
         """Collect all varobj children data.
 
         Return True when dbgvarbuf must be set as dirty
-        at the next update run (for syntax highlighting).
+        for the next update run (for syntax highlighting).
 
         """
         if not self:
@@ -286,6 +286,7 @@ class VarObj(dict):
         self['exp'] = ''
         self['type'] = ''
         self['value'] = ''
+        self['chged'] = '={=}'
         self['in_scope'] = 'true'
         self['numchild'] = 0
         self['children'] = VarObjList()
@@ -295,6 +296,7 @@ class VarObj(dict):
     def collect(self, parents, lnum, stream, indent, tab):
         """Collect varobj data."""
         dirty = False
+
         if self.chged:
             self['chged'] = '={*}'
             self.chged = False
@@ -317,7 +319,8 @@ class VarObj(dict):
         stream.write(' ' * indent + fold + format % self)
         if self['children']:
             assert self['numchild'] != 0
-            self['children'].collect(parents, lnum, stream, indent + 2)
+            status = self['children'].collect(parents, lnum, stream, indent + 2)
+            dirty = dirty or status
 
         return dirty
 
