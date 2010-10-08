@@ -72,8 +72,9 @@ The following table lists the differences between clewn_, vimGdb_ and pyclewn.
     |               |             |                       | above                  |
     +---------------+-------------+-----------------------+------------------------+
     | vim mode      | vim in a    | gvim                  | vim in a               |
-    |               | terminal,   |                       | terminal,              |
-    |               | gvim        |                       | gvim                   |
+    |               | terminal,   |                       | terminal (vim 7.3      |
+    |               | gvim        |                       | or above **required**),|
+    |               |             |                       | gvim                   |
     +---------------+-------------+-----------------------+------------------------+
     | vim interface | a vim patch | a standalone program  | a standalone program   |
     |               |             | connected to gvim with| connected to vim with  |
@@ -90,17 +91,17 @@ The following table lists the differences between clewn_, vimGdb_ and pyclewn.
     | debuggers     | gdb         | gdb                   | gdb                    |
     |               |             |                       |                        |
     +---------------+-------------+-----------------------+------------------------+
-    | gdb features  |             | watched variables     | tight integration      |
-    |               |             |                       | with vim               |
-    |               |             | project file          |                        |
-    |               |             |                       | gdb/mi interface       |
+    | gdb features  |             | * watched variables   | * tight integration    |
+    |               |             |                       |   with vim             |
+    |               |             | * project file        |                        |
+    |               |             |                       | * gdb/mi interface     |
     |               |             |                       |                        |
-    |               |             |                       | asynchronous gdb       |
-    |               |             |                       | commands               |
+    |               |             |                       | * asynchronous gdb     |
+    |               |             |                       |   commands             |
     |               |             |                       |                        |
-    |               |             |                       | watched variables      |
+    |               |             |                       | * watched variables    |
     |               |             |                       |                        |
-    |               |             |                       | project file           |
+    |               |             |                       | * project file         |
     +---------------+-------------+-----------------------+------------------------+
 
 .. toctree::

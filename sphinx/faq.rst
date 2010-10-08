@@ -1,6 +1,17 @@
 FAQ
 ===
 
+Pyclewn never executes gdb
+--------------------------
+
+*A buffer named (clewn)_console is opened and ':echo has("netbeans_enabled")'
+displays 1. However, a 'ps -fC gdb' reports nothing, and the (clewn)_console
+buffer is always empty, regardless of the ':C' commands that are run.*
+
+Netbeans is not supported by vim when vim is run in a terminal and vim version
+is 7.2 or older. When you are running vim in a terminal (not gvim), make sure
+the vim version is 7.3 or above.
+
 Standard/error output in gdb console
 ------------------------------------
 
