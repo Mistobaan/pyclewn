@@ -41,7 +41,7 @@ else:
     vimdir = pyclewn_install.vimdir()
     LONG_DESCRIPTION = DESCRIPTION
 
-DEBUGGERS = ('simple', 'gdb')
+DEBUGGERS = ('simple', 'gdb', 'pdb')
 DATA_FILES = [
     (pathjoin(vimdir, 'plugin'), ['runtime/plugin/pyclewn.vim']),
     (pathjoin(vimdir, 'autoload'), ['runtime/autoload/pyclewn.vim']),
@@ -103,6 +103,9 @@ def keymap_files():
     for d in DEBUGGERS:
         f = open('runtime/.pyclewn_keys.%s' % d, 'w')
         f.write(string.Template(template).substitute(clazz=d))
+        # cannot use absolute imports with python 2.4, so we are stuck with pydb.py
+        if d == 'pdb':
+            d = 'pydb'
         module = __import__('clewn.%s' % d,  globals(), locals(), ['MAPKEYS'])
         mapkeys = getattr(module, 'MAPKEYS')
         for k in sorted(mapkeys):

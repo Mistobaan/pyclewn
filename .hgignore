@@ -4,6 +4,7 @@ syntax: glob
 *.pyc
 *.swp
 clewn/__version__.py
+runtime/.pyclewn_keys.pdb
 runtime/.pyclewn_keys.gdb
 runtime/.pyclewn_keys.simple
 testsuite/foobar

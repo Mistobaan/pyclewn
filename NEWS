@@ -1,6 +1,41 @@
 News
 ====
 
+Pyclewn 1.5
+-----------
+
+.. November 20, 2010
+
+New feature
+^^^^^^^^^^^
+
+* Support of ``pdb``, the python debugger.
+
+  + A python script may be run under the control of ``pdb``. For example the
+    current vim buffer may be started and debugged with the vim command
+    ``:Pyclewn pdb %:p``
+  + One may also attach to a running python process, interrupt the process,
+    manage a debugging session and terminate the debugging session by
+    detaching from the process. A new debugging session may be conducted later
+    on this same process, possibly from another Vim instance.
+  + All the ``pdb`` commands are supported except ``list`` and ``commands``.
+    This includes alias expansion and executing a python statement in the
+    context of the current frame. The new command ``threadstack`` prints the
+    instantaneous backtrace of all the threads, including those that are stuck
+    in a deadlock.
+
+* Pdb is currently supported on unix platforms and requires the latest Vim
+  version: Vim 7.3. Python3 is not supported yet.
+
+Change
+^^^^^^
+
+* Logs are written to stderr when the ``--level`` option is set and the
+  ``--file`` option is not set.
+
+Bug fix
+^^^^^^^
+
 Pyclewn 1.4
 -----------
 

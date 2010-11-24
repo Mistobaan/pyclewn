@@ -34,7 +34,7 @@ if os.name == 'nt':
 elif os.environ.has_key('CLEWN_PIPES'):
     SLEEP_TIME = '600m'
 else:
-    SLEEP_TIME = '400m'
+    SLEEP_TIME = '600m'
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
 
@@ -64,11 +64,17 @@ class ClewnTestCase(unittest.TestCase):
     written to LOGFILE.
 
     """
-    __port = 0
+    _port = 0
+
+    def __init__(self, methodName='runTest'):
+        """Constructor."""
+        unittest.TestCase.__init__(self, methodName)
+        self.debugged_script = None
+        self.fnull = None
 
     def setUp(self):
         """Setup pyclewn arguments."""
-        port = self.__port + NETBEANS_PORT
+        port = self._port + NETBEANS_PORT
 
         sys.argv = [
             '-c',                       # argv[0], a script
@@ -100,7 +106,7 @@ class ClewnTestCase(unittest.TestCase):
 
     def tearDown(self):
         """Cleanup stuff after the test."""
-        self.__class__.__port = (self.__port + 1) % 100
+        self.__class__._port = (self._port + 1) % 100
         for name in os.listdir(os.getcwd()):
             if name.startswith(TESTFN):
                 try:
@@ -125,14 +131,15 @@ class ClewnTestCase(unittest.TestCase):
         (including new lines).
 
         """
-        unused = self
+        cwd = os.getcwd() + os.sep
         cmd = ':sleep ${time}\n' + cmd
 
         # write the commands
         fp = open(TESTFN, 'w')
         fp.write(string.Template(cmd).substitute(time=SLEEP_TIME,
                                                     test_file=TESTFN_FILE,
-                                                    test_out=TESTFN_OUT))
+                                                    test_out=TESTFN_OUT,
+                                                    cwd=cwd))
         fp.close()
 
         # write the test files
@@ -142,7 +149,13 @@ class ClewnTestCase(unittest.TestCase):
             fp.close()
 
         # process the commands
-        vim.main(True)
+        unused = vim.main(True)
+
+        # wait for the python script being debugged to terminate
+        if self.debugged_script:
+            self.debugged_script.wait()
+            self.debugged_script = None
+            self.fnull.close()
 
         # check the result
         fp = open(outfile, 'r')
@@ -151,7 +164,6 @@ class ClewnTestCase(unittest.TestCase):
 
         if os.name == 'nt':
             expected = expected.replace('/', '\\')
-        cwd = os.getcwd() + os.sep
         expected = string.Template(expected).substitute(
                                             cwd=cwd, test_file=TESTFN_FILE)
 

@@ -1,6 +1,6 @@
 
 Pyclewn allows using vim_ as a front end to a debugger. Pyclewn currently
-supports gdb_.
+supports gdb_ and pdb_.
 
 The debugger output is redirected to a vim window, the pyclewn console. The
 debugger commands are mapped to vim user-defined commands with a common letter
@@ -9,7 +9,8 @@ prefix, and with completion available on the commands and their first argument.
 On unix when running gvim, the controlling terminal of the program to debug is
 the terminal used to launch pyclewn. Any other terminal can be used when the
 debugger allows it, for example after using the ``attach`` or ``tty`` gdb
-commands. On Windows, gdb pops up a console attached to the program to debug.
+commands or using the ``--tty`` option with pdb. On Windows, gdb pops up a
+console attached to the program to debug.
 
 Features
 --------
@@ -33,17 +34,25 @@ Features
 * The value of an expression or variable is displayed in a balloon in gvim when
   the mouse pointer is hovering over the selected expression or the variable.
 
+* Similarly to gdb, one may attach to a running python process with the pdb
+  debugger, interrupt the process, manage a debugging session and terminate
+  the debugging session by detaching from the process. A new debugging session
+  may be conducted later on this same process, possibly from another Vim
+  instance.
+
 * An expression can be watched in a vim window. The expression value is
   updated and highlighted whenever it has changed. When the expression is a
   structure or class instance, it can be expanded (resp. folded) to show
-  (resp. hide) its members and their values.
+  (resp. hide) its members and their values. This feature is only available
+  with gdb.
 
 * The ``project`` command saves the current gdb settings to a project file
   that may be sourced later by the gdb ``source`` command. These settings are
   the working directory, the debuggee program file name, the program arguments
   and the breakpoints. The sourcing and saving of the project file can be
   automated to occur on each gdb startup and termination, whith the
-  ``project`` command line option.
+  ``project`` command line option. The ``project`` command is currently only
+  available with gdb.
 
 * Vim command completion on the commands and their first argument.
 
@@ -88,7 +97,7 @@ The following table lists the differences between clewn_, vimGdb_ and pyclewn.
     |               | each vim    |                       |                        |
     |               | version     |                       |                        |
     +---------------+-------------+-----------------------+------------------------+
-    | debuggers     | gdb         | gdb                   | gdb                    |
+    | debuggers     | gdb         | gdb                   | gdb, pdb               |
     |               |             |                       |                        |
     +---------------+-------------+-----------------------+------------------------+
     | gdb features  |             | * watched variables   | * tight integration    |
@@ -103,6 +112,15 @@ The following table lists the differences between clewn_, vimGdb_ and pyclewn.
     |               |             |                       |                        |
     |               |             |                       | * project file         |
     +---------------+-------------+-----------------------+------------------------+
+    | pdb features  |             |                       | * interrupt the        |
+    |               |             |                       |   debuggee             |
+    |               |             |                       |                        |
+    |               |             |                       | * attach to a running  |
+    |               |             |                       |   python process       |
+    |               |             |                       |                        |
+    |               |             |                       | * the ``threadstack``  |
+    |               |             |                       |   command              |
+    +---------------+-------------+-----------------------+------------------------+
 
 .. toctree::
    :maxdepth: 2
@@ -116,6 +134,7 @@ The following table lists the differences between clewn_, vimGdb_ and pyclewn.
 
 .. _vim: http://www.vim.org/
 .. _gdb: http://www.gnu.org/software/gdb/gdb.html
+.. _pdb: http://docs.python.org/library/pdb.html
 .. _clewn: http://clewn.sourceforge.net
 .. _vimGdb: http://clewn.sourceforge.net
 .. vim:filetype=rst:tw=78:ts=8:et:

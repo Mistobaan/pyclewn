@@ -1,4 +1,9 @@
+2010-11-15  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* buffer.py debugger.py gdb.py pydb.py netbeans.py vim.py: Support of
+	pdb, the python debugger.
+
+===============================================================================
 2010-09-26  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* gdbmi.py: Fix the highlighting of a watched variable child is not

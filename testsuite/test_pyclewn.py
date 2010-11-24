@@ -126,7 +126,7 @@ class PyclewnTestCase(ClewnTestCase):
             'Breakpoint 1 at file ${cwd}${test_file}1, line 2.\n'
             '--- Signs ---\n'
             'Signs for ${test_file}1:\n'
-            '    line=2  id=3  name=3\n',
+            '    line=2  id=1  name=1\n',
 
             'line 1\n'
             'line 2\n'

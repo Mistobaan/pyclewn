@@ -221,8 +221,16 @@ checkImplicitReturns = 1
 suppressions = {
 	'netbeans.parse_msg': 'no-returnvalues',
 	'buffer.FrameAnnotation.init': 'no-override',
+	'buffer.Sernum.init': 'no-override',
 	'gdb.GlobalSetup.init': 'no-override',
 	'gdbmi.OobGdbCommand': 'no-classattr',
+	'pydb.Pdb.set_continue': 'no-classattr no-initattr',
+	'pydb.Pdb.dispatch_line': 'no-classattr',
+	'pydb.Pdb.user_line': 'no-initattr',
+	'pydb.Pdb.dispatch_exception': 'no-classattr',
+	'pydb.Pdb.stop_here': 'no-classattr',
+	'pydb.ShortRepr': 'no-callinit',
+	'pydb.BalloonRepr': 'no-callinit',
     }
 
 # dict: suppress warnings where keys can be regular expressions

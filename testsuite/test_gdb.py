@@ -555,10 +555,10 @@ class GdbTestCase(ClewnTestCase):
             '    line=9  id=1  name=1\n'
             'Signs for ${cwd}testsuite/foo.c:\n'
             '    line=30  id=3  name=3\n'
-            'sign 1 text=1  texthl=NB_1\n'
-            'sign 2 text=1  texthl=NB_2\n'
-            'sign 3 text=2  texthl=NB_3\n'
-            'sign 4 text=2  texthl=NB_4\n'
+            'sign 1 text=1  texthl=NB_2\n'
+            'sign 2 text=1  texthl=NB_3\n'
+            'sign 3 text=2  texthl=NB_4\n'
+            'sign 4 text=2  texthl=NB_5\n'
             'sign 5 text==> texthl=NB_0\n'
             )
 
@@ -693,6 +693,7 @@ class GdbTestCase(ClewnTestCase):
             ':Cfile testsuite/foobar\n'
             ':Cquit\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':edit (clewn)_console | $$ | w!  ${test_out}\n'
             ':qa!\n',
 
@@ -718,6 +719,30 @@ class GdbTestCase(ClewnTestCase):
 
             "${cwd}testsuite/foo.c|30| breakpoint 1 disabled\n"
             "${cwd}testsuite/bar.c|5| breakpoint 3 enabled\n"
+            )
+
+    def test_bp_after_quit(self):
+        """Check adding breakpoints after a quit"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak main\n'
+            ':Crun\n'
+            ':sleep ${time}\n'
+            ':Cquit\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak main\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            "Signs for testsuite/foobar.c:\n"
+            "line=9  id=4  name=4\n"
+            "line=9  id=1  name=1\n"
             )
 
 
@@ -767,6 +792,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_project_option_vimquit'))
     suite.addTest(GdbTestCase('test_quit_display'))
     suite.addTest(GdbTestCase('test_cwindow_command'))
+    suite.addTest(GdbTestCase('test_bp_after_quit'))
     test_support.run_suite(suite)
 
 if __name__ == '__main__':

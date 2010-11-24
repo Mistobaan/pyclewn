@@ -361,9 +361,8 @@ class Debugger(object):
 
     """
 
-    def __init__(self, nbsock, options):
+    def __init__(self, options):
         """Initialize instance variables and the prompt."""
-        self.__nbsock = nbsock
         self.options = options
 
         self.cmds = {
@@ -382,9 +381,20 @@ class Debugger(object):
         self._last_balloon = ''
         self._prompt_str = '(%s) ' % self.__class__.__name__.lower()
         self._consbuffered = False
+        self.__nbsock = None
 
         # schedule the first 'debugger_background_jobs' method
         self.timer(self.debugger_background_jobs, LOOP_TIMEOUT)
+
+    def set_nbsock(self, nbsock):
+        """Set the netbeans socket."""
+        self.__nbsock = nbsock
+
+    def switch_map(self, map):
+        """Attach nbsock to another asyncore map."""
+        if self.__nbsock:
+            return self.__nbsock.switch_map(map)
+        return None
 
     #-----------------------------------------------------------------------
     #   Overidden methods by the Debugger subclass.
@@ -525,6 +535,15 @@ class Debugger(object):
         """
         return self.__nbsock.delete_all(pathname, lnum)
 
+    def remove_all(self):
+        """Remove all annotations.
+
+        Vim signs are unplaced.
+        Annotations are not deleted.
+
+        """
+        self.__nbsock.remove_all()
+
     def get_lnum_list(self, pathname):
         """Return a list of line numbers of all enabled breakpoints in a
         Vim buffer.
@@ -626,6 +645,13 @@ class Debugger(object):
         if self.started and console.buf.registered:
             console.flush()
 
+    # prompt is a Cmd class attribute, do not use it with pdb
+    print_prompt = prompt
+
+    def get_console(self):
+        """Return the console."""
+        return self.__nbsock.console
+
     def console_print(self, format, *args):
         """Print a format string and its arguments to the console.
 
@@ -660,10 +686,29 @@ class Debugger(object):
 
     def close(self):
         """Close the debugger and remove all signs in Vim."""
+        info('enter close')
         if not self.closed:
-            # delete all annotations
-            self.delete_all()
+            self.started = False
             self.closed = True
+            info('in close: remove all annotations')
+            self.remove_all()
+
+    def netbeans_detach(self):
+        """Close the netbeans session."""
+        # A bug in vim73 prevents closing netbeans from pyclewn: send
+        # the 'DETACH' message instead, and make sure that no other data
+        # is sent after this message to avoid triggering the vim crash.
+        info('enter netbeans_detach')
+        self.started = False
+        if self.__nbsock.connected:
+            msg = 'DETACH'
+            info('sending netbeans message \'%s\'', msg)
+            self.__nbsock.push(msg + '\n')
+
+        # vim73 'netbeans close SEGV' bug (fixed by 7.3.060).
+        # Allow vim to process all netbeans PDUs before receiving the disconnect
+        # event.
+        time.sleep(misc.VIM73_BUG_SLEEP_TIME)
 
     #-----------------------------------------------------------------------
     #   Internally used methods.
@@ -678,13 +723,22 @@ class Debugger(object):
         """
         if not self.started:
             self.started = True
-            self.console_print(
-                'Pyclewn version %s starting a new instance of %s.\n\n',
-                        __tag__, self.__class__.__name__.lower())
+            # print the banner only with the first netbeans instance
+            if not self.closed:
+                self.console_print(
+                    'Pyclewn version %s starting a new instance of %s.\n\n',
+                            __tag__, self.__class__.__name__.lower())
+            else:
+                self.console_print(
+                    'Pyclewn restarting the %s debugger.\n\n',
+                            self.__class__.__name__.lower())
+            self.closed = False
 
     @restart_timer(LOOP_TIMEOUT)
     def debugger_background_jobs(self):
         """Flush the console buffer."""
+        if not self.__nbsock:
+            return
         console = self.__nbsock.console
         if self.started and console.buf.registered and self._consbuffered:
             console.flush(time.time())
@@ -712,9 +766,9 @@ class Debugger(object):
         f = None
         try:
             # pyclewn is started from within vim
-            if not options.vim:
-                if options.vim_args:
-                    f = open(options.vim_args[0], 'w')
+            if not options.editor:
+                if options.cargs:
+                    f = open(options.cargs[0], 'w')
                 else:
                     return None
             else:
@@ -738,7 +792,7 @@ class Debugger(object):
                 'cnoremap nbkey call <SID>winsplit'
                 '("${console}", "${location}") <Bar> nbkey'
                 ).substitute(console=netbeans.CONSOLE,
-                            location=options.location))
+                            location=options.window))
 
             # utility vim functions
             if options.noname_fix == '0':
@@ -759,12 +813,12 @@ class Debugger(object):
                 function_nbcommand = FUNCTION_NBCOMMAND_RESTRICT
 
             split_dbgvar_buf = ''
-            if self.__nbsock.getLength_fix != '0':
+            if netbeans.Netbeans.getLength_fix != '0':
                 split_dbgvar_buf = string.Template(SPLIT_DBGVAR_BUF).substitute(
                                         dbgvar_buf=netbeans.VARIABLES_BUFFER)
             f.write(string.Template(function_nbcommand).substitute(
                                         console=netbeans.CONSOLE,
-                                        location=options.location,
+                                        location=options.window,
                                         split_dbgvar_buf=split_dbgvar_buf))
             noCompletion = string.Template('command -bar -nargs=* ${pre}${cmd} '
                                     'call s:nbcommand("${cmd}", <f-args>)\n')
@@ -816,6 +870,8 @@ class Debugger(object):
         Return the timeout for the next iteration of the event loop.
 
         """
+        if not self.__nbsock:
+            return
         timeout = LOOP_TIMEOUT
         if not self._jobs_enabled and self.__nbsock.ready:
             self._jobs_enabled = True
@@ -912,13 +968,12 @@ class Debugger(object):
                     self.console_print('%s -- %s\n', cmd, doc)
 
     def cmd_dumprepr(self, *args):
-        """Print debugging information on netbeans and the debugger in
-        the Vim debugger console."""
+        """Print debugging information on netbeans and the debugger."""
         unused = args
         self.console_print(
                 'netbeans:\n%s\n' % misc.pformat(self.__nbsock.__dict__)
                 + '%s:\n%s\n' % (self.__class__.__name__.lower(), self))
-        self.prompt()
+        self.print_prompt()
 
     def cmd_mapkeys(self, *args):
         """Map the pyclewn keys."""
@@ -937,7 +992,7 @@ class Debugger(object):
                 text += '  %s : %s\n' % (k, self.mapkeys[k][0])
 
         self.console_print(text)
-        self.prompt()
+        self.print_prompt()
 
     def cmd_unmapkeys(self, *args):
         """Unmap the pyclewn keys.

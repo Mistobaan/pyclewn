@@ -606,7 +606,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
         self.async = False
         self.project = ''
         self.foldlnum = None
-        self.parse_paramlist(self.options.gdb_parameters)
+        self.parse_paramlist(self.options.gdb)
 
         # schedule the first 'gdb_background_jobs' method
         self.timer(self.gdb_background_jobs, debugger.LOOP_TIMEOUT)
@@ -648,7 +648,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
         # Use pyclewn tty as the debuggee standard input and output,
         # but not when vim is run as 'vim' or 'vi'.
         # May be overriden by --args option on pyclewn command line.
-        vim_pgm = os.path.basename(self.options.vim)
+        vim_pgm = os.path.basename(self.options.editor)
         if os.name != 'nt':
             if (not self.options.daemon
                     and vim_pgm != 'vim'
