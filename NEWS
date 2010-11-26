@@ -4,7 +4,7 @@ News
 Pyclewn 1.5
 -----------
 
-.. November 20, 2010
+.. November 25, 2010
 
 New feature
 ^^^^^^^^^^^
@@ -32,9 +32,6 @@ Change
 
 * Logs are written to stderr when the ``--level`` option is set and the
   ``--file`` option is not set.
-
-Bug fix
-^^^^^^^
 
 Pyclewn 1.4
 -----------

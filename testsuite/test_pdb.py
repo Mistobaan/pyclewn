@@ -340,10 +340,10 @@ class PdbTestCase(ClewnTestCase):
 
             '(pdb) continue\n'
             "An exception occured: ('ZeroDivisionError:', \"'integer division or modulo by zero'\")\n"
-            '> ?() at /home/xavier/src/pyclewn-hg-pdb/testsuite/foobar.py:13\n'
-            '  main() at /home/xavier/src/pyclewn-hg-pdb/testsuite/foobar.py:8\n'
-            "  foo(run=True, args=('unused',)) at /home/xavier/src/pyclewn-hg-pdb/testsuite/foo.py:38\n"
-            "  bar(prefix='value', i=0) at /home/xavier/src/pyclewn-hg-pdb/testsuite/foo.py:25\n"
+            '> ?() at ${cwd}testsuite/foobar.py:13\n'
+            '  main() at ${cwd}testsuite/foobar.py:8\n'
+            "  foo(run=True, args=('unused',)) at ${cwd}testsuite/foo.py:38\n"
+            "  bar(prefix='value', i=0) at ${cwd}testsuite/foo.py:25\n"
             '(pdb)\n',
             )
 
