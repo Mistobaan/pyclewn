@@ -700,7 +700,9 @@ class Debugger(object):
         # is sent after this message to avoid triggering the vim crash.
         info('enter netbeans_detach')
         self.started = False
+        self.closed = True
         if self.__nbsock.connected:
+            self.remove_all()
             msg = 'DETACH'
             info('sending netbeans message \'%s\'', msg)
             self.__nbsock.push(msg + '\n')

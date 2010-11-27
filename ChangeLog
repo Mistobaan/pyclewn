@@ -1,3 +1,8 @@
+2010-11-27  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* debugger.py: Do not send any netbeans command after DETACH.
+
+===============================================================================
 2010-11-15  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* buffer.py debugger.py gdb.py pydb.py netbeans.py vim.py: Support of

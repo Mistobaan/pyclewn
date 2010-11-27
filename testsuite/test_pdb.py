@@ -366,13 +366,16 @@ class PdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':Pyclewn pdb\n'
             ':sleep ${time}\n'
+            ':Cinterrupt\n'
+            ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
             ':sign place\n'
             ':redir! > ${test_file}1\n'
             ':C run = False\n'
+            ':sleep ${time}\n'
             ':Ccontinue\n'
             ':sleep ${time}\n'
-            ':qa!\n',
+            ':qa\n',
 
             'Signs for ${cwd}testsuite/foo.py:\n'
             'line=38  id=8  name=1\n'
@@ -395,8 +398,7 @@ def test_main():
     suite.addTest(PdbTestCase('test_locals_change'))
     suite.addTest(PdbTestCase('test_infinite_loop'))
     suite.addTest(PdbTestCase('test_zero_division'))
-    # this test causes vim 7.3.061 to crash
-    #suite.addTest(PdbTestCase('test_bp_restored_after_detach'))
+    suite.addTest(PdbTestCase('test_bp_restored_after_detach'))
     test_support.run_suite(suite)
 
 if __name__ == "__main__":

@@ -84,7 +84,7 @@ value to::
 
     C:\path\to\vim73;%PATH%
 
-To install pyclewn, double-click on the installer: pyclewn-1.4.win32.exe. This
+To install pyclewn, double-click on the installer: pyclewn-1.5.win32.exe. This
 will install pyclewn, configure Vim and create a shortcut on the Desktop. The
 installation is complete after the following message is printed by the
 installer: ``pyclewn postinstall completed``. You can now use the ``:help

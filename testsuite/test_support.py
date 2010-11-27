@@ -82,9 +82,8 @@ class ClewnTestCase(unittest.TestCase):
             '--file=' + LOGFILE,
             '--cargs',                  # vim args
             '-nb:127.0.0.1:%d:changeme '
-                '-u NONE '
+                '-u NORC '
                 '-U NONE '
-                '--noplugin '
                 '-s %s' % (port, TESTFN),
         ]
         if os.environ.has_key('EDITOR'):
