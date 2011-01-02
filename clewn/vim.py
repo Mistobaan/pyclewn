@@ -108,8 +108,13 @@ def exec_vimcmd(commands, pathname=''):
                 os.unlink(tmpname)
             except OSError:
                 pass
-    if output is None:
-        raise ClewnError("error starting Vim with:\n'%s'" % ' '.join(args))
+
+    if not output:
+        print >> sys.stderr, (
+            "Error trying to start Vim with the following command:\n'%s'"
+            % ' '.join(args))
+        sys.exit(1)
+
     return output
 
 def pformat(name, obj):

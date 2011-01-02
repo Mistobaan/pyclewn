@@ -1,5 +1,6 @@
-2010-11-27  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-01-01  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* vim.py: Explicit error message after installation failure.
 	* debugger.py: Do not send any netbeans command after DETACH.
 
 ===============================================================================

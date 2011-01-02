@@ -29,6 +29,9 @@ setup script to install pyclewn::
 You can now use the ``:help pyclewn`` command within vim, to get access to the
 documentation.
 
+The installation process uses the environment variable EDITOR to invoke Vim
+and install the pyclewn help file, ``gvim`` is used when this environment
+variable is not found.
 
 Local installation on unix
 --------------------------

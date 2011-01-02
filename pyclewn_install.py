@@ -10,16 +10,13 @@ import distutils.sysconfig as sysconfig
 import distutils.dir_util as dir_util
 from os.path import join as pathjoin
 from distutils.file_util import copy_file
+from distutils.errors import DistutilsExecError
 
 import clewn.vim as vim
 import clewn.misc as misc
 
 ICON_NAME = 'clewn.ico'
 PYCLEWN_SHORTCUT = 'Pyclewn.lnk'
-
-class ClewnInstallError(Exception):
-    """Pyclewn install exceptions."""
-    pass
 
 def icon(vimdir):
     """Return icon file tuple to be used as data file in distutils setup."""
@@ -33,14 +30,14 @@ def vim_features():
     try:
         output.index('+netbeans_intg')
     except ValueError:
-        raise ClewnInstallError, 'netbeans support in vim is required'
+        raise DistutilsExecError, 'netbeans support in vim is required'
     print >> sys.stderr, 'yes'
 
     print >> sys.stderr, 'checking auto commands support in vim:',
     try:
         output.index('+autocmd')
     except ValueError:
-        raise ClewnInstallError, 'auto commands support in vim is required'
+        raise DistutilsExecError, 'auto commands support in vim is required'
     print >> sys.stderr, 'yes'
 
 @misc.previous_evaluation
@@ -54,7 +51,7 @@ def vimdir():
         if not os.path.isdir(path):
             nodir = ('Invalid data files path. $VIM="%s" is returned'
                 ' by Vim, but this is not an existing directory.' % path)
-            raise ClewnInstallError, nodir
+            raise DistutilsExecError, nodir
         dir = pathjoin(path, 'vimfiles')
     print 'Vim user data files location: "%s"' % dir
     return dir
