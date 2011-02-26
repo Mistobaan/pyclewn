@@ -745,6 +745,22 @@ class GdbTestCase(ClewnTestCase):
             "line=9  id=1  name=1\n"
             )
 
+    def test_template_function(self):
+        """Set a breakpoint in a template function"""
+        self.cltest_redir(
+            ':edit testsuite/function_template.cpp\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/function_template\n'
+            ':Cbreak ${cwd}testsuite/function_template_sub/localmax.cpp:7\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            "Signs for ${cwd}testsuite/function_template_sub/localmax.cpp:\n"
+            "line=7  id=1  name=1\n"
+            )
+
 
 def test_main():
     """Run all the tests."""
@@ -793,6 +809,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_quit_display'))
     suite.addTest(GdbTestCase('test_cwindow_command'))
     suite.addTest(GdbTestCase('test_bp_after_quit'))
+    suite.addTest(GdbTestCase('test_template_function'))
     test_support.run_suite(suite)
 
 if __name__ == '__main__':

@@ -73,7 +73,9 @@ SOURCE_CMDS = (
     'source')
 
 # gdb objects attributes
-BREAKPOINT_ATTRIBUTES = set(('number', 'type', 'enabled', 'file', 'line'))
+BREAKPOINT_ATTRIBUTES = set(('number', 'type', 'enabled', 'file', 'line',
+                             'original-location'))
+REQ_BREAKPOINT_ATTRIBUTES = set(('number', 'type', 'enabled'))
 FILE_ATTRIBUTES = set(('line', 'file', 'fullname'))
 FRAMECLI_ATTRIBUTES = set(('level', 'func', 'file', 'line',))
 FRAME_ATTRIBUTES = set(('level', 'func', 'file', 'line', 'fullname',))
@@ -445,6 +447,14 @@ class Info(object):
 
         # create signs for new breakpoints
         for num in (nset - oldset):
+            # when file/line is missing (template function), use the
+            # original-location
+            if ('line' not in bp_dictionary[num]
+                    and 'file' not in bp_dictionary[num]):
+                fn, lno = bp_dictionary[num]['original-location'].split(':')
+                bp_dictionary[num]['file'] = fn.strip(misc.DOUBLEQUOTE)
+                bp_dictionary[num]['line'] = lno
+
             pathname = self.get_fullpath(bp_dictionary[num]['file'])
             if pathname is not None:
                 lnum = int(bp_dictionary[num]['line'])
@@ -1206,7 +1216,7 @@ Breakpoints =   \
                 'info_attribute': 'breakpoints',
                 'prefix': 'done,',
                 'regexp': re_breakpoints,
-                'reqkeys': BREAKPOINT_ATTRIBUTES,
+                'reqkeys': REQ_BREAKPOINT_ATTRIBUTES,
                 'gdblist': True,
                 'action': 'update_breakpoints',
                 'trigger_list': BREAKPOINT_CMDS,

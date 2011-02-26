@@ -4,11 +4,12 @@ News
 Pyclewn 1.6
 -----------
 
-.. January 1, 2011
+.. February 26, 2011
 
 Bug fixes
 ^^^^^^^^^
 
+* Set breakpoint in a template function.
 * Give an explicit error message after installation failure, for example when
   the environment var EDITOR is set to something different than vim or empty.
 
