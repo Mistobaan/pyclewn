@@ -561,7 +561,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
     """
 
     # gdb states
-    STATE_INIT, STATE_RUNNING, STATE_QUITTING = range(3)
+    STATE_INIT, STATE_RUNNING, STATE_QUITTING, STATE_CLOSING = range(4)
 
     def __init__(self, *args):
         """Constructor."""
@@ -913,7 +913,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
             self.cmd_quit()
             return
 
-        if not self.closed:
+        if self.state == self.STATE_CLOSING and not self.closed:
             debugger.Debugger.close(self)
             ProcessChannel.close(self)
 
@@ -1111,6 +1111,22 @@ class Gdb(debugger.Debugger, ProcessChannel):
     def cmd_quit(self, *args):
         """Quit gdb."""
         unused = args
+
+        # handle abnormal termination of gdb
+        if hasattr(self, 'pid_status') and self.pid_status:
+            self.state = self.STATE_CLOSING
+            self.console_print('\n%s\n', self.pid_status)
+            # save the project file
+            if self.project:
+                pobj = gdbmi.Project(self)
+                pobj.notify('project %s' % self.project)
+                pobj()
+            self.console_print("Closing this gdb session.\n")
+            self.console_print('\n===========\n')
+            self.console_flush()
+            self.close()
+            return
+
         # Attempt to save the project file.
         # When oob commands are being processed, or gdb is busy in a
         # 'continue' statement, the project file is not saved.

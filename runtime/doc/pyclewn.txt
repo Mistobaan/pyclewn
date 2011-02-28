@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2010 November 22
+*pyclewn.txt*                                   Last change: 2011 February 28
 
 
                             PYCLEWN USER MANUAL
@@ -625,9 +625,6 @@ The <commands> command is not allowed. To give a breakpoint a series of
 commands to execute when the debuggee stops due to that breakpoint, edit the
 commands in a temporary file with vim, and load the commands into gdb by using
 the gdb <source> command on this file.
-
-The project file is not saved automatically on exit, if gdb is busy running a
-command at that time.
 
 When pyclewn cannot setup a pseudo tty to communicate with gdb, pyclewn falls
 back to pipes. In this case, the Csigint command does not work as gdb does not

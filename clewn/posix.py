@@ -119,6 +119,8 @@ class ProcessChannel(asyncproc.ProcessChannel):
             default SIGCHLD signal handler
         debug: boolean
             when True, print logs
+        pid_status: str
+            wait status of child termination as a string
 
     """
 
@@ -129,6 +131,7 @@ class ProcessChannel(asyncproc.ProcessChannel):
         asyncproc.ProcessChannel.__init__(self, argv)
         self.sig_handler = None
         self.debug = (logging.getLogger().getEffectiveLevel() <= logging.INFO)
+        self.pid_status = ''
 
     def forkexec(self):
         """Fork and exec the program after setting the pseudo tty attributes.
@@ -229,25 +232,21 @@ class ProcessChannel(asyncproc.ProcessChannel):
                 self.pid = 0
                 if self.sig_handler is not None:
                     signal.signal(signal.SIGCHLD, self.sig_handler)
-                self.close()
 
-                if self.debug:
-                    if os.WCOREDUMP(status):
-                        print >> sys.stderr, (
-                            "process %s terminated with a core dump"
-                            % self.pgm_name)
-                    elif os.WIFSIGNALED(status):
-                        print >> sys.stderr, (
-                            "process %s terminated after receiving signal %d"
-                            % (self.pgm_name, os.WTERMSIG(status)))
-                    elif os.WIFEXITED(status):
-                        print >> sys.stderr, (
-                            "process %s terminated with exit %d"
-                            % (self.pgm_name, os.WEXITSTATUS(status)))
-                    else:
-                        print >> sys.stderr, (
-                            "process %s terminated"
-                            % self.pgm_name)
+                if os.WCOREDUMP(status):
+                    self.pid_status = ('%s process terminated with a core dump.'
+                                    % self.pgm_name)
+                elif os.WIFSIGNALED(status):
+                    self.pid_status = (
+                            '%s process terminated after receiving signal %d.'
+                                    % (self.pgm_name, os.WTERMSIG(status)))
+                elif os.WIFEXITED(status):
+                    self.pid_status = ('%s process terminated with exit %d.'
+                                    % (self.pgm_name, os.WEXITSTATUS(status)))
+                else:
+                    self.pid_status = '%s process terminated.' % self.pgm_name
+
+                self.close()
 
     def close(self):
         """Close the channel an wait on the process."""

@@ -669,6 +669,10 @@ class Debugger(object):
             if not self._consbuffered:
                 console.flush()
 
+    def console_flush(self):
+        """Flush the console."""
+        self.__nbsock.console.flush()
+
     def timer(self, callme, delta):
         """Schedule the 'callme' job at 'delta' time from now.
 

@@ -65,12 +65,12 @@ DIRECTORY_CMDS = (
     'directory',
     'source')
 
-PROJECT_CMDS = ('project',)
-
 SOURCE_CMDS = (
     'r', 'start',
     'file', 'exec-file', 'core-file', 'symbol-file', 'add-symbol-file',
     'source')
+
+PROJECT_CMDS = tuple(['project'] + list(SOURCE_CMDS))
 
 # gdb objects attributes
 BREAKPOINT_ATTRIBUTES = set(('number', 'type', 'enabled', 'file', 'line',
@@ -1431,7 +1431,11 @@ class Quit(OobCommand):
             # the Debugger instance is closing, its dispatch loop timer is
             # closing as well and we cannot rely on this timer anymore to handle
             # buffering on the console, so switch to no buffering
-            self.gdb._consbuffered = False
             self.gdb.console_print('\n===========\n')
+            self.gdb.console_flush()
+
+            self.gdb.state = self.gdb.STATE_CLOSING
+            self.gdb.close()
+
         return False
 

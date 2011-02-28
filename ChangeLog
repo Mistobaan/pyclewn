@@ -1,5 +1,7 @@
-2011-02-26  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-02-28  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* gdb.py gdbmi.py debugger.py posix.py: On gdb abnormal termination,
+	save the project file and forcibly terminate the current session.
 	* gdbmi.py: Set breakpoint in a template function.
 	* vim.py: Explicit error message after installation failure.
 	* debugger.py: Do not send any netbeans command after DETACH.
