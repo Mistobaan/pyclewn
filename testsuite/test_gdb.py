@@ -761,6 +761,24 @@ class GdbTestCase(ClewnTestCase):
             "line=7  id=1  name=1\n"
             )
 
+    def test_sigint_as_first_command(self):
+        """Check starting the session with the 'sigint' command"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
+            ':Csigint\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak foo\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            "Signs for ${cwd}testsuite/foo.c:\n"
+            "line=30  id=1  name=1\n"
+            )
+
 
 def test_main():
     """Run all the tests."""
@@ -810,6 +828,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_cwindow_command'))
     suite.addTest(GdbTestCase('test_bp_after_quit'))
     suite.addTest(GdbTestCase('test_template_function'))
+    suite.addTest(GdbTestCase('test_sigint_as_first_command'))
     test_support.run_suite(suite)
 
 if __name__ == '__main__':

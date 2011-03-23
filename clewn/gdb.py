@@ -1111,6 +1111,10 @@ class Gdb(debugger.Debugger, ProcessChannel):
     def cmd_quit(self, *args):
         """Quit gdb."""
         unused = args
+        if self.state == self.STATE_INIT:
+            self.console_print("Ignoring 'quit' command on startup.\n")
+            return
+
 
         # handle abnormal termination of gdb
         if hasattr(self, 'pid_status') and self.pid_status:
@@ -1144,6 +1148,10 @@ class Gdb(debugger.Debugger, ProcessChannel):
     def cmd_sigint(self, *args):
         """Send a <C-C> character to the debugger."""
         unused = args
+        if self.state == self.STATE_INIT:
+            self.console_print("Ignoring 'sigint' command on startup.\n")
+            return
+
         self.sendintr()
         if self.ttyname is None:
             self.cmd_sigint.im_func.__doc__ = \

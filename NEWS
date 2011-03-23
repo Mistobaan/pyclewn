@@ -4,11 +4,12 @@ News
 Pyclewn 1.6
 -----------
 
-.. February 28, 2011
+.. March 23, 2011
 
 Bug fixes
 ^^^^^^^^^
 
+* Ignore 'sigint' or 'quit' command on startup.
 * On gdb abnormal termination, save the project file if exists and forcibly
   terminate the current session.
 * Set breakpoint in a template function.

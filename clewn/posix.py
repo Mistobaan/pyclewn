@@ -41,7 +41,7 @@ except ValueError:
     MAXFD = 256
 
 # set the logging methods
-(critical, error, warning, info, debug) = misc.logmethods('posix')
+(critical, error, warning, info, debug) = misc.logmethods('psix')
 Unused = warning
 Unused = debug
 
@@ -160,7 +160,9 @@ class ProcessChannel(asyncproc.ProcessChannel):
             # (from `The GNU C Library' (glibc-2.3.1))
             try:
                 fcntl.ioctl(slave_fd, termios.TIOCSCTTY)
-                info("terminal control with TIOCSCTTY ioctl call")
+                # do not use the logger in the child, for some reason this
+                # causes the next log entry from the father to get lost
+                # info("terminal control with TIOCSCTTY ioctl call")
             except IOError:
                 # this might work (it does on Linux)
                 if slave_fd != 0: os.close(0)
