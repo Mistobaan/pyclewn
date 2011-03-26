@@ -54,7 +54,7 @@ else:
     from clewn.posix import daemonize, platform_data
 
 
-WINDOW_LOCATION = ('top', 'bottom', 'left', 'right')
+WINDOW_LOCATION = ('top', 'bottom', 'left', 'right', 'none')
 CONNECTION_DEFAULTs = '', 3219, 'changeme'
 CONNECTION_TIMEOUT = 30
 CONNECTION_ERROR = """Connection to Vim timed out after %s seconds.
@@ -504,7 +504,7 @@ class Vim(object):
                 type='string', action='callback', callback=args_callback,
                 help='set the debugger arguments to ARGS')
         parser.add_option('-w', '--window', default='top',
-                type='string',
+                type='string', metavar='LOCATION',
                 help="%s%s%s" % ("open the debugger console window at LOCATION "
                 "which may be one of ", WINDOW_LOCATION,
                 ", the default is '%default'"))
@@ -548,6 +548,10 @@ class Vim(object):
             parser.error(
                     '"%s" is an invalid window LOCATION, must be one of %s'
                     % (self.options.window, WINDOW_LOCATION))
+
+        # set Netbeans class members
+        if location == 'none':
+            netbeans.Netbeans.enable_setdot = False
 
         if self.options.maxlines <= 0:
             parser.error('invalid number for maxlines option')

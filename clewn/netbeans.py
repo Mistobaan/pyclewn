@@ -226,6 +226,20 @@ class ClewnBuffer(object):
             self.editing = True
         nbsock.send_function(self.buf, function, args)
 
+    def setdot(self, offset=None, lnum=None):
+        """Set the cursor at the requested position.
+
+        Do not set the cursor when the 'window' command line option is 'none',
+        unless there is no netbeans buffer opened yet (the console is the
+        only buffer).
+        """
+        if ((self.nbsock.enable_setdot or not self.nbsock._bset)
+                                                    and self.visible):
+            if offset is not None:
+                self.nbsock.send_cmd(self.buf, 'setDot', str(offset))
+            else:
+                self.nbsock.send_cmd(self.buf, 'setDot', '%d/0' % lnum)
+
     def terminate_editing(self):
         """Terminate editing a ClewnBuffer."""
         if self.editing:
@@ -252,8 +266,7 @@ class ClewnBuffer(object):
         self.len += len(msg)
 
         # show the last line if the buffer is displayed in a Vim window
-        if self.visible:
-            self.nbsock.send_cmd(self.buf, 'setDot', str(self.len - 1))
+        self.setdot(offset=(self.len - 1))
         self.terminate_editing()
 
     def update(self, content):
@@ -297,8 +310,8 @@ class ClewnBuffer(object):
             self.len -= count
             if self.len == 0:
                 self.nonempty_last = False
-            elif self.visible:
-                self.nbsock.send_cmd(self.buf, 'setDot', str(self.len - 1))
+            else:
+                self.setdot(offset=(self.len - 1))
             self.terminate_editing()
             info('%s length: %d bytes', self.buf.name, self.len)
 
@@ -641,6 +654,8 @@ class Netbeans(asynchat.async_chat, object):
             '0' with vim 7.1 before patch 207
         getLength_fix: str
             '0' with vim 7.2 before patch 253
+        enable_setdot: boolean
+            False when the console and dbgvarbuf are not redrawn
         max_lines: int
             Console maximum number of lines
         bg_colors: tuple
@@ -651,6 +666,7 @@ class Netbeans(asynchat.async_chat, object):
 
     remove_fix = '0'
     getLength_fix = '0'
+    enable_setdot = True
     max_lines = CONSOLE_MAXLINES
     bg_colors = ('Cyan', 'Green', 'Magenta')
 

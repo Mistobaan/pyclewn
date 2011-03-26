@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2011 February 28
+*pyclewn.txt*                                   Last change: 2011 March 26
 
 
                             PYCLEWN USER MANUAL
@@ -317,11 +317,12 @@ The full description of pyclewn options follows:
 
 -w {LOCATION}
 --window={LOCATION} The debugger console window pops up at LOCATION, which may
-                    be one of top, bottom, left or right. The default is top.
-                    In the left or right case, the window pops up on the left
-                    (resp. right) if there is only one window currently
+                    be one of top, bottom, left, right or none. The default is
+                    top.  In the left or right case, the window pops up on the
+                    left (resp. right) if there is only one window currently
                     displayed, otherwise the debugger window is opened at the
-                    default top.
+                    default top. When LOCATION is none, the automatic display
+                    of the console is disabled.
 
 -m {LNUM}
 --maxlines={LNUM}   Set the maximum number of lines of the debugger console
@@ -381,7 +382,12 @@ Console:
 The debugger output is redirected to a vim window: the console.
 
 The console window pops up whenever a|Ccommand|is entered on vim command line
-or a key mapped by pyclewn is hit.
+or a key mapped by pyclewn is hit. This behavior may be disabled by setting to
+`none` the `window`|pyclewn-options|and may be useful when using Vim tabs and
+wanting to keep the console in a tab of its own. In this case, the cursor
+position in the console is not updated by pyclewn, so you need to set manually
+the cursor at the bottom of the console, the first time you open
+(clewn)_console.
 
 The initial console window height is set with the vim option 'previewheight'
 that defaults to 12 lines.

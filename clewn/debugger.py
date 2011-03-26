@@ -180,6 +180,10 @@ endfunc
 FUNCTION_CONSOLE = """
 " Split a window and display a buffer with previewheight.
 function s:winsplit(bufname, location)
+    if a:location == "none"
+        return
+    endif
+
     " The console window does not exist
     if bufwinnr(a:bufname) == -1
         call s:split(a:bufname, a:location)
@@ -589,12 +593,11 @@ class Debugger(object):
         # race condition: must note the state of the buffer before
         # updating the buffer, since this will change its visible state
         # temporarily
-        visible = dbgvarbuf.visible
         if dirty or dbgvarbuf.dirty:
             dbgvarbuf.update(getdata())
             # set the cursor on the current fold when visible
-            if lnum is not None and visible:
-                self.__nbsock.send_cmd(dbgvarbuf.buf, 'setDot', '%d/0' % lnum)
+            if lnum is not None:
+                dbgvarbuf.setdot(lnum=lnum)
 
     def show_frame(self, pathname=None, lnum=1):
         """Show the frame highlighted sign in a Vim buffer.

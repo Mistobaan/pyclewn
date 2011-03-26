@@ -493,6 +493,10 @@ class BufferSet(dict):
         """A key is never removed."""
         pass
 
+    def __len__(self):
+        """Return the length of the dictionary."""
+        return len(self.anno_dict)
+
     def popitem(self):
         """A key is never removed."""
         pass
