@@ -1,5 +1,7 @@
-2011-03-26  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-03-28  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* buffer.py netbeans.py: Disable automatic display of the console
+	(rework).
 	* vim.py buffer.py netbeans.py debugger.py: Add the 'none' LOCATION to
 	the '--window' command line option.
 	* gdb.py: Ignore 'sigint' or 'quit' command on startup.

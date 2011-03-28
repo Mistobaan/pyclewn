@@ -494,8 +494,8 @@ class BufferSet(dict):
         pass
 
     def __len__(self):
-        """Return the length of the dictionary."""
-        return len(self.anno_dict)
+        """Return the number of non ClewnBuffer buffers."""
+        return len([p for p in self if not is_clewnbuf(p)])
 
     def popitem(self):
         """A key is never removed."""

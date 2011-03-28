@@ -922,7 +922,7 @@ class Netbeans(asynchat.async_chat, object):
             self.console = Console(self)
             self.console.register()
 
-        if self.dbgvarbuf is None or not self.dbgvarbuf.buf.registered:
+        if self.dbgvarbuf is None:
             self.dbgvarbuf = DebuggerVarBuffer(self)
 
         buf = self._bset.getbuf(buf_id)
