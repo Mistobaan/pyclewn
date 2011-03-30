@@ -1144,6 +1144,9 @@ class Gdb(debugger.Debugger, ProcessChannel):
                                         console=False, gdb=False)
             else:
                 self.clicmd_notify('dummy', console=False, gdb=False)
+        else:
+            self.state = self.STATE_CLOSING
+            self.close()
 
     def cmd_sigint(self, *args):
         """Send a <C-C> character to the debugger."""

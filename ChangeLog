@@ -1,5 +1,7 @@
-2011-03-28  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-03-30  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* gdb.py: Handling of the netbeans socket disconnection, closes the
+	gdb session also when gdb is busy.
 	* buffer.py netbeans.py: Disable automatic display of the console
 	(rework).
 	* vim.py buffer.py netbeans.py debugger.py: Add the 'none' LOCATION to
