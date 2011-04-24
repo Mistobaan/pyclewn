@@ -4,11 +4,13 @@ News
 Pyclewn 1.6
 -----------
 
-.. March 30, 2011
+.. April 22, 2011
 
 New feature
 ^^^^^^^^^^^
 
+* The script ``inferior_tty.py`` creates a pseudo terminal to be used as the
+  controlling terminal of the process debugged by gdb.
 * New ``none`` LOCATION of the ``--window`` command line option. This option
   disables the automatic display of the console and may be useful when using
   Vim tabs and keeping the console in a tab of its own.

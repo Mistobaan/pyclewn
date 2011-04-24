@@ -363,7 +363,6 @@ class GlobalSetup(misc.Singleton):
         'define',
         'edit',
         'end',
-        'shell',
         # tui commands
         'layout',
         'focus',

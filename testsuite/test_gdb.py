@@ -178,14 +178,14 @@ class GdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cset con\n'       # set confirm command
-            ':C she\n'          # shell command
+            ':C def\n'          # define command
             ':sleep ${time}\n'
             ':edit (clewn)_console | $$ | ?con?,$$-1w!  ${test_out}\n'
             ':qa!\n',
 
             '(gdb) set con\n'
             'Illegal argument in pyclewn.\n'
-            '(gdb) she\n'
+            '(gdb) def\n'
             'Illegal command in pyclewn.\n'
             )
 

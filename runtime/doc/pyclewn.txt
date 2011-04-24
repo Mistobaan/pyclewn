@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2011 March 28
+*pyclewn.txt*                                   Last change: 2011 April 22
 
 
                             PYCLEWN USER MANUAL
@@ -506,48 +506,38 @@ feature, set the vim option 'noballooneval'.
 
 
 When gdb is started, it automatically executes commands from its init file,
-normally called '.gdbinit'. See gdb documentation.
+normally called '.gdbinit'. See the gdb documentation.
 
 
 Debuggee standard input and output:
 -----------------------------------
-On unix, when pyclewn is started from a terminal and not as a daemon, the
-standard input and output of the program to debug are those of the terminal
-from where pyclewn was started.
-
-When pyclewn is run as a daemon, the <tty> gdb command, or the <attach> gdb
-command can be used to control the input and output of the program to debug.
-
 On Windows, gdb pops up a console attached to the program to debug.
 
+                                                    *inferior_tty*
+
+On unix, the "inferior_tty.py" script installed with pyclewn can be run to
+create a pseudo terminal that is used as the controlling terminal of the
+process debugged by gdb. For example, to debug vim (not gvim) and start the
+debugging session at vim's main function. From pyclewn, spawn an xterm
+terminal and launch "inferior_tty.py" in this terminal: >
+
+    :Cfile /path/to/vim
+    :Cshell setsid xterm -e inferior_tty.py &
+
+"inferior_tty.py" prints the name of the pseudo terminal to be used by gdb and
+the two gdb commands needed to configure properly gdb with this terminal. Copy
+and paste these two commands to vim command line: >
+
+    :Cset inferior-tty /dev/pts/nn
+    :Cset environment TERM = xterm
+
+Then start the debugging of vim and stop at main(): >
+
+    :Cstart
+
 Note:
-On linux, to redirect the output of the debuggee in a terminal, start a new
-terminal and get the new terminal name with the `tty` command. Let's assume it
-is `dev/pts/7`. In pyclewn, run the following command before starting the
-debuggee: >
-
-    :Ctty /dev/pts/7
-
-The above method does not work for input redirection as the shell in
-`dev/pts/7` is also reading the terminal input. In that case start from the
-`dev/pts/7` terminal a second xterm process with the following command: >
-
-    $ xterm -Sabc/3
-
-Input/output redirection can be set now to `dev/pts/7` with: >
-
-    :Ctty /dev/pts/7
-
-The following warning output by gdb has been introduced after gdb 6.8, by the
-gdb patch: http://sourceware.org/ml/gdb-patches/2008-03/msg00103.html: >
-
-    GDB: Failed to set controlling terminal: Operation not permitted
-
-This warning says that the terminal could not be set as a controlling
-terminal for the program to debug, which means that this process cannot
-receive from the terminal signals such as SIGINT or SIGWINCH. When needing a
-fully featured controlling terminal, use the <attach> gdb command to a running
-process instead of input/output redirection.
+* <setsid> is necessary to prevent gdb from killing the xterm process when a
+  <Ctl-C> is typed from gdb to interrupt the debuggee.
 
 
                                                     *async-option*

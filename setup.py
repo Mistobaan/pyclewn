@@ -37,7 +37,7 @@ if os.name == 'nt':
     vimdir = 'pyclewn'
     LONG_DESCRIPTION = WINDOWS_INSTALL
 else:
-    SCRIPTS = ['pyclewn']
+    SCRIPTS = ['pyclewn', 'runtime/bin/inferior_tty.py']
     vimdir = pyclewn_install.vimdir()
     LONG_DESCRIPTION = DESCRIPTION
 
