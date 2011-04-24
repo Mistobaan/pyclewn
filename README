@@ -74,7 +74,10 @@ The following table lists the differences between clewn_, vimGdb_ and pyclewn.
     |               | vimGdb      | clewn                 | pyclewn                |
     +===============+=============+=======================+========================+
     | platform      | unix        | unix                  | all unix platforms     |
-    |               |             |                       | supported by python,   |
+    |               |             |                       | supported by python -  |
+    |               |             |                       | requires GNU gdb from  |
+    |               |             |                       | macports on Mac Os X   |
+    |               |             |                       |                        |
     |               |             |                       | Windows                |
     +---------------+-------------+-----------------------+------------------------+
     | language      | C           | C                     | python 2.4 and         |
