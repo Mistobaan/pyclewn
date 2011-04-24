@@ -40,7 +40,7 @@ NBDEBUG = 5
 NBDEBUG_LEVEL_NAME = 'nbdebug'
 LOG_LEVELS = 'critical, error, warning, info, debug or ' + NBDEBUG_LEVEL_NAME
 
-RE_TOKEN_SPLIT = r'\s*"((?:\\"|[^"])+)"\s*|\s*([^ ^"]+)\s*'     \
+RE_TOKEN_SPLIT = r'\s*"((?:\\"|[^"])+)"\s*|\s*([^ "]+)\s*'     \
                  r'# RE: split a string in tokens, handling quotes'
 RE_ESCAPE = r'["\n\t\r\\]'                                      \
             r'# RE: escaped characters in a string'
