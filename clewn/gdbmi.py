@@ -351,8 +351,10 @@ class Info(object):
             current gdb source attributes
         frame: dict
             gdb frame attributes
-        frameloc: dict
+        frame_location: dict
             current frame location
+        frame_prefix: str
+            completion prefix for the 'frame' command
         sources: list
             list of gdb sources
         varobj: RootVarObj
@@ -373,7 +375,8 @@ class Info(object):
         self.directories = ['$cdir', '$cwd']
         self.file = {}
         self.frame = {}
-        self.frameloc = {}
+        self.frame_location = {}
+        self.frame_prefix = ''
         self.sources = []
         self.varobj = RootVarObj()
         self.changelist = []
@@ -420,8 +423,9 @@ class Info(object):
 
         return None
 
-    def update_breakpoints(self):
+    def update_breakpoints(self, cmd):
         """Update the breakpoints."""
+        unused = cmd
         is_changed = False
 
         # build the breakpoints dictionary
@@ -479,7 +483,7 @@ class Info(object):
                                         % (pathname, lnum, num, state))
             f_bps.close()
 
-    def update_frame(self, hide=False):
+    def update_frame(self, cmd='', hide=False):
         """Update the frame sign."""
         if hide:
             self.frame = {}
@@ -496,19 +500,26 @@ class Info(object):
             pathname = self.get_fullpath(source)
 
             if pathname is not None:
-                frameloc = {'pathname':pathname, 'lnum':line}
-                # do it only when frame location has changed
-                if self.frameloc != frameloc:
-                    self.gdb.show_frame(**frameloc)
-                    self.frameloc = frameloc
+                frame_location = {'pathname':pathname, 'lnum':line}
+                if not self.frame_prefix:
+                    keys = self.gdb.cmds.keys()
+                    keys.remove('frame')
+                    self.frame_prefix = misc.smallpref_inlist('frame', keys)
+                # when the frame location has changed or when running the
+                # 'frame' command
+                if (self.frame_location != frame_location or
+                            cmd.startswith(self.frame_prefix)):
+                    self.gdb.show_frame(**frame_location)
+                    self.frame_location = frame_location
                 return
 
         # hide frame sign
         self.gdb.show_frame()
-        self.frameloc = {}
+        self.frame_location = {}
 
-    def update_changelist(self):
+    def update_changelist(self, cmd):
         """Process a varobj changelist event."""
+        unused = cmd
         for vardict in self.changelist:
             (varobj, varlist) = self.varobj.leaf(vardict['name'])
             unused = varlist
@@ -1083,6 +1094,8 @@ class OobGdbCommand(OobCommand, Command):
         action: str
             optional: not present in all subclasses
             name of the gdb.info method that is called after parsing the result
+        cmd: str
+            the command being currently processed
         trigger: boolean
             when True, invoke __call__()
         trigger_list: tuple
@@ -1114,6 +1127,7 @@ class OobGdbCommand(OobCommand, Command):
                 and isinstance(self.trigger_list, tuple)
         assert hasattr(self, 'reqkeys')                     \
                 and isinstance(self.reqkeys, set)
+        self.cmd = ''
         self.trigger = False
 
         # build prefix list that triggers the command after being notified
@@ -1128,6 +1142,7 @@ class OobGdbCommand(OobCommand, Command):
         prefix of the notified command matches in the trigger_prefix list.
 
         """
+        self.cmd = cmd
         if not self.trigger_list or     \
                     misc.any([cmd.startswith(x) for x in self.trigger_prefix]):
             self.trigger = True
@@ -1181,7 +1196,7 @@ class OobGdbCommand(OobCommand, Command):
             # call the gdb.info method
             if hasattr(self, 'action'):
                 try:
-                    getattr(self.gdb.info, self.action)()
+                    getattr(self.gdb.info, self.action)(self.cmd)
                 except (KeyError, ValueError):
                     info_attribute = getattr(self.gdb.info,
                                             self.info_attribute)

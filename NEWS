@@ -4,11 +4,13 @@ News
 Pyclewn 1.6
 -----------
 
-.. April 22, 2011
+.. April 27, 2011
 
 New feature
 ^^^^^^^^^^^
 
+* The ``frame`` command updates the frame sign and positions the cursor on
+  this sign.
 * The script ``inferior_tty.py`` creates a pseudo terminal to be used as the
   controlling terminal of the process debugged by gdb.
 * New ``none`` LOCATION of the ``--window`` command line option. This option

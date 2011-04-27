@@ -244,7 +244,7 @@ class GdbTestCase(ClewnTestCase):
             "          'func': 'main',\n"
             "          'level': '0',\n"
             "          'line': '9'},\n"
-            "'frameloc': {'lnum': 9,\n"
+            "'frame_location': {'lnum': 9,\n"
             "             'pathname': '${cwd}testsuite/foobar.c'},\n"
             )
 
@@ -270,7 +270,7 @@ class GdbTestCase(ClewnTestCase):
             "          'func': 'main',\n"
             "          'level': '0',\n"
             "          'line': '9'},\n"
-            "'frameloc': {'lnum': 9,\n"
+            "'frame_location': {'lnum': 9,\n"
             "             'pathname': '${cwd}testsuite/foobar.c'},\n"
             )
 
@@ -779,6 +779,27 @@ class GdbTestCase(ClewnTestCase):
             "line=30  id=1  name=1\n"
             )
 
+    def test_frame_command(self):
+        """Check the frame command moves the cursor to the frame location"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak foo\n'
+            ':Crun\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':edit testsuite/foobar.c\n'
+            ':echo bufname("%")\n'
+            ':Cframe\n'
+            ':sleep ${time}\n'
+            ':echo bufname("%")\n'
+            ':qa!\n',
+
+            "testsuite/foobar.c\n"
+            "${cwd}testsuite/foo.c"
+            )
+
 
 def test_main():
     """Run all the tests."""
@@ -829,6 +850,7 @@ def test_main():
     suite.addTest(GdbTestCase('test_bp_after_quit'))
     suite.addTest(GdbTestCase('test_template_function'))
     suite.addTest(GdbTestCase('test_sigint_as_first_command'))
+    suite.addTest(GdbTestCase('test_frame_command'))
     test_support.run_suite(suite)
 
 if __name__ == '__main__':
