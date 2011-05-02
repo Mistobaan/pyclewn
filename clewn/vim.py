@@ -47,6 +47,7 @@ import clewn.netbeans as netbeans
 import clewn.buffer as vimbuffer
 import clewn.evtloop as evtloop
 import clewn.pydb as pydb
+import clewn.tty as tty
 if os.name == 'nt':
     from clewn.nt import hide_console as daemonize
     from clewn.nt import platform_data
@@ -209,10 +210,22 @@ def main(testrun=False):
         return vim
 
     try:
+        gdb_pty = tty.GdbInferiorPty()
         try:
+            if (vim.clazz == gdb.Gdb
+                        and os.name != 'nt'
+                        and not options.daemon
+                        and os.isatty(sys.stdin.fileno())):
+                # Use pyclewn pty as the debuggee standard input and output, but
+                # not when vim is run as 'vim' or 'vi'.
+                vim_pgm = os.path.basename(options.editor)
+                if vim_pgm != 'vim' and vim_pgm != 'vi':
+                    gdb_pty.start()
+                    options.tty = gdb_pty.ptyname
+
             vim.debugger = vim.clazz(options)
             vim.setup(True)
-            vim.loop()
+            vim.loop(gdb_pty.fds)
         except (KeyboardInterrupt, SystemExit):
             pass
         except:
@@ -235,6 +248,7 @@ def main(testrun=False):
             if vim.nbserver.netbeans:
                 vim.nbserver.netbeans.show_balloon(except_str)
     finally:
+        gdb_pty.close()
         debug('Vim instance: ' + str(vim))
         vim.shutdown()
 
@@ -608,11 +622,11 @@ class Vim(object):
 
             root.setLevel(level)
 
-    def loop(self):
+    def loop(self, exclude):
         """The dispatch loop."""
 
         start = time.time()
-        while self.socket_map:
+        while set(self.socket_map.keys()).difference(exclude):
             nbsock = self.nbserver.netbeans
             # start the debugger
             if start is not False:

@@ -1,5 +1,7 @@
-2011-04-27  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-05-01  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* vim.py gdb.py tty.py inferior_tty.py: fix gdb warning "Failed to set
+	controlling terminal".
 	* gdbmi.py: The 'frame' command updates the frame sign.
 	* setup.py inferior_tty.py gdb.py: allow the gdb 'shell' command and
 	include inferior_tty.py in the distribution.

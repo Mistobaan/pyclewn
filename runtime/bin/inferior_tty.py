@@ -28,9 +28,6 @@ command line arguments of 'gdb_wrapper' are passed unchanged to gdb.
 
 import os
 import sys
-import array
-import errno
-import pty
 import signal
 import fcntl
 import time
@@ -38,12 +35,17 @@ import asyncore
 import subprocess
 import traceback
 import logging
-from termios import tcgetattr, tcsetattr, TCSADRAIN, TIOCGWINSZ, TIOCSWINSZ
-from termios import error as termios_error
+
+import clewn.misc as misc
+import clewn.tty as tty
+
+# set the logging methods
+(critical, error, warning, info, debug) = misc.logmethods('pty')
+Unused = critical
+Unused = error
+Unused = warning
 
 debug = False
-# the command character: 'C-a'
-CMD_CHAR = chr(1)
 this_pgm = os.path.basename(sys.argv[0]).rsplit('.py', 1)[0]
 usage = ("""'%s' two characters sequence commands:
     'C-a q' exit immediately
@@ -52,92 +54,14 @@ usage = ("""'%s' two characters sequence commands:
     'C-a a' send a \'C-a\' character
 """ % this_pgm)
 
-class FileDispatcher(asyncore.file_dispatcher):
-    """The FileDispatcher does input/output on a file descriptor.
-
-    Read data into 'buf'.
-    Write the content of the FileDispatcher 'source' buffer 'buf'.
-    When 'enable_cmds' is True, handle the command character 'C-a'.
-    """
-
-    def __init__(self, fd, source=None, reader=True, enable_cmds=False):
-        """Constructor."""
-        asyncore.file_dispatcher.__init__(self, fd)
-        self.source = source
-        self.reader = reader
-        self.enable_cmds = enable_cmds
-        self.cmd_char_last = False
-        self.close_tty = False
-        self.buf = ''
-
-    def readable(self):
-        """A readable dispatcher."""
-        return self.reader
-
-    def writable(self):
-        """A writable dispatcher."""
-        return self.source and self.source.buf != ''
-
-    def handle_read(self):
-        """Process data available for reading."""
-        try:
-            data = self.socket.recv(1024)
-        except OSError, err:
-            if err[0] != errno.EAGAIN and err[0] != errno.EINTR:
-                if self.source.close_tty and err[0] == errno.EIO:
-                    raise asyncore.ExitNow("[slave pseudo terminal closed,"
-                            " '%s' is terminated]" % this_pgm)
-                raise asyncore.ExitNow(err)
-        else:
-            if self.enable_cmds:
-                if self.cmd_char_last:
-                    self.cmd_char_last = False
-                    if data == 'q':
-                        raise asyncore.ExitNow(
-                                '\n[%s is terminating]' % this_pgm)
-                    elif data == 'c':
-                        self.close_tty = True
-                        return
-                    elif data == 'a':
-                        self.buf += CMD_CHAR
-                        return
-                    else:
-                        self.buf += CMD_CHAR + data
-                        return
-                elif data == CMD_CHAR:
-                    self.cmd_char_last = True
-                    return
-            self.buf += data
-
-    def handle_write(self):
-        """Write the content of the 'source' buffer."""
-        buf = self.source.buf
-        try:
-            count = os.write(self.socket.fd, buf)
-        except OSError, err:
-            if err[0] != errno.EAGAIN and err[0] != errno.EINTR:
-                raise asyncore.ExitNow(err)
-        else:
-            self.source.buf = buf[count:]
-
-    def close(self):
-        """Close the dispatcher."""
-        self.del_channel()
-
-    def update_size(self):
-        """Set the window size to match the size of its 'source'."""
-        buf = array.array('h', [0, 0, 0, 0])
-        ret = fcntl.ioctl(self.source.socket.fd, TIOCGWINSZ, buf, 1)
-        if ret == 0:
-            fcntl.ioctl(self.socket.fd, TIOCSWINSZ, buf, 1)
-        else:
-            logging.error('failed ioctl: %d', ret)
-
 def setlogger(filename):
     """Set the logging file handler."""
     if debug:
         root = logging.getLogger()
-        root.addHandler(logging.FileHandler(filename))
+        hdlr_file = logging.FileHandler(filename)
+        fmt = logging.Formatter('%(name)-4s %(levelname)-7s %(message)s')
+        hdlr_file.setFormatter(fmt)
+        root.addHandler(hdlr_file)
         root.setLevel(logging.DEBUG)
 
 def abort(msg=''):
@@ -155,15 +79,15 @@ def prompt(msg):
     fcntl.fcntl(fd, fcntl.F_SETFL, flags)
     return raw_input(msg)
 
-def spawn_terminal_emulator(pty_term, slave_fd, master_fd):
+def spawn_terminal_emulator(pty_term, gdb_pty):
     """Run ourself in xterm to monitor gdb exit status."""
     argv = ['xterm', '-e', 'python']
     argv.extend(sys.argv)
-    logging.debug('spawning: \'%s\'', argv)
+    debug('spawning: \'%s\'', argv)
     pid = os.fork()
     if pid == 0:
-        os.close(slave_fd)
-        os.close(master_fd)
+        os.close(gdb_pty.slave_fd)
+        os.close(gdb_pty.master_fd)
         try:
             os.environ['PTY_TERM'] = pty_term
             os.execvp(argv[0], argv)
@@ -178,7 +102,7 @@ def spawn_gdb(ptyname, term):
     argv = ['gdb', '-tty', ptyname, '--eval-command',
                         'set environment TERM = %s' % term]
     argv.extend(sys.argv[1:])
-    logging.debug('spawn_gdb: \'%s\'', argv)
+    debug('spawn_gdb: \'%s\'', argv)
 
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
@@ -197,22 +121,7 @@ def spawn_gdb(ptyname, term):
     # show error messages before exiting
     raw_input('Type <Return> to exit.')
 
-from termios import INLCR, ICRNL, IXON, IXOFF, IXANY,   \
-        OPOST,                                          \
-        ECHO, ECHONL, ICANON, ISIG, IEXTEN,             \
-        VMIN, VTIME
-
-def stty_raw(fd, attr):
-    """Set 'fd' in raw mode."""
-    attr[0] &= ~(INLCR | ICRNL | IXON | IXOFF | IXANY)
-    attr[1] &= ~OPOST
-    attr[3] &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN)
-    attr[6][VMIN] = 1
-    attr[6][VTIME] = 0
-    tcsetattr(fd, TCSADRAIN, attr)
-
 got_sigchld = False
-master_dsptch = None
 
 def sigchld_handler(*args):
     """Handle SIGCHLD."""
@@ -220,41 +129,28 @@ def sigchld_handler(*args):
     global got_sigchld
     got_sigchld = True
 
-def sigwinch_handler(*args):
-    """Handle SIGWINCH."""
-    unused = args
-    if master_dsptch is not None:
-        master_dsptch.update_size()
-
-def loop(orig_attr, stdin_fd, master_fd, slave_fd, stdin_dsptch):
+def loop(gdb_pty):
     """Run the asyncore select loop."""
     try:
         msg = ''
         slave_closed = False
+        gdb_pty.stty_raw()
         try:
             while asyncore.socket_map and not got_sigchld:
                 asyncore.poll()
-                if stdin_dsptch.close_tty and not slave_closed:
+                if gdb_pty.stdin_dsptch.close_tty and not slave_closed:
                     slave_closed = True
-                    os.close(slave_fd)
+                    os.close(gdb_pty.slave_fd)
         except asyncore.ExitNow, err:
             msg = err
         if got_sigchld:
             msg = '\n[terminal emulator is terminating]'
             os.wait()
     finally:
-        try:
-            tcsetattr(stdin_fd, TCSADRAIN, orig_attr)
-        except termios_error, err:
-            msg += str(err)
-        try:
-            os.close(slave_fd)
-            os.close(master_fd)
-        except OSError:
-            pass
+        gdb_pty.close()
         if msg:
             print >> sys.stderr, msg
-        logging.info('========================================')
+        info('========================================')
 
 def main():
     """Main."""
@@ -263,7 +159,7 @@ def main():
 
     if gdb_wrapper:
         pty_term = os.environ.get('PTY_TERM')
-        logging.debug('pty_term: %s', pty_term)
+        debug('pty_term: %s', pty_term)
         # run gdb in the new xterm terminal
         if pty_term is not None:
             spawn_gdb(*pty_term.split(':'))
@@ -273,29 +169,18 @@ def main():
     if term is None:
         abort('The environment variable $TERM is not defined.')
 
-    master_fd, slave_fd = pty.openpty()
-    ptyname = os.ttyname(slave_fd)
-    logging.info('create pty \'%s\'', ptyname)
+    gdb_pty = tty.GdbInferiorPty()
+    gdb_pty.interconnect_pty(enable_cmds=True)
+    ptyname = gdb_pty.ptyname
+
     if gdb_wrapper:
         signal.signal(signal.SIGCHLD, sigchld_handler)
-        spawn_terminal_emulator(ptyname + ':' + term, slave_fd, master_fd)
-
-    # interconnect stdin to master_fd, and master_fd to stdout
-    global master_dsptch
-    stdin_fd = sys.stdin.fileno()
-    stdin_dsptch = FileDispatcher(stdin_fd, enable_cmds=True)
-    master_dsptch = FileDispatcher(master_fd, source=stdin_dsptch)
-    FileDispatcher(sys.stdout.fileno(), source=master_dsptch, reader=False)
-
-    # update pseudo terminal size
-    master_dsptch.update_size()
-    signal.signal(signal.SIGWINCH, sigwinch_handler)
-
-    if gdb_wrapper:
+        spawn_terminal_emulator(ptyname + ':' + term, gdb_pty)
         # allow for the child to start
         time.sleep(.100)
         if got_sigchld:
             abort()
+
     print >> sys.stderr, usage
     if not gdb_wrapper:
         print >> sys.stderr, (
@@ -304,11 +189,7 @@ def main():
             "\n\n    'set inferior-tty %s'\n"
             "    'set environment TERM = %s'\n" % (ptyname, ptyname, term))
 
-    # use termio from the new tty and tailor it
-    orig_attr = tcgetattr(stdin_fd)
-    stty_raw(stdin_fd, tcgetattr(slave_fd))
-
-    loop(orig_attr, stdin_fd, master_fd, slave_fd, stdin_dsptch)
+    loop(gdb_pty)
 
 if __name__ == '__main__':
     try:

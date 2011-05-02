@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2011 April 22
+*pyclewn.txt*                                   Last change: 2011 May 1
 
 
                             PYCLEWN USER MANUAL
@@ -515,29 +515,38 @@ On Windows, gdb pops up a console attached to the program to debug.
 
                                                     *inferior_tty*
 
-On unix, the "inferior_tty.py" script installed with pyclewn can be run to
-create a pseudo terminal that is used as the controlling terminal of the
-process debugged by gdb. For example, to debug vim (not gvim) and start the
-debugging session at vim's main function. From pyclewn, spawn an xterm
-terminal and launch "inferior_tty.py" in this terminal: >
+On unix, when starting pyclewn from a terminal and using gvim, pyclewn creates
+a pseudo terminal that is the the controlling terminal of the program to
+debug. Programs debugged by gdb, including those based on curses and termios
+such as vim, run in this terminal. A <Ctl-C> typed in the terminal interrupts
+the debuggee.
+
+When pyclewn is started from vim with the|:Pyclewn|command, there is no
+terminal associated with pyclewn. Use instead the "inferior_tty.py" script
+installed with pyclewn to get the same functionality. This script creates a
+pseudo terminal to be used as the controlling terminal of the process debugged
+by gdb. For example, to debug vim (not gvim) and start the debugging session
+at vim's main function.  From pyclewn, spawn an xterm terminal and launch
+"inferior_tty.py" in this terminal: >
 
     :Cfile /path/to/vim
     :Cshell setsid xterm -e inferior_tty.py &
 
 "inferior_tty.py" prints the name of the pseudo terminal to be used by gdb and
 the two gdb commands needed to configure properly gdb with this terminal. Copy
-and paste these two commands to vim command line: >
+and paste these two commands in vim command line: >
 
     :Cset inferior-tty /dev/pts/nn
     :Cset environment TERM = xterm
 
-Then start the debugging of vim and stop at main(): >
+Then start the debugging session of vim and stop at vim main(): >
 
     :Cstart
 
 Note:
 * <setsid> is necessary to prevent gdb from killing the xterm process when a
-  <Ctl-C> is typed from gdb to interrupt the debuggee.
+  <Ctl-C> is typed from gdb to interrupt the debuggee. This is not needed when
+  the terminal emulator is not started from gdb.
 
 
                                                     *async-option*

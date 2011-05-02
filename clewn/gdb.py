@@ -643,21 +643,8 @@ class Gdb(debugger.Debugger, ProcessChannel):
     def getargv(self):
         """Return the gdb argv list."""
         argv = [self.pgm]
-
-        # Use pyclewn tty as the debuggee standard input and output,
-        # but not when vim is run as 'vim' or 'vi'.
-        # May be overriden by --args option on pyclewn command line.
-        vim_pgm = os.path.basename(self.options.editor)
         if os.name != 'nt':
-            if (not self.options.daemon
-                    and vim_pgm != 'vim'
-                    and vim_pgm != 'vi'
-                    and hasattr(os, 'isatty')
-                    and os.isatty(0)):
-                terminal = os.ttyname(0)
-            else:
-                terminal = os.devnull
-            argv += ['-tty=%s' % terminal]
+            argv += ['-tty=%s' % self.options.tty]
 
         # build the gdb init temporary file
         try:

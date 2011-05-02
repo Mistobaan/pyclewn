@@ -4,15 +4,23 @@ News
 Pyclewn 1.6
 -----------
 
-.. April 27, 2011
+.. May 1, 2011
 
 New feature
 ^^^^^^^^^^^
 
+* On unix, when starting pyclewn from a terminal and using gvim, pyclewn
+  creates a pseudo terminal that is the the controlling terminal of the
+  program to debug. Programs debugged by gdb, including those based on curses
+  and termios such as vim, run in this terminal. A ``<Ctl-C>`` typed in the
+  terminal interrupts the debuggee.
+  When pyclewn is started from vim with the ``:Pyclewn`` command, there is no
+  terminal associated with pyclewn. Use instead the ``inferior_tty.py`` script
+  installed with pyclewn to get the same functionality. This script creates a
+  pseudo terminal to be used as the controlling terminal of the process
+  debugged by gdb.
 * The ``frame`` command updates the frame sign and positions the cursor on
   this sign.
-* The script ``inferior_tty.py`` creates a pseudo terminal to be used as the
-  controlling terminal of the process debugged by gdb.
 * New ``none`` LOCATION of the ``--window`` command line option. This option
   disables the automatic display of the console and may be useful when using
   Vim tabs and keeping the console in a tab of its own.
@@ -20,6 +28,7 @@ New feature
 Bug fixes
 ^^^^^^^^^
 
+* Fix gdb warning ``Failed to set controlling terminal``.
 * Handling of the netbeans socket disconnection, closes the gdb session also
   when gdb is busy.
 * Ignore 'sigint' or 'quit' command on startup.
