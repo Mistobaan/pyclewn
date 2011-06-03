@@ -154,7 +154,6 @@ class GdbInferiorPty(object):
         """Constructor."""
         self.master_fd = -1
         self.slave_fd = -1
-        self.fds = ()
         self.ptyname = ''
         self.stdin_dsptch = None
         self.master_dsptch = None
@@ -169,16 +168,15 @@ class GdbInferiorPty(object):
 
     def interconnect_pty(self, enable_cmds=False):
         """Interconnect pty with our terminal."""
-        stdin_fd = sys.stdin.fileno()
-        stdout_fd = sys.stdout.fileno()
         self.master_fd, self.slave_fd = pty.openpty()
-        self.fds = (stdin_fd, self.master_fd, stdout_fd)
         self.ptyname = os.ttyname(self.slave_fd)
         info('creating gdb inferior pseudo tty \'%s\'', self.ptyname)
-        self.stdin_dsptch = FileDispatcher(stdin_fd, enable_cmds=enable_cmds)
+        self.stdin_dsptch = FileDispatcher(sys.stdin.fileno(),
+                                                enable_cmds=enable_cmds)
         self.master_dsptch = FileDispatcher(self.master_fd,
                                                 source=self.stdin_dsptch)
-        FileDispatcher(stdout_fd, source=self.master_dsptch, reader=False)
+        FileDispatcher(sys.stdout.fileno(), source=self.master_dsptch,
+                                                reader=False)
 
         # update pseudo terminal size
         self.master_dsptch.update_size()

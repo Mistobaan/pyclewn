@@ -1,5 +1,8 @@
-2011-05-01  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-06-01  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* vim.py tty.py: do not use a file descriptor set as the condition for
+	terminating the loop as asyncore (starting with python 2.6) passes an
+	os.dup of the file descriptor to build the file wrapper dispatcher.
 	* vim.py gdb.py tty.py inferior_tty.py: fix gdb warning "Failed to set
 	controlling terminal".
 	* gdbmi.py: The 'frame' command updates the frame sign.

@@ -225,7 +225,7 @@ def main(testrun=False):
 
             vim.debugger = vim.clazz(options)
             vim.setup(True)
-            vim.loop(gdb_pty.fds)
+            vim.loop()
         except (KeyboardInterrupt, SystemExit):
             pass
         except:
@@ -622,16 +622,17 @@ class Vim(object):
 
             root.setLevel(level)
 
-    def loop(self, exclude):
+    def loop(self):
         """The dispatch loop."""
 
         start = time.time()
-        while set(self.socket_map.keys()).difference(exclude):
-            nbsock = self.nbserver.netbeans
+        nbsock = None
+        while True:
             # start the debugger
             if start is not False:
                 if time.time() - start > CONNECTION_TIMEOUT:
                     raise IOError(CONNECTION_ERROR % str(CONNECTION_TIMEOUT))
+                nbsock = self.nbserver.netbeans
                 if nbsock and nbsock.ready:
                     start = False
                     info(nbsock)
@@ -646,12 +647,15 @@ class Vim(object):
                         version += '.' + __changeset__
                     info('pyclewn version %s and the %s debugger',
                                         version, self.clazz.__name__)
-
-            # instantiate a new debugger
-            elif nbsock and self.debugger.closed and nbsock.connected:
-                self.debugger = self.clazz(self.options)
-                nbsock.set_debugger(self.debugger)
-                info('new "%s" instance', self.clazz.__name__.lower())
+            elif nbsock.connected:
+                # instantiate a new debugger
+                if self.debugger.closed:
+                    self.debugger = self.clazz(self.options)
+                    nbsock.set_debugger(self.debugger)
+                    info('new "%s" instance', self.clazz.__name__.lower())
+            else:
+                if not self.debugger.started or self.debugger.closed:
+                    break
 
             timeout = self.debugger._call_jobs()
             evtloop.poll(self.socket_map, timeout=timeout)
