@@ -4,7 +4,7 @@ News
 Pyclewn 1.6
 -----------
 
-.. May 1, 2011
+.. June 6, 2011
 
 New feature
 ^^^^^^^^^^^
@@ -24,6 +24,16 @@ New feature
 * New ``none`` LOCATION of the ``--window`` command line option. This option
   disables the automatic display of the console and may be useful when using
   Vim tabs and keeping the console in a tab of its own.
+
+Change
+^^^^^^
+
+* The gdb ``whatis`` command is used by pyclewn to get the type of the
+  variable or the type of the selected expression that is being hovered over
+  by the mouse.  When it is a pointer to data, the pointer is dereferenced and
+  its value displayed in the vim balloon. A new paramater to the ``--gdb``
+  option named ``nodereference`` disables this feature and switches back to
+  the old behavior of printing the pointer address value.
 
 Bug fixes
 ^^^^^^^^^

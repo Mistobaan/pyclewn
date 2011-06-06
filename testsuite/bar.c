@@ -1,6 +1,13 @@
+#include <stdlib.h>
+
 int bar(int * pnum, char * ptr)
 {
     int i;
+    /* for testing the balloon display */
+    int *invalid = NULL;
+    int **pp = &invalid;
+
+    *pp = &i;
 
     i = *ptr - 'a';
     i = (i + 1) % 26;

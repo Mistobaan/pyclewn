@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2011 May 1
+*pyclewn.txt*                                   Last change: 2011 June 6
 
 
                             PYCLEWN USER MANUAL
@@ -266,9 +266,10 @@ The full description of pyclewn options follows:
                         pyclewn -g ""
                         pyclewn --gdb=
 .
-                    There are two optional parameters:
+                    There are three optional parameters:
 
                         * the "async" keyword sets the|async-option|
+                        * the "nodereference" keyword, see|gdb-balloon|.
                         * the project file name sets the|project-file|
 
                     The project file name can be an absolute pathname, a
@@ -618,6 +619,17 @@ with the gdb <file> command, and before the program is run.
 Note: The <break> and <clear> filename completion is not the same as gdb file
 name completion for these two commands. Gdb uses the symbols found in the
 program file to debug, while pyclewn uses only the file system.
+
+
+                                                    *gdb-balloon*
+Balloon evaluation:
+-------------------
+The gdb <whatis> command is used by pyclewn to get the type of the variable or
+the type of the selected expression that is being hovered over by the mouse.
+When it is a pointer to data, the pointer is dereferenced and its value
+displayed in the vim balloon. The paramater of the "--gdb" option named
+"nodereference" disables this feature: the balloon prints the pointer address
+value.
 
 
                                             *project-command* *project-file*

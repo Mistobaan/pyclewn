@@ -481,6 +481,9 @@ class GdbTestCase(ClewnTestCase):
             ":edit (clewn)_dbgvar | 1,$$w!  ${test_out}\n"
             ':Cstep\n'
             ':Cstep\n'
+            ':Cstep\n'
+            ':Cstep\n'
+            ':Cstep\n'
             ':sleep ${time}\n'
             ":edit (clewn)_dbgvar | 1,$$w! >> ${test_out}\n"
             ':Cfinish\n'
@@ -718,7 +721,7 @@ class GdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             "${cwd}testsuite/foo.c|30| breakpoint 1 disabled\n"
-            "${cwd}testsuite/bar.c|5| breakpoint 3 enabled\n"
+            "${cwd}testsuite/bar.c|7| breakpoint 3 enabled\n"
             )
 
     def test_bp_after_quit(self):

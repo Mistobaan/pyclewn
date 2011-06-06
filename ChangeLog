@@ -1,12 +1,13 @@
-2011-06-01  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-06-06  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
-	* vim.py tty.py: do not use a file descriptor set as the condition for
+	* gdb.py gdbmi.py: Dereference pointers in balloon evaluation.
+	* vim.py tty.py: Do not use a file descriptor set as the condition for
 	terminating the loop as asyncore (starting with python 2.6) passes an
 	os.dup of the file descriptor to build the file wrapper dispatcher.
-	* vim.py gdb.py tty.py inferior_tty.py: fix gdb warning "Failed to set
+	* vim.py gdb.py tty.py inferior_tty.py: Fix gdb warning "Failed to set
 	controlling terminal".
 	* gdbmi.py: The 'frame' command updates the frame sign.
-	* setup.py inferior_tty.py gdb.py: allow the gdb 'shell' command and
+	* setup.py inferior_tty.py gdb.py: Allow the gdb 'shell' command and
 	include inferior_tty.py in the distribution.
 	* gdb.py: Handling of the netbeans socket disconnection, closes the
 	gdb session also when gdb is busy.
