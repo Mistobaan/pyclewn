@@ -74,8 +74,13 @@ BG_COLORS =( 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 'DarkRed',
 Unused = error
 Unused = warning
 
-def exec_vimcmd(commands, pathname=''):
+def exec_vimcmd(commands, pathname='', error_stream=None):
     """Run a list of Vim 'commands' and return the commands output."""
+    try:
+        perror = error_stream.write
+    except AttributeError:
+        perror = sys.stderr.write
+
     if not pathname:
         pathname = os.environ.get('EDITOR', 'gvim')
 
@@ -94,12 +99,11 @@ def exec_vimcmd(commands, pathname=''):
             output = f.read()
         except (OSError, IOError), err:
             if isinstance(err, OSError) and err.errno == errno.ENOENT:
-                print >> sys.stderr, "Failed to run '%s' as Vim." % args[0]
-                print >> sys.stderr, ("Please run 'pyclewn"
-                                      " --editor=/path/to/(g)vim'.\n")
+                perror("Failed to run '%s' as Vim.\n" % args[0])
+                perror("Please run 'pyclewn"
+                                      " --editor=/path/to/(g)vim'.\n\n")
             else:
-                print >> sys.stderr, ("Failed to run Vim as:\n'%s'\n" %
-                                       str(args))
+                perror("Failed to run Vim as:\n'%s'\n\n" % str(args))
             raise
     finally:
         if f is not None:
@@ -111,8 +115,8 @@ def exec_vimcmd(commands, pathname=''):
                 pass
 
     if not output:
-        print >> sys.stderr, (
-            "Error trying to start Vim with the following command:\n'%s'"
+        perror(
+            "Error trying to start Vim with the following command:\n'%s'\n"
             % ' '.join(args))
         sys.exit(1)
 
@@ -210,7 +214,7 @@ def main(testrun=False):
         return vim
 
     try:
-        gdb_pty = tty.GdbInferiorPty()
+        gdb_pty = tty.GdbInferiorPty(vim.stderr_hdlr)
         try:
             if (vim.clazz == gdb.Gdb
                         and os.name != 'nt'
@@ -268,6 +272,8 @@ class Vim(object):
             pyclewn options as a list
         file_hdlr: logger.FileHandler
             log file
+        stderr_hdlr: misc.StderrHandler
+            sdterr stream handler
         socket_map: asyncore socket dictionary
             socket and socket-like objects listening on the select
             event loop
@@ -298,6 +304,7 @@ class Vim(object):
             vimbuffer.Sernum(0)
 
         self.file_hdlr = None
+        self.stderr_hdlr = None
         self.socket_map = asyncore.socket_map
         self.debugger = None
         self.clazz = None
@@ -331,7 +338,8 @@ class Vim(object):
                     ' | echo g:pyclewn_version'
                     ' | endif',
                 ]
-        output = exec_vimcmd(cmds, self.options.editor).strip().split('\n')
+        output = exec_vimcmd(cmds, self.options.editor,
+                                   self.stderr_hdlr).strip().split('\n')
         output = [x.strip('\r') for x in output]
         length = len(output)
         version = ''
@@ -600,25 +608,26 @@ class Vim(object):
 
             if self.options.file:
                 try:
-                    hdlr_file = logging.FileHandler(self.options.file, 'w')
+                    file_hdlr = logging.FileHandler(self.options.file, 'w')
                 except IOError:
                     logging.exception('cannot setup the log file')
                 else:
-                    hdlr_file.setFormatter(fmt)
-                    root.addHandler(hdlr_file)
-                    self.file_hdlr = hdlr_file
+                    file_hdlr.setFormatter(fmt)
+                    root.addHandler(file_hdlr)
+                    self.file_hdlr = file_hdlr
 
-            # default level: ERROR
-            level = logging.ERROR
+            # default level: CRITICAL
+            level = logging.CRITICAL
             if self.options.level:
                 level = self.options.level
 
-                # add an handler to stderr, except when running the testsuite
-                # or when the 'file' option is set
-                if not self.testrun and not self.options.file:
-                    hdlr_stream = logging.StreamHandler(sys.stderr)
-                    hdlr_stream.setFormatter(fmt)
-                    root.addHandler(hdlr_stream)
+            # add an handler to stderr, except when running the testsuite
+            # or a log file is used with a level not set to critical
+            if (not self.testrun and
+                        not (self.options.file and level != logging.CRITICAL)):
+                self.stderr_hdlr = misc.StderrHandler()
+                self.stderr_hdlr.setFormatter(fmt)
+                root.addHandler(self.stderr_hdlr)
 
             root.setLevel(level)
 

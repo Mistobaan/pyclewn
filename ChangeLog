@@ -1,5 +1,7 @@
-2011-06-06  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-06-07  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* misc.py tty.py vim.py: Fix some error messages are not printed on
+	stderr.
 	* gdb.py gdbmi.py: Dereference pointers in balloon evaluation.
 	* vim.py tty.py: Do not use a file descriptor set as the condition for
 	terminating the loop as asyncore (starting with python 2.6) passes an

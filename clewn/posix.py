@@ -195,9 +195,9 @@ class ProcessChannel(asyncproc.ProcessChannel):
             master = self.forkexec()
         except (ImportError, OSError, os.error, termios.error):
             t, v, filename, lnum, unused = misc.last_traceback()
-            critical("failed to setup a pseudo tty, falling back to pipes:")
-            critical("    %s: %s", str(t), str(v))
-            critical("    at %s:%s", filename, lnum)
+            error("failed to setup a pseudo tty, falling back to pipes:")
+            error("    %s: %s", str(t), str(v))
+            error("    at %s:%s", filename, lnum)
             self.popen()
         else:
             pty = asyncproc.FileAsynchat(master, self)

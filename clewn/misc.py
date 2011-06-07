@@ -30,6 +30,7 @@ import subprocess
 import atexit
 import pprint
 import itertools
+import cStringIO
 
 from clewn import *
 
@@ -449,6 +450,37 @@ class OrderedDict(dict):
         if not self:
             return '%s()' % (self.__class__.__name__,)
         return '%s(%r)' % (self.__class__.__name__, self.items())
+
+class StderrHandler(logging.StreamHandler):
+    """Stderr logging handler."""
+
+    def __init__(self):
+        """Constructor."""
+        self.strbuf = cStringIO.StringIO()
+        self.doflush = True
+        logging.StreamHandler.__init__(self, self.strbuf)
+
+    def should_flush(self, doflush):
+        """Set flush mode."""
+        self.doflush = doflush
+
+    def write(self, string):
+        """Write to the StringIO buffer."""
+        self.strbuf.write(string)
+
+    def flush(self):
+        """Flush to stderr when enabled."""
+        if self.doflush:
+            value = self.strbuf.getvalue()
+            if value:
+                print >>sys.stderr, value
+                self.strbuf.truncate(0)
+
+    def close(self):
+        """Close the handler."""
+        self.flush()
+        self.strbuf.close()
+        logging.StreamHandler.close(self)
 
 def _test():
     """Run the doctests."""

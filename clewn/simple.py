@@ -40,6 +40,7 @@ import clewn.debugger as debugger
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('simp')
+Unused = critical
 Unused = error
 Unused = warning
 Unused = debug

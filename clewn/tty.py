@@ -150,8 +150,9 @@ class FileDispatcher(asyncore.file_dispatcher):
 class GdbInferiorPty(object):
     """Gdb inferior terminal."""
 
-    def __init__(self):
+    def __init__(self, stderr_hdlr=None):
         """Constructor."""
+        self.stderr_hdlr = stderr_hdlr
         self.master_fd = -1
         self.slave_fd = -1
         self.ptyname = ''
@@ -164,6 +165,9 @@ class GdbInferiorPty(object):
     def start(self):
         """Start the pty."""
         self.interconnect_pty()
+        # postpone stderr logging while terminal is in raw mode
+        if self.stderr_hdlr:
+            self.stderr_hdlr.should_flush(False)
         self.stty_raw()
 
     def interconnect_pty(self, enable_cmds=False):
@@ -206,4 +210,6 @@ class GdbInferiorPty(object):
                 error(err)
         close(self.master_fd)
         close(self.slave_fd)
+        if self.stderr_hdlr:
+            self.stderr_hdlr.should_flush(True)
 

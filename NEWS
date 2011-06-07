@@ -4,7 +4,7 @@ News
 Pyclewn 1.6
 -----------
 
-.. June 6, 2011
+.. June 7, 2011
 
 New feature
 ^^^^^^^^^^^
@@ -38,6 +38,7 @@ Change
 Bug fixes
 ^^^^^^^^^
 
+* Fix some error messages are not printed on stderr.
 * Fix gdb warning ``Failed to set controlling terminal``.
 * Handling of the netbeans socket disconnection, closes the gdb session also
   when gdb is busy.
