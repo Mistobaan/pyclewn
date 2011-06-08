@@ -41,4 +41,7 @@ class ClewnError(Exception):
 if sys.version_info < (2, 4):
     print >> sys.stderr, "Python 2.4 or above is required by pyclewn."
     sys.exit(1)
+elif sys.version_info >= (3, 0):
+    sys.stderr.write("This version of pyclewn does not support Python 3.\n")
+    sys.exit(1)
 

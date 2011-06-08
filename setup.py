@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
 import sys
+if sys.version_info >= (3, 0):
+    sys.stderr.write("This version of pyclewn does not support Python 3.\n")
+    sys.exit(1)
 import os
 import os.path
 import string
 import re
-import __builtin__
 import distutils.core as core
 
 from os.path import join as pathjoin
