@@ -1015,7 +1015,7 @@ class Debugger(object):
         """Return the string representation."""
         shallow = copy.copy(self.__dict__)
         for name in ('cmds', 'pyclewn_cmds', 'mapkeys'):
-            if shallow.has_key(name):
+            if name in shallow:
                 del shallow[name]
         return misc.pformat(shallow)
 

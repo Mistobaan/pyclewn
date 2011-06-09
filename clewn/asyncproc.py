@@ -415,7 +415,7 @@ class SelectPeek(Peek):
         try:
             iwtd, owtd, ewtd = select.select(self.iwtd, self.owtd, self.ewtd, 0)
         except select.error, err:
-            if err[0] != errno.EINTR:
+            if err.args[0] != errno.EINTR:
                 error('failed select call: ', err); raise
             else:
                 return False

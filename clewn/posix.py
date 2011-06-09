@@ -217,8 +217,7 @@ class ProcessChannel(asyncproc.ProcessChannel):
         self.sig_handler = signal.signal(signal.SIGCHLD, sigchld_handler)
 
         try:
-            if os.environ.has_key('CLEWN_PIPES')            \
-                    or os.environ.has_key('CLEWN_POPEN'):
+            if 'CLEWN_PIPES' in os.environ or 'CLEWN_POPEN' in os.environ:
                 self.popen()
             else:
                 self.ptyopen()
@@ -273,7 +272,7 @@ class PipePeek(asyncproc.PipePeek):
         try:
             iwtd, owtd, ewtd = select.select([self.fd], [], [], 0)
         except select.error, err:
-            if err[0] != errno.EINTR:
+            if err.args[0] != errno.EINTR:
                 # this may occur on exit
                 # closing the debugger is handled in ProcessChannel.waitpid
                 error('ignoring failed select syscall: %s', err)

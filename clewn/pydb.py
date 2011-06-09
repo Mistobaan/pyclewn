@@ -453,90 +453,12 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         if bp:
             self.delete_bp(bp.number)
             bp.deleteMe()
-            if not bdb.Breakpoint.bplist.has_key((bp.file, bp.line)):
+            if (bp.file, bp.line) not in bdb.Breakpoint.bplist:
                 self.breaks[bp.file].remove(bp.line)
             if not self.breaks[bp.file]:
                 del self.breaks[bp.file]
         else:
             return err
-
-    #--------------------------------------------------------------------------
-    #   Pdb methods fixing Python issue 5215
-    #
-    # Fixed in Python 2.7, see http://bugs.python.org/issue5215
-    #
-    # Accessing f_locals causes Python to call PyFrame_FastToLocals to go from
-    # the locals tuple to a dictionary. When leaving the trace function,
-    # Python calls PyFrame_LocalsToFast to write back changes to the dictionary
-    # into the tuple. The fix caches f_locals into curframe_locals.
-    #--------------------------------------------------------------------------
-
-    def setup(self, f, t):
-        """Override method to fix Python issue 5215."""
-        if sys.version_info < (2, 7):
-            self.forget()
-            self.stack, self.curindex = self.get_stack(f, t)
-            self.curframe = self.stack[self.curindex][0]
-            # The f_locals dictionary is updated from the actual frame
-            # locals whenever the .f_locals accessor is called, so we
-            # cache it here to ensure that modifications are not overwritten.
-            self.curframe_locals = self.curframe.f_locals
-            self.execRcLines()
-        else:
-            pdb.Pdb.setup(self, f, t)
-
-    def do_up(self, arg):
-        """Override method to fix Python issue 5215."""
-        if sys.version_info < (2, 7):
-            if self.curindex == 0:
-                print '*** Oldest frame'
-            else:
-                self.curindex = self.curindex - 1
-                self.curframe = self.stack[self.curindex][0]
-                self.curframe_locals = self.curframe.f_locals
-                self.print_stack_entry(self.stack[self.curindex])
-                self.lineno = None
-        else:
-            pdb.Pdb.do_up(self, arg)
-
-    def do_down(self, arg):
-        """Override method to fix Python issue 5215."""
-        if sys.version_info < (2, 7):
-            if self.curindex + 1 == len(self.stack):
-                print '*** Newest frame'
-            else:
-                self.curindex = self.curindex + 1
-                self.curframe = self.stack[self.curindex][0]
-                self.curframe_locals = self.curframe.f_locals
-                self.print_stack_entry(self.stack[self.curindex])
-                self.lineno = None
-        else:
-            pdb.Pdb.do_down(self, arg)
-
-    def do_break(self, arg, temporary = 0):
-        """Override method to fix Python issue 5215."""
-        if sys.version_info < (2, 7):
-            saved = self.curframe_locals.copy()
-            pdb.Pdb.do_break(self, arg, temporary)
-            self.curframe.f_locals.update(saved)
-        else:
-            pdb.Pdb.do_break(self, arg, temporary)
-
-    def _getval(self, arg):
-        """Override method to fix Python issue 5215."""
-        if sys.version_info < (2, 7):
-            try:
-                return eval(arg, self.curframe.f_globals,
-                            self.curframe_locals)
-            except:
-                t, v = sys.exc_info()[:2]
-                if isinstance(t, str):
-                    exc_type_name = t
-                else: exc_type_name = t.__name__
-                print '***', exc_type_name + ':', repr(v)
-                raise
-        else:
-            return pdb.Pdb._getval(self, arg)
 
     #-----------------------------------------------------------------------
     #   Pdb and Cmd methods

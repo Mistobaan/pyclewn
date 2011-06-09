@@ -399,7 +399,7 @@ def test_main():
     suite.addTest(SimpleCommandsTestCase('test_maxlines'))
     if os.name != 'nt':
         vim_pgm = ''
-        if os.environ.has_key('EDITOR'):
+        if 'EDITOR' in os.environ:
             vim_pgm = os.path.basename(os.environ['EDITOR'])
         if vim_pgm != 'vim':
             suite.addTest(SimpleCommandsTestCase('test_startupfile'))

@@ -34,6 +34,7 @@ command, the dispatcher instantiates a new instance of Simple.
 import sys
 import threading
 import time
+import functools
 
 import clewn.misc as misc
 import clewn.debugger as debugger
@@ -89,7 +90,7 @@ class Target(threading.Thread):
         self.cnt = 0
 
         # do not print on stdout when running unittests
-        self.testrun = reduce(lambda x, y: x or (y == 'unittest'),
+        self.testrun = functools.reduce(lambda x, y: x or (y == 'unittest'),
                                         [False] + sys.modules.keys())
 
     def close(self):

@@ -94,8 +94,8 @@ class FileDispatcher(asyncore.file_dispatcher):
         try:
             data = self.socket.recv(1024)
         except OSError, err:
-            if err[0] != errno.EAGAIN and err[0] != errno.EINTR:
-                if self.source.close_tty and err[0] == errno.EIO:
+            if err.errno != errno.EAGAIN and err.errno != errno.EINTR:
+                if self.source.close_tty and err.errno == errno.EIO:
                     raise asyncore.ExitNow("[slave pseudo terminal closed,"
                             " pseudo tty management is terminated]")
                 raise asyncore.ExitNow(err)
@@ -126,14 +126,10 @@ class FileDispatcher(asyncore.file_dispatcher):
         try:
             count = os.write(self.socket.fd, buf)
         except OSError, err:
-            if err[0] != errno.EAGAIN and err[0] != errno.EINTR:
+            if err.errno != errno.EAGAIN and err.errno != errno.EINTR:
                 raise asyncore.ExitNow(err)
         else:
             self.source.buf = buf[count:]
-
-    def close(self):
-        """Close the dispatcher."""
-        self.del_channel()
 
     def update_size(self):
         """Set the window size to match the size of its 'source'."""

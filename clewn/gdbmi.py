@@ -494,7 +494,7 @@ class Info(object):
         if self.frame and isinstance(self.frame, dict):
             line = int(self.frame['line'])
             # gdb 6.4 and above
-            if self.frame.has_key('fullname'):
+            if 'fullname' in self.frame:
                 source = self.frame['fullname']
             else:
                 fullname = self.file['fullname']
@@ -559,11 +559,11 @@ class Result(dict):
         # do not add an OobGdbCommand if the dictionary contains
         # an object of the same class
         if isinstance(command, OobGdbCommand)  \
-                and misc.any([command.__class__ is obj.__class__
+                and any([command.__class__ is obj.__class__
                         for obj in self.values()]):
             return None
         t = str(self.token)
-        if self.has_key(t):
+        if t in self:
             error('token "%s" already exists as an expected pending result', t)
         self[t] = command
         self.token = (self.token + 1) % 100 + 100
@@ -571,7 +571,7 @@ class Result(dict):
 
     def remove(self, token):
         """Remove a command object from the dictionary and return the object."""
-        if not self.has_key(token):
+        if token not in self:
             # do not report as an error: may occur on quitting
             info('no token "%s" as an expected pending result', token)
             return None
@@ -656,7 +656,7 @@ class OobList(object):
         When the iterator is not running, push the object to the
         running_list (as a result of a dbgvar, delvar or foldvar command).
         """
-        assert callable(obj)
+        assert isinstance(obj, collections.Callable)
         if self.fifo is not None:
             self.fifo.append(obj)
         else:
@@ -1194,7 +1194,7 @@ class OobGdbCommand(OobCommand, Command):
         """
         self.cmd = cmd
         if not self.trigger_list or     \
-                    misc.any([cmd.startswith(x) for x in self.trigger_prefix]):
+                    any([cmd.startswith(x) for x in self.trigger_prefix]):
             self.trigger = True
 
     def __call__(self):

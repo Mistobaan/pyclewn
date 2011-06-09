@@ -815,9 +815,9 @@ def test_main():
     suite.addTest(GdbTestCase('test_bad_gdbpath'))
     suite.addTest(GdbTestCase('test_initial_setup'))
     suite.addTest(GdbTestCase('test_new_session'))
-    if not os.environ.has_key('CLEWN_PIPES')            \
-            and not os.environ.has_key('CLEWN_POPEN')   \
-            and os.name != 'nt':
+    if ('CLEWN_PIPES' not in os.environ
+            and 'CLEWN_POPEN' not in os.environ
+            and os.name != 'nt'):
         suite.addTest(GdbTestCase('test_sigint'))
     suite.addTest(GdbTestCase('test_gdb_arglist'))
     suite.addTest(GdbTestCase('test_gdb_illegal'))

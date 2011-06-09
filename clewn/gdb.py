@@ -491,7 +491,7 @@ class GlobalSetup(misc.Singleton):
         self.run_cmds_prefix = set([misc.smallpref_inlist(x, keys)
                                             for x in self.run_cmds])
 
-        if self.cmds.has_key('set') and self.cmds['set']:
+        if 'set' in self.cmds and self.cmds['set']:
             # remove the illegal arguments
             self.cmds['set'] = list(
                                     set(self.cmds['set'])
@@ -962,7 +962,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
     def default_cmd_processing(self, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""
         assert cmd == self.curcmdline.split()[0]
-        if misc.any([cmd.startswith(x)
+        if any([cmd.startswith(x)
                 for x in self.globaal.illegal_cmds_prefix]):
             self.console_print('Illegal command in pyclewn.\n')
             self.prompt()
@@ -970,16 +970,16 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
         if cmd == 'set' and args:
             firstarg = args.split()[0]
-            if misc.any([firstarg.startswith(x)
+            if any([firstarg.startswith(x)
                     for x in self.globaal.illegal_setargs_prefix]):
                 self.console_print('Illegal argument in pyclewn.\n')
                 self.prompt()
                 return
 
         # turn off the frame sign after a run command
-        if misc.any([cmd.startswith(x)
+        if any([cmd.startswith(x)
                     for x in self.globaal.run_cmds_prefix])     \
-                or misc.any([cmd == x
+                or any([cmd == x
                     for x in ('d', 'r', 'c', 's', 'n', 'u', 'j')]):
             self.info.update_frame(hide=True)
 
@@ -1047,7 +1047,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 errmsg = 'Not a line number.'
         if not errmsg:
             rootvarobj = self.info.varobj
-            if rootvarobj.parents.has_key(lnum):
+            if lnum in rootvarobj.parents:
                 varobj = rootvarobj.parents[lnum]
                 # collapse
                 if varobj['children']:

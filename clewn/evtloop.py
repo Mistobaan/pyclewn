@@ -41,7 +41,7 @@ Unused = warning
 Unused = info
 Unused = debug
 
-use_select_emulation = (os.environ.has_key('CLEWN_PIPES') or os.name == 'nt')
+use_select_emulation = ('CLEWN_PIPES' in os.environ or os.name == 'nt')
 
 def get_asyncobj(fd, file_type, fdmap):
     """Return an asyncore instance from 'fdmap' if matching 'file_type'."""
@@ -139,7 +139,7 @@ def poll(map, timeout=0.0):
                 else:
                     r, w, e = select.select(r, w, e, timeout)
             except select.error, err:
-                if err[0] != errno.EINTR:
+                if err.args[0] != errno.EINTR:
                     raise
                 else:
                     return
