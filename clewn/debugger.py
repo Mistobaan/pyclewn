@@ -46,10 +46,10 @@ import time
 import heapq
 import string
 import copy
+from abc import ABCMeta, abstractmethod
 
-from clewn import *
-import clewn.misc as misc
-import clewn.netbeans as netbeans
+from .clewn import *
+from . import (misc, netbeans)
 
 __all__ = ['LOOP_TIMEOUT', 'restart_timer', 'Debugger']
 LOOP_TIMEOUT = .040
@@ -299,14 +299,14 @@ def restart_timer(timeout):
         """The decorator."""
         def _newf(self, *args, **kwargs):
             """The decorated method."""
-            job = getattr(self, f.func_name)
+            job = getattr(self, f.__name__)
             ret = f(self, *args, **kwargs)
             self.timer(job, timeout)
             return ret
         return _newf
     return decorator
 
-class Debugger(object):
+class Debugger:
     """Abstract base class for pyclewn debuggers.
 
     The debugger commands received through netbeans 'keyAtPos' events
@@ -365,15 +365,17 @@ class Debugger(object):
 
     """
 
+    __metaclass__ = ABCMeta
+
     def __init__(self, options):
         """Initialize instance variables and the prompt."""
         self.options = options
 
         self.cmds = {
-            'dumprepr':(),
-            'help':(),
-            'mapkeys':(),
-            'unmapkeys':(),
+            'dumprepr': (),
+            'help': (),
+            'mapkeys': (),
+            'unmapkeys': (),
         }
         self.pyclewn_cmds = self.cmds
         self.mapkeys = {}
@@ -404,6 +406,7 @@ class Debugger(object):
     #   Overidden methods by the Debugger subclass.
     #-----------------------------------------------------------------------
 
+    @abstractmethod
     def pre_cmd(self, cmd, args):
         """The method called before each invocation of a 'cmd_<name>'
         method.
@@ -417,11 +420,9 @@ class Debugger(object):
                 The arguments of the command.
 
         """
-        unused = self
-        unused = cmd
-        unused = args
-        raise NotImplementedError('must be implemented in subclass')
+        pass
 
+    @abstractmethod
     def default_cmd_processing(self, cmd, args):
         """Fall back method for commands not handled by a 'cmd_<name>'
         method.
@@ -435,11 +436,9 @@ class Debugger(object):
                 The arguments of the command.
 
         """
-        unused = self
-        unused = cmd
-        unused = args
-        raise NotImplementedError('must be implemented in subclass')
+        pass
 
+    @abstractmethod
     def post_cmd(self, cmd, args):
         """The method called after each invocation of a 'cmd_<name>'
         method.
@@ -453,10 +452,7 @@ class Debugger(object):
                 The arguments of the command.
 
         """
-        unused = self
-        unused = cmd
-        unused = args
-        raise NotImplementedError('must be implemented in subclass')
+        pass
 
     def vim_script_custom(self, prefix):
         """Return debugger specific Vim statements as a string.
@@ -829,20 +825,20 @@ class Debugger(object):
                                         console=netbeans.CONSOLE,
                                         location=options.window,
                                         split_dbgvar_buf=split_dbgvar_buf))
-            noCompletion = string.Template('command -bar -nargs=* ${pre}${cmd} '
+            noCompletion = string.Template('command! -bar -nargs=* ${pre}${cmd} '
                                     'call s:nbcommand("${cmd}", <f-args>)\n')
-            fileCompletion = string.Template('command -bar -nargs=* '
+            fileCompletion = string.Template('command! -bar -nargs=* '
                                     '-complete=file ${pre}${cmd} '
                                     'call s:nbcommand("${cmd}", <f-args>)\n')
-            listCompletion = string.Template('command -bar -nargs=* '
+            listCompletion = string.Template('command! -bar -nargs=* '
                                     '-complete=custom,s:Arg_${cmd} ${pre}${cmd} '
                                     'call s:nbcommand("${cmd}", <f-args>)\n')
             argsList = string.Template('function s:Arg_${cmd}(A, L, P)\n'
                                     '\treturn "${args}"\n'
                                     'endfunction\n')
-            unmapkeys = string.Template('command -bar ${pre}unmapkeys '
+            unmapkeys = string.Template('command! -bar ${pre}unmapkeys '
                                         'call s:unmapkeys()\n')
-            for cmd, completion in self._get_cmds().iteritems():
+            for cmd, completion in self._get_cmds().items():
                 if cmd == 'unmapkeys':
                     f.write(unmapkeys.substitute(pre=prefix))
                     continue

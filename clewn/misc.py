@@ -30,9 +30,9 @@ import subprocess
 import atexit
 import pprint
 import itertools
-import cStringIO
+import io
 
-from clewn import *
+from .clewn import *
 
 VIM73_BUG_SLEEP_TIME = 0.500
 DOUBLEQUOTE = '"'
@@ -260,7 +260,7 @@ class PrettyPrinterString(pprint.PrettyPrinter):
     def format(self, object, context, maxlevels, level):
         """Format un object."""
         unused = self
-        if type(object) is str:
+        if isinstance(object, str):
             return "'" + str(object) + "'", True, False
         return pprint._safe_repr(object, context, maxlevels, level)
 
@@ -287,27 +287,48 @@ class CalledProcessError(ClewnError):
         return "Command '%s' returned non-zero exit status %d"  \
                                         % (self.cmd, self.returncode)
 
-class TmpFile(file):
-    """An instance of this class is a writtable temporary file object."""
+class TmpFile:
+    """A container for a temporary writtable file object.
 
+    Support the context management protocol.
+
+    """
     def __init__(self, prefix):
         """Constructor."""
-        self.tmpname = None
+        self.f = None
+        self.name = None
         try:
-            fd, self.tmpname = tempfile.mkstemp('.clewn', prefix)
+            fd, self.name = tempfile.mkstemp('.clewn', prefix)
             os.close(fd)
-            file.__init__(self, self.tmpname, 'w')
+            self.f = open(self.name, 'w')
         except (OSError, IOError):
-            unlink(self.tmpname)
+            unlink(self.name)
             critical('cannot create temporary file'); raise
         else:
-            atexit.register(unlink, self.tmpname)
+            atexit.register(unlink, self.name)
+
+    def write(self, data):
+        """Write data to the file."""
+        self.f.write(data)
+
+    def close(self):
+        """Close the file."""
+        if self.f:
+            self.f.close()
+
+    def __enter__(self):
+        """The context manager __enter__ method."""
+        return self
+
+    def __exit__(self, type, value, tb):
+        """The context manager __exit__ method."""
+        self.close()
 
     def __del__(self):
         """Unlink the file."""
-        unlink(self.tmpname)
+        unlink(self.name)
 
-class Singleton(object):
+class Singleton:
     """A singleton, there is only one instance of this class."""
 
     def __new__(cls, *args, **kwds):
@@ -351,7 +372,7 @@ class OrderedDict(dict):
         if other is None:
             pass
         elif hasattr(other, 'iteritems'):
-            for k, v in other.iteritems():
+            for k, v in other.items():
                 self[k] = v
         elif hasattr(other, 'keys'):
             for k in other.keys():
@@ -372,15 +393,11 @@ class OrderedDict(dict):
 
     def values(self):
         """An ordered of the list of values by keys."""
-        return map(self.get, self._keys)
+        return list(map(self.get, self._keys))
 
     def items(self):
-        """An ordered copy of the list of (key, value) pairs."""
-        return zip(self._keys, self.values())
-
-    def iteritems(self):
         """Return an ordered iterator over (key, value) pairs."""
-        return itertools.izip(self._keys, self.itervalues())
+        return zip(self._keys, iter(self.values()))
 
     def pop(self, key, default=MISSING):
         """self[key] if key in self, else default (and remove key)."""
@@ -408,7 +425,7 @@ class OrderedDict(dict):
 
     def itervalues(self):
         """Return an ordered iterator over the values."""
-        return itertools.imap(self.get, self._keys)
+        return map(self.get, self._keys)
 
     def __setitem__(self, key, value):
         """Called to implement assignment to self[key]."""
@@ -438,14 +455,14 @@ class OrderedDict(dict):
         """Return the string representation."""
         if not self:
             return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, self.items())
+        return '%s(%r)' % (self.__class__.__name__, list(self.items()))
 
 class StderrHandler(logging.StreamHandler):
     """Stderr logging handler."""
 
     def __init__(self):
         """Constructor."""
-        self.strbuf = cStringIO.StringIO()
+        self.strbuf = io.StringIO()
         self.doflush = True
         logging.StreamHandler.__init__(self, self.strbuf)
 
@@ -462,7 +479,7 @@ class StderrHandler(logging.StreamHandler):
         if self.doflush:
             value = self.strbuf.getvalue()
             if value:
-                print >>sys.stderr, value
+                print(value, file=sys.stderr)
                 self.strbuf.truncate(0)
 
     def close(self):

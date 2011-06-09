@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
 import sys
+if sys.version_info < (3, 0):
+    sys.stderr.write("This version of pyclewn does not support Python 2.\n")
+    sys.exit(1)
 import os
 import os.path
 import string
 import re
-import __builtin__
 import distutils.core as core
 
 from os.path import join as pathjoin
@@ -73,7 +75,7 @@ class install(_install):
         # rename the 'debugger' directory present in old versions
         debugger_dir = os.path.join(pythonpath, 'clewn', 'debugger')
         if os.path.isdir(debugger_dir):
-            print >> sys.stderr, 'renaming the debugger directory'
+            sys.stderr.write('renaming the debugger directory\n')
             os.rename(debugger_dir, debugger_dir + '.orig')
 
         # substitute templates in the autoload plugin
@@ -185,5 +187,9 @@ core.setup(
     author='Xavier de Gaye',
     author_email='xdegaye at users dot sourceforge dot net',
     url='http://pyclewn.sourceforge.net/',
+    classifiers=[
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 3'
+    ],
 )
 

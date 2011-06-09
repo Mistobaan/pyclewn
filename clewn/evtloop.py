@@ -26,12 +26,11 @@ import select
 import errno
 import asyncore
 if os.name == 'nt':
-    from clewn.nt import PipePeek
+    from .nt import PipePeek
 else:
-    from clewn.posix import PipePeek
+    from .posix import PipePeek
 
-import clewn.asyncproc as asyncproc
-import clewn.misc as misc
+from . import (misc, asyncproc)
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('loop')
@@ -138,7 +137,7 @@ def poll(map, timeout=0.0):
                     r, w, e = clewn_select(r, w, e, timeout)
                 else:
                     r, w, e = select.select(r, w, e, timeout)
-            except select.error, err:
+            except select.error as err:
                 if err.args[0] != errno.EINTR:
                     raise
                 else:

@@ -26,19 +26,19 @@ def vim_features():
     """Abort if missing required Vim feature."""
     output = vim.exec_vimcmd(['version'])
 
-    print >> sys.stderr, 'checking netbeans support in vim:',
+    print('checking netbeans support in vim:', end=' ', file=sys.stderr)
     try:
         output.index('+netbeans_intg')
     except ValueError:
-        raise DistutilsExecError, 'netbeans support in vim is required'
-    print >> sys.stderr, 'yes'
+        raise DistutilsExecError('netbeans support in vim is required')
+    print('yes', file=sys.stderr)
 
-    print >> sys.stderr, 'checking auto commands support in vim:',
+    print('checking auto commands support in vim:', end=' ', file=sys.stderr)
     try:
         output.index('+autocmd')
     except ValueError:
-        raise DistutilsExecError, 'auto commands support in vim is required'
-    print >> sys.stderr, 'yes'
+        raise DistutilsExecError('auto commands support in vim is required')
+    print('yes', file=sys.stderr)
 
 @misc.previous_evaluation
 def vimdir():
@@ -51,15 +51,15 @@ def vimdir():
         if not os.path.isdir(path):
             nodir = ('Invalid data files path. $VIM="%s" is returned'
                 ' by Vim, but this is not an existing directory.' % path)
-            raise DistutilsExecError, nodir
+            raise DistutilsExecError(nodir)
         dir = pathjoin(path, 'vimfiles')
-    print 'Vim user data files location: "%s"' % dir
+    print('Vim user data files location: "%s"' % dir)
     return dir
 
 def build_vimhelp():
     """Add pyclewn help to Vim help."""
     helpdir = pathjoin(vimdir(), 'doc')
-    print >> sys.stderr, 'running Vim help tags file generation in %s' % helpdir
+    print('running Vim help tags file generation in %s' % helpdir, file=sys.stderr)
     vim.exec_vimcmd(['helptags ' + helpdir, 'echo v:version'])
 
 def unlink(filename):
@@ -90,7 +90,7 @@ def install():
     runtime_dir = pathjoin(prefix, 'pyclewn')
     icon_file = pathjoin(runtime_dir, ICON_NAME)
     copy_file(icon_file, scripts)
-    print >> sys.stderr, 'copying file %s' % icon_file
+    print('copying file %s' % icon_file, file=sys.stderr)
     unlink(icon_file)
 
     # substitute templates in the autoload plugin
@@ -99,8 +99,8 @@ def install():
     substitute_autoload(runtime_dir, mapping)
 
     for filename in dir_util.copy_tree(runtime_dir, vimdir()):
-        print >> sys.stderr, 'copying file %s' % filename
-    print >> sys.stderr, 'removing directory %s' % runtime_dir
+        print('copying file %s' % filename, file=sys.stderr)
+    print('removing directory %s' % runtime_dir, file=sys.stderr)
     dir_util.remove_tree(runtime_dir)
 
     build_vimhelp()
@@ -127,7 +127,8 @@ def install():
     pyclewn_shortcut = pathjoin(desktop_path, PYCLEWN_SHORTCUT)
     if not os.path.exists(pyclewn_shortcut):
         copy_file(PYCLEWN_SHORTCUT, desktop_path)
-        print >> sys.stderr, 'copying pyclewn to the desktop: %s' % pyclewn_shortcut
+        print('copying pyclewn to the desktop: %s' % pyclewn_shortcut,
+                                                            file=sys.stderr)
 
     # cleanup
     unlink(PYCLEWN_SHORTCUT)
@@ -135,7 +136,7 @@ def install():
     unlink(pathjoin(scripts, 'pyclewn_install.pyc'))
     unlink(pathjoin(scripts, 'pyclewn_install.pyo'))
 
-    print >> sys.stderr, 'pyclewn postinstall completed'
+    print('pyclewn postinstall completed', file=sys.stderr)
 
 def uninstall():
     """Uninstall on Windows."""
@@ -164,6 +165,6 @@ if __name__ == '__main__':
                 install()
             elif sys.argv[1] == '-remove':
                 uninstall()
-        except Exception, err:
+        except Exception as err:
             # let the python installer print the error
-            print >> sys.stderr, err
+            print(err, file=sys.stderr)

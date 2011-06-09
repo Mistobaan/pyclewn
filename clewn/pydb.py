@@ -27,13 +27,14 @@ import bdb
 import pdb
 import threading
 import time
-import repr as _repr
-import cStringIO
+import reprlib as _repr
+import io
 
-import clewn.misc as misc
-import clewn.debugger as debugger
-import clewn.asyncproc as asyncproc
-import clewn.evtloop as evtloop
+from . import (misc, debugger, asyncproc, evtloop)
+try:
+    from collections import OrderedDict
+except ImportError:
+    from .misc import OrderedDict
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('pdb')
@@ -41,52 +42,52 @@ Unused = warning
 
 # list of pdb commands mapped to vim user commands C<command>
 PDB_CMDS = {
-    'help'       : (),
-    'break'      : None,   # file name completion
-    'tbreak'     : None,   # file name completion
-    'enable'     : (),
-    'disable'    : (),
-    'condition'  : (),
-    'ignore'     : (),
-    'clear'      : None,   # file name completion
-    'where'      : (),
-    'bt'         : (),
-    'up'         : (),
-    'down'       : (),
-    'step'       : (),
-    'interrupt'  : (),
-    'next'       : (),
-    'return'     : (),
-    'continue'   : (),
-    'jump'       : (),
-    'detach'     : (),
-    'quit'       : (),
-    'args'       : (),
-    'p'          : (),
-    'pp'         : (),
-    'alias'      : (),
-    'unalias'    : (),
+    'help': (),
+    'break': None,   # file name completion
+    'tbreak': None,   # file name completion
+    'enable': (),
+    'disable': (),
+    'condition': (),
+    'ignore': (),
+    'clear': None,   # file name completion
+    'where': (),
+    'bt': (),
+    'up': (),
+    'down': (),
+    'step': (),
+    'interrupt': (),
+    'next': (),
+    'return': (),
+    'continue': (),
+    'jump': (),
+    'detach': (),
+    'quit': (),
+    'args': (),
+    'p': (),
+    'pp': (),
+    'alias': (),
+    'unalias': (),
     'threadstack': (),
 }
 
 # list of key mappings, used to build the .pyclewn_keys.gdb file
 #     key : (mapping, comment)
 MAPKEYS = {
-    'S-B' : ('break',),
-    'S-A' : ('args',),
-    'S-S' : ('step',),
-    'C-Z' : ('interrupt',),
-    'C-N' : ('next',),
-    'S-R' : ('return',),
-    'S-C' : ('continue',),
-    'S-W' : ('where',),
-    'C-U' : ('up',),
-    'C-D' : ('down',),
-    'C-B' : ('break "${fname}:${lnum}"',
+    'S-B': ('break',),
+    'S-A': ('args',),
+    'S-S': ('step',),
+    'C-Z': ('interrupt',),
+    'C-N': ('next',),
+    'S-R': ('return',),
+    'S-C': ('continue',),
+    'S-W': ('where',),
+    'C-U': ('up',),
+    'C-D': ('down',),
+    'C-B': ('break "${fname}:${lnum}"',
                 'set breakpoint at current line'),
-    'C-E' : ('clear "${fname}:${lnum}"',
+    'C-E': ('clear "${fname}:${lnum}"',
                 'clear breakpoint at current line'),
-    'C-P' : ('p ${text}',
+    'C-P': ('p ${text}',
                 'print value of selection at mouse position'),
 }
 
@@ -128,10 +129,10 @@ def update_condition(arg):
             cond = args[1].strip()
         bp.cond = cond
         if not cond:
-            print 'Breakpoint', bp.number,
-            print 'is now unconditional.'
+            print('Breakpoint', bp.number, end=' ')
+            print('is now unconditional.')
     else:
-        print '***', err
+        print('***', err)
 
 def update_ignore(arg):
     """Sets the ignore count for the given breakpoint number."""
@@ -150,12 +151,12 @@ def update_ignore(arg):
                     reply = reply + '%d crossings' % count
                 else:
                     reply = reply + '1 crossing'
-                print reply + ' of breakpoint %d.' % bp.number
+                print(reply + ' of breakpoint %d.' % bp.number)
             else:
-                print 'Will stop next time breakpoint',
-                print bp.number, 'is reached.'
+                print('Will stop next time breakpoint', end=' ')
+                print(bp.number, 'is reached.')
             return
-    print '***', err
+    print('***', err)
 
 def tty_fobj(ttyname):
     """Return the tty file object."""
@@ -166,7 +167,7 @@ def tty_fobj(ttyname):
         else:
             try:
                 tty = open(ttyname, 'r+')
-            except IOError, err:
+            except IOError as err:
                 critical(err)
             else:
                 if os.name == 'posix' and not os.isatty(tty.fileno()):
@@ -176,7 +177,7 @@ def tty_fobj(ttyname):
     if not tty:
         try:
             tty = open(os.devnull, 'r+')
-        except IOError, err:
+        except IOError as err:
             critical(err)
     return tty
 
@@ -277,7 +278,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.thread = None
         self.socket_map = {}
         self.clt_sockmap = None
-        self.stdout = cStringIO.StringIO()
+        self.stdout = io.StringIO()
         self.stop_loop = False
         self.let_target_run = False
         self.trace_type = ''
@@ -293,7 +294,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         Ping(ping_r)
 
         self.cmds.update(PDB_CMDS)
-        self.cmds['help'] = self.cmds.keys()
+        self.cmds['help'] = list(self.cmds.keys())
         self.mapkeys.update(MAPKEYS)
 
     def _start(self):
@@ -340,7 +341,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             locals_ = self.curframe_locals
         else:
             locals_ = frame.f_locals
-        args = misc.OrderedDict()
+        args = OrderedDict()
 
         # see python source: Python/ceval.c
         co = frame.f_code
@@ -367,7 +368,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         try:
             return pdb.Pdb.trace_dispatch(self, frame, event, arg)
         except KeyboardInterrupt:
-            raise KeyboardInterrupt(), None, None
+            raise KeyboardInterrupt(None).with_traceback(None)
 
     def dispatch_line(self, frame):
         """Override dispatch_line to set 'doprint_trace' when breaking."""
@@ -397,7 +398,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
         args = self.frame_args(frame)
         s = s + '(' + ', '.join([a + '=' + _saferepr(v)
-                            for a, v in args.iteritems()]) + ')'
+                            for a, v in args.items()]) + ')'
 
         if frame is self.curframe:
             locals_ = self.curframe_locals
@@ -444,7 +445,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         if result is None:
             for bpno in bplist:
                 self.delete_bp(bpno)
-            print 'Deleted breakpoint(s): %r' % bplist
+            print('Deleted breakpoint(s): %r' % bplist)
         return result
 
     def clear_bpbynumber(self, arg):
@@ -496,11 +497,12 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.trace_type = '--Return--'
         self.interaction(frame, None)
 
-    def user_exception(self, frame, (exc_type, exc_value, exc_traceback)):
+    def user_exception(self, frame, exc_info):
         """This function is called if an exception occurs,
         but only if we are to stop at or just below this level."""
+        (exc_type, exc_value, exc_traceback) = exc_info
         frame.f_locals['__exception__'] = exc_type, exc_value
-        if type(exc_type) == type(''):
+        if isinstance(exc_type, type('')):
             exc_type_name = exc_type
         else: exc_type_name = exc_type.__name__
         self.trace_type = ('An exception occured: %s'
@@ -513,15 +515,15 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         globals_ = self.curframe.f_globals
         try:
             code = compile(line + '\n', '<stdin>', 'single')
-            exec code in globals_, locals_
+            exec(code, globals_, locals_)
         except SystemExit:
             raise
         except:
             t, v = sys.exc_info()[:2]
-            if type(t) == type(''):
+            if isinstance(t, type('')):
                 exc_type_name = t
             else: exc_type_name = t.__name__
-            print '***', exc_type_name + ':', v
+            print('***', exc_type_name + ':', v)
 
     def print_stack_entry(self, frame_lineno, prompt_prefix=pdb.line_prefix):
         """Override print_stack_entry."""
@@ -544,7 +546,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         # switch nbsock to the main thread asyncore loop
         self.clt_sockmap = self.switch_map(self.socket_map)
         assert self.clt_sockmap is not None
-        os.write(self.ping_w, 'ping\n')
+        os.write(self.ping_w, b'ping\n')
 
         self.setup(frame, traceback)
         if self.trace_type or self.doprint_trace:
@@ -580,7 +582,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         finally:
             # switch nbsock to the clewn thread asyncore loop
             self.switch_map(self.clt_sockmap)
-            os.write(self.ping_w, 'ping\n')
+            os.write(self.ping_w, b'ping\n')
 
     #-----------------------------------------------------------------------
     #   commands
@@ -652,7 +654,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         r = self.stdout.getvalue()
         if r:
             self.console_print(r)
-            self.stdout.truncate(0)
+            self.stdout = io.StringIO()
 
     def default_cmd_processing(self, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""
@@ -665,17 +667,17 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         """Print help on the pdb commands."""
         unused, cmd = args
         cmd = cmd.strip()
-        allowed = PDB_CMDS.keys() + ['mapkeys', 'unmapkeys', 'dumprepr']
+        allowed = list(PDB_CMDS.keys()) + ['mapkeys', 'unmapkeys', 'dumprepr']
         if not cmd:
-            print "\nAvailable commands:"
+            print("\nAvailable commands:")
             count = 0
             for item in sorted(allowed):
                 count += 1
                 if count % 7 == 0:
-                    print item
+                    print(item)
                 else:
-                    print item.ljust(11),
-            print '\n'
+                    print(item.ljust(11), end=' ')
+            print('\n')
             print ("The empty command executes the (one-line) statement in the\n"
             "context of the current stack frame after alias expansion.\n"
             "The first word of the statement must not be a debugger\n"
@@ -686,7 +688,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             "command with a 'global' command, e.g.:\n\n"
             ":C global list_options; list_options = ['-l']\n")
         elif cmd not in allowed:
-            print '*** No help on', cmd
+            print('*** No help on', cmd)
         elif cmd == 'help':
             print ("h(elp)\n"
             "Without argument, print the list of available commands.\n"
@@ -695,7 +697,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                      'mapkeys', 'unmapkeys', 'dumprepr', 'threadstack',):
             method = getattr(self, 'cmd_%s' % cmd, None)
             if method is not None and method.__doc__ is not None:
-                print method.__doc__.split('\n')[0]
+                print(method.__doc__.split('\n')[0])
         else:
             self.do_help(cmd)
             if cmd == 'clear':
@@ -732,7 +734,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                 bp.enable()
                 self.update_bp(bp.number, False)
             else:
-                print '***', err
+                print('***', err)
 
     def cmd_disable(self, cmd, arg):
         """Disable breakpoints."""
@@ -744,7 +746,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                 bp.disable()
                 self.update_bp(bp.number, True)
             else:
-                print '***', err
+                print('***', err)
 
     def cmd_condition(self, cmd, args):
         """Update the condition of a breakpoint."""
@@ -880,7 +882,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             self.console_print('Command not supported,'
                                ' upgrade to Python 2.5 at least.\n')
             return
-        for thread_id, frame in sys._current_frames().iteritems():
+        for thread_id, frame in sys._current_frames().items():
             try:
                 if thread_id == self.clewn_thread_ident:
                     thread = 'Clewn-thread'
@@ -917,14 +919,14 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             return
 
         try:
-            code = value.func_code
+            code = value.__code__
             self.show_balloon('(%s) Function: %s' % (arg, code.co_name))
             return
         except:
             pass
 
         try:
-            code = value.im_func.func_code
+            code = value.__func__.__code__
             self.show_balloon('(%s) Method: %s' % (arg, code.co_name))
             return
         except:

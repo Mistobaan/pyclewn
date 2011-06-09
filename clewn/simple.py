@@ -36,8 +36,7 @@ import threading
 import time
 import functools
 
-import clewn.misc as misc
-import clewn.debugger as debugger
+from . import (misc, debugger)
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('simp')
@@ -49,30 +48,30 @@ Unused = debug
 # list of key mappings, used to build the .pyclewn_keys.simple file
 #     key : (mapping, comment)
 MAPKEYS = {
-    'C-B' : ('break ${fname}:${lnum}',
+    'C-B': ('break ${fname}:${lnum}',
                 'set breakpoint at current line'),
-    'C-E' : ('clear ${fname}:${lnum}',
+    'C-E': ('clear ${fname}:${lnum}',
                 'clear breakpoint at current line'),
-    'C-P' : ('print ${text}',
+    'C-P': ('print ${text}',
                 'print value of selection at mouse position'),
-    'C-Z' : ('interrupt',
+    'C-Z': ('interrupt',
                 'interrupt the execution of the target'),
-    'S-C' : ('continue',),
-    'S-Q' : ('quit',),
-    'S-S' : ('step',),
+    'S-C': ('continue',),
+    'S-Q': ('quit',),
+    'S-S': ('step',),
 }
 
 # list of the simple commands mapped to vim user commands C<command>
 SIMPLE_CMDS = {
-    'break'     : None,   # file name completion
-    'clear'     : None,   # file name completion
-    'continue'  : (),
-    'disable'   : (),
-    'enable'    : (),
-    'interrupt' : (),
-    'print'     : (),
-    'quit'      : (),
-    'step'      : (),
+    'break': None,   # file name completion
+    'clear': None,   # file name completion
+    'continue': (),
+    'disable': (),
+    'enable': (),
+    'interrupt': (),
+    'print': (),
+    'quit': (),
+    'step': (),
 }
 
 class Target(threading.Thread):
@@ -91,7 +90,7 @@ class Target(threading.Thread):
 
         # do not print on stdout when running unittests
         self.testrun = functools.reduce(lambda x, y: x or (y == 'unittest'),
-                                        [False] + sys.modules.keys())
+                                        [False] + list(sys.modules.keys()))
 
     def close(self):
         """Close the target."""
@@ -130,10 +129,10 @@ class Target(threading.Thread):
         while not self.closed:
             if self.bp.isSet():
                 if self.cnt == 0 and not self.daemon and not self.testrun:
-                    print >> sys.stderr, 'Inferior starting.\n'
+                    print('Inferior starting.\n', file=sys.stderr)
                 self.cnt += 1
                 if not self.daemon and not self.testrun:
-                    print >> sys.stderr, 'value %d\n' % self.cnt
+                    print('value %d\n' % self.cnt, file=sys.stderr)
 
                 # end the step command, when not running
                 if not self.running:
@@ -143,7 +142,7 @@ class Target(threading.Thread):
 
             self.bp.wait(self.TARGET_TIMEOUT)
 
-class Varobj(object):
+class Varobj:
     """The Simple varobj class.
 
     Instance attributes:
@@ -177,14 +176,14 @@ class Varobj(object):
         size = len(self.var)
         if size == 0:
             return None
-        l = self.var.keys()
+        l = list(self.var.keys())
         try:
             i = (l.index(self.current) + 1) % size
             return l[i]
         except ValueError:
             return l[0]
 
-    def next(self):
+    def __next__(self):
         """Set next name to hilite and increment its value."""
         self.current = self._next()
         if self.current is not None:
@@ -219,7 +218,7 @@ class Varobj(object):
     def __str__(self):
         """Return a string representation of the varobj."""
         varstr = ''
-        for (name, value) in self.var.iteritems():
+        for (name, value) in self.var.items():
             if name == self.current and self.hilite:
                 hilite = '*'
             else:
@@ -251,10 +250,10 @@ class Simple(debugger.Debugger):
         debugger.Debugger.__init__(self, *args)
         self.pyclewn_cmds.update(
             {
-                'dbgvar':(),
-                'delvar':(),
-                'sigint':(),
-                'symcompletion':(),
+                'dbgvar': (),
+                'delvar': (),
+                'sigint': (),
+                'symcompletion': (),
             })
         self.cmds.update(SIMPLE_CMDS)
         self.mapkeys.update(MAPKEYS)
@@ -297,7 +296,7 @@ class Simple(debugger.Debugger):
             self.show_frame(self.step_bufname, self.lnum + 1)
             self.lnum += 1
             self.lnum %= min(lnum_list)
-            self.varobj.next()
+            next(self.varobj)
         else:
             # hide frame
             self.show_frame()

@@ -32,8 +32,7 @@ import fcntl
 import termios
 import platform
 
-import clewn.asyncproc as asyncproc
-import clewn.misc as misc
+from . import (misc, asyncproc)
 
 try:
     MAXFD = os.sysconf("SC_OPEN_MAX")
@@ -51,7 +50,7 @@ def platform_data():
 
 def close_fds():
     """Close all file descriptors except stdin, stdout and stderr."""
-    for i in xrange(3, MAXFD):
+    for i in range(3, MAXFD):
         try:
             os.close(i)
         except OSError:
@@ -124,7 +123,7 @@ class ProcessChannel(asyncproc.ProcessChannel):
 
     """
 
-    INTERRUPT_CHAR = chr(3)     # <Ctl-C>
+    INTERRUPT_CHAR = b'\x03'    # <Ctl-C>
 
     def __init__(self, argv):
         """Constructor."""
@@ -271,7 +270,7 @@ class PipePeek(asyncproc.PipePeek):
         """Peek the pipe."""
         try:
             iwtd, owtd, ewtd = select.select([self.fd], [], [], 0)
-        except select.error, err:
+        except select.error as err:
             if err.args[0] != errno.EINTR:
                 # this may occur on exit
                 # closing the debugger is handled in ProcessChannel.waitpid

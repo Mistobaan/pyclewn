@@ -31,8 +31,7 @@ import win32con
 import win32gui
 import win32console
 
-import clewn.asyncproc as asyncproc
-import clewn.misc as misc
+from . import (misc, asyncproc)
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('nt')
@@ -61,7 +60,7 @@ class PipePeek(asyncproc.PipePeek):
         """Peek the pipe."""
         try:
             (buf, avail, remain) = win32pipe.PeekNamedPipe(self.handle, 0)
-        except Exception, why:
+        except Exception as why:
             # this may occur on exit
             debug('got Exception %s', why)
             info('closing debugger after failed PeekNamedPipe syscall')

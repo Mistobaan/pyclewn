@@ -18,25 +18,27 @@ Standard/error output in gdb console
 *I'm starting vim in a screen session inside Putty and gdb doesn't display
 what's printed on the standard and error outputs*
 
-When using vim, the debuggee output is redirected to ``/dev/null``. So
-in this case you must tell gdb to redirect the debuggee output to
-another terminal.
+When pyclewn is started from vim with the ``:Pyclewn`` command, there is no
+terminal associated with pyclewn, the debuggee output is redirected to
+``/dev/null``. So use the ``inferior_tty.py`` script to create a pseudo
+terminal to be used as the controlling terminal of the process debugged by gdb.
+For example, to debug vim (not gvim) and start the debugging session at vim's
+main function.  From pyclewn, spawn an xterm terminal and launch
+``inferior_tty.py`` in this terminal with the commands::
 
-Start two putty sessions:
+    :Cfile /path/to/vim
+    :Cshell setsid xterm -e inferior_tty.py &
 
-* on the first one run the command ``tty`` to get the name of the terminal.
-  Assume for example that the command output is::
+``inferior_tty.py`` prints the name of the pseudo terminal to be used by gdb
+and the two gdb commands needed to configure properly gdb with this terminal.
+Copy and paste these two commands in vim command line::
 
-    /dev/pts/2
+    :Cset inferior-tty /dev/pts/nn
+    :Cset environment TERM = xterm
 
-* on the second session, run vim, start pyclewn and gdb, and run the command::
+Then start the debugging session of vim and stop at vim main()::
 
-    :Cset inferior-tty /dev/pts/2
-
-* some gdb versions do not support the ``set inferior-tty`` command, in this
-  case use the ``tty`` command instead
-
-Now all debuggee output goes to the first putty terminal.
+    :Cstart
 
 ImportError on install
 ----------------------
@@ -45,34 +47,6 @@ ImportError on install
 
 This error occurs when trying to install pyclewn with an old version of python.
 Upgrade to python 2.4 or above.
-
-Error on terminal open
-----------------------
-
-*I get the following error message: "Gdb cannot open the terminal: [Errno 13]
-Permission denied: '/dev/pts/3'".*
-
-This may happen after running the ``su - other_user`` unix command.
-
-Gdb needs to open the terminal with read/write access rights. Check the
-terminal ownership and access rights. Fix those with the ``chmod`` or the
-``chown`` unix command.
-
-Simultaneous sessions
----------------------
-
-*I would like to run two or more instances of pyclewn simultaneously on the same
-host.*
-
-There is a bug in pyclewn that prevents two pyclewn sessions to use the same
-listening port. This bug is fixed with pyclewn version 0.7.
-
-With pyclewn version 0.6 and older, the second pyclewn session must use another
-netbeans socket than the default netbeans socket on port 3219. This is done by
-setting the appropriate parameters on the command line. For example, to use
-port 3220 and password 'foobar'::
-
-    pyclewn --netbeans=:3220:foobar --cargs=-nb:localhost:3220:foobar
 
 Cannot set pending bp
 ---------------------

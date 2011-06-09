@@ -28,10 +28,11 @@ import socket
 import asyncore
 import asynchat
 import difflib
+from abc import ABCMeta, abstractmethod
 
-from clewn import *
-import clewn.misc as misc
-import clewn.buffer as vimbuffer
+from .clewn import *
+from . import misc
+from . import buffer as vimbuffer
 
 NETBEANS_VERSION = '2.3'
 CONSOLE = '(clewn)_console'
@@ -128,7 +129,7 @@ def full_pathname(name):
         name = os.path.abspath(name)
     return name
 
-class LineCluster(object):
+class LineCluster:
     """Group lines in a bounded list of elements of a maximum size.
 
     Instance attributes:
@@ -173,7 +174,7 @@ class LineCluster(object):
                 return self.cluster.pop(0)[1]
         return 0
 
-class ClewnBuffer(object):
+class ClewnBuffer:
     """A ClewnBuffer instance is an edit port in Vim.
 
     Instance attributes:
@@ -446,7 +447,7 @@ class DebuggerVarBuffer(ClewnBuffer):
 
         self.linelist = newlist
 
-class Reply(object):
+class Reply:
     """Abstract class. A Reply instance is a callable used to process
     the result of a  function call in the reply received from netbeans.
 
@@ -458,6 +459,8 @@ class Reply(object):
         nbsock: netbeans.Netbeans
             the netbeans asynchat socket
     """
+
+    __metaclass__ = ABCMeta
 
     def __init__(self, buf, seqno, nbsock):
         """Constructor."""
@@ -475,13 +478,10 @@ class Reply(object):
         self.nbsock.show_balloon(err)
         error(err)
 
+    @abstractmethod
     def __call__(self, seqno, nbstring, arg_list):
         """Process the netbeans reply."""
-        unused = self
-        unused = seqno
-        unused = nbstring
-        unused = arg_list
-        raise NotImplementedError('must be implemented in subclass')
+        pass
 
 class insertReply(Reply):
     """Check the reply to an insert function."""
@@ -616,7 +616,7 @@ class Server(asyncore.dispatcher):
         unused = self
         assert False, 'unhandled close event in server'
 
-class Netbeans(asynchat.async_chat, object):
+class Netbeans(asynchat.async_chat):
     """A Netbeans instance exchanges netbeans messages on a socket.
 
     Instance attributes:
@@ -688,7 +688,7 @@ class Netbeans(asynchat.async_chat, object):
         self.ibuff = []
         self.seqno = 0
         self.last_seqno = 0
-        self.set_terminator('\n')
+        self.set_terminator(b'\n')
 
     def set_debugger(self, debugger):
         """Notify of the current debugger."""
@@ -752,7 +752,7 @@ class Netbeans(asynchat.async_chat, object):
 
     def collect_incoming_data(self, data):
         """Process async_chat received data."""
-        self.ibuff.append(data)
+        self.ibuff.append(data.decode())
 
     def found_terminator(self):
         """Process new line terminated netbeans message."""
@@ -793,6 +793,10 @@ class Netbeans(asynchat.async_chat, object):
             unused = n
             reply(seqno, nbstring, arg_list)
             self.last_seqno = seqno
+
+    def push(self, data):
+        """Push the data to be sent."""
+        asynchat.async_chat.push(self, data.encode())
 
 
     def open_session(self, msg):

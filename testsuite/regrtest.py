@@ -22,7 +22,7 @@
 
 import os
 import sys
-import cStringIO
+import io
 import traceback
 import textwrap
 
@@ -52,13 +52,13 @@ def run(testdir, tests=None, verbose=0):
             abstest = test
         else:
             abstest = test_prefix + test
-        print abstest
+        print(abstest)
         sys.stdout.flush()
         try:
             ok = runtest(test, abstest, verbose)
         except KeyboardInterrupt:
             # print a newline separate from the ^C
-            print
+            print()
             break
         except:
             raise
@@ -77,13 +77,13 @@ def run(testdir, tests=None, verbose=0):
 
     if good:
         if not bad and not skipped and len(good) > 1:
-            print "All",
-        print count(len(good), "test"), "OK."
+            print("All", end=' ')
+        print(count(len(good), "test"), "OK.")
     if bad:
-        print count(len(bad), "test"), "failed:"
+        print(count(len(bad), "test"), "failed:")
         printlist(bad)
     if skipped:
-        print count(len(skipped), "test"), "skipped:"
+        print(count(len(skipped), "test"), "skipped:")
         printlist(skipped)
 
     sys.exit(len(bad) > 0)
@@ -119,7 +119,7 @@ def runtest(test, abstest, verbose):
     if verbose:
         capture_stdout = None
     else:
-        capture_stdout = cStringIO.StringIO()
+        capture_stdout = io.StringIO()
 
     try:
         save_stdout = sys.stdout
@@ -134,13 +134,13 @@ def runtest(test, abstest, verbose):
             sys.stdout = save_stdout
     except KeyboardInterrupt:
         raise
-    except test_support.TestFailed, msg:
-        print "test", test, "failed --", msg
+    except test_support.TestFailed as msg:
+        print("test", test, "failed --", msg)
         sys.stdout.flush()
         return 0
     except:
         exception, value = sys.exc_info()[:2]
-        print "test", test, "crashed --", str(exception) + ":", value
+        print("test", test, "crashed --", str(exception) + ":", value)
         sys.stdout.flush()
         if verbose:
             traceback.print_exc(file=sys.stdout)
@@ -153,10 +153,10 @@ def runtest(test, abstest, verbose):
         output = capture_stdout.getvalue()
         if not output:
             return 1
-        print "test", test, "produced unexpected output:"
-        print "*" * 70
-        print output
-        print "*" * 70
+        print("test", test, "produced unexpected output:")
+        print("*" * 70)
+        print(output)
+        print("*" * 70)
         sys.stdout.flush()
         return 0
 
@@ -176,6 +176,6 @@ def printlist(x, width=70, indent=4):
     """
 
     blanks = ' ' * indent
-    print textwrap.fill(' '.join(map(str, x)), width,
-               initial_indent=blanks, subsequent_indent=blanks)
+    print(textwrap.fill(' '.join(map(str, x)), width,
+               initial_indent=blanks, subsequent_indent=blanks))
 

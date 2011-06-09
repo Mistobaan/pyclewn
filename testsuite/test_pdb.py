@@ -27,7 +27,7 @@ import subprocess
 import unittest
 import testsuite.test_support as test_support
 
-from test_support import ClewnTestCase
+from .test_support import ClewnTestCase
 
 class PdbTestCase(ClewnTestCase):
     """Test pyclewn."""
@@ -40,11 +40,9 @@ class PdbTestCase(ClewnTestCase):
         sys.argv.append('--pdb')
 
         # start the python script being debugged
-        os.environ['PYTHONPATH'] = os.path.join(
-                                    os.environ['HOME'], 'lib/python')
         self.fnull = open(os.devnull, 'w')
         self.debugged_script = subprocess.Popen(
-                                    ['python', 'testsuite/foobar.py'],
+                                    ['python3', './foobar.py'],
                                      stdout=self.fnull)
 
     def test_intr_load_buffer(self):
@@ -61,7 +59,7 @@ class PdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             'line=13  id=1  name=1\n'
-            '${cwd}testsuite/foobar.py',
+            '${cwd}foobar.py',
             )
 
     def test_break(self):
@@ -89,7 +87,7 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
-            ':Cbreak ${cwd}testsuite/foobar.py:5\n'
+            ':Cbreak ${cwd}foobar.py:5\n'
             ':Cdisable 1\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -110,8 +108,8 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
-            ':Cbreak ${cwd}testsuite/foobar.py:5\n'
-            ':Cbreak ${cwd}testsuite/foobar.py:7\n'
+            ':Cbreak ${cwd}foobar.py:5\n'
+            ':Cbreak ${cwd}foobar.py:7\n'
             ':Cdisable 1 2\n'
             ':Cenable 2\n'
             ':sleep ${time}\n'
@@ -134,10 +132,10 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
-            ':Cbreak ${cwd}testsuite/foobar.py:5\n'
-            ':Cbreak ${cwd}testsuite/foobar.py:7\n'
-            ':Cbreak ${cwd}testsuite/foobar.py:7\n'
-            ':Cclear ${cwd}testsuite/foobar.py:5\n'
+            ':Cbreak ${cwd}foobar.py:5\n'
+            ':Cbreak ${cwd}foobar.py:7\n'
+            ':Cbreak ${cwd}foobar.py:7\n'
+            ':Cclear ${cwd}foobar.py:5\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
             ':sign place\n'
@@ -234,7 +232,7 @@ class PdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':qa!\n',
 
-            'Signs for ${cwd}testsuite/foobar.py:\n'
+            'Signs for ${cwd}foobar.py:\n'
             'line=5  id=2  name=2\n'
             'line=7  id=1  name=1\n'
             'Signs for ${cwd}testsuite/foo.py:\n'
@@ -260,7 +258,7 @@ class PdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':qa!\n',
 
-            'Signs for ${cwd}testsuite/foobar.py:\n'
+            'Signs for ${cwd}foobar.py:\n'
             'line=5  id=2  name=2\n'
             'Signs for ${cwd}testsuite/foo.py:\n'
             'line=32  id=1  name=1\n',
@@ -292,6 +290,7 @@ class PdbTestCase(ClewnTestCase):
     def test_infinite_loop(self):
         """Interrupting an infinite loop"""
         self.cltest_redir(
+            ':sleep ${time}\n'
             ':Cinterrupt\n'
             ':sleep ${time}\n'
             ':Cbreak ${cwd}testsuite/foo.py:35\n'
@@ -339,9 +338,9 @@ class PdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             '(pdb) continue\n'
-            "An exception occured: ('ZeroDivisionError:', \"'integer division or modulo by zero'\")\n"
-            '> ?() at ${cwd}testsuite/foobar.py:13\n'
-            '  main() at ${cwd}testsuite/foobar.py:8\n'
+            "An exception occured: ('ZeroDivisionError:', \"'int division or modulo by zero'\")\n"
+            '> <module>() at ${cwd}foobar.py:13\n'
+            '  main() at ${cwd}foobar.py:8\n'
             "  foo(run=True, args=('unused',)) at ${cwd}testsuite/foo.py:38\n"
             "  bar(prefix='value', i=0) at ${cwd}testsuite/foo.py:25\n"
             '(pdb)\n',

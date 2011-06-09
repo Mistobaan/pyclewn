@@ -30,15 +30,12 @@ import string
 import time
 import collections
 
-from clewn import *
-import clewn.asyncproc as asyncproc
-import clewn.gdbmi as gdbmi
-import clewn.misc as misc
-import clewn.debugger as debugger
+from .clewn import *
+from . import (asyncproc, gdbmi, misc, debugger)
 if os.name == 'posix':
-    from clewn.posix import ProcessChannel
+    from .posix import ProcessChannel
 else:
-    from asyncproc import ProcessChannel
+    from .asyncproc import ProcessChannel
 
 if os.name == 'nt':
     # On Windows, the best timer is time.clock()
@@ -66,29 +63,29 @@ SETFMTVAR_FORMATS = ('binary', 'decimal', 'hexadecimal', 'octal', 'natural')
 # list of key mappings, used to build the .pyclewn_keys.gdb file
 #     key : (mapping, comment)
 MAPKEYS = {
-    'C-Z' : ('sigint',
+    'C-Z': ('sigint',
                 'kill the inferior running program'),
-    'S-B' : ('info breakpoints',),
-    'S-L' : ('info locals',),
-    'S-A' : ('info args',),
-    'S-S' : ('step',),
-    'C-N' : ('next',),
-    'S-F' : ('finish',),
-    'S-R' : ('run',),
-    'S-Q' : ('quit',),
-    'S-C' : ('continue',),
-    'S-X' : ('foldvar ${lnum}',
+    'S-B': ('info breakpoints',),
+    'S-L': ('info locals',),
+    'S-A': ('info args',),
+    'S-S': ('step',),
+    'C-N': ('next',),
+    'S-F': ('finish',),
+    'S-R': ('run',),
+    'S-Q': ('quit',),
+    'S-C': ('continue',),
+    'S-X': ('foldvar ${lnum}',
                 'expand/collapse a watched variable'),
-    'S-W' : ('where',),
-    'C-U' : ('up',),
-    'C-D' : ('down',),
-    'C-B' : ('break "${fname}":${lnum}',
+    'S-W': ('where',),
+    'C-U': ('up',),
+    'C-D': ('down',),
+    'C-B': ('break "${fname}":${lnum}',
                 'set breakpoint at current line'),
-    'C-E' : ('clear "${fname}":${lnum}',
+    'C-E': ('clear "${fname}":${lnum}',
                 'clear breakpoint at current line'),
-    'C-P' : ('print ${text}',
+    'C-P': ('print ${text}',
                 'print value of selection at mouse position'),
-    'C-X' : ('print *${text}',
+    'C-X': ('print *${text}',
                 'print value referenced by word at mouse position'),
 }
 
@@ -197,13 +194,8 @@ command! -bar ${pre}symcompletion call s:symcompletion()
 
 def tmpfile():
     """Return a closed file object to a new temporary file."""
-    f = None
-    try:
-        f = misc.TmpFile('gdb')
+    with misc.TmpFile('gdb') as f:
         f.write('\n')
-    finally:
-        if f:
-            f.close()
     return f
 
 def unwrap_stream_record(lines):
@@ -228,13 +220,8 @@ def unwrap_stream_record(lines):
 def gdb_batch(pgm, job):
     """Run job in gdb batch mode and return the result as a string."""
     # create the gdb script as a temporary file
-    f = None
-    try:
-        f = misc.TmpFile('gdbscript')
+    with misc.TmpFile('gdbscript') as f:
         f.write(job)
-    finally:
-        if f:
-            f.close()
 
     result = None
     try:
@@ -247,7 +234,7 @@ def gdb_batch(pgm, job):
         critical('cannot start gdb as "%s"', pgm)
         sys.exit()
 
-    return result
+    return result.decode()
 
 @misc.previous_evaluation
 def gdb_version(pgm):
@@ -263,13 +250,13 @@ def gdb_version(pgm):
     if hasattr(os, 'ttyname'):
         try:
             ttyname = os.ttyname(0)
-        except OSError, err:
+        except OSError as err:
             info('No terminal associated with stdin: %s', err)
         else:
             try:
-                f = open(ttyname, 'rw')
-                f.close()
-            except IOError, err:
+                fd = os.open(ttyname, os.O_RDWR)
+                os.close(fd)
+            except OSError as err:
                 raise ClewnError("Gdb cannot open the terminal: %s" % err)
 
     version = None
@@ -479,17 +466,17 @@ class GlobalSetup(misc.Singleton):
         self.cmds[''] = dash_cmds
 
         # add pyclewn commands
-        for cmd, completion in self.pyclewn_cmds.iteritems():
+        for cmd, completion in self.pyclewn_cmds.items():
             if cmd and cmd != 'help':
                 self.cmds[cmd] = completion
 
-        keys = self.cmds.keys()
-        self.illegal_cmds_prefix = set([misc.smallpref_inlist(x, keys)
-                                            for x in self.illegal_cmds])
+        keys = list(self.cmds.keys())
+        self.illegal_cmds_prefix = {misc.smallpref_inlist(x, keys)
+                                            for x in self.illegal_cmds}
 
         keys = list(set(keys).difference(set(self.run_cmds)))
-        self.run_cmds_prefix = set([misc.smallpref_inlist(x, keys)
-                                            for x in self.run_cmds])
+        self.run_cmds_prefix = {misc.smallpref_inlist(x, keys)
+                                            for x in self.run_cmds}
 
         if 'set' in self.cmds and self.cmds['set']:
             # remove the illegal arguments
@@ -497,9 +484,8 @@ class GlobalSetup(misc.Singleton):
                                     set(self.cmds['set'])
                                     .difference(set(self.illegal_setargs)))
             setargs = self.cmds['set']
-            self.illegal_setargs_prefix = set(
-                                        [misc.smallpref_inlist(x, setargs)
-                                            for x in self.illegal_setargs])
+            self.illegal_setargs_prefix = {misc.smallpref_inlist(x, setargs)
+                                            for x in self.illegal_setargs}
 
 class Gdb(debugger.Debugger, ProcessChannel):
     """The Gdb debugger is a frontend to GDB/MI.
@@ -562,21 +548,21 @@ class Gdb(debugger.Debugger, ProcessChannel):
     """
 
     # gdb states
-    STATE_INIT, STATE_RUNNING, STATE_QUITTING, STATE_CLOSING = range(4)
+    STATE_INIT, STATE_RUNNING, STATE_QUITTING, STATE_CLOSING = list(range(4))
 
     def __init__(self, *args):
         """Constructor."""
         debugger.Debugger.__init__(self, *args)
         self.pyclewn_cmds.update(
             {
-                'dbgvar':(),
-                'delvar':(),
-                'foldvar':(),
-                'setfmtvar':(),
-                'project':True,
-                'sigint':(),
-                'cwindow':(),
-                'symcompletion':(),
+                'dbgvar': (),
+                'delvar': (),
+                'foldvar': (),
+                'setfmtvar': (),
+                'project': True,
+                'sigint': (),
+                'cwindow': (),
+                'symcompletion': (),
             })
         self.mapkeys.update(MAPKEYS)
 
@@ -632,9 +618,9 @@ class Gdb(debugger.Debugger, ProcessChannel):
                     if not self.project:
                         if os.path.isfile(pathname):
                             try:
-                                f = open(pathname, 'r+b')
+                                f = open(pathname, 'r')
                                 f.close()
-                            except IOError, err:
+                            except IOError as err:
                                 raise ClewnError(
                                         'project file %s: %s' % (param, err))
                         self.project = pathname
@@ -654,12 +640,8 @@ class Gdb(debugger.Debugger, ProcessChannel):
             argv += ['-tty=%s' % self.options.tty]
 
         # build the gdb init temporary file
-        try:
-            self.f_init = misc.TmpFile('gdbscript')
+        with misc.TmpFile('gdbscript') as self.f_init:
             self.f_init.write(GDB_INIT)
-        finally:
-            if self.f_init:
-                self.f_init.close()
 
         argv += ['-x'] + [self.f_init.name] + ['--interpreter=mi']
         if self.arglist:
@@ -871,7 +853,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
             try:
                 # loop over oob commands that don't send anything
                 while True:
-                    if self.oob.next()():
+                    if next(self.oob)():
                         break
             except StopIteration:
                 self.oob = None
@@ -902,6 +884,8 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
     def close(self):
         """Close gdb."""
+        # This method may be called by the SIGCHLD handler and therefore must be
+        # reentrant.
         if self.state == self.STATE_RUNNING:
             self.cmd_quit()
             return
@@ -916,7 +900,10 @@ class Gdb(debugger.Debugger, ProcessChannel):
             self.update_dbgvarbuf(rootvarobj.collect, cleared)
 
             # remove temporary files
-            del self.f_init
+            try:
+                del self.f_init
+            except AttributeError:
+                pass
 
     #-----------------------------------------------------------------------
     #   commands
@@ -1150,7 +1137,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
         self.sendintr()
         if self.ttyname is None:
-            self.cmd_sigint.im_func.__doc__ = \
+            self.cmd_sigint.__func__.__doc__ = \
                 'Command ignored: gdb does not handle interrupts over pipes.'
             self.console_print('\n%s\n', self.cmd_sigint.__doc__)
             if os.name == 'posix':

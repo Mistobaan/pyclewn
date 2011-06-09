@@ -26,7 +26,7 @@ def bar(prefix, i):
     elif i == -1:
         loop()
 
-    print prefix, i
+    print(prefix, i)
     return i + 1
 
 def foo(run, *args):

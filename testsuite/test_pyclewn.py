@@ -25,7 +25,7 @@ import sys
 import unittest
 import testsuite.test_support as test_support
 
-from test_support import ClewnTestCase
+from .test_support import ClewnTestCase
 
 class PyclewnTestCase(ClewnTestCase):
     """Test pyclewn."""

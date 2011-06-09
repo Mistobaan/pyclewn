@@ -35,24 +35,18 @@ import inspect
 import optparse
 import logging
 import errno
-import thread
+import _thread
 import threading
 import atexit
 
-from clewn import *
-import clewn.misc as misc
-import clewn.gdb as gdb
-import clewn.simple as simple
-import clewn.netbeans as netbeans
-import clewn.buffer as vimbuffer
-import clewn.evtloop as evtloop
-import clewn.pydb as pydb
-import clewn.tty as tty
+from .clewn import *
+from . import (misc, gdb, simple, netbeans, evtloop, pydb, tty)
+from . import buffer as vimbuffer
 if os.name == 'nt':
-    from clewn.nt import hide_console as daemonize
-    from clewn.nt import platform_data
+    from .nt import hide_console as daemonize
+    from .nt import platform_data
 else:
-    from clewn.posix import daemonize, platform_data
+    from .posix import daemonize, platform_data
 
 
 WINDOW_LOCATION = ('top', 'bottom', 'left', 'right', 'none')
@@ -93,18 +87,17 @@ def exec_vimcmd(commands, pathname='', error_stream=None):
 
     output = f = None
     try:
-        try:
-            subprocess.Popen(args).wait()
-            f = os.fdopen(fd)
-            output = f.read()
-        except (OSError, IOError), err:
-            if isinstance(err, OSError) and err.errno == errno.ENOENT:
-                perror("Failed to run '%s' as Vim.\n" % args[0])
-                perror("Please run 'pyclewn"
-                                      " --editor=/path/to/(g)vim'.\n\n")
-            else:
-                perror("Failed to run Vim as:\n'%s'\n\n" % str(args))
-            raise
+        subprocess.Popen(args).wait()
+        f = os.fdopen(fd)
+        output = f.read()
+    except (OSError, IOError) as err:
+        if isinstance(err, OSError) and err.errno == errno.ENOENT:
+            perror("Failed to run '%s' as Vim.\n" % args[0])
+            perror("Please run 'pyclewn"
+                                  " --editor=/path/to/(g)vim'.\n\n")
+        else:
+            perror("Failed to run Vim as:\n'%s'\n\n" % str(args))
+        raise
     finally:
         if f is not None:
             f.close()
@@ -143,14 +136,14 @@ def vim73_workaround(vim):
 def _pdb(vim, attach=False):
     """Start the python debugger thread."""
     if os.name != 'posix':
-        print >> sys.stderr, 'Error, pdb is only supported on unix systems.'
+        print('Error, pdb is only supported on unix systems.', file=sys.stderr)
         sys.exit(1)
 
     Vim.pdb_running = True
     atexit.register(vim73_workaround, vim)
     vim.debugger = vim.clazz(vim.options)
     pdb = vim.debugger
-    pdb.target_thread_ident = thread.get_ident()
+    pdb.target_thread_ident = _thread.get_ident()
 
     # use a daemon thread
     class ClewnThread(threading.Thread):
@@ -163,7 +156,7 @@ def _pdb(vim, attach=False):
     ClewnThread().start()
     pdb.started_event.wait(1)
     if not pdb.started_event.isSet():
-        print >> sys.stderr, 'Aborting, failed to start the clewn thread.'
+        print('Aborting, failed to start the clewn thread.', file=sys.stderr)
         sys.exit(1)
 
     if attach:
@@ -185,7 +178,7 @@ def pdb(run=False, **kwds):
     argv = ['pyclewn', '--pdb']
     if run:
         argv.append('--run')
-    argv.extend(['--' + k + '=' + str(v) for k,v in kwds.iteritems()])
+    argv.extend(['--' + k + '=' + str(v) for k, v in kwds.items()])
     _pdb(Vim(False, argv), True)
 
 def main(testrun=False):
@@ -215,42 +208,41 @@ def main(testrun=False):
 
     try:
         gdb_pty = tty.GdbInferiorPty(vim.stderr_hdlr)
+        if (vim.clazz == gdb.Gdb
+                    and os.name != 'nt'
+                    and not options.daemon
+                    and os.isatty(sys.stdin.fileno())):
+            # Use pyclewn pty as the debuggee standard input and output, but
+            # not when vim is run as 'vim' or 'vi'.
+            vim_pgm = os.path.basename(options.editor)
+            if vim_pgm != 'vim' and vim_pgm != 'vi':
+                gdb_pty.start()
+                options.tty = gdb_pty.ptyname
+
+        vim.debugger = vim.clazz(options)
+        vim.setup(True)
+        vim.loop()
+    except (KeyboardInterrupt, SystemExit):
+        pass
+    except:
+        t, v, filename, lnum, last_tb = misc.last_traceback()
+
+        # get the line where exception occured
         try:
-            if (vim.clazz == gdb.Gdb
-                        and os.name != 'nt'
-                        and not options.daemon
-                        and os.isatty(sys.stdin.fileno())):
-                # Use pyclewn pty as the debuggee standard input and output, but
-                # not when vim is run as 'vim' or 'vi'.
-                vim_pgm = os.path.basename(options.editor)
-                if vim_pgm != 'vim' and vim_pgm != 'vi':
-                    gdb_pty.start()
-                    options.tty = gdb_pty.ptyname
+            lines, top = inspect.getsourcelines(last_tb)
+            location = 'source line: "%s"\nat %s:%d' \
+                    % (lines[lnum - top].strip(), filename, lnum)
+        except IOError:
+            sys.exc_clear()
+            location = ''
 
-            vim.debugger = vim.clazz(options)
-            vim.setup(True)
-            vim.loop()
-        except (KeyboardInterrupt, SystemExit):
-            pass
-        except:
-            t, v, filename, lnum, last_tb = misc.last_traceback()
-
-            # get the line where exception occured
-            try:
-                lines, top = inspect.getsourcelines(last_tb)
-                location = 'source line: "%s"\nat %s:%d' \
-                        % (lines[lnum - top].strip(), filename, lnum)
-            except IOError:
-                sys.exc_clear()
-                location = ''
-
-            except_str = '\nException in pyclewn:\n\n'  \
-                            '%s\n"%s"\n%s\n\n'          \
-                            'pyclewn aborting...\n'     \
-                                    % (str(t), str(v), location)
-            critical(except_str)
-            if vim.nbserver.netbeans:
-                vim.nbserver.netbeans.show_balloon(except_str)
+        except_str = '\nException in pyclewn:\n\n'  \
+                        '%s\n"%s"\n%s\n\n'          \
+                        'pyclewn aborting...\n'     \
+                                % (str(t), str(v), location)
+        critical(except_str)
+        if vim.nbserver.netbeans:
+            vim.nbserver.netbeans.show_balloon(except_str)
     finally:
         gdb_pty.close()
         debug('Vim instance: ' + str(vim))
@@ -258,7 +250,7 @@ def main(testrun=False):
 
     return vim
 
-class Vim(object):
+class Vim:
     """The Vim instance dispatches netbeans messages.
 
     Class attributes:
@@ -457,7 +449,7 @@ class Vim(object):
         else:
             logging.shutdown()
 
-        for asyncobj in self.socket_map.values():
+        for asyncobj in list(self.socket_map.values()):
             asyncobj.close()
 
     def parse_options(self, argv):
@@ -466,7 +458,7 @@ class Vim(object):
             unused = opt_str
             try:
                 args = misc.dequote(value)
-            except ClewnError, e:
+            except ClewnError as e:
                 raise optparse.OptionValueError(e)
             if option._short_opts[0] == '-c':
                 parser.values.cargs = args
@@ -679,7 +671,7 @@ class Vim(object):
         self.options.editor = ''
         self.setup(False)
         pdb.thread = threading.currentThread()
-        pdb.clewn_thread_ident = thread.get_ident()
+        pdb.clewn_thread_ident = _thread.get_ident()
 
         pdb.started_event.set()
         last_nbsock = None

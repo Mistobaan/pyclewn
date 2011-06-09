@@ -36,7 +36,7 @@ from termios import INLCR, ICRNL, IXON, IXOFF, IXANY,   \
         ECHO, ECHONL, ICANON, ISIG, IEXTEN,             \
         VMIN, VTIME
 
-import clewn.misc as misc
+from . import misc
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('tty')
@@ -92,8 +92,8 @@ class FileDispatcher(asyncore.file_dispatcher):
     def handle_read(self):
         """Process data available for reading."""
         try:
-            data = self.socket.recv(1024)
-        except OSError, err:
+            data = self.socket.recv(1024).decode()
+        except OSError as err:
             if err.errno != errno.EAGAIN and err.errno != errno.EINTR:
                 if self.source.close_tty and err.errno == errno.EIO:
                     raise asyncore.ExitNow("[slave pseudo terminal closed,"
@@ -122,14 +122,17 @@ class FileDispatcher(asyncore.file_dispatcher):
 
     def handle_write(self):
         """Write the content of the 'source' buffer."""
-        buf = self.source.buf
+        buf = self.source.buf.encode()
         try:
             count = os.write(self.socket.fd, buf)
-        except OSError, err:
+        except OSError as err:
             if err.errno != errno.EAGAIN and err.errno != errno.EINTR:
                 raise asyncore.ExitNow(err)
         else:
-            self.source.buf = buf[count:]
+            if count < len(buf):
+                self.source.buf = buf[count:].decode()
+            else:
+                self.source.buf = ''
 
     def update_size(self):
         """Set the window size to match the size of its 'source'."""
@@ -140,10 +143,10 @@ class FileDispatcher(asyncore.file_dispatcher):
                 fcntl.ioctl(self.socket.fd, TIOCSWINSZ, buf, 1)
             else:
                 error('failed ioctl: %d', ret)
-        except IOError, err:
+        except IOError as err:
             error('failed ioctl: %s', err)
 
-class GdbInferiorPty(object):
+class GdbInferiorPty:
     """Gdb inferior terminal."""
 
     def __init__(self, stderr_hdlr=None):
@@ -202,7 +205,7 @@ class GdbInferiorPty(object):
         if self.orig_attr:
             try:
                 tcsetattr(sys.stdin.fileno(), TCSADRAIN, self.orig_attr)
-            except termios_error, err:
+            except termios_error as err:
                 error(err)
         close(self.master_fd)
         close(self.slave_fd)

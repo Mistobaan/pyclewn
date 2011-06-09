@@ -22,7 +22,7 @@
 import os.path
 import re
 
-import clewn.misc as misc
+from . import misc
 
 FRAME_ANNO_ID = 'frame'
 
@@ -66,7 +66,7 @@ class Sernum(misc.Singleton):
         self.i += 1
         return self.i
 
-class LastSernum(object):
+class LastSernum:
     """Last annotation serial number."""
 
     def __init__(self):
@@ -173,7 +173,7 @@ class Buffer(dict):
         return self.__name
     name = property(getname, None, None, getname.__doc__)
 
-class Annotation(object):
+class Annotation:
     """A netbeans annotation.
 
     Instance attributes:
@@ -422,7 +422,7 @@ class BufferSet(dict):
 
                 # delete annotations from anno_dict
                 anno_list = []
-                for (anno_id, anno) in buf.iteritems():
+                for (anno_id, anno) in list(buf.items()):
                     if lnum is None or anno.lnum == lnum:
                         del self.anno_dict[anno_id]
                         anno_list.append(anno_id)

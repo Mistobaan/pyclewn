@@ -1,5 +1,7 @@
-2011-06-07  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-06-13  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* The whole repository: Create the 'python2' mercurial branch and port
+	pyclewn to Python 3 on the default branch.
 	* misc.py tty.py vim.py: Fix some error messages are not printed on
 	stderr.
 	* gdb.py gdbmi.py: Dereference pointers in balloon evaluation.

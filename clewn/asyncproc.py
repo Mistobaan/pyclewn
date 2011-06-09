@@ -35,10 +35,11 @@ import select
 import errno
 import asynchat
 import subprocess
+from abc import ABCMeta, abstractmethod
 if os.name == 'posix':
     import fcntl
 
-import clewn.misc as misc
+from . import misc
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('proc')
@@ -46,9 +47,9 @@ Unused = warning
 Unused = debug
 
 # Peek thread states
-STS_STARTED, STS_STOPPED = range(2)
+STS_STARTED, STS_STOPPED = list(range(2))
 
-class FileWrapper(object):
+class FileWrapper:
     """Emulate a socket with a file descriptor or file object.
 
     Here we override just enough to make a file look like a socket for the
@@ -65,11 +66,11 @@ class FileWrapper(object):
     def __init__(self, f):
         """Constructor."""
         self.fobj = None
-        if isinstance(f, file):
+        if isinstance(f, int):
+            self.fd = f
+        else:
             self.fobj = f
             self.fd = f.fileno()
-        else:
-            self.fd = f
         self.connected = True
 
     def recv(self, *args):
@@ -125,14 +126,14 @@ class FileAsynchat(asynchat.async_chat):
         self.connected = True
         self.ibuff = []
         if os.name == 'nt':
-            self.set_terminator('\r\n')
+            self.set_terminator(b'\r\n')
         else:
-            self.set_terminator('\n')
+            self.set_terminator(b'\n')
 
-        if isinstance(f, file):
-            self._fileno = f.fileno()
-        else:
+        if isinstance(f, int):
             self._fileno = f
+        else:
+            self._fileno = f.fileno()
         self.set_file(f)
 
         # set it to non-blocking mode
@@ -200,7 +201,7 @@ class FileAsynchat(asynchat.async_chat):
 
     def collect_incoming_data(self, data):
         """Called with data holding an arbitrary amount of received data."""
-        self.ibuff.append(data)
+        self.ibuff.append(data.decode())
 
     def found_terminator(self):
         """Have the ProcessChannel instance process the received data."""
@@ -208,7 +209,11 @@ class FileAsynchat(asynchat.async_chat):
         self.ibuff = []
         self.channel.handle_line(msg)
 
-class ProcessChannel(object):
+    def push(self, data):
+        """Push the data to be sent."""
+        asynchat.async_chat.push(self, data.encode())
+
+class ProcessChannel:
     """An abstract class to run a command with a process through async_chat.
 
     To implement a concrete subclass of ProcessChannel, one must implement
@@ -228,6 +233,8 @@ class ProcessChannel(object):
             pseudo tty name
 
     """
+
+    __metaclass__ = ABCMeta
 
     def __init__(self, argv):
         """Constructor."""
@@ -270,11 +277,10 @@ class ProcessChannel(object):
         """Cannot send an interrupt to the program."""
         pass
 
+    @abstractmethod
     def handle_line(self, line):
         """Process the line received from the program stdout and stderr."""
-        unused = line
-        if self.fileasync is not None:
-            raise NotImplementedError('handle_line in ProcessChannel')
+        pass
 
     def write(self, data):
         """Write a chunk of data to the process stdin."""
@@ -414,7 +420,7 @@ class SelectPeek(Peek):
         # debug('%s, %s, %s', self.iwtd, self.owtd, self.ewtd)
         try:
             iwtd, owtd, ewtd = select.select(self.iwtd, self.owtd, self.ewtd, 0)
-        except select.error, err:
+        except select.error as err:
             if err.args[0] != errno.EINTR:
                 error('failed select call: ', err); raise
             else:

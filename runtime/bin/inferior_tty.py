@@ -67,7 +67,7 @@ def setlogger(filename):
 def abort(msg=''):
     """Abort after printing 'msg'."""
     if msg:
-        print >> sys.stderr, msg
+        print(msg, file=sys.stderr)
     sys.exit(1)
 
 def prompt(msg):
@@ -77,7 +77,7 @@ def prompt(msg):
     flags = fcntl.fcntl(fd, fcntl.F_GETFL, 0)
     flags = flags & ~os.O_NONBLOCK
     fcntl.fcntl(fd, fcntl.F_SETFL, flags)
-    return raw_input(msg)
+    return input(msg)
 
 def spawn_terminal_emulator(pty_term, gdb_pty):
     """Run ourself in xterm to monitor gdb exit status."""
@@ -91,7 +91,7 @@ def spawn_terminal_emulator(pty_term, gdb_pty):
         try:
             os.environ['PTY_TERM'] = pty_term
             os.execvp(argv[0], argv)
-        except OSError, err:
+        except OSError as err:
             msg = 'argv: \'%s\'\n' % argv
             msg += 'Spawing \'%s\' failed: %s' % (argv[0], err)
             abort(msg)
@@ -108,18 +108,18 @@ def spawn_gdb(ptyname, term):
     try:
         ret = subprocess.call(argv)
         if ret < 0:
-            print >> sys.stderr,\
-                '%s was terminated by signal %d' % (argv[0], -ret)
+            print('%s was terminated by signal %d' % (argv[0], -ret),
+                                                        file=sys.stderr)
         elif ret != 0:
-            print >> sys.stderr, '%s returned %d' % (argv, ret)
+            print('%s returned %d' % (argv, ret), file=sys.stderr)
         else:
             # normal exit
             return
-    except OSError, e:
-        print >> sys.stderr, '%s execution failed: %s' % (argv[0], e)
+    except OSError as e:
+        print('%s execution failed: %s' % (argv[0], e), file=sys.stderr)
 
     # show error messages before exiting
-    raw_input('Type <Return> to exit.')
+    input('Type <Return> to exit.')
 
 got_sigchld = False
 
@@ -141,7 +141,7 @@ def loop(gdb_pty):
                 if gdb_pty.stdin_dsptch.close_tty and not slave_closed:
                     slave_closed = True
                     os.close(gdb_pty.slave_fd)
-        except asyncore.ExitNow, err:
+        except asyncore.ExitNow as err:
             msg = err
         if got_sigchld:
             msg = '\n[terminal emulator is terminating]'
@@ -149,7 +149,7 @@ def loop(gdb_pty):
     finally:
         gdb_pty.close()
         if msg:
-            print >> sys.stderr, msg
+            print(msg, file=sys.stderr)
         info('========================================')
 
 def main():
@@ -181,20 +181,21 @@ def main():
         if got_sigchld:
             abort()
 
-    print >> sys.stderr, usage
+    print(usage, file=sys.stderr)
     if not gdb_wrapper:
-        print >> sys.stderr, (
+        print(
             "'%s' pseudo terminal has been created.\n"
             "Set the tty for the program being debugged with the gdb commands:"
             "\n\n    'set inferior-tty %s'\n"
-            "    'set environment TERM = %s'\n" % (ptyname, ptyname, term))
+            "    'set environment TERM = %s'\n" % (ptyname, ptyname, term),
+            file=sys.stderr)
 
     loop(gdb_pty)
 
 if __name__ == '__main__':
     try:
         main()
-    except StandardError:
+    except Exception:
         traceback.print_exc()
         prompt('Type <Return> to exit.')
 

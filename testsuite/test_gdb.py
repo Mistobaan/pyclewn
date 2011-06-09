@@ -28,7 +28,7 @@ import testsuite.test_support as test_support
 
 import clewn.gdb as gdb
 import clewn.misc as misc
-from test_support import ClewnTestCase, TESTFN_FILE, TESTFN_OUT
+from .test_support import ClewnTestCase, TESTFN_FILE, TESTFN_OUT
 
 if os.name == 'nt':
     debuggee = 'file ${cwd}testsuite/foobar.exe'

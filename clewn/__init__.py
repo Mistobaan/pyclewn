@@ -23,9 +23,9 @@
 """
 import sys
 try:
-    import clewn.__version__
-    __tag__ = clewn.__version__.tag
-    __changeset__ = clewn.__version__.changeset
+    from . import __version__
+    __tag__ = __version__.tag
+    __changeset__ = __version__.changeset
 except ImportError:
     __tag__ = 'unknown'
     __changeset__ = ''
@@ -38,7 +38,7 @@ class ClewnError(Exception):
     """Base class for pyclewn exceptions."""
 
 # the subprocess module is required (new in python 2.4)
-if sys.version_info < (2, 4):
-    print >> sys.stderr, "Python 2.4 or above is required by pyclewn."
+if sys.version_info < (3, 0):
+    sys.stderr.write("Python 3 is required by this version of pyclewn.\n")
     sys.exit(1)
 
