@@ -348,6 +348,7 @@ class PdbTestCase(ClewnTestCase):
 
     def test_bp_restored_after_detach(self):
         """Breakpoints are restored after detach"""
+        os.environ['PATH'] = '.:' + os.environ['PATH']
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
