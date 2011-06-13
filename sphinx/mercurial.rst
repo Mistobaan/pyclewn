@@ -30,9 +30,9 @@ pyclewn directory::
 
         $ hg pull --update
 
-The development of the python3 version of pyclewn is on the default branch. To
-get the source of the python2 version of pyclewn, switch to the python2 branch
-with the command::
+The development of the Python 3 version of pyclewn is on the default branch.
+To get the source of the Python 2 version of pyclewn, switch to the
+``python2`` branch with the command::
 
         $ hg update python2
 
@@ -44,7 +44,7 @@ the ``dist`` directory::
 
         $ python3 setup.py sdist
 
-Run the following commands to build a python2 distribution::
+Run the following commands to build a Python 2 distribution::
 
         $ hg update python2
         $ python setup.py sdist
