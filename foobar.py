@@ -1,6 +1,6 @@
 """Debugged script used by the test suite."""
 import sys
-import foo
+from testsuite import foo
 
 def main():
     """Main."""

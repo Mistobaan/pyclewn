@@ -730,7 +730,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         r = self.stdout.getvalue()
         if r:
             self.console_print(r)
-            self.stdout.truncate(0)
+            self.stdout = cStringIO.StringIO()
 
     def default_cmd_processing(self, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""

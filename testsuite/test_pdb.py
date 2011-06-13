@@ -44,7 +44,7 @@ class PdbTestCase(ClewnTestCase):
                                     os.environ['HOME'], 'lib/python')
         self.fnull = open(os.devnull, 'w')
         self.debugged_script = subprocess.Popen(
-                                    ['python', 'testsuite/foobar.py'],
+                                    ['python', './foobar.py'],
                                      stdout=self.fnull)
 
     def test_intr_load_buffer(self):
@@ -61,7 +61,7 @@ class PdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             'line=13  id=1  name=1\n'
-            '${cwd}testsuite/foobar.py',
+            '${cwd}foobar.py',
             )
 
     def test_break(self):
@@ -89,7 +89,7 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
-            ':Cbreak ${cwd}testsuite/foobar.py:5\n'
+            ':Cbreak ${cwd}foobar.py:5\n'
             ':Cdisable 1\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -110,8 +110,8 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
-            ':Cbreak ${cwd}testsuite/foobar.py:5\n'
-            ':Cbreak ${cwd}testsuite/foobar.py:7\n'
+            ':Cbreak ${cwd}foobar.py:5\n'
+            ':Cbreak ${cwd}foobar.py:7\n'
             ':Cdisable 1 2\n'
             ':Cenable 2\n'
             ':sleep ${time}\n'
@@ -134,10 +134,10 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
-            ':Cbreak ${cwd}testsuite/foobar.py:5\n'
-            ':Cbreak ${cwd}testsuite/foobar.py:7\n'
-            ':Cbreak ${cwd}testsuite/foobar.py:7\n'
-            ':Cclear ${cwd}testsuite/foobar.py:5\n'
+            ':Cbreak ${cwd}foobar.py:5\n'
+            ':Cbreak ${cwd}foobar.py:7\n'
+            ':Cbreak ${cwd}foobar.py:7\n'
+            ':Cclear ${cwd}foobar.py:5\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
             ':sign place\n'
@@ -234,7 +234,7 @@ class PdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':qa!\n',
 
-            'Signs for ${cwd}testsuite/foobar.py:\n'
+            'Signs for ${cwd}foobar.py:\n'
             'line=5  id=2  name=2\n'
             'line=7  id=1  name=1\n'
             'Signs for ${cwd}testsuite/foo.py:\n'
@@ -260,7 +260,7 @@ class PdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':qa!\n',
 
-            'Signs for ${cwd}testsuite/foobar.py:\n'
+            'Signs for ${cwd}foobar.py:\n'
             'line=5  id=2  name=2\n'
             'Signs for ${cwd}testsuite/foo.py:\n'
             'line=32  id=1  name=1\n',
@@ -340,8 +340,8 @@ class PdbTestCase(ClewnTestCase):
 
             '(pdb) continue\n'
             "An exception occured: ('ZeroDivisionError:', \"'integer division or modulo by zero'\")\n"
-            '> ?() at ${cwd}testsuite/foobar.py:13\n'
-            '  main() at ${cwd}testsuite/foobar.py:8\n'
+            '> ?() at ${cwd}foobar.py:13\n'
+            '  main() at ${cwd}foobar.py:8\n'
             "  foo(run=True, args=('unused',)) at ${cwd}testsuite/foo.py:38\n"
             "  bar(prefix='value', i=0) at ${cwd}testsuite/foo.py:25\n"
             '(pdb)\n',
@@ -349,6 +349,7 @@ class PdbTestCase(ClewnTestCase):
 
     def test_bp_restored_after_detach(self):
         """Breakpoints are restored after detach"""
+        os.environ['PATH'] = '.:' + os.environ['PATH']
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
