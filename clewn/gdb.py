@@ -902,6 +902,8 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
     def close(self):
         """Close gdb."""
+        # This method may be called by the SIGCHLD handler and therefore must be
+        # reentrant.
         if self.state == self.STATE_RUNNING:
             self.cmd_quit()
             return
@@ -916,7 +918,10 @@ class Gdb(debugger.Debugger, ProcessChannel):
             self.update_dbgvarbuf(rootvarobj.collect, cleared)
 
             # remove temporary files
-            del self.f_init
+            try:
+                del self.f_init
+            except AttributeError:
+                pass
 
     #-----------------------------------------------------------------------
     #   commands
