@@ -1,5 +1,7 @@
-2011-06-07  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-06-14  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* runtime/autoload/pyclewn.vim: fix a syntax error in
+	.pyclewn_keys.gdb causes :Pyclewn to hang.
 	* misc.py tty.py vim.py: Fix some error messages are not printed on
 	stderr.
 	* gdb.py gdbmi.py: Dereference pointers in balloon evaluation.

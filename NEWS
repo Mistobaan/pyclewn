@@ -4,7 +4,7 @@ News
 Pyclewn 1.6
 -----------
 
-.. June 7, 2011
+.. June 14, 2011
 
 New feature
 ^^^^^^^^^^^
@@ -28,6 +28,9 @@ New feature
 Change
 ^^^^^^
 
+* Pyclewn supports Python 3, ``pyclewn-1.6.py3.tar.gz`` is the Python 3
+  distribution tarball,  ``pyclewn-1.6.py2.tar.gz`` is the Python 2
+  distribution tarball.
 * The gdb ``whatis`` command is used by pyclewn to get the type of the
   variable or the type of the selected expression that is being hovered over
   by the mouse.  When it is a pointer to data, the pointer is dereferenced and
@@ -38,11 +41,12 @@ Change
 Bug fixes
 ^^^^^^^^^
 
+* Fix a syntax error in ``.pyclewn_keys.gdb`` causes ``:Pyclewn`` to hang.
 * Fix some error messages are not printed on stderr.
 * Fix gdb warning ``Failed to set controlling terminal``.
 * Handling of the netbeans socket disconnection, closes the gdb session also
   when gdb is busy.
-* Ignore 'sigint' or 'quit' command on startup.
+* Ignore ``sigint`` or ``quit`` command on startup.
 * On gdb abnormal termination, save the project file if exists and forcibly
   terminate the current session.
 * Set breakpoint in a template function C++.

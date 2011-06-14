@@ -8,6 +8,9 @@ if exists("s:did_pyclewn")
 endif
 let s:did_pyclewn = 1
 
+let s:start_err = "Error: pyclewn failed to start, "
+let s:start_err .= "run the 'pyclewn' program to get the cause of the problem."
+
 " The following variables define how pyclewn is started when
 " the ':Pyclewn' vim command is run.
 " They may be changed to match your preferences.
@@ -80,13 +83,7 @@ function s:start(args)
     if !executable(s:pgm)
         throw "Error: '" . s:pgm . "' cannot be found or is not an executable."
     endif
-
-    " the pyclewn generated vim script is sourced only once
-    if exists("s:tmpfile")
-        let s:tmpfile = ""
-    else
-        let s:tmpfile = tempname()
-    endif
+    let l:tmpfile = tempname()
 
     " remove console and dbgvar buffers from previous session
     if bufexists("(clewn)_console")
@@ -98,23 +95,27 @@ function s:start(args)
 
     " start pyclewn and netbeans
     call s:info("Starting pyclewn, please wait...\n")
-    exe "silent !${start}" . s:pgm . " " . a:args . " " . s:fixed . s:tmpfile . " &"
+    exe "silent !${start}" . s:pgm . " " . a:args . " " . s:fixed . l:tmpfile . " &"
     call s:info("'pyclewn' has been started.\n")
     call s:info("Running nbstart, <C-C> to interrupt.\n")
     " allow pyclewn to start its dispatch loop, otherwise we will have to
     " wait 5 seconds for the second connection attempt by vim
     sleep 500m
+    if !filereadable(l:tmpfile)
+        throw s:start_err
+    endif
     exe "nbstart :" . s:connection
 
     " source vim script
     if has("netbeans_enabled")
-        if s:tmpfile != ""
-            if !filereadable(s:tmpfile)
-                unlet s:tmpfile
-                nbclose
-                throw "Error: pyclewn failed to start."
-            endif
-            exe "source " . s:tmpfile
+        if !filereadable(l:tmpfile)
+            nbclose
+            throw s:start_err
+        endif
+        " the pyclewn generated vim script is sourced only once
+        if ! exists("s:source_once")
+            let s:source_once = 1
+            exe "source " . l:tmpfile
         endif
         call s:info("The netbeans socket is connected.\n")
         call s:start_pdb(a:args)
@@ -145,9 +146,6 @@ function pyclewn#StartClewn(...)
     try
         call s:start(l:args)
     catch /.*/
-        if exists("s:tmpfile") && s:tmpfile != ""
-            unlet s:tmpfile
-        endif
         call s:info("The 'Pyclewn' command has been aborted.\n")
         call s:error(v:exception)
         " vim console screen is garbled, redraw the screen

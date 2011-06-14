@@ -25,4 +25,7 @@
 #       . modifier (or modifiers) + character
 #             e.g., `S-Q:quit', `C-S-B:info breakpoints'
 #
+# Note that a modifier is required for non-function keys. So it is not possible
+# to map a lower case character with this method (use the Vim 'map' command
+# instead).
 #
