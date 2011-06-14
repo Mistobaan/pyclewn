@@ -4,7 +4,7 @@ News
 Pyclewn 1.6
 -----------
 
-.. June 13, 2011
+.. June 14, 2011
 
 New feature
 ^^^^^^^^^^^
@@ -41,11 +41,12 @@ Change
 Bug fixes
 ^^^^^^^^^
 
+* Fix a syntax error in ``.pyclewn_keys.gdb`` causes ``:Pyclewn`` to hang.
 * Fix some error messages are not printed on stderr.
 * Fix gdb warning ``Failed to set controlling terminal``.
 * Handling of the netbeans socket disconnection, closes the gdb session also
   when gdb is busy.
-* Ignore 'sigint' or 'quit' command on startup.
+* Ignore ``sigint`` or ``quit`` command on startup.
 * On gdb abnormal termination, save the project file if exists and forcibly
   terminate the current session.
 * Set breakpoint in a template function C++.

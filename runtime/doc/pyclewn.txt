@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2011 June 7
+*pyclewn.txt*                                   Last change: 2011 June 14
 
 
                             PYCLEWN USER MANUAL
@@ -1064,11 +1064,11 @@ $CLEWNDIR/.pyclewn_keys.{debugger}, or $HOME/.pyclewn_keys.{debugger}.
 To customize pyclewn key mappings copy the configurations files found in the
 distribution to the proper directory: >
 
-    cp runtime/.clewn_keys.gdb        $CLEWNDIR
+    cp runtime/.pyclewn_keys.gdb        $CLEWNDIR
 
 or >
 
-    cp runtime/.clewn_keys.gdb        $HOME
+    cp runtime/.pyclewn_keys.gdb        $HOME
 
 The comments in the configuration file explain how to customize the key
 mappings.
