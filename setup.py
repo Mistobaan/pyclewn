@@ -35,15 +35,16 @@ http://pyclewn.sourceforge.net/install.html).
 """
 
 if os.name == 'nt':
+    DEBUGGERS = ('simple', 'gdb')
     SCRIPTS = ['pyclewn', 'pyclewn_install.py']
     vimdir = 'pyclewn'
     LONG_DESCRIPTION = WINDOWS_INSTALL
 else:
+    DEBUGGERS = ('simple', 'gdb', 'pdb')
     SCRIPTS = ['pyclewn', 'runtime/bin/inferior_tty.py']
     vimdir = pyclewn_install.vimdir()
     LONG_DESCRIPTION = DESCRIPTION
 
-DEBUGGERS = ('simple', 'gdb', 'pdb')
 DATA_FILES = [
     (pathjoin(vimdir, 'plugin'), ['runtime/plugin/pyclewn.vim']),
     (pathjoin(vimdir, 'autoload'), ['runtime/autoload/pyclewn.vim']),

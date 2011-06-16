@@ -139,7 +139,7 @@ checkSpecialMethods = 1
 
 # int: warnings for code complexity, max value before generating a warning
 maxLines = 120
-maxBranches = 10
+maxBranches = 12
 maxReturns = 10
 maxArgs = 10
 maxLocals = 20
