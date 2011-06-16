@@ -700,7 +700,7 @@ class Netbeans(asynchat.async_chat, object):
         fd = self._fileno
         if fd is not None:
             cur_map = self._map
-            if cur_map.has_key(fd):
+            if fd in cur_map:
                 del cur_map[fd]
             self._map = map
             self.add_channel()

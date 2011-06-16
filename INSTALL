@@ -5,9 +5,9 @@ Required
 --------
 
 +------------+---------------------------------------+
-| python     | vim                                   |
+| Python     | Vim                                   |
 +============+=======================================+
-| python 2.4 | Vim 7.0 or above with the             |
+| Python 2.4 | Vim 7.0 or above with the             |
 | or above   | **netbeans_intg** feature enabled,    |
 |            | and with the **autocmd** feature      |
 |            | enabled                               |

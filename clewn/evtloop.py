@@ -41,7 +41,7 @@ Unused = warning
 Unused = info
 Unused = debug
 
-use_select_emulation = (os.environ.has_key('CLEWN_PIPES') or os.name == 'nt')
+use_select_emulation = ('CLEWN_PIPES' in os.environ or os.name == 'nt')
 
 def get_asyncobj(fd, file_type, fdmap):
     """Return an asyncore instance from 'fdmap' if matching 'file_type'."""

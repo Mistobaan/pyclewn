@@ -76,7 +76,7 @@ class install(_install):
         # rename the 'debugger' directory present in old versions
         debugger_dir = os.path.join(pythonpath, 'clewn', 'debugger')
         if os.path.isdir(debugger_dir):
-            print >> sys.stderr, 'renaming the debugger directory'
+            sys.stderr.write('renaming the debugger directory\n')
             os.rename(debugger_dir, debugger_dir + '.orig')
 
         # substitute templates in the autoload plugin
@@ -188,5 +188,9 @@ core.setup(
     author='Xavier de Gaye',
     author_email='xdegaye at users dot sourceforge dot net',
     url='http://pyclewn.sourceforge.net/',
+    classifiers=[
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2'
+    ],
 )
 

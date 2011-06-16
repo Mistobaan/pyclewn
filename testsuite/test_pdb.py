@@ -40,8 +40,6 @@ class PdbTestCase(ClewnTestCase):
         sys.argv.append('--pdb')
 
         # start the python script being debugged
-        os.environ['PYTHONPATH'] = os.path.join(
-                                    os.environ['HOME'], 'lib/python')
         self.fnull = open(os.devnull, 'w')
         self.debugged_script = subprocess.Popen(
                                     ['python', './foobar.py'],
@@ -292,6 +290,7 @@ class PdbTestCase(ClewnTestCase):
     def test_infinite_loop(self):
         """Interrupting an infinite loop"""
         self.cltest_redir(
+            ':sleep ${time}\n'
             ':Cinterrupt\n'
             ':sleep ${time}\n'
             ':Cbreak ${cwd}testsuite/foo.py:35\n'

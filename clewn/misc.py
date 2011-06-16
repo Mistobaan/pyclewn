@@ -80,7 +80,7 @@ def previous_evaluation(f, previous={}):
     """Decorator for functions returning previous result when args are unchanged."""
     def _dec(*args):
         """The decorator."""
-        if previous.has_key(f) and previous[f][0] == args:
+        if f in previous and previous[f][0] == args:
             return previous[f][1]
         previous[f] = [args]
         ret = f(*args)

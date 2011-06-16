@@ -217,8 +217,7 @@ class ProcessChannel(asyncproc.ProcessChannel):
         self.sig_handler = signal.signal(signal.SIGCHLD, sigchld_handler)
 
         try:
-            if os.environ.has_key('CLEWN_PIPES')            \
-                    or os.environ.has_key('CLEWN_POPEN'):
+            if 'CLEWN_PIPES' in os.environ or 'CLEWN_POPEN' in os.environ:
                 self.popen()
             else:
                 self.ptyopen()

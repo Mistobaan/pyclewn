@@ -11,7 +11,13 @@ import sys
 import os
 import optparse
 import subprocess
-import itertools
+
+python3 = sys.version_info >= (3, 0)
+if python3:
+    _zip = zip
+else:
+    import itertools
+    _zip = itertools.izip
 
 pgm = os.path.basename(sys.argv[0])
 
@@ -28,7 +34,7 @@ def command(cmd_list):
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE).communicate()
     if err:
-        raise HookError, err
+        raise HookError(err)
     return out.strip()
 
 def hook_type(args):
@@ -58,14 +64,18 @@ def version(args, debug):
     if htype == 'commit':
         node = os.environ['HG_NODE']
     if debug:
-        print >> sys.stderr, 'node-parent:', node, parent
+        sys.stderr.write('node-parent: %s %s\n' % (str(node), str(parent)))
 
     # build a tags map after removing alphanumeric tags
     taglist = command(['hg', 'tags', '--debug']).split()
     it = iter(taglist)
-    tagmap = dict(itertools.izip(it, it))
+    tagmap = dict(_zip(it, it))
     alphatags = []
-    for tag, nodeid in tagmap.iteritems():
+    if python3:
+        items = tagmap.items()
+    else:
+        items = tagmap.iteritems()
+    for tag, nodeid in items:
         if tag[0].isalpha():
             alphatags.append(tag)
         else:
@@ -74,10 +84,10 @@ def version(args, debug):
         del tagmap[tag]
 
     # browse the tags in lexical decreasing order
-    for tag in sorted(tagmap.keys(), reverse=True):
+    for tag in sorted(list(tagmap.keys()), reverse=True):
         nodeid = tagmap[tag]
         if debug:
-            print >> sys.stderr, 'tag-nodeid:', tag, nodeid
+            sys.stderr.write('tag-nodeid: %s %s\n' % (str(tag), str(nodeid)))
         if nodeid.find(parent) == 0:
             # update: updating to 'tag'
             if htype == 'update':
@@ -88,13 +98,14 @@ def version(args, debug):
                                     fullpath('.hgtags'), '-c',  'tip'])
                 if newtag != '':
                     if debug:
-                        print >> sys.stderr, 'newtag:\n', indent(newtag)
+                        sys.stderr.write('newtag:\n%s\n' % indent(newtag))
                     return tag, ''
                 elif debug:
-                    print >> sys.stderr, 'newtag: ""'
+                    sys.stderr.write('newtag: ""\n')
         ancestor = command(['hg',  'debugancestor',  nodeid, node])
         if debug:
-            print >> sys.stderr, 'ancestor-nodeid:', ancestor, nodeid
+            sys.stderr.write('ancestor-nodeid: %s %s\n'
+                                    % (str(ancestor), str(nodeid)))
         if ancestor[ancestor.index(':')+1:] == nodeid:
             return tag, node
 
@@ -130,8 +141,8 @@ if __name__ == '__main__':
             f.write('changeset = "%s"\n' % changeset)
             f.close()
         else:
-            print 'version = %s.%s' % (tag, changeset)
-    except (HookError, optparse.OptionValueError), err:
-        print >> sys.stderr, err
+            sys.stdout.write('version = %s.%s\n' % (tag, changeset))
+    except (HookError, optparse.OptionValueError):
+        sys.stderr.write('%s\n'  % sys.exc_info()[1])
         sys.exit(1)
 

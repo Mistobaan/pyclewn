@@ -453,7 +453,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         if bp:
             self.delete_bp(bp.number)
             bp.deleteMe()
-            if not bdb.Breakpoint.bplist.has_key((bp.file, bp.line)):
+            if (bp.file, bp.line) not in bdb.Breakpoint.bplist:
                 self.breaks[bp.file].remove(bp.line)
             if not self.breaks[bp.file]:
                 del self.breaks[bp.file]

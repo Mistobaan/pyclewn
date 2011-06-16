@@ -43,7 +43,7 @@ def vim_features():
 @misc.previous_evaluation
 def vimdir():
     """Return the vim runtime files directory."""
-    if os.environ.has_key('vimdir'):
+    if 'vimdir' in os.environ:
         dir = os.environ['vimdir']
     else:
         path = vim.exec_vimcmd(['echon $VIM'])

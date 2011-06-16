@@ -494,7 +494,7 @@ class Info(object):
         if self.frame and isinstance(self.frame, dict):
             line = int(self.frame['line'])
             # gdb 6.4 and above
-            if self.frame.has_key('fullname'):
+            if 'fullname' in self.frame:
                 source = self.frame['fullname']
             else:
                 fullname = self.file['fullname']
@@ -563,7 +563,7 @@ class Result(dict):
                         for obj in self.values()]):
             return None
         t = str(self.token)
-        if self.has_key(t):
+        if t in self:
             error('token "%s" already exists as an expected pending result', t)
         self[t] = command
         self.token = (self.token + 1) % 100 + 100
@@ -571,7 +571,7 @@ class Result(dict):
 
     def remove(self, token):
         """Remove a command object from the dictionary and return the object."""
-        if not self.has_key(token):
+        if token not in self:
             # do not report as an error: may occur on quitting
             info('no token "%s" as an expected pending result', token)
             return None

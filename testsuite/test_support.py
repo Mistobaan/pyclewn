@@ -31,7 +31,7 @@ verbose = 0              # flag set by regrtest.py
 
 if os.name == 'nt':
     SLEEP_TIME = '1400m'
-elif os.environ.has_key('CLEWN_PIPES'):
+elif 'CLEWN_PIPES' in os.environ:
     SLEEP_TIME = '600m'
 else:
     SLEEP_TIME = '600m'
@@ -86,7 +86,7 @@ class ClewnTestCase(unittest.TestCase):
                 '-U NONE '
                 '-s %s' % (port, TESTFN),
         ]
-        if os.environ.has_key('EDITOR'):
+        if 'EDITOR' in os.environ:
             sys.argv.append('--editor=%s' % os.environ['EDITOR'])
         if verbose:
             sys.argv.append('--level=nbdebug')

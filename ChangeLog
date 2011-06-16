@@ -2,6 +2,8 @@
 
 	* runtime/autoload/pyclewn.vim: fix a syntax error in
 	.pyclewn_keys.gdb causes :Pyclewn to hang.
+	* The whole repository: Create the 'python2' mercurial branch and port
+	pyclewn to Python 3 on the default branch.
 	* misc.py tty.py vim.py: Fix some error messages are not printed on
 	stderr.
 	* gdb.py gdbmi.py: Dereference pointers in balloon evaluation.

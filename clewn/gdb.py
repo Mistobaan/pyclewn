@@ -487,7 +487,7 @@ class GlobalSetup(misc.Singleton):
         self.run_cmds_prefix = set([misc.smallpref_inlist(x, keys)
                                             for x in self.run_cmds])
 
-        if self.cmds.has_key('set') and self.cmds['set']:
+        if 'set' in self.cmds and self.cmds['set']:
             # remove the illegal arguments
             self.cmds['set'] = list(
                                     set(self.cmds['set'])
@@ -1048,7 +1048,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 errmsg = 'Not a line number.'
         if not errmsg:
             rootvarobj = self.info.varobj
-            if rootvarobj.parents.has_key(lnum):
+            if lnum in rootvarobj.parents:
                 varobj = rootvarobj.parents[lnum]
                 # collapse
                 if varobj['children']:
