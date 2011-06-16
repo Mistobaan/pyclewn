@@ -21,7 +21,6 @@
 """The Gdb debugger is a frontend to GDB/MI.
 """
 
-import sys
 import os
 import os.path
 import subprocess

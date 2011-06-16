@@ -81,11 +81,7 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_logfile(
             ':qa!\n',
 
-            'vim  CRITICAL\n'
-            'Exception in pyclewn:\n'
-            "<class 'clewn.__init__.ClewnError'>\n"
             '"cannot find the gdb version"',
-
 
             'error'
             )
@@ -97,9 +93,6 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_logfile(
             ':qa!\n',
 
-            'vim  CRITICAL\n'
-            'Exception in pyclewn:\n'
-            "<class 'clewn.__init__.ClewnError'>\n"
             '"cannot start gdb as \"path_to_nowhere/foobar\""',
 
             'error'

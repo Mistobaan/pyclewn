@@ -314,12 +314,12 @@ class Job:
         self.time = time
         self.job = job
 
-    def __lt__(self, other): return self.time < other.time
-    def __le__(self, other): return self.time <= other.time
-    def __eq__(self, other): return self.time == other.time
-    def __ne__(self, other): return self.time != other.time
-    def __gt__(self, other): return self.time > other.time
-    def __ge__(self, other): return self.time <= other.time
+    def __lt__(self, o): """Comparison method."""; return self.time < o.time
+    def __le__(self, o): """Comparison method."""; return self.time <= o.time
+    def __eq__(self, o): """Comparison method."""; return self.time == o.time
+    def __ne__(self, o): """Comparison method."""; return self.time != o.time
+    def __gt__(self, o): """Comparison method."""; return self.time > o.time
+    def __ge__(self, o): """Comparison method."""; return self.time <= o.time
 
 class Debugger:
     """Abstract base class for pyclewn debuggers.
