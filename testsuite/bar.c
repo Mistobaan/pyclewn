@@ -2,7 +2,7 @@
 
 int bar(int * pnum, char * ptr)
 {
-    int i;
+    int i = 0;
     /* for testing the balloon display */
     int *invalid = NULL;
     int **pp = &invalid;

@@ -30,7 +30,7 @@ import string
 import time
 import collections
 
-from .clewn import *
+from .__init__ import *
 from . import (asyncproc, gdbmi, misc, debugger)
 if os.name == 'posix':
     from .posix import ProcessChannel
@@ -231,8 +231,7 @@ def gdb_batch(pgm, job):
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE).communicate()[0]
     except OSError:
-        critical('cannot start gdb as "%s"', pgm)
-        sys.exit()
+        raise ClewnError('cannot start gdb as "%s"' % pgm)
 
     return result.decode()
 
@@ -267,16 +266,14 @@ def gdb_version(pgm):
             version = matchobj.group('version')
 
     if not version:
-        critical('cannot find the gdb version')
         if header:
             critical('response to "show version":\n%s%s%s',
                         '***START***\n',
                         header,
                         '***END***\n')
-        sys.exit()
+        raise ClewnError('cannot find the gdb version')
     elif version.split('.') < GDB_VERSION.split('.'):
-        critical('invalid gdb version "%s"', version)
-        sys.exit()
+        raise ClewnError('invalid gdb version "%s"' % version)
     else:
         info('gdb version: %s', version)
         return version

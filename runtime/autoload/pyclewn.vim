@@ -72,6 +72,26 @@ function s:start_pdb(args)
     endif
 endfunction
 
+" Check wether pyclewn successfully wrote the script file
+function s:pyclewn_ready(filename)
+    let l:cnt = 1
+    let l:max = 20
+    echohl WarningMsg
+    while l:cnt < l:max
+        echon "."
+        let l:cnt = l:cnt + 1
+        if filereadable(a:filename)
+            break
+        endif
+        sleep 200m
+    endwhile
+    echohl None
+    if l:cnt == l:max
+        throw s:start_err
+    endif
+    call s:info("The pyclewn process has been started successfully.\n")
+endfunction
+
 " Start pyclewn and vim netbeans interface.
 function s:start(args)
     if !exists(":nbstart")
@@ -98,12 +118,7 @@ function s:start(args)
     exe "silent !${start}" . s:pgm . " " . a:args . " " . s:fixed . l:tmpfile . " &"
     call s:info("'pyclewn' has been started.\n")
     call s:info("Running nbstart, <C-C> to interrupt.\n")
-    " allow pyclewn to start its dispatch loop, otherwise we will have to
-    " wait 5 seconds for the second connection attempt by vim
-    sleep 500m
-    if !filereadable(l:tmpfile)
-        throw s:start_err
-    endif
+    call s:pyclewn_ready(l:tmpfile)
     exe "nbstart :" . s:connection
 
     " source vim script
@@ -128,6 +143,10 @@ function pyclewn#StartClewn(...)
     " command to start pdb: Pyclewn pdb foo.py arg1 arg2 ....
     let l:args = s:args
     if a:0 != 0
+        if has("gui_win32")
+            call s:error("The Pyclewn command on Windows does not accept arguments.")
+            return
+        endif
         if a:1 == "pdb"
             if a:0 == 2 && filereadable(a:2) == 0
                 call s:error("File '" . a:2 . "' is not readable.")

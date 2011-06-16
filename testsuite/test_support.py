@@ -167,10 +167,10 @@ class ClewnTestCase(unittest.TestCase):
                                             cwd=cwd, test_file=TESTFN_FILE)
 
         checked = ' '.join(expected.split()) in ' '.join(output.split())
-        # project files on Windows do have forward slashes, so try with
-        # forward slashes if the normal verification failed
+        # project files on Windows do have forward slashes, and gdb may output
+        # a mix of backward and forward slashes: convert also output
         if os.name == 'nt' and not checked:
-            expected = expected.replace('\\', '/')
+            output = output.replace('/', '\\')
             checked = ' '.join(expected.split()) in ' '.join(output.split())
         verify(checked,
                 "\n\n...Expected:\n%s \n\n...Got:\n%s" % (expected, output))

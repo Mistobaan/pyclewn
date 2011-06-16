@@ -364,6 +364,7 @@ class PdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':Cdetach\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':Pyclewn pdb\n'
             ':sleep ${time}\n'
             ':Cinterrupt\n'

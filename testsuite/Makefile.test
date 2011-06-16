@@ -1,3 +1,4 @@
+CC = gcc
 CFLAGS = -Wall -g $(PLATFORM)
 CPPFLAGS = -Wall -g $(PLATFORM)
 

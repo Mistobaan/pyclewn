@@ -48,7 +48,7 @@ import string
 import copy
 from abc import ABCMeta, abstractmethod
 
-from .clewn import *
+from .__init__ import *
 from . import (misc, netbeans)
 
 __all__ = ['LOOP_TIMEOUT', 'restart_timer', 'Debugger']
@@ -305,6 +305,21 @@ def restart_timer(timeout):
             return ret
         return _newf
     return decorator
+
+class Job:
+    """Job instances are pushed in an ordered heapq queue."""
+
+    def __init__(self, time, job):
+        """Constructor."""
+        self.time = time
+        self.job = job
+
+    def __lt__(self, other): return self.time < other.time
+    def __le__(self, other): return self.time <= other.time
+    def __eq__(self, other): return self.time == other.time
+    def __ne__(self, other): return self.time != other.time
+    def __gt__(self, other): return self.time > other.time
+    def __ge__(self, other): return self.time <= other.time
 
 class Debugger:
     """Abstract base class for pyclewn debuggers.
@@ -685,7 +700,7 @@ class Debugger:
                 time interval
 
         """
-        heapq.heappush(self._jobs, (time.time() + delta, callme))
+        heapq.heappush(self._jobs, Job(time.time() + delta, callme))
 
     def close(self):
         """Close the debugger and remove all signs in Vim."""
@@ -882,12 +897,12 @@ class Debugger:
             self._jobs_enabled = True
         if self._jobs_enabled:
             now = time.time()
-            while self._jobs and now >= self._jobs[0][0]:
-                callme = heapq.heappop(self._jobs)[1]
+            while self._jobs and now >= self._jobs[0].time:
+                callme = heapq.heappop(self._jobs).job
                 callme()
                 now = time.time()
             if self._jobs:
-                timeout = min(timeout, abs(self._jobs[0][0] - now))
+                timeout = min(timeout, abs(self._jobs[0].time - now))
         return timeout
 
     def _do_cmd(self, method, cmd, args):

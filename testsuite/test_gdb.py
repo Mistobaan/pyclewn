@@ -81,7 +81,11 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_logfile(
             ':qa!\n',
 
-            'gdb  CRITICAL cannot find the gdb version\n',
+            'vim  CRITICAL\n'
+            'Exception in pyclewn:\n'
+            "<class 'clewn.__init__.ClewnError'>\n"
+            '"cannot find the gdb version"',
+
 
             'error'
             )
@@ -93,7 +97,10 @@ class GdbTestCase(ClewnTestCase):
         self.cltest_logfile(
             ':qa!\n',
 
-            'gdb CRITICAL cannot start gdb as "%s"\n' % foobar,
+            'vim  CRITICAL\n'
+            'Exception in pyclewn:\n'
+            "<class 'clewn.__init__.ClewnError'>\n"
+            '"cannot start gdb as \"path_to_nowhere/foobar\""',
 
             'error'
             )
@@ -260,6 +267,7 @@ class GdbTestCase(ClewnTestCase):
             ':Cdumprepr\n'
             ':sleep ${time}\n'
             ":edit (clewn)_console | $$ | ?'info'?,/'version'/w!  ${test_out}\n"
+            ':sleep ${time}\n'
             ':qa!\n',
 
             "'file': {'file': 'foobar.c',\n"
@@ -303,7 +311,10 @@ class GdbTestCase(ClewnTestCase):
             ':Cstep\n'
             ':Cstep\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ":edit (clewn)_console | $$ | /(gdb) step/,$$w!  ${test_out}\n"
+            ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':qa!\n',
 
             "(gdb) step\n"
@@ -337,6 +348,7 @@ class GdbTestCase(ClewnTestCase):
             ':Cenable delete 1\n'
             ':Crun\n'
             ':Cstep\n'
+            ':sleep ${time}\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
             ':sign place\n'
@@ -478,6 +490,7 @@ class GdbTestCase(ClewnTestCase):
             ':Cstep\n'
             ':Cdbgvar i\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ":edit (clewn)_dbgvar | 1,$$w!  ${test_out}\n"
             ':Cstep\n'
             ':Cstep\n'
@@ -485,14 +498,16 @@ class GdbTestCase(ClewnTestCase):
             ':Cstep\n'
             ':Cstep\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ":edit (clewn)_dbgvar | 1,$$w! >> ${test_out}\n"
             ':Cfinish\n'
+            ':sleep ${time}\n'
             ':sleep ${time}\n'
             ":edit (clewn)_dbgvar | 1,$$w! >> ${test_out}\n"
             ':qa!\n',
 
             " *  var1: (int) i ={*} 0\n"
-            " *  var1: (int) i ={=} 1\n"
+            " *  var1: (int) i ={*} 1\n"
             " *  var1: (int) i ={-} 1\n"
             )
 
@@ -721,7 +736,7 @@ class GdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             "${cwd}testsuite/foo.c|30| breakpoint 1 disabled\n"
-            "${cwd}testsuite/bar.c|7| breakpoint 3 enabled\n"
+            "${cwd}testsuite/bar.c|5| breakpoint 3 enabled\n"
             )
 
     def test_bp_after_quit(self):
@@ -791,15 +806,14 @@ class GdbTestCase(ClewnTestCase):
             ':Cbreak foo\n'
             ':Crun\n'
             ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
             ':edit testsuite/foobar.c\n'
             ':echo bufname("%")\n'
             ':Cframe\n'
             ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
             ':echo bufname("%")\n'
             ':qa!\n',
 
-            "testsuite/foobar.c\n"
             "${cwd}testsuite/foo.c"
             )
 
@@ -822,12 +836,13 @@ def test_main():
     suite.addTest(GdbTestCase('test_gdb_arglist'))
     suite.addTest(GdbTestCase('test_gdb_illegal'))
     suite.addTest(GdbTestCase('test_symbols_completion'))
-    if gdb_v.split('.') < '6.4'.split('.'):
-        suite.addTest(GdbTestCase('test_oob_command'))
-    elif gdb_v.split('.') < '7.0'.split('.'):
-        suite.addTest(GdbTestCase('test_oob_command_v_64'))
-    else:
-        suite.addTest(GdbTestCase('test_oob_command_v_70'))
+    if os.name != 'nt':
+        if gdb_v.split('.') < '6.4'.split('.'):
+            suite.addTest(GdbTestCase('test_oob_command'))
+        elif gdb_v.split('.') < '7.0'.split('.'):
+            suite.addTest(GdbTestCase('test_oob_command_v_64'))
+        else:
+            suite.addTest(GdbTestCase('test_oob_command_v_70'))
     suite.addTest(GdbTestCase('test_frame_sign'))
     suite.addTest(GdbTestCase('test_annotation_lvl1'))
     suite.addTest(GdbTestCase('test_disable_bp'))
@@ -851,7 +866,8 @@ def test_main():
     suite.addTest(GdbTestCase('test_quit_display'))
     suite.addTest(GdbTestCase('test_cwindow_command'))
     suite.addTest(GdbTestCase('test_bp_after_quit'))
-    suite.addTest(GdbTestCase('test_template_function'))
+    if os.name != 'nt':
+        suite.addTest(GdbTestCase('test_template_function'))
     suite.addTest(GdbTestCase('test_sigint_as_first_command'))
     suite.addTest(GdbTestCase('test_frame_command'))
     test_support.run_suite(suite)

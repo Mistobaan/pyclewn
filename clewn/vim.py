@@ -39,14 +39,16 @@ import _thread
 import threading
 import atexit
 
-from .clewn import *
-from . import (misc, gdb, simple, netbeans, evtloop, pydb, tty)
+from .__init__ import *
+from . import (misc, gdb, simple, netbeans, evtloop)
 from . import buffer as vimbuffer
 if os.name == 'nt':
     from .nt import hide_console as daemonize
     from .nt import platform_data
+    pydb = tty = None
 else:
     from .posix import daemonize, platform_data
+    from . import (pydb, tty)
 
 
 WINDOW_LOCATION = ('top', 'bottom', 'left', 'right', 'none')
@@ -108,10 +110,9 @@ def exec_vimcmd(commands, pathname='', error_stream=None):
                 pass
 
     if not output:
-        perror(
+        raise ClewnError(
             "Error trying to start Vim with the following command:\n'%s'\n"
             % ' '.join(args))
-        sys.exit(1)
 
     return output
 
@@ -181,6 +182,9 @@ def pdb(run=False, **kwds):
     argv.extend(['--' + k + '=' + str(v) for k, v in kwds.items()])
     _pdb(Vim(False, argv), True)
 
+if os.name == 'nt':
+    del pdb
+
 def main(testrun=False):
     """Main.
 
@@ -206,10 +210,13 @@ def main(testrun=False):
             vim.clazz(options)._vim_script(options)
         return vim
 
+    except_str = ''
     try:
-        gdb_pty = tty.GdbInferiorPty(vim.stderr_hdlr)
+        gdb_pty = None
+        if os.name != 'nt' and not testrun:
+            gdb_pty = tty.GdbInferiorPty(vim.stderr_hdlr)
         if (vim.clazz == gdb.Gdb
-                    and os.name != 'nt'
+                    and gdb_pty
                     and not options.daemon
                     and os.isatty(sys.stdin.fileno())):
             # Use pyclewn pty as the debuggee standard input and output, but
@@ -244,9 +251,12 @@ def main(testrun=False):
         if vim.nbserver.netbeans:
             vim.nbserver.netbeans.show_balloon(except_str)
     finally:
-        gdb_pty.close()
+        if gdb_pty:
+            gdb_pty.close()
         debug('Vim instance: ' + str(vim))
         vim.shutdown()
+        if os.name == 'nt' and except_str:
+            time.sleep(5)
 
     return vim
 
@@ -346,18 +356,16 @@ class Vim:
              self.options.noname_fix,
              vimver) = output
         else:
-            critical('output of %s: %s', cmds, output)
-            sys.exit(1)
+            raise ClewnError('output of %s: %s' % (cmds, output))
         info('Vim version: %s', vimver)
 
         # check pyclewn version
         pyclewn_version = 'pyclewn-' + __tag__
         if version != pyclewn_version:
-            critical('pyclewn.vim version does not match pyclewn\'s:\n'\
+            raise ClewnError('pyclewn.vim version does not match pyclewn\'s:\n'\
                         '\t\tpyclewn version: "%s"\n'\
-                        '\t\tpyclewn.vim version: "%s"',
-                        pyclewn_version, version)
-            sys.exit(1)
+                        '\t\tpyclewn.vim version: "%s"'
+                        % (pyclewn_version, version))
         info('pyclewn.vim version: %s', version)
 
     def spawn_vim(self):
@@ -487,9 +495,10 @@ class Vim:
         parser.add_option('-s', '--simple',
                 action="store_true", default=False,
                 help='select the simple debugger')
-        parser.add_option('--pdb',
-                action="store_true", default=False,
-                help='select \'pdb\', the python debugger')
+        if os.name != 'nt':
+            parser.add_option('--pdb',
+                    action="store_true", default=False,
+                    help='select \'pdb\', the python debugger')
         parser.add_option('-g', '--gdb',
                 type='string', metavar='PARAM_LIST', default='',
                 help='select the gdb debugger (the default)'
@@ -497,10 +506,11 @@ class Vim:
         parser.add_option('-d', '--daemon',
                 action="store_true", default=False,
                 help='run as a daemon (default \'%default\')')
-        parser.add_option('--run',
-                action="store_true", default=False,
-                help=('allow the debuggee to run after the pdb() call'
-                ' (default \'%default\')'))
+        if os.name != 'nt':
+            parser.add_option('--run',
+                    action="store_true", default=False,
+                    help=('allow the debuggee to run after the pdb() call'
+                    ' (default \'%default\')'))
         parser.add_option('--tty',
                 type='string', metavar='TTY', default=os.devnull,
                 help=('use TTY for input/output by the python script being'
@@ -547,6 +557,9 @@ class Vim:
         parser.add_option('-f', '--file', metavar='FILE',
                 help='set the log file name to FILE')
         (self.options, args) = parser.parse_args(args=argv)
+
+        if os.name == 'nt':
+            self.options.pdb = None
 
         if self.options.simple:
             self.clazz = simple.Simple

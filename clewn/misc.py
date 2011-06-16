@@ -32,7 +32,7 @@ import pprint
 import itertools
 import io
 
-from .clewn import *
+from .__init__ import *
 
 VIM73_BUG_SLEEP_TIME = 0.500
 DOUBLEQUOTE = '"'

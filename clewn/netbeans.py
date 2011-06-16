@@ -30,7 +30,7 @@ import asynchat
 import difflib
 from abc import ABCMeta, abstractmethod
 
-from .clewn import *
+from .__init__ import *
 from . import misc
 from . import buffer as vimbuffer
 
