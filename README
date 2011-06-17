@@ -65,7 +65,7 @@ Features
    The vim ``:nbstart`` command that allows pyclewn to be started from within
    vim, is available since vim version 7.3.
 
-    Support of Python 3 is available since pyclewn 1.6.
+   Support of Python 3 is available since pyclewn 1.6.
 
 Comparison of clewn, vimGdb and pyclewn
 ---------------------------------------
