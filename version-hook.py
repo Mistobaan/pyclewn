@@ -35,6 +35,8 @@ def command(cmd_list):
                                     stderr=subprocess.PIPE).communicate()
     if err:
         raise HookError(err)
+    if sys.version_info >= (3, 0):
+        return out.strip().decode()
     return out.strip()
 
 def hook_type(args):

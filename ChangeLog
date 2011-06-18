@@ -1,6 +1,7 @@
-2011-06-14  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-06-18  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
-	* runtime/autoload/pyclewn.vim: fix a syntax error in
+	* version-hook.py: Run version-hook with Python 3.
+	* runtime/autoload/pyclewn.vim: Fix a syntax error in
 	.pyclewn_keys.gdb causes :Pyclewn to hang.
 	* The whole repository: Create the 'python2' mercurial branch and port
 	pyclewn to Python 3 on the default branch.
