@@ -56,12 +56,6 @@ DATA_FILES = [
 if os.name == 'nt':
     DATA_FILES.append(pyclewn_install.icon(vimdir))
 
-RE_VERSION = r'(?P<name>pyclewn-)(?P<num>\d+\.\d+)'     \
-             r'# RE: pyclewn-d.d'
-
-# compile regexps
-re_version = re.compile(RE_VERSION, re.VERBOSE)
-
 # installation path of pyclewn lib
 pythonpath = None
 
@@ -94,7 +88,7 @@ def update_version(filename):
     content = []
     f = open(filename, 'r+')
     for line in f:
-        line = re_version.sub(r'\g<name>' + __tag__, line)
+        line = line.replace('pyclewn-__tag__' , 'pyclewn-' + __tag__)
         content.append(line)
     f.seek(0)
     f.writelines(content)
