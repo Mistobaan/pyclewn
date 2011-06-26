@@ -42,6 +42,7 @@ Building from source
 Run the following command to build a distribution, the tarball is created in
 the ``dist`` directory::
 
+        $ hg update default
         $ python3 setup.py sdist
 
 Run the following commands to build a Python 2 distribution::
