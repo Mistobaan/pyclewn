@@ -1,6 +1,18 @@
 News
 ====
 
+Pyclewn 1.7
+-----------
+
+.. June 27, 2011
+
+Bug fixes
+^^^^^^^^^
+
+* Fix Pyclewn with the Python 2 ``pdb`` debugger raises the exception
+  ``ValueError: "lnum" must be strictly positive: 0`` when stepping into an
+  empty module.
+
 Pyclewn 1.6
 -----------
 

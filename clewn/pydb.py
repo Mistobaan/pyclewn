@@ -329,6 +329,9 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     def hilite_frame(self):
         """Highlite the frame sign."""
         frame, lineno = self.stack[self.curindex]
+        # a Python 2 bug
+        if lineno == 0:
+            lineno = 1
         filename = self.canonic(frame.f_code.co_filename)
         if filename == "<" + filename[1:-1] + ">":
             filename = None

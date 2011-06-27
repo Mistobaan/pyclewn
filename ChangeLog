@@ -1,3 +1,8 @@
+2011-06-27  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* pydb.py: fix '0' line number when stepping into an empty module.
+
+===============================================================================
 2011-06-14  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* version-hook.py: Run version-hook with Python 3.
