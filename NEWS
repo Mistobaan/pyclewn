@@ -1,6 +1,16 @@
 News
 ====
 
+Pyclewn 1.7
+-----------
+
+.. June 27, 2011
+
+Bug fixes
+^^^^^^^^^
+
+* Fix ``inferior_tty.py`` uses 100% cpu.
+
 Pyclewn 1.6
 -----------
 

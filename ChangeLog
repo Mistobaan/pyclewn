@@ -1,3 +1,8 @@
+2011-06-27  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* inferior_tty.py: Fix 'inferior_tty.py' uses 100% cpu.
+
+===============================================================================
 2011-06-18  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* version-hook.py: Run version-hook with Python 3.

@@ -38,6 +38,7 @@ import logging
 
 import clewn.misc as misc
 import clewn.tty as tty
+import clewn.debugger as debugger
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('pty')
@@ -137,7 +138,7 @@ def loop(gdb_pty):
         gdb_pty.stty_raw()
         try:
             while asyncore.socket_map and not got_sigchld:
-                asyncore.poll()
+                asyncore.poll(timeout=debugger.LOOP_TIMEOUT)
                 if gdb_pty.stdin_dsptch.close_tty and not slave_closed:
                     slave_closed = True
                     os.close(gdb_pty.slave_fd)
