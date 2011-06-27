@@ -1,5 +1,6 @@
 2011-06-27  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* inferior_tty.py: Fix 'inferior_tty.py' uses 100% cpu.
 	* pydb.py: fix '0' line number when stepping into an empty module.
 
 ===============================================================================
