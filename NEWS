@@ -4,11 +4,13 @@ News
 Pyclewn 1.7
 -----------
 
-.. June 27, 2011
+.. July 1, 2011
 
 Bug fixes
 ^^^^^^^^^
 
+* Fix an unfolded watched variable of 500 elements causes 100% cpu use when
+  the hiliting of all its elements is updated.
 * Fix ``inferior_tty.py`` uses 100% cpu.
 * Fix Pyclewn with the Python 2 ``pdb`` debugger raises the exception
   ``ValueError: "lnum" must be strictly positive: 0`` when stepping into an

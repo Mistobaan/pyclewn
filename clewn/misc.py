@@ -264,6 +264,16 @@ def last_traceback():
 
     return t, v, filename, lnum, last_tb
 
+def offset_gen(lines):
+    """Return an iterator over the offsets of the beginning of lines.
+
+    'lines': a list of strings
+    """
+    offset = 0
+    for l in lines:
+        yield offset
+        offset += len(l)
+
 
 class PrettyPrinterString(pprint.PrettyPrinter):
     """Strings are printed with str() to avoid duplicate backslashes."""
