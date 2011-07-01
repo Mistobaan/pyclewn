@@ -626,7 +626,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             else:
                 self.onecmd(line)
 
-        if cmd not in ('mapkeys', 'dumprepr'):
+        if cmd not in ('mapkeys', 'dumprepr', 'loglevel'):
             self.do_prompt(True)
 
     def onecmd(self, line):
@@ -667,7 +667,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         """Print help on the pdb commands."""
         unused, cmd = args
         cmd = cmd.strip()
-        allowed = list(PDB_CMDS.keys()) + ['mapkeys', 'unmapkeys', 'dumprepr']
+        allowed = list(PDB_CMDS.keys()) + ['mapkeys', 'unmapkeys', 'dumprepr',
+                                                                    'loglevel']
         if not cmd:
             print("\nAvailable commands:")
             count = 0
@@ -694,7 +695,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             "Without argument, print the list of available commands.\n"
             "With a command name as argument, print help about that command.")
         elif cmd in ('interrupt', 'detach', 'quit',
-                     'mapkeys', 'unmapkeys', 'dumprepr', 'threadstack',):
+                     'mapkeys', 'unmapkeys', 'dumprepr',
+                     'loglevel', 'threadstack',):
             method = getattr(self, 'cmd_%s' % cmd, None)
             if method is not None and method.__doc__ is not None:
                 print(method.__doc__.split('\n')[0])

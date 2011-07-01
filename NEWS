@@ -4,7 +4,13 @@ News
 Pyclewn 1.7
 -----------
 
-.. June 29, 2011
+.. July 1, 2011
+
+New feature
+^^^^^^^^^^^
+
+* The new ``loglevel`` command allows to print or set the log level
+  dynamically from inside Vim.
 
 Bug fixes
 ^^^^^^^^^

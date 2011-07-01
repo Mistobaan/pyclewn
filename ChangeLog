@@ -1,6 +1,8 @@
-2011-06-29  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-07-01  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
-	* netbeans.py misc.py: use difflib.unified_diff to update the watched
+	* debugger.py vim.py misc.py pydb.py: Implement the 'loglevel' pyclewn
+	command.
+	* netbeans.py misc.py: Use difflib.unified_diff to update the watched
 	variables buffer (see http://bugs.python.org/issue6931).
 	* inferior_tty.py: Fix 'inferior_tty.py' uses 100% cpu.
 

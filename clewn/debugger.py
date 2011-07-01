@@ -43,6 +43,7 @@ import os
 import os.path
 import re
 import time
+import logging
 import heapq
 import string
 import copy
@@ -389,6 +390,7 @@ class Debugger:
         self.cmds = {
             'dumprepr': (),
             'help': (),
+            'loglevel': misc.LOG_LEVELS,
             'mapkeys': (),
             'unmapkeys': (),
         }
@@ -993,6 +995,23 @@ class Debugger:
         self.console_print(
                 'netbeans:\n%s\n' % misc.pformat(self.__nbsock.__dict__)
                 + '%s:\n%s\n' % (self.__class__.__name__.lower(), self))
+        self.print_prompt()
+
+    def cmd_loglevel(self, cmd, level):
+        """Get or set the pyclewn log level."""
+        unused = cmd
+        if not level:
+            level = logging.getLevelName(logging.getLogger().level).lower()
+            self.console_print("The pyclewn log level is currently '%s'.\n"
+                                                                    % level)
+        elif level.lower() in misc.LOG_LEVELS:
+            if level.lower() == misc.NBDEBUG_LEVEL_NAME:
+                logging.getLogger().setLevel(misc.NBDEBUG)
+            else:
+                logging.getLogger().setLevel(getattr(logging, level.upper()))
+            self.console_print('Pyclewn log level is set to %s.\n' % level)
+        else:
+            self.console_print("'%s' is not a valid log level.\n" % level)
         self.print_prompt()
 
     def cmd_mapkeys(self, *args):

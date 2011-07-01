@@ -552,8 +552,8 @@ class Vim:
                 ':'.join([str(x) for x in CONNECTION_DEFAULTs]))
         parser.add_option('-l', '--level', metavar='LEVEL',
                 type='string', default='',
-                help='set the log level to LEVEL: %s (default error)'
-                % misc.LOG_LEVELS)
+                help='set the log level to LEVEL: %s (default \'error\')'
+                % ', '.join(misc.LOG_LEVELS))
         parser.add_option('-f', '--file', metavar='FILE',
                 help='set the log file name to FILE')
         (self.options, args) = parser.parse_args(args=argv)
@@ -596,7 +596,7 @@ class Vim:
             else:
                 parser.error(
                     '"%s" is an invalid log LEVEL, must be one of: %s'
-                    % (self.options.level, misc.LOG_LEVELS))
+                    % (self.options.level, ', '.join(misc.LOG_LEVELS)))
 
     def setlogger(self):
         """Setup the root logger with handlers: stderr and optionnaly a file."""
