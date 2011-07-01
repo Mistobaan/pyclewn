@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2011 June 14
+*pyclewn.txt*                                   Last change: 2011 July 1st
 
 
                             PYCLEWN USER MANUAL
@@ -731,6 +731,8 @@ commands that are listed here:
                      commands (those on this list) in addition to the help on
                      the debugger commands
 
+    * Cloglevel      print or set the log level dynamically from inside Vim
+
     *|Cmapkeys|      map pyclewn keys
 
     *|Cproject|      save the current gdb settings to a project file
@@ -948,6 +950,8 @@ that are listed here:
 
     * Cdumprepr      print on the console pyclewn internal structures that
                      may be used for debugging pyclewn
+
+    * Cloglevel      print or set the log level dynamically from inside Vim
 
     *|Cmapkeys|      map pyclewn keys
 
@@ -1314,6 +1318,9 @@ CLASSES
      |  cmd_help(self, *args)
      |      Print help on all pyclewn commands in the Vim debugger
      |      console.
+     |
+     |  cmd_loglevel(self, cmd, level)
+     |      Get or set the pyclewn log level.
      |
      |  cmd_mapkeys(self, *args)
      |      Map the pyclewn keys.
