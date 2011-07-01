@@ -184,26 +184,6 @@ def parse_keyval(regexp, line):
     debug('not an iterable of key/value pairs: "%s"', line)
     return None
 
-# subprocess.check_call does not exist in Python 2.4
-def check_call(*popenargs, **kwargs):
-    """Run command with arguments.  Wait for command to complete.  If
-    the exit code was zero then return, otherwise raise
-    CalledProcessError.  The CalledProcessError object will have the
-    return code in the returncode attribute.
-
-    The arguments are the same as for the Popen constructor.  Example:
-
-    check_call(["ls", "-l"])
-
-    """
-    retcode = subprocess.call(*popenargs, **kwargs)
-    cmd = kwargs.get("args")
-    if cmd is None:
-        cmd = popenargs[0]
-    if retcode:
-        raise CalledProcessError(retcode, cmd)
-    return retcode
-
 def smallest_prefix(word, other):
     """Return the smallest prefix of 'word', not prefix of 'other'."""
     assert word
@@ -253,6 +233,16 @@ def last_traceback():
 
     return t, v, filename, lnum, last_tb
 
+def offset_gen(lines):
+    """Return an iterator over the offsets of the beginning of lines.
+
+    'lines': a list of strings
+    """
+    offset = 0
+    for l in lines:
+        yield offset
+        offset += len(l)
+
 
 class PrettyPrinterString(pprint.PrettyPrinter):
     """Strings are printed with str() to avoid duplicate backslashes."""
@@ -268,24 +258,6 @@ def pformat(object, indent=1, width=80, depth=None):
     """Format a Python object into a pretty-printed representation."""
     return PrettyPrinterString(
                     indent=indent, width=width, depth=depth).pformat(object)
-
-class CalledProcessError(ClewnError):
-    """This exception is raised when a process run by check_call() returns
-    a non-zero exit status.  The exit status will be stored in the
-    returncode attribute.
-
-    """
-
-    def __init__(self, returncode, cmd):
-        """Constructor."""
-        ClewnError.__init__(self)
-        self.returncode = returncode
-        self.cmd = cmd
-
-    def __str__(self):
-        """Return the error message."""
-        return "Command '%s' returned non-zero exit status %d"  \
-                                        % (self.cmd, self.returncode)
 
 class TmpFile:
     """A container for a temporary writtable file object.

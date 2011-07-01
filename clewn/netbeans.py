@@ -39,21 +39,24 @@ CONSOLE = '(clewn)_console'
 CONSOLE_MAXLINES = 10000
 VARIABLES_BUFFER = '(clewn)_dbgvar'
 
-RE_AUTH = r'^\s*AUTH\s*(?P<passwd>\S+)\s*$'                     \
+RE_AUTH = r'^\s*AUTH\s*(?P<passwd>\S+)\s*$'                             \
           r'# RE: password authentication'
-RE_RESPONSE = r'^\s*(?P<seqno>\d+)\s*(?P<args>.*)\s*$'          \
+RE_RESPONSE = r'^\s*(?P<seqno>\d+)\s*(?P<args>.*)\s*$'                  \
               r'# RE: a netbeans response'
-RE_EVENT = r'^\s*(?P<buf_id>\d+):(?P<event>\S+)=(?P<seqno>\d+)' \
-           r'\s*(?P<args>.*)\s*$'                               \
+RE_EVENT = r'^\s*(?P<buf_id>\d+):(?P<event>\S+)=(?P<seqno>\d+)'         \
+           r'\s*(?P<args>.*)\s*$'                                       \
            r'# RE: a netbeans event message'
-RE_LNUMCOL = r'^(?P<lnum>\d+)/(?P<col>\d+)'                     \
+RE_LNUMCOL = r'^(?P<lnum>\d+)/(?P<col>\d+)'                             \
              r'# RE: lnum/col'
+RE_UNIDIFF = r'^@@\s-\d+,(?P<a>\d+)\s\+(?P<lnum>\d+),(?P<b>\d+)\s@@$'   \
+             r'# RE: @@ -%d,%d +%d,%d @@'
 
 # compile regexps
 re_auth = re.compile(RE_AUTH, re.VERBOSE)
 re_response = re.compile(RE_RESPONSE, re.VERBOSE)
 re_event = re.compile(RE_EVENT, re.VERBOSE)
 re_lnumcol = re.compile(RE_LNUMCOL, re.VERBOSE)
+re_unidiff = re.compile(RE_UNIDIFF, re.VERBOSE)
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('nb')
@@ -389,8 +392,6 @@ class DebuggerVarBuffer(ClewnBuffer):
     Instance attributes:
         linelist: list
             the vim buffer content as a sequence of newline terminated strings
-        differ: difflib.Differ
-            a differ object to compare two sequences of lines
 
     """
 
@@ -398,15 +399,6 @@ class DebuggerVarBuffer(ClewnBuffer):
         """Constructor."""
         ClewnBuffer.__init__(self, VARIABLES_BUFFER, nbsock)
         self.linelist = []
-        self.differ = difflib.Differ()
-
-    def append(self, msg, *args):
-        """Append 'msg' to the end of the buffer."""
-        if args:
-            msg = msg % args
-        assert msg.endswith('\n')
-        ClewnBuffer.append(self, msg)
-        self.linelist.extend(msg.splitlines(1))
 
     def clear(self, len=-1):
         """Clear the buffer."""
@@ -419,29 +411,55 @@ class DebuggerVarBuffer(ClewnBuffer):
         if not self.buf.registered:
             return
 
-        offset = 0
+        # build the list of the offsets of the beginning of each line
         newlist = content.splitlines(1)
+        num_lines = len(newlist)
+        offsets = [offset for offset in misc.offset_gen(newlist)]
+
+        started = False
+        hunk_a = hunk_b = 0
         send_function = self.send_function
         try:
-            for line in self.differ.compare(self.linelist, newlist):
-                assert len(line) > 2
+            if logger.level <= logging.DEBUG:
+                for line in difflib.unified_diff(self.linelist, newlist):
+                    debug(line.strip('\n'))
 
-                if line.startswith('  '):
-                    offset += len(line) - 2
-                elif line.startswith('+ '):
-                    delta = len(line) - 2
+            for line in difflib.unified_diff(self.linelist, newlist):
+                if not started:
+                    if line.startswith('+++'):
+                        started = True
+                    continue
+                if hunk_a == hunk_b == 0:
+                    matchobj = re_unidiff.match(line.strip())
+                    if matchobj:
+                        lnum = int(matchobj.group('lnum'))
+                        hunk_a = int(matchobj.group('a'))
+                        hunk_b = int(matchobj.group('b'))
+                    else:
+                        assert False, "missing unified-diff control line"
+                    continue
+                if line[0] == ' ':
+                    lnum += 1
+                    hunk_a -= 1
+                    hunk_b -= 1
+                elif line[0] == '+':
+                    delta = len(line) - 1
                     send_function('insert',
-                            '%s %s' % (str(offset), misc.quote(line[2:])))
+                        '%s %s' % (str(offsets[lnum-1]), misc.quote(line[1:])))
                     self.len += delta
-                    offset += delta
-                elif line.startswith('- '):
-                    delta = len(line) - 2
-                    self.remove(offset, delta)
+                    lnum += 1
+                    hunk_b -= 1
+                elif line[0] == '-':
+                    delta = len(line) - 1
+                    if lnum <= num_lines:
+                        self.remove(offsets[lnum-1], delta)
+                    else:
+                        # removing (one of) the last line(s)
+                        self.remove(len(content), delta)
                     self.len -= delta
-                elif line.startswith('? '):
-                    pass    # skip line not present in either input sequence
+                    hunk_a -= 1
                 else:
-                    assert False, "line not prefixed by the differ instance"
+                    assert False, "unknown unified-diff line type"
         finally:
             self.terminate_editing()
 

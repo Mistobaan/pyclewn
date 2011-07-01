@@ -24,10 +24,10 @@
 import sys
 import os
 import unittest
+import subprocess
 import testsuite.test_support as test_support
 
 import clewn.gdb as gdb
-import clewn.misc as misc
 from .test_support import ClewnTestCase, TESTFN_FILE, TESTFN_OUT
 
 if os.name == 'nt':
@@ -472,6 +472,88 @@ class GdbTestCase(ClewnTestCase):
             "   *  var2.key  : (int   ) key   ={=} 1\n"
             )
 
+    def test_varobj_del_last(self):
+        """Check deleting the last varobj"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak foo\n'
+            ':Crun\n'
+            ':Cdbgvar map\n'
+            ':Cdbgvar map\n'
+            ':Cdbgvar map\n'
+            ':sleep ${time}\n'
+            ':Cfoldvar 2\n'
+            ':sleep ${time}\n'
+            ':Cstep\n'
+            ':Cstep\n'
+            ':Cstep\n'
+            ':sleep ${time}\n'
+            ':Cdelvar var3\n'
+            ':sleep ${time}\n'
+            ':buffer (clewn)_dbgvar | 1,3w!  ${test_out}\n'
+            ':qa!\n',
+
+            "[+] var1: (map_t) map ={=} {...}\n"
+            "[-] var2: (map_t) map ={=} {...}\n"
+            "   *  var2.key  : (int   ) key   ={=} 1\n"
+            )
+
+    def test_varobj_del_first(self):
+        """Check deleting the first varobj"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak foo\n'
+            ':Crun\n'
+            ':Cdbgvar map\n'
+            ':Cdbgvar map\n'
+            ':Cdbgvar map\n'
+            ':sleep ${time}\n'
+            ':Cfoldvar 2\n'
+            ':sleep ${time}\n'
+            ':Cstep\n'
+            ':Cstep\n'
+            ':Cstep\n'
+            ':sleep ${time}\n'
+            ':Cdelvar var1\n'
+            ':sleep ${time}\n'
+            ':buffer (clewn)_dbgvar | 1,2w!  ${test_out}\n'
+            ':qa!\n',
+
+            "[-] var2: (map_t) map ={=} {...}\n"
+            "   *  var2.key  : (int   ) key   ={=} 1\n"
+            )
+
+    def test_varobj_del_middle(self):
+        """Check deleting a middle varobj"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak foo\n'
+            ':Crun\n'
+            ':Cdbgvar map\n'
+            ':Cdbgvar map\n'
+            ':Cdbgvar map\n'
+            ':sleep ${time}\n'
+            ':Cfoldvar 2\n'
+            ':sleep ${time}\n'
+            ':Cstep\n'
+            ':Cstep\n'
+            ':Cstep\n'
+            ':sleep ${time}\n'
+            ':Cdelvar var2\n'
+            ':sleep ${time}\n'
+            ':buffer (clewn)_dbgvar | 1,2w!  ${test_out}\n'
+            ':qa!\n',
+
+            "[+] var1: (map_t) map ={=} {...}\n"
+            "[+] var3: (map_t) map ={=} {...}\n"
+            )
+
     def test_varobj_hilite(self):
         """Check varobj hiliting"""
         self.cltest_redir(
@@ -814,7 +896,7 @@ class GdbTestCase(ClewnTestCase):
 def test_main():
     """Run all the tests."""
     # run make on the testsuite
-    misc.check_call(['make', '-C', 'testsuite'])
+    subprocess.check_call(['make', '-C', 'testsuite'])
 
     suite = unittest.TestSuite()
     suite.addTest(GdbTestCase('test_completion'))
@@ -846,6 +928,9 @@ def test_main():
     suite.addTest(GdbTestCase('test_break_completion'))
     suite.addTest(GdbTestCase('test_varobj'))
     suite.addTest(GdbTestCase('test_varobj_fold'))
+    suite.addTest(GdbTestCase('test_varobj_del_last'))
+    suite.addTest(GdbTestCase('test_varobj_del_first'))
+    suite.addTest(GdbTestCase('test_varobj_del_middle'))
     suite.addTest(GdbTestCase('test_varobj_hilite'))
     suite.addTest(GdbTestCase('test_tabedit_bug'))
     suite.addTest(GdbTestCase('test_watch_print'))
