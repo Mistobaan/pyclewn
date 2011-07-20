@@ -260,6 +260,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             thread identifiers
         started_event: Event
             set after the clewn thread has been successfully started
+        closing: boolean
+            when True, terminate the clewn thread asyncore loop
 
     """
 
@@ -286,6 +288,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.clewn_thread_ident = 0
         self.target_thread_ident = 0
         self.started_event = threading.Event()
+        self.closing = False
 
         # the ping pipe is used to ping the clewn thread asyncore loop to enable
         # switching nbsock to the asyncore loop running in the main loop, in the

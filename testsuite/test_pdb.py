@@ -338,7 +338,7 @@ class PdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             '(pdb) continue\n'
-            "An exception occured: ('ZeroDivisionError:', \"'int division or modulo by zero'\")\n"
+            "An exception occured: ('ZeroDivisionError:', \"'division by zero'\")\n"
             '> <module>() at ${cwd}foobar.py:13\n'
             '  main() at ${cwd}foobar.py:8\n'
             "  foo(run=True, args=('unused',)) at ${cwd}testsuite/foo.py:38\n"

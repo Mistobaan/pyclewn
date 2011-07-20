@@ -122,17 +122,22 @@ def pformat(name, obj):
         return '%s:\n%s\n' % (name, misc.pformat(obj.__dict__))
     else: return ''
 
-def vim73_workaround(vim):
-    """Work around a bug in Vim73."""
+def close_clewnthread(vim):
+    """Terminate the clewn thread and stop the debugger."""
     # vim73 'netbeans close SEGV' bug (fixed by 7.3.060).
     # Allow vim to process all netbeans PDUs before receiving the disconnect
     # event.
     if not vim.closed:
-        info('enter vim73_workaround')
+        info('enter close_clewnthread')
         time.sleep(misc.VIM73_BUG_SLEEP_TIME)
-
         debug('Vim instance: ' + str(vim))
-        vim.shutdown()
+
+    # notify 'Clewn-thread' of pending termination, remove the settrace function
+    pdb = vim.debugger
+    pdb.closing = True
+    if pdb.thread:
+        pdb.thread.join()
+    sys.settrace(None)
 
 def _pdb(vim, attach=False):
     """Start the python debugger thread."""
@@ -141,7 +146,6 @@ def _pdb(vim, attach=False):
         sys.exit(1)
 
     Vim.pdb_running = True
-    atexit.register(vim73_workaround, vim)
     vim.debugger = vim.clazz(vim.options)
     pdb = vim.debugger
     pdb.target_thread_ident = _thread.get_ident()
@@ -159,6 +163,7 @@ def _pdb(vim, attach=False):
     if not pdb.started_event.isSet():
         print('Aborting, failed to start the clewn thread.', file=sys.stderr)
         sys.exit(1)
+    atexit.register(close_clewnthread, vim)
 
     if attach:
         if vim.options.run:
@@ -689,7 +694,7 @@ class Vim:
         pdb.started_event.set()
         last_nbsock = None
         session_logged = True
-        while self.socket_map:
+        while self.socket_map and not pdb.closing:
             nbsock = self.nbserver.netbeans
             # a new netbeans connection, the server has closed last_nbsock
             if nbsock != last_nbsock and nbsock.ready:
