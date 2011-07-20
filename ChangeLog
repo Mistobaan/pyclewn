@@ -1,5 +1,6 @@
-2011-07-01  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-07-19  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* vim.py pydb.py: Fix ignored AttributeError exception (pdb).
 	* debugger.py vim.py misc.py pydb.py: Implement the 'loglevel' pyclewn
 	command.
 	* netbeans.py misc.py: Use difflib.unified_diff to update the watched
@@ -8,7 +9,7 @@
 	* pydb.py: fix '0' line number when stepping into an empty module.
 
 ===============================================================================
-2011-06-14  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-06-18  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* version-hook.py: Run version-hook with Python 3.
 	* runtime/autoload/pyclewn.vim: Fix a syntax error in
