@@ -223,13 +223,15 @@ _balloonrepr = BalloonRepr().repr
 
 class Ping(asyncproc.FileAsynchat):
     """Terminate the select call in the asyncore loop."""
-    def __init__(self, f):
+    def __init__(self, f, pdb):
         """Constructor."""
         asyncproc.FileAsynchat.__init__(self, f, None, True)
+        self.pdb = pdb
 
     def found_terminator(self):
         """Ignore received data."""
         self.ibuff = []
+        self.pdb.synchronisation_evt.set()
 
 class Pdb(debugger.Debugger, pdb.Pdb):
     """The Pdb debugger.
@@ -258,8 +260,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             when True, print the stack entry
         clewn_thread_ident, target_thread_ident: int
             thread identifiers
-        started_event: Event
-            set after the clewn thread has been successfully started
+        synchronisation_evt: Event
+            used to synchronise both threads
         closing: boolean
             when True, terminate the clewn thread asyncore loop
 
@@ -287,14 +289,14 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.doprint_trace = False
         self.clewn_thread_ident = 0
         self.target_thread_ident = 0
-        self.started_event = threading.Event()
+        self.synchronisation_evt = threading.Event()
         self.closing = False
 
         # the ping pipe is used to ping the clewn thread asyncore loop to enable
         # switching nbsock to the asyncore loop running in the main loop, in the
         # 'interaction' method
         ping_r, self.ping_w = os.pipe()
-        Ping(ping_r)
+        Ping(ping_r, self)
 
         self.cmds.update(PDB_CMDS)
         self.cmds['help'] = list(self.cmds.keys())
@@ -361,6 +363,13 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             else:
                 args[name] = "*** undefined ***"
         return args
+
+    def ping(self):
+        """Ping the clewn thread asyncore loop."""
+        os.write(self.ping_w, b'ping\n')
+        self.synchronisation_evt.wait(1)
+        if not self.synchronisation_evt.isSet():
+            error('Cannot ping the clewn thread asyncore loop.')
 
     #-----------------------------------------------------------------------
     #   Bdb methods
@@ -549,7 +558,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         # switch nbsock to the main thread asyncore loop
         self.clt_sockmap = self.switch_map(self.socket_map)
         assert self.clt_sockmap is not None
-        os.write(self.ping_w, b'ping\n')
+        self.ping()
 
         self.setup(frame, traceback)
         if self.trace_type or self.doprint_trace:
@@ -585,7 +594,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         finally:
             # switch nbsock to the clewn thread asyncore loop
             self.switch_map(self.clt_sockmap)
-            os.write(self.ping_w, b'ping\n')
+            self.ping()
 
     #-----------------------------------------------------------------------
     #   commands

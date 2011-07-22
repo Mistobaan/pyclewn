@@ -159,8 +159,8 @@ def _pdb(vim, attach=False):
             vim.run_pdb()
 
     ClewnThread().start()
-    pdb.started_event.wait(1)
-    if not pdb.started_event.isSet():
+    pdb.synchronisation_evt.wait(1)
+    if not pdb.synchronisation_evt.isSet():
         print('Aborting, failed to start the clewn thread.', file=sys.stderr)
         sys.exit(1)
     atexit.register(close_clewnthread, vim)
@@ -691,7 +691,7 @@ class Vim:
         pdb.thread = threading.currentThread()
         pdb.clewn_thread_ident = _thread.get_ident()
 
-        pdb.started_event.set()
+        pdb.synchronisation_evt.set()
         last_nbsock = None
         session_logged = True
         while self.socket_map and not pdb.closing:
