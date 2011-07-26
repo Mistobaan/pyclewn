@@ -41,14 +41,19 @@ class PdbTestCase(ClewnTestCase):
 
         # start the python script being debugged
         self.fnull = open(os.devnull, 'w')
+        if os.name == 'nt':
+            python_name = 'python'
+        else:
+            python_name = 'python3'
         self.debugged_script = subprocess.Popen(
-                                    ['python3', './foobar.py'],
+                                    [python_name, './foobar.py'],
                                      stdout=self.fnull)
 
     def test_intr_load_buffer(self):
         """The buffer is automatically loaded on the interrupt command"""
         self.cltest_redir(
             ':Cinterrupt\n'
+            ':sleep ${time}\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
             ':sign place\n'
@@ -66,6 +71,7 @@ class PdbTestCase(ClewnTestCase):
         """The break command"""
         self.cltest_redir(
             ':Cinterrupt\n'
+            ':sleep ${time}\n'
             ':sleep ${time}\n'
             ':Cbreak main\n'
             ':sleep ${time}\n'
@@ -87,6 +93,7 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':Cbreak ${cwd}foobar.py:5\n'
             ':Cdisable 1\n'
             ':sleep ${time}\n'
@@ -107,6 +114,7 @@ class PdbTestCase(ClewnTestCase):
         """The enable command"""
         self.cltest_redir(
             ':Cinterrupt\n'
+            ':sleep ${time}\n'
             ':sleep ${time}\n'
             ':Cbreak ${cwd}foobar.py:5\n'
             ':Cbreak ${cwd}foobar.py:7\n'
@@ -132,6 +140,7 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':Cbreak ${cwd}foobar.py:5\n'
             ':Cbreak ${cwd}foobar.py:7\n'
             ':Cbreak ${cwd}foobar.py:7\n'
@@ -156,6 +165,7 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':Cbreak foo.foo\n'
             ':Ccontinue\n'
             ':sleep ${time}\n'
@@ -178,6 +188,7 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':Ctbreak main\n'
             ':Ccontinue\n'
             ':sleep ${time}\n'
@@ -195,6 +206,7 @@ class PdbTestCase(ClewnTestCase):
         """Delete a breakpoint"""
         self.cltest_redir(
             ':Cinterrupt\n'
+            ':sleep ${time}\n'
             ':sleep ${time}\n'
             ':Cbreak main\n'
             ':Cbreak main\n'
@@ -217,6 +229,7 @@ class PdbTestCase(ClewnTestCase):
         """Setting a breakpoint opens the source file"""
         self.cltest_redir(
             ':Cinterrupt\n'
+            ':sleep ${time}\n'
             ':sleep ${time}\n'
             ':Cbreak main\n'
             ':Ccontinue\n'
@@ -244,6 +257,7 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':Cbreak main\n'
             ':Ccontinue\n'
             ':sleep ${time}\n'
@@ -269,6 +283,7 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':Cbreak foo.foo\n'
             ':Ccontinue\n'
             ':sleep ${time}\n'
@@ -293,7 +308,8 @@ class PdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':Cinterrupt\n'
             ':sleep ${time}\n'
-            ':Cbreak ${cwd}testsuite/foo.py:35\n'
+            ':sleep ${time}\n'
+            ':Cbreak testsuite/foo.py:35\n'
             ':Ccontinue\n'
             ':sleep ${time}\n'
             ':C run = True\n'
@@ -302,12 +318,13 @@ class PdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':Cinterrupt\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':Cjump 19\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
             ':sign place\n'
             ':redir! > ${test_file}1\n'
-            ':Cbreak ${cwd}testsuite/foo.py:39\n'
+            ':Cbreak testsuite/foo.py:39\n'
             ':Ccontinue\n'
             ':sleep ${time}\n'
             ':C run = False\n'
@@ -325,7 +342,8 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
-            ':Cbreak ${cwd}testsuite/foo.py:35\n'
+            ':sleep ${time}\n'
+            ':Cbreak testsuite/foo.py:35\n'
             ':Ccontinue\n'
             ':sleep ${time}\n'
             ':C run = True\n'
@@ -352,13 +370,14 @@ class PdbTestCase(ClewnTestCase):
         self.cltest_redir(
             ':Cinterrupt\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':Cbreak foo.foo\n'
             ':sleep ${time}\n'
             ':Ccontinue\n'
             ':sleep ${time}\n'
             ':C run = True\n'
             ':sleep ${time}\n'
-            ':Cbreak ${cwd}testsuite/foo.py:38\n'
+            ':Cbreak testsuite/foo.py:38\n'
             ':sleep ${time}\n'
             ':Cclear 1\n'
             ':sleep ${time}\n'
@@ -367,7 +386,10 @@ class PdbTestCase(ClewnTestCase):
             ':sleep ${time}\n'
             ':Pyclewn pdb\n'
             ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':Cinterrupt\n'
+            ':sleep ${time}\n'
+            ':sleep ${time}\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
             ':sign place\n'

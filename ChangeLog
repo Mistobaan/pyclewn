@@ -1,5 +1,7 @@
-2011-07-22  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-07-26  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* asyncproc.py evtloop.py pydb.py vim.py netbeans.py: Add support for
+	the Python pdb debugger on Windows.
 	* vim.py pydb.py: Synchronize both pdb threads on a ping.
 	* vim.py pydb.py: Fix ignored AttributeError exception (pdb).
 	* debugger.py vim.py misc.py pydb.py: Implement the 'loglevel' pyclewn

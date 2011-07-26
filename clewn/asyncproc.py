@@ -308,6 +308,7 @@ class Peek(threading.Thread):
         self.stop_peeking = threading.Event()
         self.have_started = threading.Event()
         self.have_stopped = threading.Event()
+        self.setDaemon(True)
 
     def run(self):
         """The thread peeks the file object(s).
@@ -336,10 +337,6 @@ class Peek(threading.Thread):
                         break
                 time.sleep(.001) # allow a thread context switch
             self.have_stopped.set()
-
-        # logger may be closed when terminating pyclewn
-        if not isinstance(self, SelectPeek):
-            info('thread terminated: %s', self)
 
     def peek(self):
         """Peek the file object for one or more events.

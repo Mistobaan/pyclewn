@@ -42,13 +42,14 @@ import atexit
 from .__init__ import *
 from . import (misc, gdb, simple, netbeans, evtloop)
 from . import buffer as vimbuffer
+from . import pydb
 if os.name == 'nt':
     from .nt import hide_console as daemonize
     from .nt import platform_data
-    pydb = tty = None
+    tty = None
 else:
     from .posix import daemonize, platform_data
-    from . import (pydb, tty)
+    from . import tty
 
 
 WINDOW_LOCATION = ('top', 'bottom', 'left', 'right', 'none')
@@ -134,17 +135,13 @@ def close_clewnthread(vim):
 
     # notify 'Clewn-thread' of pending termination, remove the settrace function
     pdb = vim.debugger
-    pdb.closing = True
+    pdb.exit()
     if pdb.thread:
         pdb.thread.join()
     sys.settrace(None)
 
 def _pdb(vim, attach=False):
     """Start the python debugger thread."""
-    if os.name != 'posix':
-        print('Error, pdb is only supported on unix systems.', file=sys.stderr)
-        sys.exit(1)
-
     Vim.pdb_running = True
     vim.debugger = vim.clazz(vim.options)
     pdb = vim.debugger
@@ -186,9 +183,6 @@ def pdb(run=False, **kwds):
         argv.append('--run')
     argv.extend(['--' + k + '=' + str(v) for k, v in kwds.items()])
     _pdb(Vim(False, argv), True)
-
-if os.name == 'nt':
-    del pdb
 
 def main(testrun=False):
     """Main.
@@ -298,6 +292,8 @@ class Vim:
             the command line options
         closed: boolean
             True when shutdown has been run
+        poll: evtloop.Poll
+            manage the select thread
 
     """
 
@@ -313,6 +309,7 @@ class Vim:
         self.file_hdlr = None
         self.stderr_hdlr = None
         self.socket_map = asyncore.socket_map
+        self.poll = evtloop.Poll(self.socket_map)
         self.debugger = None
         self.clazz = None
         self.f_script = None
@@ -462,8 +459,16 @@ class Vim:
         else:
             logging.shutdown()
 
+        # terminate daemon peeker threads
+        if 'CLEWN_PIPES' in os.environ or os.name == 'nt':
+            for asyncobj in self.socket_map.values():
+                asyncobj.socket.close()
+                if hasattr(asyncobj, 'peeker'):
+                    asyncobj.peeker.start_thread()
+
         for asyncobj in list(self.socket_map.values()):
             asyncobj.close()
+        self.poll.close()
 
     def parse_options(self, argv):
         """Parse the command line options."""
@@ -500,10 +505,9 @@ class Vim:
         parser.add_option('-s', '--simple',
                 action="store_true", default=False,
                 help='select the simple debugger')
-        if os.name != 'nt':
-            parser.add_option('--pdb',
-                    action="store_true", default=False,
-                    help='select \'pdb\', the python debugger')
+        parser.add_option('--pdb',
+                action="store_true", default=False,
+                help='select \'pdb\', the python debugger')
         parser.add_option('-g', '--gdb',
                 type='string', metavar='PARAM_LIST', default='',
                 help='select the gdb debugger (the default)'
@@ -511,11 +515,10 @@ class Vim:
         parser.add_option('-d', '--daemon',
                 action="store_true", default=False,
                 help='run as a daemon (default \'%default\')')
-        if os.name != 'nt':
-            parser.add_option('--run',
-                    action="store_true", default=False,
-                    help=('allow the debuggee to run after the pdb() call'
-                    ' (default \'%default\')'))
+        parser.add_option('--run',
+                action="store_true", default=False,
+                help=('allow the debuggee to run after the pdb() call'
+                ' (default \'%default\')'))
         parser.add_option('--tty',
                 type='string', metavar='TTY', default=os.devnull,
                 help=('use TTY for input/output by the python script being'
@@ -563,9 +566,6 @@ class Vim:
                 help='set the log file name to FILE')
         (self.options, args) = parser.parse_args(args=argv)
 
-        if os.name == 'nt':
-            self.options.pdb = None
-
         if self.options.simple:
             self.clazz = simple.Simple
         elif self.options.pdb:
@@ -612,6 +612,13 @@ class Vim:
 
         # can't use basicConfig with kwargs, only supported with 2.4
         root = logging.getLogger()
+        # don't print on stderr after logging module teardown
+        # 'lastResort' has been introduced with Python 3.2
+        # bug in Python 3.2: 'lastResort' prints all messages,
+        # even those with level < WARNING
+        if getattr(logging, 'lastResort', None):
+            logging.lastResort = None
+
         if not root.handlers:
             root.manager.emittedNoHandlerWarning = True
             fmt = logging.Formatter('%(name)-4s %(levelname)-7s %(message)s')
@@ -677,7 +684,7 @@ class Vim:
                     break
 
             timeout = self.debugger._call_jobs()
-            evtloop.poll(self.socket_map, timeout=timeout)
+            self.poll.run(timeout=timeout)
 
         self.debugger.close()
 
@@ -699,7 +706,7 @@ class Vim:
             # a new netbeans connection, the server has closed last_nbsock
             if nbsock != last_nbsock and nbsock.ready:
                 info(nbsock)
-                nbsock.set_debugger(pdb)
+                nbsock.set_debugger(pdb, True)
                 if last_nbsock is None:
                     version = __tag__
                     if __changeset__:
@@ -715,8 +722,10 @@ class Vim:
                 debug('Vim instance: ' + str(self))
 
             timeout = pdb._call_jobs()
-            evtloop.poll(self.socket_map, timeout=timeout)
+            self.poll.run(timeout=timeout)
+            pdb.synchronisation_evt.set()
 
+        pdb.netbeans_detach()
         self.shutdown()
 
     def __str__(self):

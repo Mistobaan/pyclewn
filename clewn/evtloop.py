@@ -42,23 +42,22 @@ Unused = debug
 
 use_select_emulation = ('CLEWN_PIPES' in os.environ or os.name == 'nt')
 
-def get_asyncobj(fd, file_type, fdmap):
-    """Return an asyncore instance from 'fdmap' if matching 'file_type'."""
-    asyncobj = fdmap.get(fd)
-    assert asyncobj is not None
-    if isinstance(asyncobj.socket, file_type):
+def get_asyncobj(fd, file_type, socket_map):
+    """Return an asyncore instance from 'socket_map' if matching 'file_type'."""
+    asyncobj = socket_map.get(fd)
+    if asyncobj and isinstance(asyncobj.socket, file_type):
         return asyncobj
     return None
 
-def strip_asyncobj(wtd, file_type, fdmap):
+def strip_asyncobj(wtd, file_type, socket_map):
     """Remove all 'file_type' file descriptors in 'wtd'."""
     tmp_list = wtd[:]
     for fd in tmp_list:
-        asyncobj = get_asyncobj(fd, file_type, fdmap)
+        asyncobj = get_asyncobj(fd, file_type, socket_map)
         if asyncobj is not None:
             wtd.remove(fd)
 
-def clewn_select(iwtd, owtd, ewtd, timeout, static_select=[]):
+def clewn_select(iwtd, owtd, ewtd, timeout, socket_map, select_thread):
     """Windows select emulation on pipes and sockets.
 
     The select_peeker thread, once created, is never destroyed.
@@ -66,14 +65,14 @@ def clewn_select(iwtd, owtd, ewtd, timeout, static_select=[]):
     """
     select_peeker = None
     pipe_objects = []
-    fdmap = asyncore.socket_map
+
     # pipes send only read events
-    strip_asyncobj(owtd, asyncproc.FileWrapper, fdmap)
-    strip_asyncobj(ewtd, asyncproc.FileWrapper, fdmap)
+    strip_asyncobj(owtd, asyncproc.FileWrapper, socket_map)
+    strip_asyncobj(ewtd, asyncproc.FileWrapper, socket_map)
 
     # start the peek threads
     for fd in iwtd:
-        asyncobj = get_asyncobj(fd, asyncproc.FileWrapper, fdmap)
+        asyncobj = get_asyncobj(fd, asyncproc.FileWrapper, socket_map)
         if asyncobj is not None:
             assert hasattr(asyncobj, 'reader') and asyncobj.reader
             if not hasattr(asyncobj, 'peeker'):
@@ -83,13 +82,8 @@ def clewn_select(iwtd, owtd, ewtd, timeout, static_select=[]):
             iwtd.remove(fd)
             asyncobj.peeker.start_thread()
     if iwtd or owtd or ewtd:
-        if not static_select:
-            static_select.append(asyncproc.SelectPeek(fdmap))
-        elif not static_select[0].isAlive():
-            # when running the testsuite, static_select is the same
-            # list across all tests: replace previous dead thread
-            static_select[0] = asyncproc.SelectPeek(fdmap)
-        select_peeker = static_select[0]
+        select_peeker = select_thread
+
         if not select_peeker.isAlive():
             select_peeker.start()
 
@@ -116,48 +110,70 @@ def clewn_select(iwtd, owtd, ewtd, timeout, static_select=[]):
 
     return iwtd, owtd, ewtd
 
-def poll(map, timeout=0.0):
-    """Asyncore poll function."""
-    if map:
-        r = []; w = []; e = []
-        for fd, obj in map.items():
-            is_r = obj.readable()
-            is_w = obj.writable()
-            if is_r:
-                r.append(fd)
-            if is_w:
-                w.append(fd)
-            if is_r or is_w:
-                e.append(fd)
-        if [] == r == w == e:
-            time.sleep(timeout)
-        else:
-            try:
-                if use_select_emulation:
-                    r, w, e = clewn_select(r, w, e, timeout)
-                else:
-                    r, w, e = select.select(r, w, e, timeout)
-            except select.error as err:
-                if err.args[0] != errno.EINTR:
-                    raise
-                else:
-                    return
+class Poll:
+    """A Poll instance manage a select thread."""
 
-        for fd in r:
-            obj = map.get(fd)
-            if obj is None:
-                continue
-            asyncore.read(obj)
+    def __init__(self, socket_map):
+        """Constructor."""
+        self.socket_map = socket_map
+        if use_select_emulation:
+            self.select_thread = None
 
-        for fd in w:
-            obj = map.get(fd)
-            if obj is None:
-                continue
-            asyncore.write(obj)
+    def close(self):
+        """Terminate the select thread."""
+        if use_select_emulation and not self.socket_map:
+            if self.select_thread and self.select_thread.isAlive():
+                self.select_thread.start_thread()
 
-        for fd in e:
-            obj = map.get(fd)
-            if obj is None:
-                continue
-            asyncore._exception(obj)
+    def run(self, timeout=0.0):
+        """Run the asyncore poll function."""
+        if self.socket_map:
+            r = []; w = []; e = []
+            for fd, obj in self.socket_map.items():
+                is_r = obj.readable()
+                is_w = obj.writable()
+                if is_r:
+                    r.append(fd)
+                if is_w:
+                    w.append(fd)
+                if is_r or is_w:
+                    e.append(fd)
+            if [] == r == w == e:
+                time.sleep(timeout)
+            else:
+                try:
+                    if use_select_emulation:
+                        # when running the testsuite, replace
+                        # the previous dead thread
+                        if (not self.select_thread or not
+                                    self.select_thread.isAlive()):
+                            self.select_thread = asyncproc.SelectPeek(
+                                                            self.socket_map)
+                        r, w, e = clewn_select(r, w, e, timeout,
+                                        self.socket_map, self.select_thread)
+                    else:
+                        r, w, e = select.select(r, w, e, timeout)
+                except select.error as err:
+                    if err.args[0] != errno.EINTR:
+                        raise
+                    else:
+                        return
+
+            for fd in r:
+                obj = self.socket_map.get(fd)
+                if obj is None:
+                    continue
+                asyncore.read(obj)
+
+            for fd in w:
+                obj = self.socket_map.get(fd)
+                if obj is None:
+                    continue
+                asyncore.write(obj)
+
+            for fd in e:
+                obj = self.socket_map.get(fd)
+                if obj is None:
+                    continue
+                asyncore._exception(obj)
 

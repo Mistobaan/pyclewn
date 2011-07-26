@@ -23,6 +23,7 @@ import sys
 import time
 import os.path
 import logging
+import threading
 import re
 import socket
 import asyncore
@@ -679,6 +680,8 @@ class Netbeans(asynchat.async_chat):
         bg_colors: tuple
             The three sign background colors of the bp enabled, bp disabled and
             the frame (in this order)
+        lock: threading.RLock
+            Used to lock critical sections when running 'pdb' threads
 
     """
 
@@ -700,6 +703,7 @@ class Netbeans(asynchat.async_chat):
         self.console = None
         self.dbgvarbuf = None
         self.reply_fifo = asynchat.fifo()
+        self.lock = None
         self.ready = False
         self.debugger = None
         self.nbversion = None
@@ -708,10 +712,12 @@ class Netbeans(asynchat.async_chat):
         self.last_seqno = 0
         self.set_terminator(b'\n')
 
-    def set_debugger(self, debugger):
+    def set_debugger(self, debugger, use_lock=False):
         """Notify of the current debugger."""
         self.debugger = debugger
         debugger.set_nbsock(self)
+        if use_lock:
+            self.lock = threading.RLock()
 
     def switch_map(self, map):
         """Attach this dispatcher to another asyncore map."""
@@ -813,9 +819,22 @@ class Netbeans(asynchat.async_chat):
             self.last_seqno = seqno
 
     def push(self, data):
-        """Push the data to be sent."""
-        asynchat.async_chat.push(self, data.encode())
+        """Push the data to be sent.
 
+        When running 'pdb', both threads may call this method on process
+        termination, and the 'Clewn-thread' may cause the following exception in
+        async_chat.initiate_send:
+        File "/usr/local/lib/python3.2/asynchat.py", line 266, in initiate_send
+            del self.producer_fifo[0]
+        IndexError: deque index out of range
+        """
+        if self.lock:
+            self.lock.acquire()
+        try:
+            asynchat.async_chat.push(self, data.encode())
+        finally:
+            if self.lock:
+                self.lock.release()
 
     def open_session(self, msg):
         """Process initial netbeans messages."""

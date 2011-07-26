@@ -223,15 +223,13 @@ _balloonrepr = BalloonRepr().repr
 
 class Ping(asyncproc.FileAsynchat):
     """Terminate the select call in the asyncore loop."""
-    def __init__(self, f, pdb):
+    def __init__(self, f):
         """Constructor."""
         asyncproc.FileAsynchat.__init__(self, f, None, True)
-        self.pdb = pdb
 
     def found_terminator(self):
         """Ignore received data."""
         self.ibuff = []
-        self.pdb.synchronisation_evt.set()
 
 class Pdb(debugger.Debugger, pdb.Pdb):
     """The Pdb debugger.
@@ -242,7 +240,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         thread: threading.Thread
             the clewn thread
         socket_map: dict
-            asyncore map used in interaction
+            map used in interaction
         clt_sockmap: dict
             clewn thread asyncore map
         stdout: StringIO instance
@@ -264,6 +262,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             used to synchronise both threads
         closing: boolean
             when True, terminate the clewn thread asyncore loop
+        poll: evtloop.Poll
+            manage the select thread
 
     """
 
@@ -282,6 +282,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.thread = None
         self.socket_map = {}
         self.clt_sockmap = None
+        self.poll = evtloop.Poll(self.socket_map)
         self.stdout = io.StringIO()
         self.stop_loop = False
         self.let_target_run = False
@@ -293,10 +294,10 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.closing = False
 
         # the ping pipe is used to ping the clewn thread asyncore loop to enable
-        # switching nbsock to the asyncore loop running in the main loop, in the
+        # switching nbsock to the loop running in the main thread, in the
         # 'interaction' method
         ping_r, self.ping_w = os.pipe()
-        Ping(ping_r, self)
+        Ping(ping_r)
 
         self.cmds.update(PDB_CMDS)
         self.cmds['help'] = list(self.cmds.keys())
@@ -320,6 +321,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         """Close the netbeans session."""
         debugger.Debugger.close(self)
         self.let_target_run = True
+        self.poll.close()
 
     def do_prompt(self, timed=False):
         """Print the prompt in the Vim debugger console."""
@@ -366,10 +368,21 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def ping(self):
         """Ping the clewn thread asyncore loop."""
-        os.write(self.ping_w, b'ping\n')
-        self.synchronisation_evt.wait(1)
-        if not self.synchronisation_evt.isSet():
-            error('Cannot ping the clewn thread asyncore loop.')
+        self.synchronisation_evt.clear()
+        try:
+            os.write(self.ping_w, b'ping\n')
+        except OSError:
+            pass
+        else:
+            self.synchronisation_evt.wait(1)
+            if not self.synchronisation_evt.isSet():
+                error('Cannot ping the clewn thread asyncore loop.')
+
+    def exit(self):
+        """Terminate the clewn thread."""
+        if not self.closed:
+            self.close()
+        self.closing = True
 
     #-----------------------------------------------------------------------
     #   Bdb methods
@@ -583,7 +596,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                     if self.cmdqueue:
                         self.do_line_cmd(self.cmdqueue.pop(0))
                     else:
-                        evtloop.poll(self.socket_map, debugger.LOOP_TIMEOUT)
+                        self.poll.run(debugger.LOOP_TIMEOUT)
                 except KeyboardInterrupt:
                     # ignore a KeyboardInterrupt to avoid breaking
                     # the debugging session
