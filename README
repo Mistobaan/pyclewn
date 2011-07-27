@@ -80,10 +80,11 @@ The following table lists the differences between clewn_, vimGdb_ and pyclewn.
     |               |             |                       | requires GNU gdb from  |
     |               |             |                       | macports on Mac Os X   |
     |               |             |                       |                        |
-    |               |             |                       | Windows                |
+    |               |             |                       | Windows (Python 3)     |
     +---------------+-------------+-----------------------+------------------------+
-    | language      | C           | C                     | python 2.4 and         |
+    | language      | C           | C                     | Python 2.4 and         |
     |               |             |                       | above                  |
+    |               |             |                       | Python 3               |
     +---------------+-------------+-----------------------+------------------------+
     | vim mode      | vim in a    | gvim                  | vim in a               |
     |               | terminal,   |                       | terminal (vim 7.3      |

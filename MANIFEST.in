@@ -11,6 +11,8 @@ include runtime/syntax/dbgvar.vim
 include images/*
 include pyclewn_install.py
 include .pycheckrc
+include foobar.py
+include .pdbrc
 include testsuite/*.py
 include testsuite/*.c
 include testsuite/*.cc

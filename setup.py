@@ -34,13 +34,12 @@ will fail (see installation notes at
 http://pyclewn.sourceforge.net/install.html).
 """
 
+DEBUGGERS = ('simple', 'gdb', 'pdb')
 if os.name == 'nt':
-    DEBUGGERS = ('simple', 'gdb')
     SCRIPTS = ['pyclewn', 'pyclewn_install.py']
     vimdir = 'pyclewn'
     LONG_DESCRIPTION = WINDOWS_INSTALL
 else:
-    DEBUGGERS = ('simple', 'gdb', 'pdb')
     SCRIPTS = ['pyclewn', 'runtime/bin/inferior_tty.py']
     vimdir = pyclewn_install.vimdir()
     LONG_DESCRIPTION = DESCRIPTION

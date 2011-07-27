@@ -143,10 +143,6 @@ function pyclewn#StartClewn(...)
     " command to start pdb: Pyclewn pdb foo.py arg1 arg2 ....
     let l:args = s:args
     if a:0 != 0
-        if has("gui_win32")
-            call s:error("The Pyclewn command on Windows does not accept arguments.")
-            return
-        endif
         if a:1 == "pdb"
             if a:0 == 2 && filereadable(a:2) == 0
                 call s:error("File '" . a:2 . "' is not readable.")
