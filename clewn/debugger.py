@@ -563,7 +563,8 @@ class Debugger(object):
         Annotations are not deleted.
 
         """
-        self.__nbsock.remove_all()
+        if self.__nbsock:
+            self.__nbsock.remove_all()
 
     def get_lnum_list(self, pathname):
         """Return a list of line numbers of all enabled breakpoints in a
@@ -725,7 +726,7 @@ class Debugger(object):
         info('enter netbeans_detach')
         self.started = False
         self.closed = True
-        if self.__nbsock.connected:
+        if self.__nbsock and self.__nbsock.connected:
             self.remove_all()
             msg = 'DETACH'
             info('sending netbeans message \'%s\'', msg)
@@ -897,7 +898,7 @@ class Debugger(object):
 
         """
         if not self.__nbsock:
-            return
+            return LOOP_TIMEOUT
         timeout = LOOP_TIMEOUT
         if not self._jobs_enabled and self.__nbsock.ready:
             self._jobs_enabled = True
