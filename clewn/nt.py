@@ -48,9 +48,9 @@ def platform_data():
 class PipePeek(asyncproc.PipePeek):
     """The pipe peek thread."""
 
-    def __init__(self, fd, asyncobj):
+    def __init__(self, fd, asyncobj, select_event):
         """Constructor."""
-        asyncproc.PipePeek.__init__(self, fd, asyncobj)
+        asyncproc.PipePeek.__init__(self, fd, asyncobj, select_event)
         try:
             self.handle = msvcrt.get_osfhandle(fd)
         except IOError:

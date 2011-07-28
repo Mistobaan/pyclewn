@@ -1,5 +1,8 @@
-2011-07-26  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-07-28  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* asyncproc.py debugger.py evtloop.py nt.py posix.py pydb.py vim.py:
+	Clean up threads termination and fix 'select_event' cannot be a class
+	instance.
 	* asyncproc.py evtloop.py pydb.py vim.py netbeans.py: Add support for
 	the Python pdb debugger on Windows.
 	* vim.py pydb.py: Synchronize both pdb threads on a ping.

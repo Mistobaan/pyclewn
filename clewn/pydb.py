@@ -223,9 +223,13 @@ _balloonrepr = BalloonRepr().repr
 
 class Ping(asyncproc.FileAsynchat):
     """Terminate the select call in the asyncore loop."""
-    def __init__(self, f):
+    def __init__(self, f, reader, map=None):
         """Constructor."""
-        asyncproc.FileAsynchat.__init__(self, f, None, True)
+        asyncproc.FileAsynchat.__init__(self, f, None, reader, map)
+
+    def writable(self):
+        """Do not monitor 'writable' select events."""
+        return False
 
     def found_terminator(self):
         """Ignore received data."""
@@ -241,8 +245,6 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             the clewn thread
         socket_map: dict
             map used in interaction
-        clt_sockmap: dict
-            clewn thread asyncore map
         stdout: StringIO instance
             stdout redirection
         ping_r, ping_w: file descriptors
@@ -281,8 +283,6 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.curframe_locals = None
         self.thread = None
         self.socket_map = {}
-        self.clt_sockmap = None
-        self.poll = evtloop.Poll(self.socket_map)
         self.stdout = io.StringIO()
         self.stop_loop = False
         self.let_target_run = False
@@ -297,7 +297,13 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         # switching nbsock to the loop running in the main thread, in the
         # 'interaction' method
         ping_r, self.ping_w = os.pipe()
-        Ping(ping_r)
+        Ping(ping_r, True)
+        # a dummy Ping instance to avoid having 'self.socket_map' empty, when
+        # outside the 'interaction' method (when using select emulation on
+        # Windows)
+        Ping(self.ping_w, False, map=self.socket_map)
+        # instantiating 'poll' after addition of Ping to the 'socket_map'
+        self.poll = evtloop.Poll(self.socket_map)
 
         self.cmds.update(PDB_CMDS)
         self.cmds['help'] = list(self.cmds.keys())
@@ -319,9 +325,10 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def close(self):
         """Close the netbeans session."""
+        # we do not really close the thread here, just netbeans
+        debug('enter close')
         debugger.Debugger.close(self)
         self.let_target_run = True
-        self.poll.close()
 
     def do_prompt(self, timed=False):
         """Print the prompt in the Vim debugger console."""
@@ -382,6 +389,9 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         """Terminate the clewn thread."""
         if not self.closed:
             self.close()
+        # clear the 'socket_map' to terminate the 'select_thread'
+        self.socket_map.clear()
+        self.poll.close()
         self.closing = True
 
     #-----------------------------------------------------------------------
@@ -569,8 +579,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             time.sleep(debugger.LOOP_TIMEOUT)
 
         # switch nbsock to the main thread asyncore loop
-        self.clt_sockmap = self.switch_map(self.socket_map)
-        assert self.clt_sockmap is not None
+        clt_sockmap = self.switch_map(self.socket_map)
+        assert clt_sockmap is not None
         self.ping()
 
         self.setup(frame, traceback)
@@ -606,7 +616,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             self.forget()
         finally:
             # switch nbsock to the clewn thread asyncore loop
-            self.switch_map(self.clt_sockmap)
+            self.switch_map(clt_sockmap)
             self.ping()
 
     #-----------------------------------------------------------------------
@@ -858,7 +868,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.console_print('---\n\n')
         self.get_console().flush()
         self.netbeans_detach()
-        self.clt_sockmap.clear()
+        self.exit()
+
         self.stop_loop = True
 
     def cmd_jump(self, cmd, args):

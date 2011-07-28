@@ -309,11 +309,13 @@ class Vim:
         self.file_hdlr = None
         self.stderr_hdlr = None
         self.socket_map = asyncore.socket_map
-        self.poll = evtloop.Poll(self.socket_map)
         self.debugger = None
         self.clazz = None
         self.f_script = None
         self.nbserver = netbeans.Server()
+        # instantiate 'poll' after addition of 'nbserver' sot the asyncore
+        # 'socket_map'
+        self.poll = evtloop.Poll(self.socket_map)
         self.vim = None
         self.options = None
         self.parse_options(argv)
@@ -464,7 +466,7 @@ class Vim:
             for asyncobj in self.socket_map.values():
                 asyncobj.socket.close()
                 if hasattr(asyncobj, 'peeker'):
-                    asyncobj.peeker.start_thread()
+                    asyncobj.peeker.join()
 
         for asyncobj in list(self.socket_map.values()):
             asyncobj.close()

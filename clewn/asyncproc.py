@@ -118,9 +118,9 @@ class FileAsynchat(asynchat.async_chat):
 
     """
 
-    def __init__(self, f, channel, reader=None):
+    def __init__(self, f, channel, reader=None, map=None):
         """Constructor."""
-        asynchat.async_chat.__init__(self)
+        asynchat.async_chat.__init__(self, map=map)
         self.channel = channel
         self.reader = reader
         self.connected = True
@@ -292,17 +292,12 @@ class ProcessChannel:
 class Peek(threading.Thread):
     """A generic peek thread as an abstract class.
 
-    Class attribute:
-        select_event: Event
-            The Event object that the clewn_select emulation is waiting on.
-
     """
 
-    select_event = threading.Event()
-
-    def __init__(self, name):
+    def __init__(self, name, select_event):
         """Constructor."""
         threading.Thread.__init__(self, name=name)
+        self.select_event = select_event
         self.state = STS_STOPPED
         self.start_peeking = threading.Event()
         self.stop_peeking = threading.Event()
@@ -391,9 +386,9 @@ class SelectPeek(Peek):
     The thread peeks on all waitable sockets set in clewn_select.
 
     """
-    def __init__(self, fdmap):
+    def __init__(self, fdmap, select_event):
         """Constructor."""
-        Peek.__init__(self, 'socketThread')
+        Peek.__init__(self, 'socketThread', select_event)
         self.fdmap = fdmap
         self.iwtd = []
         self.owtd = []
@@ -441,9 +436,9 @@ class SelectPeek(Peek):
 class PipePeek(Peek):
     """The abstract pipe peek class."""
 
-    def __init__(self, fd, asyncobj):
+    def __init__(self, fd, asyncobj, select_event):
         """Constructor."""
-        Peek.__init__(self, 'pipeThread')
+        Peek.__init__(self, 'pipeThread', select_event)
         self.fd = fd
         self.asyncobj = asyncobj
         self.read_event = False

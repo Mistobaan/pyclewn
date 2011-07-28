@@ -262,9 +262,9 @@ class ProcessChannel(asyncproc.ProcessChannel):
 class PipePeek(asyncproc.PipePeek):
     """The pipe peek thread."""
 
-    def __init__(self, fd, asyncobj):
+    def __init__(self, fd, asyncobj, select_event):
         """Constructor."""
-        asyncproc.PipePeek.__init__(self, fd, asyncobj)
+        asyncproc.PipePeek.__init__(self, fd, asyncobj, select_event)
 
     def peek(self):
         """Peek the pipe."""
