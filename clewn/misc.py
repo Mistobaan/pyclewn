@@ -34,7 +34,6 @@ import io
 
 from .__init__ import *
 
-VIM73_BUG_SLEEP_TIME = 0.500
 DOUBLEQUOTE = '"'
 QUOTED_STRING = r'"((?:\\"|[^"])+)"'
 NBDEBUG = 5
@@ -48,7 +47,6 @@ RE_ESCAPE = r'["\n\t\r\\]'                                      \
             r'# RE: escaped characters in a string'
 RE_UNESCAPE = r'\\["ntr\\]'                                     \
               r'# RE: escaped characters in a quoted string'
-Unused = VIM73_BUG_SLEEP_TIME
 Unused = NBDEBUG
 Unused = LOG_LEVELS
 MISSING = object()

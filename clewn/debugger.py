@@ -413,11 +413,18 @@ class Debugger:
         """Set the netbeans socket."""
         self.__nbsock = nbsock
 
-    def switch_map(self, map):
-        """Attach nbsock to another asyncore map."""
+    def set_nbsock_owner(self, thread_ident, socket_map):
+        """Add nbsock to 'socket_map' and make 'thread_ident' nbsock owner.
+
+        When 'thread_ident' is 0, remove nbsock from 'socket_map'
+        """
         if self.__nbsock:
-            return self.__nbsock.switch_map(map)
-        return None
+            self.__nbsock.set_owner_thread(thread_ident)
+            fd = self.__nbsock._fileno
+            if thread_ident != 0:
+                socket_map[fd] = self.__nbsock
+            elif fd in socket_map:
+                del socket_map[fd]
 
     #-----------------------------------------------------------------------
     #   Overidden methods by the Debugger subclass.
@@ -715,23 +722,18 @@ class Debugger:
             self.remove_all()
 
     def netbeans_detach(self):
-        """Close the netbeans session."""
-        # A bug in vim73 prevents closing netbeans from pyclewn: send
-        # the 'DETACH' message instead, and make sure that no other data
-        # is sent after this message to avoid triggering the vim crash.
+        """Request vim to close the netbeans session."""
+        # vim73 'crash when DETACH is followed by a netbeans message' bug
+        # (fixed by 7.3.073)
+        # sleep to prevent having vim to parse a composed message
+        # starting with 'DETACH'
         info('enter netbeans_detach')
-        self.started = False
-        self.closed = True
         if self.__nbsock and self.__nbsock.connected:
-            self.remove_all()
             msg = 'DETACH'
             info('sending netbeans message \'%s\'', msg)
             self.__nbsock.push(msg + '\n')
-
-        # vim73 'netbeans close SEGV' bug (fixed by 7.3.060).
-        # Allow vim to process all netbeans PDUs before receiving the disconnect
-        # event.
-        time.sleep(misc.VIM73_BUG_SLEEP_TIME)
+            if self.__nbsock.nbversion <= '2.5':
+                time.sleep(0.500)
 
     #-----------------------------------------------------------------------
     #   Internally used methods.

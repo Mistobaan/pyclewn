@@ -23,6 +23,7 @@ import sys
 import time
 import os.path
 import logging
+import _thread
 import threading
 import re
 import socket
@@ -680,8 +681,8 @@ class Netbeans(asynchat.async_chat):
         bg_colors: tuple
             The three sign background colors of the bp enabled, bp disabled and
             the frame (in this order)
-        lock: threading.RLock
-            Used to lock critical sections when running 'pdb' threads
+        owner_thread: int
+            The identity of the thread handling select events.
 
     """
 
@@ -703,7 +704,7 @@ class Netbeans(asynchat.async_chat):
         self.console = None
         self.dbgvarbuf = None
         self.reply_fifo = asynchat.fifo()
-        self.lock = None
+        self.owner_thread = 0
         self.ready = False
         self.debugger = None
         self.nbversion = None
@@ -712,24 +713,29 @@ class Netbeans(asynchat.async_chat):
         self.last_seqno = 0
         self.set_terminator(b'\n')
 
-    def set_debugger(self, debugger, use_lock=False):
+    def set_debugger(self, debugger):
         """Notify of the current debugger."""
         self.debugger = debugger
         debugger.set_nbsock(self)
-        if use_lock:
-            self.lock = threading.RLock()
 
-    def switch_map(self, map):
-        """Attach this dispatcher to another asyncore map."""
-        fd = self._fileno
-        if fd is not None:
-            cur_map = self._map
-            if fd in cur_map:
-                del cur_map[fd]
-            self._map = map
-            self.add_channel()
-            return cur_map
-        return None
+    def set_owner_thread(self, thread_ident):
+        """Set the identity of the thread handling select events.
+
+        When '0', any thread may receive select events.
+        """
+        self.owner_thread = thread_ident
+
+    def readable (self):
+        """Return True when enabled to receive read select events."""
+        return (asynchat.async_chat.readable(self)
+                    and (self.owner_thread == 0
+                        or self.owner_thread == _thread.get_ident()))
+
+    def writable (self):
+        """Return True when enabled to receive write select events."""
+        return (asynchat.async_chat.writable(self)
+                    and (self.owner_thread == 0
+                        or self.owner_thread == _thread.get_ident()))
 
     def close(self):
         """Close netbeans and the debugger."""
@@ -744,7 +750,8 @@ class Netbeans(asynchat.async_chat):
         # vim73 'netbeans close SEGV' bug (fixed by 7.3.060).
         # Allow vim to process all netbeans PDUs before receiving the disconnect
         # event.
-        time.sleep(misc.VIM73_BUG_SLEEP_TIME)
+        if self.nbversion <= '2.5':
+            time.sleep(0.500)
 
         asynchat.async_chat.close(self)
         self.connected = False
@@ -819,22 +826,8 @@ class Netbeans(asynchat.async_chat):
             self.last_seqno = seqno
 
     def push(self, data):
-        """Push the data to be sent.
-
-        When running 'pdb', both threads may call this method on process
-        termination, and the 'Clewn-thread' may cause the following exception in
-        async_chat.initiate_send:
-        File "/usr/local/lib/python3.2/asynchat.py", line 266, in initiate_send
-            del self.producer_fifo[0]
-        IndexError: deque index out of range
-        """
-        if self.lock:
-            self.lock.acquire()
-        try:
-            asynchat.async_chat.push(self, data.encode())
-        finally:
-            if self.lock:
-                self.lock.release()
+        """Push the data to be sent."""
+        asynchat.async_chat.push(self, data.encode())
 
     def open_session(self, msg):
         """Process initial netbeans messages."""

@@ -125,20 +125,17 @@ def pformat(name, obj):
 
 def close_clewnthread(vim):
     """Terminate the clewn thread and stop the debugger."""
-    # vim73 'netbeans close SEGV' bug (fixed by 7.3.060).
-    # Allow vim to process all netbeans PDUs before receiving the disconnect
-    # event.
-    if not vim.closed:
+    try:
         info('enter close_clewnthread')
-        time.sleep(misc.VIM73_BUG_SLEEP_TIME)
-        debug('Vim instance: ' + str(vim))
+        sys.settrace(None)
 
-    # notify 'Clewn-thread' of pending termination, remove the settrace function
-    pdb = vim.debugger
-    pdb.exit()
-    if pdb.thread:
-        pdb.thread.join()
-    sys.settrace(None)
+        # notify 'Clewn-thread' of pending termination
+        pdb = vim.debugger
+        pdb.exit()
+        if pdb.thread:
+            pdb.thread.join()
+    except KeyboardInterrupt:
+        close_clewnthread(vim)
 
 def _pdb(vim, attach=False):
     """Start the python debugger thread."""
@@ -329,6 +326,10 @@ class Vim:
         # test if Vim contains the netbeans 'cmd on NoName buffer ignored' fix
 
         # pyclewn is started from within vim
+        # This is supported since vim73. When using 'pdb', pyclewn has no way
+        # to know which vim it is connected to, unless using the netbeans
+        # version, but this does not change consistently with vim netbeans
+        # patches.
         if not self.options.editor:
             netbeans.Netbeans.remove_fix = '1'
             netbeans.Netbeans.getLength_fix = '1'
@@ -703,12 +704,12 @@ class Vim:
         pdb.synchronisation_evt.set()
         last_nbsock = None
         session_logged = True
-        while self.socket_map and not pdb.closing:
+        while not pdb.closing:
             nbsock = self.nbserver.netbeans
             # a new netbeans connection, the server has closed last_nbsock
             if nbsock != last_nbsock and nbsock.ready:
                 info(nbsock)
-                nbsock.set_debugger(pdb, True)
+                nbsock.set_debugger(pdb)
                 if last_nbsock is None:
                     version = __tag__
                     if __changeset__:
@@ -727,7 +728,8 @@ class Vim:
             self.poll.run(timeout=timeout)
             pdb.synchronisation_evt.set()
 
-        pdb.netbeans_detach()
+        if not session_logged and nbsock:
+            debug('Vim instance: ' + str(self))
         self.shutdown()
 
     def __str__(self):

@@ -156,7 +156,7 @@ class Poll:
             else:
                 try:
                     if use_select_emulation:
-                            r, w, e = clewn_select(r, w, e, timeout, self)
+                        r, w, e = clewn_select(r, w, e, timeout, self)
                     else:
                         r, w, e = select.select(r, w, e, timeout)
                 except select.error as err:

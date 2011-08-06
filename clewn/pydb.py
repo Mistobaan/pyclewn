@@ -264,6 +264,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             used to synchronise both threads
         closing: boolean
             when True, terminate the clewn thread asyncore loop
+        do_exit: boolean
+            when True, run exit()
         poll: evtloop.Poll
             manage the select thread
 
@@ -292,6 +294,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.target_thread_ident = 0
         self.synchronisation_evt = threading.Event()
         self.closing = False
+        self.do_exit = False
 
         # the ping pipe is used to ping the clewn thread asyncore loop to enable
         # switching nbsock to the loop running in the main thread, in the
@@ -378,17 +381,16 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.synchronisation_evt.clear()
         try:
             os.write(self.ping_w, b'ping\n')
-        except OSError:
-            pass
+        except OSError as err:
+            error('Cannot ping the clewn thread: %s.', err)
         else:
             self.synchronisation_evt.wait(1)
             if not self.synchronisation_evt.isSet():
-                error('Cannot ping the clewn thread asyncore loop.')
+                error('Cannot ping the clewn thread:'
+                                ' \'synchronisation_evt\' not set.')
 
     def exit(self):
         """Terminate the clewn thread."""
-        if not self.closed:
-            self.close()
         # clear the 'socket_map' to terminate the 'select_thread'
         self.socket_map.clear()
         self.poll.close()
@@ -403,7 +405,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         try:
             return pdb.Pdb.trace_dispatch(self, frame, event, arg)
         except KeyboardInterrupt:
-            raise KeyboardInterrupt(None).with_traceback(None)
+            # hide bdb traceback to the user: prevent exception chaining
+            raise KeyboardInterrupt() from KeyboardInterrupt()
 
     def dispatch_line(self, frame):
         """Override dispatch_line to set 'doprint_trace' when breaking."""
@@ -578,10 +581,12 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                 return
             time.sleep(debugger.LOOP_TIMEOUT)
 
-        # switch nbsock to the main thread asyncore loop
-        clt_sockmap = self.switch_map(self.socket_map)
-        assert clt_sockmap is not None
+        self.set_nbsock_owner(self.target_thread_ident, self.socket_map)
         self.ping()
+        # nbsock may have been closed by vim and the clewn thread
+        # during the ping
+        if self.closed:
+            return
 
         self.setup(frame, traceback)
         if self.trace_type or self.doprint_trace:
@@ -615,9 +620,10 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             self.show_frame()
             self.forget()
         finally:
-            # switch nbsock to the clewn thread asyncore loop
-            self.switch_map(clt_sockmap)
+            self.set_nbsock_owner(0, self.socket_map)
             self.ping()
+            if self.do_exit:
+                self.exit()
 
     #-----------------------------------------------------------------------
     #   commands
@@ -868,8 +874,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.console_print('---\n\n')
         self.get_console().flush()
         self.netbeans_detach()
-        self.exit()
-
+        self.do_exit = True
         self.stop_loop = True
 
     def cmd_jump(self, cmd, args):
