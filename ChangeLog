@@ -1,5 +1,7 @@
-2011-07-28  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-08-07  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* misc.py evtloop.py pydb.py vim.py netbeans.py debugger.py:
+	Synchronise pdb threads (rework).
 	* asyncproc.py debugger.py evtloop.py nt.py posix.py pydb.py vim.py:
 	Clean up threads termination and fix 'select_event' cannot be a class
 	instance.
