@@ -413,18 +413,15 @@ class Debugger:
         """Set the netbeans socket."""
         self.__nbsock = nbsock
 
-    def set_nbsock_owner(self, thread_ident, socket_map):
-        """Add nbsock to 'socket_map' and make 'thread_ident' nbsock owner.
-
-        When 'thread_ident' is 0, remove nbsock from 'socket_map'
-        """
+    def set_nbsock_owner(self, thread_ident, socket_map=None):
+        """Add nbsock to 'socket_map' and make 'thread_ident' nbsock owner."""
         if self.__nbsock:
             self.__nbsock.set_owner_thread(thread_ident)
             fd = self.__nbsock._fileno
-            if thread_ident != 0:
+            if socket_map is not None:
                 socket_map[fd] = self.__nbsock
-            elif fd in socket_map:
-                del socket_map[fd]
+            return fd
+        return None
 
     #-----------------------------------------------------------------------
     #   Overidden methods by the Debugger subclass.
@@ -723,17 +720,8 @@ class Debugger:
 
     def netbeans_detach(self):
         """Request vim to close the netbeans session."""
-        # vim73 'crash when DETACH is followed by a netbeans message' bug
-        # (fixed by 7.3.073)
-        # sleep to prevent having vim to parse a composed message
-        # starting with 'DETACH'
-        info('enter netbeans_detach')
-        if self.__nbsock and self.__nbsock.connected:
-            msg = 'DETACH'
-            info('sending netbeans message \'%s\'', msg)
-            self.__nbsock.push(msg + '\n')
-            if self.__nbsock.nbversion <= '2.5':
-                time.sleep(0.500)
+        if self.__nbsock:
+            self.__nbsock.detach()
 
     #-----------------------------------------------------------------------
     #   Internally used methods.

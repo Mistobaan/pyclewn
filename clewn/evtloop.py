@@ -90,22 +90,23 @@ def clewn_select(iwtd, owtd, ewtd, timeout, poll):
         select_peeker.start_thread()
 
     # wait for events
-    if select_peeker is None and not pipe_objects:
-        time.sleep(timeout)
-    else:
-        poll.select_event.wait(timeout)
-
-    # stop the select threads
     iwtd = []
     owtd = []
     ewtd = []
-    if select_peeker is not None:
-        iwtd, owtd, ewtd = select_peeker.stop_thread()
-    for asyncobj in pipe_objects:
-        asyncobj.peeker.stop_thread()
-        if asyncobj.peeker.read_event:
-            iwtd.append(asyncobj.socket.fileno())
-    poll.select_event.clear()
+    if select_peeker is None and not pipe_objects:
+        time.sleep(timeout)
+    else:
+        try:
+            poll.select_event.wait(timeout)
+        finally:
+            # stop the select threads
+            if select_peeker is not None:
+                iwtd, owtd, ewtd = select_peeker.stop_thread()
+            for asyncobj in pipe_objects:
+                asyncobj.peeker.stop_thread()
+                if asyncobj.peeker.read_event:
+                    iwtd.append(asyncobj.socket.fileno())
+            poll.select_event.clear()
 
     return iwtd, owtd, ewtd
 

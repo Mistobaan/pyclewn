@@ -24,7 +24,6 @@ import time
 import os.path
 import logging
 import _thread
-import threading
 import re
 import socket
 import asyncore
@@ -656,6 +655,8 @@ class Netbeans(asynchat.async_chat):
             IP address: host, port tuple
         ready: boolean
             startupDone event has been received
+        detached: boolean
+            the netbeans 'DETACH' command has been sent
         debugger: clewn.debugger.Debugger or subclass
             the debugger instance
         passwd: str
@@ -706,6 +707,7 @@ class Netbeans(asynchat.async_chat):
         self.reply_fifo = asynchat.fifo()
         self.owner_thread = 0
         self.ready = False
+        self.detached = False
         self.debugger = None
         self.nbversion = None
         self.ibuff = []
@@ -825,9 +827,22 @@ class Netbeans(asynchat.async_chat):
             reply(seqno, nbstring, arg_list)
             self.last_seqno = seqno
 
+    def detach(self):
+        """Request vim to close the netbeans session."""
+        self.remove_all()
+        msg = 'DETACH'
+        info('sending netbeans message \'%s\'', msg)
+        self.push(msg + '\n')
+        self.detached = True
+
     def push(self, data):
         """Push the data to be sent."""
-        asynchat.async_chat.push(self, data.encode())
+        if self.detached and self.nbversion <= '2.5':
+            # vim73 'crash when DETACH is followed by a netbeans message' bug
+            # (fixed at vim 7.3.073)
+            debug('netbeans detached, failed to send "%s"', data.strip())
+        else:
+            asynchat.async_chat.push(self, data.encode())
 
     def open_session(self, msg):
         """Process initial netbeans messages."""

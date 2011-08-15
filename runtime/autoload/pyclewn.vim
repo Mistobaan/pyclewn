@@ -89,7 +89,7 @@ function s:pyclewn_ready(filename)
     if l:cnt == l:max
         throw s:start_err
     endif
-    call s:info("The pyclewn process has been started successfully.\n")
+    call s:info("Creation of vim script file \"" . a:filename . "\": OK.\n")
 endfunction
 
 " Start pyclewn and vim netbeans interface.
@@ -114,9 +114,8 @@ function s:start(args)
     endif
 
     " start pyclewn and netbeans
-    call s:info("Starting pyclewn, please wait...\n")
+    call s:info("Starting pyclewn.\n")
     exe "silent !${start}" . s:pgm . " " . a:args . " " . s:fixed . l:tmpfile . " &"
-    call s:info("'pyclewn' has been started.\n")
     call s:info("Running nbstart, <C-C> to interrupt.\n")
     call s:pyclewn_ready(l:tmpfile)
     exe "nbstart :" . s:connection

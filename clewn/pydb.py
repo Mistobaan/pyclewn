@@ -581,11 +581,12 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                 return
             time.sleep(debugger.LOOP_TIMEOUT)
 
-        self.set_nbsock_owner(self.target_thread_ident, self.socket_map)
+        fd = self.set_nbsock_owner(self.target_thread_ident, self.socket_map)
         self.ping()
         # nbsock may have been closed by vim and the clewn thread
         # during the ping
-        if self.closed:
+        if fd is None or self.closed:
+            del self.socket_map[fd]
             return
 
         self.setup(frame, traceback)
@@ -620,7 +621,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             self.show_frame()
             self.forget()
         finally:
-            self.set_nbsock_owner(0, self.socket_map)
+            self.set_nbsock_owner(0)
+            del self.socket_map[fd]
             self.ping()
             if self.do_exit:
                 self.exit()
@@ -872,7 +874,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         # terminate the clewn thread in the run_pdb() loop
         self.console_print('Clewn thread terminated.\n')
         self.console_print('---\n\n')
-        self.get_console().flush()
+        self.console_flush()
         self.netbeans_detach()
         self.do_exit = True
         self.stop_loop = True
@@ -888,7 +890,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         unused = args
         self.console_print('Netbeans connection closed.\n')
         self.console_print('---\n\n')
-        self.get_console().flush()
+        self.console_flush()
         self.netbeans_detach()
         self.stop_loop = True
 
