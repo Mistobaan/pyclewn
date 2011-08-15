@@ -1,5 +1,9 @@
-2011-08-07  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-08-15  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* debugger.py netbeans.py evtloop.py pydb.py: Do not send any netbeans
+	command after DETACH (rework). Windows and CLEWN_PIPES: fix ^C typed
+	in the console hangs the socketThread. Fix invalid file descriptor in
+	select after detach.
 	* misc.py evtloop.py pydb.py vim.py netbeans.py debugger.py:
 	Synchronise pdb threads (rework).
 	* asyncproc.py debugger.py evtloop.py nt.py posix.py pydb.py vim.py:
