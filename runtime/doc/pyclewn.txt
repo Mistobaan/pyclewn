@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2011 July 1st
+*pyclewn.txt*                                   Last change: 2011 August 16
 
 
                             PYCLEWN USER MANUAL
@@ -1330,6 +1330,9 @@ CLASSES
      |
      |      This is actually a Vim command and it does not involve pyclewn.
      |
+     |  console_flush(self)
+     |      Flush the console.
+     |
      |  console_print(self, format, *args)
      |      Print a format string and its arguments to the console.
      |
@@ -1381,7 +1384,7 @@ CLASSES
      |
      |  get_console(self)
      |      Return the console.
-     |  
+     |
      |  get_lnum_list(self, pathname)
      |      Return a list of line numbers of all enabled breakpoints in a
      |      Vim buffer.
@@ -1394,8 +1397,8 @@ CLASSES
      |              The absolute pathname to the Vim buffer.
      |
      |  netbeans_detach(self)
-     |      Close the netbeans session.
-     |  
+     |      Request vim to close the netbeans session.
+     |
      |  post_cmd(self, cmd, args)
      |      The method called after each invocation of a 'cmd_<name>'
      |      method.
@@ -1421,19 +1424,22 @@ CLASSES
      |              The arguments of the command.
      |
      |  print_prompt = prompt(self)
-     |  
+     |
      |  prompt(self)
      |      Print the prompt in the Vim debugger console.
      |
      |  remove_all(self)
      |      Remove all annotations.
-     |      
+     |
      |      Vim signs are unplaced.
      |      Annotations are not deleted.
-     |  
+     |
      |  set_nbsock(self, nbsock)
      |      Set the netbeans socket.
-     |  
+     |
+     |  set_nbsock_owner(self, thread_ident, socket_map=None)
+     |      Add nbsock to 'socket_map' and make 'thread_ident' nbsock owner.
+     |
      |  show_balloon(self, text)
      |      Show 'text' in the Vim balloon.
      |
@@ -1453,9 +1459,6 @@ CLASSES
      |          lnum: int
      |              The line number in the Vim buffer.
      |
-     |  switch_map(self, map)
-     |      Attach nbsock to another asyncore map.
-     |  
      |  timer(self, callme, delta)
      |      Schedule the 'callme' job at 'delta' time from now.
      |
