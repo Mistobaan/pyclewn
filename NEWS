@@ -4,12 +4,12 @@ News
 Pyclewn 1.7
 -----------
 
-.. July 26, 2011
+.. August 16, 2011
 
 New feature
 ^^^^^^^^^^^
 
-* Support of the Python ``pdb`` debugger on Windows (Python 3).
+* Support of the Python ``pdb`` debugger on Windows (Python 3 only).
 * The new ``loglevel`` command allows to print or set the log level
   dynamically from inside Vim.
 
