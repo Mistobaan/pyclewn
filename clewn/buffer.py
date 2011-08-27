@@ -128,18 +128,21 @@ class Buffer(dict):
 
     def add_anno(self, anno_id, lnum):
         """Add an annotation."""
-        assert not anno_id in self.keys()
-        if anno_id == FRAME_ANNO_ID:
-            self[anno_id] = FrameAnnotation(self, lnum, self.nbsock)
+        if anno_id not in self.keys():
+            if anno_id == FRAME_ANNO_ID:
+                self[anno_id] = FrameAnnotation(self, lnum, self.nbsock)
+            else:
+                self[anno_id] = Annotation(self, anno_id, lnum, self.nbsock)
         else:
-            self[anno_id] = Annotation(self, anno_id, lnum, self.nbsock)
+            self[anno_id].lnum = lnum
         self.update(anno_id)
 
     def delete_anno(self, anno_id):
         """Delete an annotation."""
         assert anno_id in self.keys()
         self[anno_id].remove_anno()
-        del self[anno_id]
+        if anno_id == FRAME_ANNO_ID:
+            del self[anno_id]
 
     def update(self, anno_id=None, disabled=False):
         """Update the buffer with netbeans."""
@@ -327,8 +330,6 @@ class BufferSet(dict):
         list."""
         if not isinstance(lnum, int) or lnum <= 0:
             raise ValueError('"lnum" must be strictly positive: %s' % lnum)
-        if anno_id in self.anno_dict.keys():
-            raise KeyError('"anno_id" already exists:  %s' % anno_id)
         if not os.path.isabs(pathname):
             raise ValueError(
                 '"pathname" is not an absolute path: %s' % pathname)
@@ -370,13 +371,7 @@ class BufferSet(dict):
         """Add the breakpoint to the global list and to the buffer annotation list."""
         if not isinstance(lnum, int) or lnum <= 0:
             raise ValueError('"lnum" must be strictly positive: %s' % lnum)
-        if not bp_id in self.anno_dict.keys():
-            self.add_anno(bp_id, pathname, lnum)
-        else:
-            # occurs when 'debugger' instance has removed Annotations on closing
-            buf = self.anno_dict[bp_id]
-            buf[bp_id].lnum = lnum
-            buf.update(bp_id)
+        self.add_anno(bp_id, pathname, lnum)
 
     def update_bp(self, bp_id, disabled=False):
         """Update the breakpoint.
@@ -398,43 +393,6 @@ class BufferSet(dict):
             return None
         return self.buf_list[buf_id - 1]
 
-    def delete_all(self, pathname=None, lnum=None):
-        """Delete all annotations.
-
-        Delete all annotations in pathname at lnum.
-        Delete all annotations in pathname if lnum is None.
-        Delete all annotations in all buffers if pathname is None.
-        The anno_dict dictionary is updated accordingly.
-        Return the list of deleted anno_id.
-
-        """
-        if pathname is None:
-            lnum = None
-        elif not os.path.isabs(pathname):
-            raise ValueError(
-                '"pathname" is not an absolute path: %s' % pathname)
-
-        deleted = []
-        for buf in self.buf_list:
-            if pathname is None or buf.name == pathname:
-                # remove annotations from the buffer
-                buf.remove_all(lnum)
-
-                # delete annotations from anno_dict
-                anno_list = []
-                for (anno_id, anno) in list(buf.items()):
-                    if lnum is None or anno.lnum == lnum:
-                        del self.anno_dict[anno_id]
-                        anno_list.append(anno_id)
-
-                # delete annotations from the buffer
-                for anno_id in anno_list:
-                    del buf[anno_id]
-
-                deleted.extend(anno_list)
-
-        return deleted
-
     def remove_all(self):
         """Remove all annotations.
 
@@ -442,8 +400,8 @@ class BufferSet(dict):
         Annotations are not deleted.
 
         """
-        for buf in self.buf_list:
-            buf.remove_all()
+        for anno_id in list(self.anno_dict.keys()):
+            self.delete_anno(anno_id)
 
     def get_lnum_list(self, pathname):
         """Return the list of line numbers of all enabled breakpoints.

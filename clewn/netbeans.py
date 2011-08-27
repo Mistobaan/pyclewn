@@ -1127,10 +1127,6 @@ class Netbeans(asynchat.async_chat):
         """Delete the breakpoint."""
         self._bset.delete_anno(bp_id)
 
-    def delete_all(self, pathname, lnum):
-        """Delete all breakpoints."""
-        return self._bset.delete_all(pathname, lnum)
-
     def remove_all(self):
         """Remove all annotations.
 

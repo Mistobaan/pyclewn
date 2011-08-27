@@ -539,23 +539,6 @@ class Debugger:
         """
         self.__nbsock.delete_bp(bp_id)
 
-    def delete_all(self, pathname=None, lnum=None):
-        """Delete all the breakpoints in a Vim buffer or in all buffers.
-
-        Delete all the breakpoints in a Vim buffer at 'lnum'.
-        Delete all the breakpoints in a Vim buffer when 'lnum' is None.
-        Delete all the breakpoints in all the buffers when 'pathname' is
-        None.
-
-        Method parameters:
-            pathname: str
-                The absolute pathname to the Vim buffer.
-            lnum: int
-                The line number in the Vim buffer.
-
-        """
-        return self.__nbsock.delete_all(pathname, lnum)
-
     def remove_all(self):
         """Remove all annotations.
 

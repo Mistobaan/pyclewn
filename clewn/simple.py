@@ -64,7 +64,6 @@ MAPKEYS = {
 # list of the simple commands mapped to vim user commands C<command>
 SIMPLE_CMDS = {
     'break': None,   # file name completion
-    'clear': None,   # file name completion
     'continue': (),
     'disable': (),
     'enable': (),
@@ -354,36 +353,6 @@ class Simple(debugger.Debugger):
             if not self.step_bufname:
                 self.step_bufname = name
                 self.lnum = 0
-
-        self.console_print(result)
-        self.prompt()
-
-    def cmd_clear(self, cmd, args):
-        """Clear all breakpoints at a specified line.
-
-        The required argument of the vim user command is 'fname:lnum'.
-
-        """
-        unused = cmd
-        result = 'Invalid arguments.\n'
-
-        name, lnum = debugger.name_lnum(args)
-        if name is None:
-            return
-        if name:
-            deleted  = self.delete_all(name, lnum)
-            if not deleted:
-                result = 'No breakpoint at %s:%d.\n'    \
-                                % (name, lnum)
-            else:
-                result = 'Deleted breakpoints %s\n'     \
-                                % ' '.join([str(num) for num in deleted])
-
-                # disable stepping when no enabled breakpoints
-                if name == self.step_bufname \
-                        and not self.get_lnum_list(name):
-                    self.step_bufname = None
-                    self.lnum = 0
 
         self.console_print(result)
         self.prompt()

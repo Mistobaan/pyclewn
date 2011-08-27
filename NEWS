@@ -1,6 +1,17 @@
 News
 ====
 
+Pyclewn 1.8
+-----------
+
+.. August 27, 2011
+
+Bug fixes
+^^^^^^^^^
+
+* Fix after starting a new gdb session, breakpoint signs may be placed in the
+  wrong files.
+
 Pyclewn 1.7
 -----------
 

@@ -142,7 +142,6 @@ class PyclewnTestCase(ClewnTestCase):
             'Name        Args Range Complete  Definition\n'
             'C           *          custom    call s:nbcommand("", <f-args>)\n'
             'Cbreak      *          file      call s:nbcommand("break", <f-args>)\n'
-            'Cclear      *          file      call s:nbcommand("clear", <f-args>)\n'
             'Ccontinue   *                    call s:nbcommand("continue", <f-args>)\n'
             'Cdbgvar     *                    call s:nbcommand("dbgvar", <f-args>)\n'
             'Cdelvar     *                    call s:nbcommand("delvar", <f-args>)\n'
