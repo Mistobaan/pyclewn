@@ -54,27 +54,6 @@ class SimpleCommandsTestCase(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_clear(self):
-        """The clear command"""
-        self.cltest_redir(
-            ':edit ${test_file}1\n'
-            ':sleep ${time}\n'
-            ':Cbreak ${test_file}1:1\n'
-            ':Cbreak ${test_file}1:2\n'
-            ':Cbreak ${test_file}1:2\n'
-            ':Cclear ${test_file}1:1\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':qa!\n',
-
-            'line=2  id=5  name=5\n'
-            'line=2  id=3  name=3',
-
-            'line 1\n'
-            'line 2\n'
-            )
-
     def test_continue(self):
         """The continue command"""
         self.cltest_redir(
@@ -211,7 +190,6 @@ class SimpleCommandsTestCase(ClewnTestCase):
             ':qa!\n',
 
             'break -- Set a breakpoint at a specified line.\n'
-            'clear -- Clear all breakpoints at a specified line.\n'
             'continue -- Continue the program being debugged, also used to start the program.\n'
             'dbgvar -- Add a variable to the debugger variable buffer.\n'
             'delvar -- Delete a variable from the debugger variable buffer.\n'
@@ -362,7 +340,6 @@ class SimpleCommandsTestCase(ClewnTestCase):
 
             '(simple) help\n'
             'break -- Set a breakpoint at a specified line.\n'
-            'clear -- Clear all breakpoints at a specified line.\n'
             'continue -- Continue the program being debugged, also used to start the program.\n'
             'dbgvar -- Add a variable to the debugger variable buffer.\n'
             'delvar -- Delete a variable from the debugger variable buffer.\n'
@@ -385,7 +362,6 @@ def test_main():
     """Run all the tests."""
     suite = unittest.TestSuite()
     suite.addTest(SimpleCommandsTestCase('test_break'))
-    suite.addTest(SimpleCommandsTestCase('test_clear'))
     suite.addTest(SimpleCommandsTestCase('test_continue'))
     suite.addTest(SimpleCommandsTestCase('test_dbgvar'))
     suite.addTest(SimpleCommandsTestCase('test_delvar'))

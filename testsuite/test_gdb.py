@@ -837,19 +837,68 @@ class GdbTestCase(ClewnTestCase):
             "${cwd}testsuite/bar.c|5| breakpoint 3 enabled\n"
             )
 
-    def test_bp_after_quit(self):
-        """Check adding breakpoints after a quit"""
+    def test_1_bp_after_quit(self):
+        """Check number 1, adding breakpoints after a quit"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
             ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
-            ':Crun\n'
+            ':sleep ${time}\n'
+            ':Cquit\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak ${cwd}testsuite/foobar.c:16\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            "Signs for testsuite/foobar.c:\n"
+            "line=16  id=1  name=1\n"
+            )
+
+    def test_2_bp_after_quit(self):
+        """Check number 2, adding breakpoints after a quit"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Cbreak foo\n'
+            ':sleep ${time}\n'
+            ':Cquit\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak foo\n'
+            ':sleep ${time}\n'
+            ':Cbreak foo\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            "Signs for ${cwd}testsuite/foo.c:\n"
+            "line=30  id=3  name=3\n"
+            "line=30  id=5  name=1\n"
+            )
+
+    def test_3_bp_after_quit(self):
+        """Check number 3, adding breakpoints after a quit"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Cbreak foo\n'
             ':sleep ${time}\n'
             ':Cquit\n'
             ':sleep ${time}\n'
             ':Cfile testsuite/foobar\n'
             ':Cbreak main\n'
+            ':sleep ${time}\n'
             ':Cbreak main\n'
             ':sleep ${time}\n'
             ':redir! > ${test_out}\n'
@@ -857,8 +906,42 @@ class GdbTestCase(ClewnTestCase):
             ':qa!\n',
 
             "Signs for testsuite/foobar.c:\n"
-            "line=9  id=4  name=4\n"
+            "line=9  id=5  name=3\n"
             "line=9  id=1  name=1\n"
+            )
+
+    def test_4_bp_after_quit(self):
+        """Check number 4, adding breakpoints after a quit"""
+        self.cltest_redir(
+            ':edit testsuite/foobar.c\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Cbreak foo\n'
+            ':sleep ${time}\n'
+            ':Cquit\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Cquit\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/foobar\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':Cbreak foo\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            "Signs for testsuite/foobar.c:\n"
+            "line=9  id=1  name=1\n"
+            "Signs for ${cwd}testsuite/foo.c:\n"
+            "line=30  id=3  name=3\n"
             )
 
     def test_template_function(self):
@@ -966,7 +1049,10 @@ def test_main():
     suite.addTest(GdbTestCase('test_project_option_vimquit'))
     suite.addTest(GdbTestCase('test_quit_display'))
     suite.addTest(GdbTestCase('test_cwindow_command'))
-    suite.addTest(GdbTestCase('test_bp_after_quit'))
+    suite.addTest(GdbTestCase('test_1_bp_after_quit'))
+    suite.addTest(GdbTestCase('test_2_bp_after_quit'))
+    suite.addTest(GdbTestCase('test_3_bp_after_quit'))
+    suite.addTest(GdbTestCase('test_4_bp_after_quit'))
     if os.name != 'nt':
         suite.addTest(GdbTestCase('test_template_function'))
     suite.addTest(GdbTestCase('test_sigint_as_first_command'))

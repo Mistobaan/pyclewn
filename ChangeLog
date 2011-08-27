@@ -1,3 +1,9 @@
+2011-08-27  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* buffer.py debugger.py netbeans.py simple.py: Fix after starting a
+	new gdb session, breakpoint signs may be placed in the wrong files.
+
+===============================================================================
 2011-08-15  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* debugger.py netbeans.py evtloop.py pydb.py: Do not send any netbeans
