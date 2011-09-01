@@ -4,11 +4,12 @@ News
 Pyclewn 1.8
 -----------
 
-.. August 27, 2011
+.. September 1st, 2011
 
 Bug fixes
 ^^^^^^^^^
 
+* Fix no breakpoint signs after setting a ``throw`` catchpoint.
 * Fix after starting a new gdb session, breakpoint signs may be placed in the
   wrong files.
 

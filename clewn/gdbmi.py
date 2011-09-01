@@ -78,7 +78,7 @@ SOURCE_CMDS = (
 PROJECT_CMDS = tuple(['project'] + list(SOURCE_CMDS))
 
 # gdb objects attributes
-BREAKPOINT_ATTRIBUTES = {'number', 'type', 'enabled', 'file', 'line',
+BREAKPOINT_ATTRIBUTES = {'number', 'type', 'enabled', 'what', 'file', 'line',
                              'original-location'}
 REQ_BREAKPOINT_ATTRIBUTES = {'number', 'type', 'enabled'}
 FILE_ATTRIBUTES = {'line', 'file', 'fullname'}
@@ -440,7 +440,11 @@ class Info:
         # build the breakpoints dictionary
         bp_dictionary = {}
         for bp in self.breakpoints:
-            if 'breakpoint' in bp['type']:
+            if ('breakpoint' in bp['type']
+                    # exclude 'throw' and 'catch 'catchpoints (they are typed by
+                    # gdb as 'breakpoint' instead of 'catchpoint')
+                    and not
+                        ('what' in bp and 'exception' in bp['what'])):
                 bp_dictionary[bp['number']] = bp
 
         nset = set(bp_dictionary.keys())
@@ -464,7 +468,13 @@ class Info:
             # original-location
             if ('line' not in bp_dictionary[num]
                     and 'file' not in bp_dictionary[num]):
-                fn, lno = bp_dictionary[num]['original-location'].split(':')
+                try:
+                    fn, lno = bp_dictionary[num]['original-location'].split(':')
+                except ValueError:
+                    info('breakpoint %s ignored:'
+                            ' cannot split "original-location"', num)
+                    del bp_dictionary[num]
+                    continue
                 bp_dictionary[num]['file'] = fn.strip(misc.DOUBLEQUOTE)
                 bp_dictionary[num]['line'] = lno
 
@@ -1249,7 +1259,11 @@ class OobGdbCommand(OobCommand, Command):
             if hasattr(self, 'action'):
                 try:
                     getattr(self.gdb.info, self.action)(self.cmd)
-                except (KeyError, ValueError):
+                except (KeyError, ValueError) as err:
+                    t, v, filename, lnum, last_tb = misc.last_traceback()
+                    unused = (t, v, last_tb)
+                    error('Exception %s: "%s" at %s:%d', type(err), err,
+                                                            filename, lnum)
                     info_attribute = getattr(self.gdb.info,
                                             self.info_attribute)
                     if info_attribute:
