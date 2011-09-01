@@ -998,6 +998,50 @@ class GdbTestCase(ClewnTestCase):
             "${cwd}testsuite/foo.c"
             )
 
+    def test_1_throw_catchpoint(self):
+        """Set a breakpoint after a 'throw' catchpoint"""
+        self.cltest_redir(
+            ':edit testsuite/overloaded.cc\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/overloaded\n'
+            ':Cstart\n'
+            ':Ccatch throw\n'
+            ':sleep ${time}\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            '--- Signs ---\n'
+            'Signs for testsuite/overloaded.cc:\n'
+            '    line=16  id=2  name=2\n'
+            '    line=16  id=1  name=1\n'
+            )
+
+    def test_2_throw_catchpoint(self):
+        """Set a breakpoint after deleting a 'throw' catchpoint"""
+        self.cltest_redir(
+            ':edit testsuite/overloaded.cc\n'
+            ':sleep ${time}\n'
+            ':Cfile testsuite/overloaded\n'
+            ':Cstart\n'
+            ':Ccatch throw\n'
+            ':sleep ${time}\n'
+            ':Cdelete 2\n'
+            ':sleep ${time}\n'
+            ':Cbreak main\n'
+            ':sleep ${time}\n'
+            ':redir! > ${test_out}\n'
+            ':sign place\n'
+            ':qa!\n',
+
+            '--- Signs ---\n'
+            'Signs for testsuite/overloaded.cc:\n'
+            '    line=16  id=2  name=2\n'
+            '    line=16  id=1  name=1\n'
+            )
+
 
 def test_main():
     """Run all the tests."""
@@ -1057,6 +1101,8 @@ def test_main():
         suite.addTest(GdbTestCase('test_template_function'))
     suite.addTest(GdbTestCase('test_sigint_as_first_command'))
     suite.addTest(GdbTestCase('test_frame_command'))
+    suite.addTest(GdbTestCase('test_1_throw_catchpoint'))
+    suite.addTest(GdbTestCase('test_2_throw_catchpoint'))
     test_support.run_suite(suite)
 
 if __name__ == '__main__':
