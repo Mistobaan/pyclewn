@@ -4,7 +4,17 @@ News
 Pyclewn 1.8
 -----------
 
-.. September 1st, 2011
+.. September 9th, 2011
+
+Change
+^^^^^^
+
+* Gdb/mi log stream messages are now written to the console instead of being
+  ignored. This stream is dedicated to gdb debugging messages, but a bug in
+  gdb (see `gdb bug 13170
+  <http://sourceware.org/bugzilla/show_bug.cgi?id=13170>`_) has some important
+  error and warning messages, that pyclewn should not ignore, written to
+  gdb/mi log stream instead of gdb/mi console output stream.
 
 Bug fixes
 ^^^^^^^^^
@@ -18,8 +28,8 @@ Pyclewn 1.7
 
 .. August 16, 2011
 
-New feature
-^^^^^^^^^^^
+New features
+^^^^^^^^^^^^
 
 * Support of the Python ``pdb`` debugger on Windows (Python 3 only).
 * The new ``loglevel`` command allows to print or set the log level
@@ -43,8 +53,8 @@ Pyclewn 1.6
 
 .. June 14, 2011
 
-New feature
-^^^^^^^^^^^
+New features
+^^^^^^^^^^^^
 
 * On unix, when starting pyclewn from a terminal and using gvim, pyclewn
   creates a pseudo terminal that is the the controlling terminal of the
@@ -62,8 +72,8 @@ New feature
   disables the automatic display of the console and may be useful when using
   Vim tabs and keeping the console in a tab of its own.
 
-Change
-^^^^^^
+Changes
+^^^^^^^
 
 * Pyclewn supports Python 3, ``pyclewn-1.6.py3.tar.gz`` is the Python 3
   distribution tarball,  ``pyclewn-1.6.py2.tar.gz`` is the Python 2
@@ -241,8 +251,8 @@ Pyclewn 1.0
 
 .. December 19, 2009
 
-New features
-^^^^^^^^^^^^
+New feature
+^^^^^^^^^^^
 
 * Split the current Vim window and display the variables window after running
   the ``Cdbgvar`` command. This feature is enabled when the running Vim
@@ -310,8 +320,8 @@ Pyclewn 0.6
 
 .. August 16, 2008
 
-Changes
-^^^^^^^
+Change
+^^^^^^
 
 * Pyclewn runs on the Windows platform.
 
