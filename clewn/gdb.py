@@ -751,11 +751,11 @@ class Gdb(debugger.Debugger, ProcessChannel):
         if line[0] in '~@':
             self.process_stream_record(line)
         elif line[0] in '&':
-            # ignore a 'log' stream record
+            # write the 'log' stream record to the console
             matchobj = misc.re_quoted.match(line[1:])
             if matchobj:
                 line = misc.unquote(matchobj.group(1))
-                info(line)
+                self.stream_record.append(line)
             else:
                 warning('bad format in gdb/mi log: "%s"', line)
         elif line[0] in '*+=':

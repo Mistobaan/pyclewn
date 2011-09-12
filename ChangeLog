@@ -1,5 +1,6 @@
-2011-09-01  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-09-09  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* gdb.py: Fix some gdb error and warning messages are ignored.
 	* gdbmi.py: Fix no breakpoint signs after setting a 'throw'
 	catchpoint.
 	* buffer.py debugger.py netbeans.py simple.py: Fix after starting a
