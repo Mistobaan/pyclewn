@@ -15,7 +15,6 @@ from distutils.command.install import install as _install
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_scripts import build_scripts as _build_scripts
 
-import testsuite.regrtest as regrtest
 import pyclewn_install
 from clewn import *
 
@@ -78,6 +77,7 @@ class install(_install):
             mapping = {'pgm': '"pyclewn"', 'start': ''}
             pyclewn_install.substitute_autoload('runtime', mapping)
 
+        print 'Vim user data files location: "%s"' % vimdir
         pyclewn_install.vim_features()
         _install.run(self)
         pyclewn_install.build_vimhelp()
@@ -139,6 +139,22 @@ def hg_revert(pathnames):
     except (ImportError, IOError, OSError):
         pass
 
+NOTTESTS = [
+    'test_support',
+    ]
+
+def findtests(testdir, nottests=NOTTESTS):
+    """Return a list of all applicable test modules."""
+    names = os.listdir(testdir)
+    tests = []
+    for name in names:
+        if name[:5] == 'test_' and name[-3:] == os.extsep + 'py':
+            modname = name[:-3]
+            if modname not in nottests:
+                tests.append(modname)
+    tests.sort()
+    return tests
+
 class sdist(_sdist):
     """Specialized sdister."""
     def run(self):
@@ -163,17 +179,28 @@ class Test(core.Command):
 
     def initialize_options(self):
         self.test = None
-        self.detail = 0
+        self.detail = False
 
     def finalize_options(self):
         if self.test is not None:
             self.test = ['test_' + t for t in self.test.split(',')]
-        if self.detail:
-            self.detail = 1
 
     def run (self):
         """Run the test suite."""
-        regrtest.run('testsuite', self.test, self.detail)
+        testdir = 'testsuite'
+        tests = self.test or findtests(testdir)
+        test_prefix = os.path.basename(os.path.normpath(testdir)) + '.'
+        for test in tests:
+            if test.startswith(test_prefix):
+                abstest = test
+            else:
+                abstest = test_prefix + test
+            the_package = __import__(abstest, globals(), locals(), [])
+            the_module = getattr(the_package, test)
+            # run the test
+            print abstest
+            sys.stdout.flush()
+            the_module.main(self.detail)
 
 core.setup(
     cmdclass={'sdist': sdist,

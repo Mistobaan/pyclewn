@@ -1,5 +1,8 @@
-2011-09-09  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-09-16  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* pyclewn_install.py setup.py testsuite/*py: Do not print the
+	traceback on failure of a test case from the testsuite, only on an
+	error.
 	* gdb.py: Fix some gdb error and warning messages are ignored.
 	* gdbmi.py: Fix no breakpoint signs after setting a 'throw'
 	catchpoint.

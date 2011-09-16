@@ -29,7 +29,7 @@ import testsuite.test_support as test_support
 
 from test_support import ClewnTestCase
 
-class PdbTestCase(ClewnTestCase):
+class Pdb(ClewnTestCase):
     """Test pyclewn."""
 
     def setUp(self):
@@ -401,25 +401,25 @@ class PdbTestCase(ClewnTestCase):
             'line=38  id=6  name=4\n',
             )
 
-def test_main():
+def main(verbose=False):
     """Run all the tests."""
     suite = unittest.TestSuite()
-    suite.addTest(PdbTestCase('test_intr_load_buffer'))
-    suite.addTest(PdbTestCase('test_break'))
-    suite.addTest(PdbTestCase('test_disable'))
-    suite.addTest(PdbTestCase('test_enable'))
-    suite.addTest(PdbTestCase('test_clear'))
-    suite.addTest(PdbTestCase('test_p_command'))
-    suite.addTest(PdbTestCase('test_temporary_breakpoint'))
-    suite.addTest(PdbTestCase('test_delete_bp'))
-    suite.addTest(PdbTestCase('test_bp_open_file'))
-    suite.addTest(PdbTestCase('test_frame_open_file'))
-    suite.addTest(PdbTestCase('test_locals_change'))
-    suite.addTest(PdbTestCase('test_infinite_loop'))
-    suite.addTest(PdbTestCase('test_zero_division'))
-    suite.addTest(PdbTestCase('test_bp_restored_after_detach'))
-    test_support.run_suite(suite)
+    suite.addTest(Pdb('test_intr_load_buffer'))
+    suite.addTest(Pdb('test_break'))
+    suite.addTest(Pdb('test_disable'))
+    suite.addTest(Pdb('test_enable'))
+    suite.addTest(Pdb('test_clear'))
+    suite.addTest(Pdb('test_p_command'))
+    suite.addTest(Pdb('test_temporary_breakpoint'))
+    suite.addTest(Pdb('test_delete_bp'))
+    suite.addTest(Pdb('test_bp_open_file'))
+    suite.addTest(Pdb('test_frame_open_file'))
+    suite.addTest(Pdb('test_locals_change'))
+    suite.addTest(Pdb('test_infinite_loop'))
+    suite.addTest(Pdb('test_zero_division'))
+    suite.addTest(Pdb('test_bp_restored_after_detach'))
+    test_support.run_suite(suite, verbose)
 
 if __name__ == "__main__":
-    test_main()
+    main()
 

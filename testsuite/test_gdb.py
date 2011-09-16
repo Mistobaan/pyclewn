@@ -37,7 +37,7 @@ else:
 
 gdb_v = gdb.gdb_version('gdb')
 
-class GdbTestCase(ClewnTestCase):
+class Gdb(ClewnTestCase):
     """Test the gdb debugger."""
 
     def setUp(self):
@@ -1043,68 +1043,68 @@ class GdbTestCase(ClewnTestCase):
             )
 
 
-def test_main():
+def main(verbose=False):
     """Run all the tests."""
     # run make on the testsuite
     misc.check_call(['make', '-C', 'testsuite'])
 
     suite = unittest.TestSuite()
-    suite.addTest(GdbTestCase('test_completion'))
-    suite.addTest(GdbTestCase('test_not_gdb'))
-    suite.addTest(GdbTestCase('test_bad_gdbpath'))
-    suite.addTest(GdbTestCase('test_initial_setup'))
-    suite.addTest(GdbTestCase('test_new_session'))
+    suite.addTest(Gdb('test_completion'))
+    suite.addTest(Gdb('test_not_gdb'))
+    suite.addTest(Gdb('test_bad_gdbpath'))
+    suite.addTest(Gdb('test_initial_setup'))
+    suite.addTest(Gdb('test_new_session'))
     if ('CLEWN_PIPES' not in os.environ
             and 'CLEWN_POPEN' not in os.environ
             and os.name != 'nt'):
-        suite.addTest(GdbTestCase('test_sigint'))
-    suite.addTest(GdbTestCase('test_gdb_arglist'))
-    suite.addTest(GdbTestCase('test_gdb_illegal'))
-    suite.addTest(GdbTestCase('test_symbols_completion'))
+        suite.addTest(Gdb('test_sigint'))
+    suite.addTest(Gdb('test_gdb_arglist'))
+    suite.addTest(Gdb('test_gdb_illegal'))
+    suite.addTest(Gdb('test_symbols_completion'))
     if os.name != 'nt':
         if gdb_v.split('.') < '6.4'.split('.'):
-            suite.addTest(GdbTestCase('test_oob_command'))
+            suite.addTest(Gdb('test_oob_command'))
         elif gdb_v.split('.') < '7.0'.split('.'):
-            suite.addTest(GdbTestCase('test_oob_command_v_64'))
+            suite.addTest(Gdb('test_oob_command_v_64'))
         else:
-            suite.addTest(GdbTestCase('test_oob_command_v_70'))
-    suite.addTest(GdbTestCase('test_frame_sign'))
-    suite.addTest(GdbTestCase('test_annotation_lvl1'))
-    suite.addTest(GdbTestCase('test_disable_bp'))
-    suite.addTest(GdbTestCase('test_delete_once'))
-    suite.addTest(GdbTestCase('test_breakpoint_open_file'))
-    suite.addTest(GdbTestCase('test_delete_bp'))
-    suite.addTest(GdbTestCase('test_clear_on_frame'))
-    suite.addTest(GdbTestCase('test_break_completion'))
-    suite.addTest(GdbTestCase('test_varobj'))
-    suite.addTest(GdbTestCase('test_varobj_fold'))
-    suite.addTest(GdbTestCase('test_varobj_del_last'))
-    suite.addTest(GdbTestCase('test_varobj_del_first'))
-    suite.addTest(GdbTestCase('test_varobj_del_middle'))
-    suite.addTest(GdbTestCase('test_varobj_hilite'))
-    suite.addTest(GdbTestCase('test_tabedit_bug'))
-    suite.addTest(GdbTestCase('test_watch_print'))
-    suite.addTest(GdbTestCase('test_frame_print'))
-    suite.addTest(GdbTestCase('test_multiple_choice'))
-    suite.addTest(GdbTestCase('test_project_cmd'))
-    suite.addTest(GdbTestCase('test_project_cmd_unique_bp'))
-    suite.addTest(GdbTestCase('test_project_option_load'))
-    suite.addTest(GdbTestCase('test_project_option_save'))
-    suite.addTest(GdbTestCase('test_project_option_vimquit'))
-    suite.addTest(GdbTestCase('test_quit_display'))
-    suite.addTest(GdbTestCase('test_cwindow_command'))
-    suite.addTest(GdbTestCase('test_1_bp_after_quit'))
-    suite.addTest(GdbTestCase('test_2_bp_after_quit'))
-    suite.addTest(GdbTestCase('test_3_bp_after_quit'))
-    suite.addTest(GdbTestCase('test_4_bp_after_quit'))
+            suite.addTest(Gdb('test_oob_command_v_70'))
+    suite.addTest(Gdb('test_frame_sign'))
+    suite.addTest(Gdb('test_annotation_lvl1'))
+    suite.addTest(Gdb('test_disable_bp'))
+    suite.addTest(Gdb('test_delete_once'))
+    suite.addTest(Gdb('test_breakpoint_open_file'))
+    suite.addTest(Gdb('test_delete_bp'))
+    suite.addTest(Gdb('test_clear_on_frame'))
+    suite.addTest(Gdb('test_break_completion'))
+    suite.addTest(Gdb('test_varobj'))
+    suite.addTest(Gdb('test_varobj_fold'))
+    suite.addTest(Gdb('test_varobj_del_last'))
+    suite.addTest(Gdb('test_varobj_del_first'))
+    suite.addTest(Gdb('test_varobj_del_middle'))
+    suite.addTest(Gdb('test_varobj_hilite'))
+    suite.addTest(Gdb('test_tabedit_bug'))
+    suite.addTest(Gdb('test_watch_print'))
+    suite.addTest(Gdb('test_frame_print'))
+    suite.addTest(Gdb('test_multiple_choice'))
+    suite.addTest(Gdb('test_project_cmd'))
+    suite.addTest(Gdb('test_project_cmd_unique_bp'))
+    suite.addTest(Gdb('test_project_option_load'))
+    suite.addTest(Gdb('test_project_option_save'))
+    suite.addTest(Gdb('test_project_option_vimquit'))
+    suite.addTest(Gdb('test_quit_display'))
+    suite.addTest(Gdb('test_cwindow_command'))
+    suite.addTest(Gdb('test_1_bp_after_quit'))
+    suite.addTest(Gdb('test_2_bp_after_quit'))
+    suite.addTest(Gdb('test_3_bp_after_quit'))
+    suite.addTest(Gdb('test_4_bp_after_quit'))
     if os.name != 'nt':
-        suite.addTest(GdbTestCase('test_template_function'))
-    suite.addTest(GdbTestCase('test_sigint_as_first_command'))
-    suite.addTest(GdbTestCase('test_frame_command'))
-    suite.addTest(GdbTestCase('test_1_throw_catchpoint'))
-    suite.addTest(GdbTestCase('test_2_throw_catchpoint'))
-    test_support.run_suite(suite)
+        suite.addTest(Gdb('test_template_function'))
+    suite.addTest(Gdb('test_sigint_as_first_command'))
+    suite.addTest(Gdb('test_frame_command'))
+    suite.addTest(Gdb('test_1_throw_catchpoint'))
+    suite.addTest(Gdb('test_2_throw_catchpoint'))
+    test_support.run_suite(suite, verbose)
 
 if __name__ == '__main__':
-    test_main()
+    main()
 

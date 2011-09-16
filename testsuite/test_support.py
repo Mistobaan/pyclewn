@@ -23,11 +23,11 @@
 import sys
 import os
 import string
-import unittest
+import time
+import traceback
+from unittest import TestCase, TestResult
 
 import clewn.vim as vim
-
-verbose = 0              # flag set by regrtest.py
 
 if os.name == 'nt':
     SLEEP_TIME = '1400m'
@@ -43,32 +43,27 @@ TESTFN = '@test'
 TESTFN_FILE = TESTFN + '_file_'
 TESTFN_OUT = TESTFN + '_out'
 
-class TestFailed(Exception):
-    """Test failed."""
+def get_description(test):
+    """"Return a ClewnTestCase description."""
+    return '<%s:%s> %s' % (test.__class__.__name__,
+                            test.method, test.shortDescription())
 
-class BasicTestRunner:
-    """BasicTestRunner."""
-    def run(self, test):
-        """Run the test."""
-        unused = self
-        result = unittest.TestResult()
-        test(result)
-        return result
-
-class ClewnTestCase(unittest.TestCase):
+class ClewnTestCase(TestCase):
     """Pyclewn test case abstract class.
 
     The netbeans port changes on each run, within the interval
     [NETBEANS_PORT, NETBEANS_PORT + 99].
-    In 'verbose' mode, pyclewn runs at 'nbdebug' log level and the log is
+    In verbose mode, pyclewn runs at 'nbdebug' log level and the log is
     written to LOGFILE.
 
     """
     _port = 0
+    _verbose = False
 
-    def __init__(self, methodName='runTest'):
+    def __init__(self, method='runTest'):
         """Constructor."""
-        unittest.TestCase.__init__(self, methodName)
+        TestCase.__init__(self, method)
+        self.method = method
         self.debugged_script = None
         self.fnull = None
 
@@ -88,7 +83,7 @@ class ClewnTestCase(unittest.TestCase):
         ]
         if 'EDITOR' in os.environ:
             sys.argv.append('--editor=%s' % os.environ['EDITOR'])
-        if verbose:
+        if self._verbose:
             sys.argv.append('--level=nbdebug')
 
     def setup_vim_arg(self, newarg):
@@ -172,7 +167,7 @@ class ClewnTestCase(unittest.TestCase):
         if os.name == 'nt' and not checked:
             output = output.replace('/', '\\')
             checked = ' '.join(expected.split()) in ' '.join(output.split())
-        verify(checked,
+        self.assertTrue(checked,
                 "\n\n...Expected:\n%s \n\n...Got:\n%s" % (expected, output))
 
     def cltest_redir(self, cmd, expected, *test):
@@ -184,29 +179,104 @@ class ClewnTestCase(unittest.TestCase):
         sys.argv.append('--level=%s' % level)
         self.clewn_test(cmd, expected, LOGFILE, *test)
 
-def verify(condition, reason='test failed'):
-    """Verify that condition is true. If not, raise TestFailed.
+class TextTestResult(TestResult):
+    """A test result class that prints formatted text results to a stream."""
+    separator1 = '=' * 70
+    separator2 = '-' * 70
 
-       The optional argument reason can be given to provide
-       a better error text.
-    """
+    def __init__(self, stream, verbose):
+        """"Constructor."""
+        TestResult.__init__(self)
+        self.stream = stream
+        self.verbose = verbose
 
-    if not condition:
-        raise TestFailed(reason)
+    def startTest(self, test):
+        "Called when the given test is about to be run"
+        TestResult.startTest(self, test)
+        if self.verbose:
+            self.stream.write(get_description(test))
+            self.stream.write(' ... ')
 
-def run_suite(suite):
-    """Run tests from a unittest.TestSuite-derived class."""
-    if verbose:
-        result = unittest.TextTestRunner(sys.stdout, verbosity=2).run(suite)
-    else:
-        result = BasicTestRunner().run(suite)
-
-    if not result.wasSuccessful():
-        if len(result.errors) == 1 and not result.failures:
-            err = result.errors[0][1]
-        elif len(result.failures) == 1 and not result.errors:
-            err = result.failures[0][1]
+    def addSuccess(self, test):
+        "Called when a test has completed successfully"
+        TestResult.addSuccess(self, test)
+        if self.verbose:
+            self.stream.write('ok\n')
         else:
-            err = "errors occurred; run in verbose mode for details"
-        raise TestFailed(err)
+            self.stream.write('.')
+
+    def addError(self, test, err):
+        """Called when an error has occurred."""
+        TestResult.addError(self, test, err)
+        if self.verbose:
+            self.stream.write('ERROR\n')
+        else:
+            self.stream.write('E')
+
+    def addFailure(self, test, err):
+        """Called when an error has occurred."""
+        exctype, value, tb = err
+        unused = tb
+        # do not print the traceback on failure
+        self.failures.append((test,
+                ''.join(traceback.format_exception(exctype, value, None))))
+        if self.verbose:
+            self.stream.write('FAIL\n')
+        else:
+            self.stream.write('F')
+
+    def print_errors(self):
+        """"Print the errors and failures."""
+        self.stream.write('\n')
+        self.print_error_list('ERROR', self.errors)
+        self.print_error_list('FAIL', self.failures)
+
+    def print_error_list(self, flavour, errors):
+        """"Print the list of one flavour of errors."""
+        for test, err in errors:
+            self.stream.write(self.separator1)
+            self.stream.write('\n%s: %s\n' % (flavour, get_description(test)))
+            self.stream.write(self.separator2)
+            self.stream.write('\n%s\n' % err)
+
+class TextTestRunner(object):
+    """A test runner class that prints results as they are run and a summary."""
+    def __init__(self, verbose, stream=sys.stderr):
+        """"Constructor."""
+        self.verbose = verbose
+        self.stream = stream
+
+    def run(self, test):
+        """Run the given test case or test suite."""
+        result = TextTestResult(self.stream, self.verbose)
+        start = time.time()
+        test(result)
+        stop = time.time()
+        elapsed = stop - start
+
+        result.print_errors()
+
+        # print the summary
+        self.stream.write(result.separator2)
+        run = result.testsRun
+        self.stream.write('\nRan %d test%s in %.3fs\n\n' %
+                            (run, run != 1 and 's' or '', elapsed))
+
+        if not result.wasSuccessful():
+            self.stream.write('FAILED (')
+            failed, errored = map(len, (result.failures, result.errors))
+            if failed:
+                self.stream.write('failures=%d' % failed)
+            if errored:
+                if failed: self.stream.write(', ')
+                self.stream.write('errors=%d' % errored)
+            self.stream.write(')\n')
+        else:
+            self.stream.write('OK\n')
+        return result
+
+def run_suite(suite, verbose):
+    """Run the suite."""
+    ClewnTestCase._verbose = verbose
+    TextTestRunner(verbose).run(suite)
 

@@ -29,7 +29,7 @@ import testsuite.test_support as test_support
 
 from test_support import ClewnTestCase
 
-class SimpleCommandsTestCase(ClewnTestCase):
+class Simple(ClewnTestCase):
     """Test the Simple commands."""
 
     def setUp(self):
@@ -358,31 +358,31 @@ class SimpleCommandsTestCase(ClewnTestCase):
             'unmapkeys -- Unmap the pyclewn keys.'
             )
 
-def test_main():
+def main(verbose=False):
     """Run all the tests."""
     suite = unittest.TestSuite()
-    suite.addTest(SimpleCommandsTestCase('test_break'))
-    suite.addTest(SimpleCommandsTestCase('test_continue'))
-    suite.addTest(SimpleCommandsTestCase('test_dbgvar'))
-    suite.addTest(SimpleCommandsTestCase('test_delvar'))
-    suite.addTest(SimpleCommandsTestCase('test_disable'))
-    suite.addTest(SimpleCommandsTestCase('test_dumprepr'))
-    suite.addTest(SimpleCommandsTestCase('test_enable'))
-    suite.addTest(SimpleCommandsTestCase('test_help'))
-    suite.addTest(SimpleCommandsTestCase('test_interrupt'))
-    suite.addTest(SimpleCommandsTestCase('test_step'))
-    suite.addTest(SimpleCommandsTestCase('test_mapkeys'))
-    suite.addTest(SimpleCommandsTestCase('test_print'))
-    suite.addTest(SimpleCommandsTestCase('test_unmapkeys'))
-    suite.addTest(SimpleCommandsTestCase('test_maxlines'))
+    suite.addTest(Simple('test_break'))
+    suite.addTest(Simple('test_continue'))
+    suite.addTest(Simple('test_dbgvar'))
+    suite.addTest(Simple('test_delvar'))
+    suite.addTest(Simple('test_disable'))
+    suite.addTest(Simple('test_dumprepr'))
+    suite.addTest(Simple('test_enable'))
+    suite.addTest(Simple('test_help'))
+    suite.addTest(Simple('test_interrupt'))
+    suite.addTest(Simple('test_step'))
+    suite.addTest(Simple('test_mapkeys'))
+    suite.addTest(Simple('test_print'))
+    suite.addTest(Simple('test_unmapkeys'))
+    suite.addTest(Simple('test_maxlines'))
     if os.name != 'nt':
         vim_pgm = ''
         if 'EDITOR' in os.environ:
             vim_pgm = os.path.basename(os.environ['EDITOR'])
         if vim_pgm != 'vim':
-            suite.addTest(SimpleCommandsTestCase('test_startupfile'))
-    test_support.run_suite(suite)
+            suite.addTest(Simple('test_startupfile'))
+    test_support.run_suite(suite, verbose)
 
 if __name__ == "__main__":
-    test_main()
+    main()
 

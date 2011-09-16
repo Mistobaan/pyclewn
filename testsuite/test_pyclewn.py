@@ -27,7 +27,7 @@ import testsuite.test_support as test_support
 
 from test_support import ClewnTestCase
 
-class PyclewnTestCase(ClewnTestCase):
+class Pyclewn(ClewnTestCase):
     """Test pyclewn."""
 
     def setUp(self):
@@ -209,18 +209,18 @@ class PyclewnTestCase(ClewnTestCase):
             'line 2\n'
             )
 
-def test_main():
+def main(verbose=False):
     """Run all the tests."""
     suite = unittest.TestSuite()
-    suite.addTest(PyclewnTestCase('test_breakloadbuffer'))
-    suite.addTest(PyclewnTestCase('test_steploadbuffer'))
-    suite.addTest(PyclewnTestCase('test_wipeout'))
-    suite.addTest(PyclewnTestCase('test_restart'))
-    suite.addTest(PyclewnTestCase('test_cmdlist'))
-    suite.addTest(PyclewnTestCase('test_mapkeys'))
-    suite.addTest(PyclewnTestCase('test_delconsole'))
-    test_support.run_suite(suite)
+    suite.addTest(Pyclewn('test_breakloadbuffer'))
+    suite.addTest(Pyclewn('test_steploadbuffer'))
+    suite.addTest(Pyclewn('test_wipeout'))
+    suite.addTest(Pyclewn('test_restart'))
+    suite.addTest(Pyclewn('test_cmdlist'))
+    suite.addTest(Pyclewn('test_mapkeys'))
+    suite.addTest(Pyclewn('test_delconsole'))
+    test_support.run_suite(suite, verbose)
 
 if __name__ == "__main__":
-    test_main()
+    main()
 

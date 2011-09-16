@@ -231,6 +231,7 @@ suppressions = {
 	'pydb.Pdb.stop_here': 'no-classattr',
 	'pydb.ShortRepr': 'no-callinit',
 	'pydb.BalloonRepr': 'no-callinit',
+	'test_support': 'no-returnvalues',
     }
 
 # dict: suppress warnings where keys can be regular expressions
