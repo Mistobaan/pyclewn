@@ -358,7 +358,7 @@ class Simple(ClewnTestCase):
             'unmapkeys -- Unmap the pyclewn keys.'
             )
 
-def main(verbose=False):
+def main(verbose=False, stop=False):
     """Run all the tests."""
     suite = unittest.TestSuite()
     suite.addTest(Simple('test_break'))
@@ -381,7 +381,7 @@ def main(verbose=False):
             vim_pgm = os.path.basename(os.environ['EDITOR'])
         if vim_pgm != 'vim':
             suite.addTest(Simple('test_startupfile'))
-    test_support.run_suite(suite, verbose)
+    test_support.run_suite(suite, verbose, stop)
 
 if __name__ == "__main__":
     main()

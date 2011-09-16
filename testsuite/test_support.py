@@ -184,11 +184,12 @@ class TextTestResult(TestResult):
     separator1 = '=' * 70
     separator2 = '-' * 70
 
-    def __init__(self, stream, verbose):
+    def __init__(self, stream, verbose, stop_on_error):
         """"Constructor."""
         TestResult.__init__(self)
         self.stream = stream
         self.verbose = verbose
+        self.stop_on_error = stop_on_error
 
     def startTest(self, test):
         "Called when the given test is about to be run"
@@ -212,6 +213,8 @@ class TextTestResult(TestResult):
             self.stream.write('ERROR\n')
         else:
             self.stream.write('E')
+        if self.stop_on_error:
+            self.stop()
 
     def addFailure(self, test, err):
         """Called when an error has occurred."""
@@ -224,6 +227,8 @@ class TextTestResult(TestResult):
             self.stream.write('FAIL\n')
         else:
             self.stream.write('F')
+        if self.stop_on_error:
+            self.stop()
 
     def print_errors(self):
         """"Print the errors and failures."""
@@ -241,14 +246,15 @@ class TextTestResult(TestResult):
 
 class TextTestRunner(object):
     """A test runner class that prints results as they are run and a summary."""
-    def __init__(self, verbose, stream=sys.stderr):
+    def __init__(self, verbose, stop_on_error, stream=sys.stderr):
         """"Constructor."""
         self.verbose = verbose
+        self.stop_on_error = stop_on_error
         self.stream = stream
 
     def run(self, test):
         """Run the given test case or test suite."""
-        result = TextTestResult(self.stream, self.verbose)
+        result = TextTestResult(self.stream, self.verbose, self.stop_on_error)
         start = time.time()
         test(result)
         stop = time.time()
@@ -275,8 +281,8 @@ class TextTestRunner(object):
             self.stream.write('OK\n')
         return result
 
-def run_suite(suite, verbose):
+def run_suite(suite, verbose, stop_on_error):
     """Run the suite."""
     ClewnTestCase._verbose = verbose
-    TextTestRunner(verbose).run(suite)
+    TextTestRunner(verbose, stop_on_error).run(suite)
 

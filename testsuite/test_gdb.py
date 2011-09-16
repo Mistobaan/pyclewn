@@ -1043,7 +1043,7 @@ class Gdb(ClewnTestCase):
             )
 
 
-def main(verbose=False):
+def main(verbose=False, stop=False):
     """Run all the tests."""
     # run make on the testsuite
     misc.check_call(['make', '-C', 'testsuite'])
@@ -1103,7 +1103,7 @@ def main(verbose=False):
     suite.addTest(Gdb('test_frame_command'))
     suite.addTest(Gdb('test_1_throw_catchpoint'))
     suite.addTest(Gdb('test_2_throw_catchpoint'))
-    test_support.run_suite(suite, verbose)
+    test_support.run_suite(suite, verbose, stop)
 
 if __name__ == '__main__':
     main()

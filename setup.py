@@ -173,12 +173,15 @@ class Test(core.Command):
             'run a comma separated list of tests, for example             '
             '"--test=simple,gdb", all the tests are run when this option'
             ' is not present'),
+        ('stop', 's',
+            'stop at the first test failure or error'),
         ('detail', 'd',
             'detailed test output, each test case is printed'),
     ]
 
     def initialize_options(self):
         self.test = None
+        self.stop = False
         self.detail = False
 
     def finalize_options(self):
@@ -200,7 +203,7 @@ class Test(core.Command):
             # run the test
             print abstest
             sys.stdout.flush()
-            the_module.main(self.detail)
+            the_module.main(self.detail, self.stop)
 
 core.setup(
     cmdclass={'sdist': sdist,

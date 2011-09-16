@@ -209,7 +209,7 @@ class Pyclewn(ClewnTestCase):
             'line 2\n'
             )
 
-def main(verbose=False):
+def main(verbose=False, stop=False):
     """Run all the tests."""
     suite = unittest.TestSuite()
     suite.addTest(Pyclewn('test_breakloadbuffer'))
@@ -219,7 +219,7 @@ def main(verbose=False):
     suite.addTest(Pyclewn('test_cmdlist'))
     suite.addTest(Pyclewn('test_mapkeys'))
     suite.addTest(Pyclewn('test_delconsole'))
-    test_support.run_suite(suite, verbose)
+    test_support.run_suite(suite, verbose, stop)
 
 if __name__ == "__main__":
     main()

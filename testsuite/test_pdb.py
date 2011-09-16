@@ -401,7 +401,7 @@ class Pdb(ClewnTestCase):
             'line=38  id=6  name=4\n',
             )
 
-def main(verbose=False):
+def main(verbose=False, stop=False):
     """Run all the tests."""
     suite = unittest.TestSuite()
     suite.addTest(Pdb('test_intr_load_buffer'))
@@ -418,7 +418,7 @@ def main(verbose=False):
     suite.addTest(Pdb('test_infinite_loop'))
     suite.addTest(Pdb('test_zero_division'))
     suite.addTest(Pdb('test_bp_restored_after_detach'))
-    test_support.run_suite(suite, verbose)
+    test_support.run_suite(suite, verbose, stop)
 
 if __name__ == "__main__":
     main()
