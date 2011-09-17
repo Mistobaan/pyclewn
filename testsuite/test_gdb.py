@@ -23,11 +23,9 @@
 """
 import sys
 import os
-from unittest2 import TestSuite
-import testsuite.test_support as test_support
+from unittest2 import skipUnless
 
 import clewn.gdb as gdb
-import clewn.misc as misc
 from test_support import ClewnTestCase, TESTFN_FILE, TESTFN_OUT
 
 if os.name == 'nt':
@@ -58,7 +56,7 @@ class Gdb(ClewnTestCase):
         unused = self
         sys.argv.extend(['-a', ('-tty=%s %s' % (os.devnull, args))])
 
-    def test_completion(self):
+    def test_001(self):
         """The gdb commands completion in vim"""
         self.cltest_redir(
             ':redir! > ${test_out}\n'
@@ -75,7 +73,7 @@ class Gdb(ClewnTestCase):
             'Cmapkeys    *                    call s:nbcommand("mapkeys", <f-args>)\n'
             )
 
-    def test_not_gdb(self):
+    def test_002(self):
         """The 'true' program is not a gdb program"""
         sys.argv.extend(['--pgm=true'])
         self.cltest_logfile(
@@ -86,7 +84,7 @@ class Gdb(ClewnTestCase):
             'error'
             )
 
-    def test_bad_gdbpath(self):
+    def test_003(self):
         """The gdb program is not a valid pathname"""
         foobar = 'path_to_nowhere%sfoobar' % os.sep
         sys.argv.extend(['--pgm=' + foobar])
@@ -98,7 +96,7 @@ class Gdb(ClewnTestCase):
             'error'
             )
 
-    def test_initial_setup(self):
+    def test_004(self):
         """Test the height, width and confirm setup"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -120,7 +118,7 @@ class Gdb(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_new_session(self):
+    def test_005(self):
         """Test that after quit, a new gdb session can be started"""
         self.cltest_logfile(
             ':edit ${test_file}1\n'
@@ -138,7 +136,11 @@ class Gdb(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_sigint(self):
+    @skipUnless(('CLEWN_PIPES' not in os.environ
+                        and 'CLEWN_POPEN' not in os.environ
+                        and os.name != 'nt'),
+                            'sigint is not supported on Windows')
+    def test_006(self):
         """The program is interrupted with the sigint command"""
         self.setup_gdb_args()
         self.cltest_redir(
@@ -155,7 +157,7 @@ class Gdb(ClewnTestCase):
             'Program received signal SIGINT, Interrupt.\n'
             )
 
-    def test_gdb_arglist(self):
+    def test_007(self):
         """The gdb program can be run with --args argument list"""
         self.setup_gdb_args('--args testsuite/foobar 55')
         self.cltest_redir(
@@ -173,7 +175,7 @@ class Gdb(ClewnTestCase):
             '$$1 = 55\n'
             )
 
-    def test_gdb_illegal(self):
+    def test_008(self):
         """Illegal commands are rejected"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -191,7 +193,7 @@ class Gdb(ClewnTestCase):
             'Illegal command in pyclewn.\n'
             )
 
-    def test_symbols_completion(self):
+    def test_008(self):
         """The break and clear commands symbols completion"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -205,7 +207,9 @@ class Gdb(ClewnTestCase):
             'symbols fetched for break and clear completion\n'
             )
 
-    def test_oob_command(self):
+    @skipUnless((gdb_v.split('.') < '6.4'.split('.')),
+                        'gdb version more recent than 6.4')
+    def test_009(self):
         """Checking result of oob commands"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -224,7 +228,9 @@ class Gdb(ClewnTestCase):
             "'frame': {'line': '9', 'file': 'foobar.c', 'func': 'main', 'level': '0'},\n"
             )
 
-    def test_oob_command_v_64(self):
+    @skipUnless((gdb_v.split('.') < '7.0'.split('.')),
+                        'gdb version more recent than 7.0')
+    def test_010(self):
         """Checking result of oob commands"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -250,7 +256,9 @@ class Gdb(ClewnTestCase):
             "             'pathname': '${cwd}testsuite/foobar.c'},\n"
             )
 
-    def test_oob_command_v_70(self):
+    @skipUnless((gdb_v.split('.') >= '7.0'.split('.')),
+                        'gdb version less recent than 7.0')
+    def test_011(self):
         """Checking result of oob commands"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -277,7 +285,7 @@ class Gdb(ClewnTestCase):
             "             'pathname': '${cwd}testsuite/foobar.c'},\n"
             )
 
-    def test_frame_sign(self):
+    def test_012(self):
         """Check frame sign"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -297,7 +305,7 @@ class Gdb(ClewnTestCase):
             "    line=9  id=1  name=1\n"
             )
 
-    def test_annotation_lvl1(self):
+    def test_013(self):
         """Check annotations level 1 are removed"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -318,7 +326,7 @@ class Gdb(ClewnTestCase):
             "(gdb) step\n"
             )
 
-    def test_disable_bp(self):
+    def test_014(self):
         """Check disable breakpoint"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -335,7 +343,7 @@ class Gdb(ClewnTestCase):
             "line=9  id=2  name=2\n"
             )
 
-    def test_delete_once(self):
+    def test_015(self):
         """Check breakpoint delete once"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -355,7 +363,7 @@ class Gdb(ClewnTestCase):
             "line=10  id=3  name=3\n"
             )
 
-    def test_breakpoint_open_file(self):
+    def test_016(self):
         """Check setting a breakpoint open the source file"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -371,7 +379,7 @@ class Gdb(ClewnTestCase):
             "line=30  id=1  name=1\n"
             )
 
-    def test_delete_bp(self):
+    def test_017(self):
         """Check delete breakpoint"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -389,7 +397,7 @@ class Gdb(ClewnTestCase):
             "line=9  id=3  name=3\n"
             )
 
-    def test_clear_on_frame(self):
+    def test_018(self):
         """Check clearing breakpoints on the frame sign line"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -410,7 +418,7 @@ class Gdb(ClewnTestCase):
             "line=9  id=3  name=3\n"
             )
 
-    def test_break_completion(self):
+    def test_019(self):
         """Check break completion on overloaded functions"""
         self.cltest_logfile(
             ':edit testsuite/overloaded.cc\n'
@@ -427,7 +435,7 @@ class Gdb(ClewnTestCase):
             'debug'
             )
 
-    def test_varobj(self):
+    def test_020(self):
         """Check varobj creation, folding and deletion"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -451,7 +459,7 @@ class Gdb(ClewnTestCase):
             "   *  var1.key: (int) key ={=} 1\n"
             )
 
-    def test_varobj_fold(self):
+    def test_021(self):
         """Check varobj folding"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -479,7 +487,7 @@ class Gdb(ClewnTestCase):
             "   *  var2.key  : (int   ) key   ={=} 1\n"
             )
 
-    def test_varobj_del_last(self):
+    def test_022(self):
         """Check deleting the last varobj"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -507,7 +515,7 @@ class Gdb(ClewnTestCase):
             "   *  var2.key  : (int   ) key   ={=} 1\n"
             )
 
-    def test_varobj_del_first(self):
+    def test_023(self):
         """Check deleting the first varobj"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -534,7 +542,7 @@ class Gdb(ClewnTestCase):
             "   *  var2.key  : (int   ) key   ={=} 1\n"
             )
 
-    def test_varobj_del_middle(self):
+    def test_024(self):
         """Check deleting a middle varobj"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -561,7 +569,7 @@ class Gdb(ClewnTestCase):
             "[+] var3: (map_t) map ={=} {...}\n"
             )
 
-    def test_varobj_hilite(self):
+    def test_025(self):
         """Check varobj hiliting"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -593,7 +601,7 @@ class Gdb(ClewnTestCase):
             " *  var1: (int) i ={-} 1\n"
             )
 
-    def test_tabedit_bug(self):
+    def test_026(self):
         """Check robustness against vim 'tabedit (clewn)_dbgvar' bug"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -616,7 +624,7 @@ class Gdb(ClewnTestCase):
             "[+] var1: (map_t) map ={=} {...}\n"
             )
 
-    def test_watch_print(self):
+    def test_027(self):
         """Watched variables are updated when changed with the print command"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -634,7 +642,7 @@ class Gdb(ClewnTestCase):
             " *  var1: (int) len ={*} 555"
             )
 
-    def test_frame_print(self):
+    def test_028(self):
         """Returning to the correct frame location after a print command"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -665,7 +673,7 @@ class Gdb(ClewnTestCase):
             'sign 5 text==> texthl=NB_0\n'
             )
 
-    def test_multiple_choice(self):
+    def test_029(self):
         """Set automatically all breakpoints on a multiple choice"""
         self.cltest_redir(
             ':edit testsuite/overloaded.cc\n'
@@ -686,7 +694,7 @@ class Gdb(ClewnTestCase):
             '    line=5  id=1  name=1\n'
             )
 
-    def test_project_cmd(self):
+    def test_030(self):
         """Check the project command"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -709,7 +717,7 @@ class Gdb(ClewnTestCase):
             'break ${cwd}testsuite/foo.c:30\n'
             )
 
-    def test_project_cmd_unique_bp(self):
+    def test_031(self):
         """Check the project command saves at most one breakpoint per line"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -733,7 +741,7 @@ class Gdb(ClewnTestCase):
             'break ${cwd}testsuite/foobar.c:9\n'
             )
 
-    def test_project_option_load(self):
+    def test_032(self):
         """Project option sources a project file"""
         self.setup_project_tests('%s1' % TESTFN_FILE)
         self.cltest_redir(
@@ -757,7 +765,7 @@ class Gdb(ClewnTestCase):
             'break foo\n'
             )
 
-    def test_project_option_save(self):
+    def test_033(self):
         """Project option saves a project file"""
         self.setup_project_tests(TESTFN_OUT)
         self.cltest_redir(
@@ -779,7 +787,7 @@ class Gdb(ClewnTestCase):
             'break ${cwd}testsuite/foo.c:30\n'
             )
 
-    def test_project_option_vimquit(self):
+    def test_034(self):
         """Project option saves a project file on quitting from Vim"""
         self.setup_project_tests(TESTFN_OUT)
         self.cltest_redir(
@@ -796,7 +804,7 @@ class Gdb(ClewnTestCase):
             'break ${cwd}testsuite/foobar.c:9\n'
             )
 
-    def test_quit_display(self):
+    def test_035(self):
         """The quit command prints a separation line"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -811,7 +819,7 @@ class Gdb(ClewnTestCase):
             '===========\n'
             )
 
-    def test_cwindow_command(self):
+    def test_036(self):
         """The cwindow command opens the quickfix window of breakpoints"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -837,7 +845,7 @@ class Gdb(ClewnTestCase):
             "${cwd}testsuite/bar.c|5| breakpoint 3 enabled\n"
             )
 
-    def test_1_bp_after_quit(self):
+    def test_037(self):
         """Check number 1, adding breakpoints after a quit"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -858,7 +866,7 @@ class Gdb(ClewnTestCase):
             "line=16  id=1  name=1\n"
             )
 
-    def test_2_bp_after_quit(self):
+    def test_038(self):
         """Check number 2, adding breakpoints after a quit"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -884,7 +892,7 @@ class Gdb(ClewnTestCase):
             "line=30  id=5  name=1\n"
             )
 
-    def test_3_bp_after_quit(self):
+    def test_039(self):
         """Check number 3, adding breakpoints after a quit"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -910,7 +918,7 @@ class Gdb(ClewnTestCase):
             "line=9  id=1  name=1\n"
             )
 
-    def test_4_bp_after_quit(self):
+    def test_040(self):
         """Check number 4, adding breakpoints after a quit"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -944,7 +952,7 @@ class Gdb(ClewnTestCase):
             "line=30  id=3  name=3\n"
             )
 
-    def test_template_function(self):
+    def test_041(self):
         """Set a breakpoint in a template function"""
         self.cltest_redir(
             ':edit testsuite/function_template.cpp\n'
@@ -960,7 +968,7 @@ class Gdb(ClewnTestCase):
             "line=7  id=1  name=1\n"
             )
 
-    def test_sigint_as_first_command(self):
+    def test_042(self):
         """Check starting the session with the 'sigint' command"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -978,7 +986,7 @@ class Gdb(ClewnTestCase):
             "line=30  id=1  name=1\n"
             )
 
-    def test_frame_command(self):
+    def test_043(self):
         """Check the frame command moves the cursor to the frame location"""
         self.cltest_redir(
             ':edit testsuite/foobar.c\n'
@@ -998,7 +1006,7 @@ class Gdb(ClewnTestCase):
             "${cwd}testsuite/foo.c"
             )
 
-    def test_1_throw_catchpoint(self):
+    def test_044(self):
         """Set a breakpoint after a 'throw' catchpoint"""
         self.cltest_redir(
             ':edit testsuite/overloaded.cc\n'
@@ -1019,7 +1027,7 @@ class Gdb(ClewnTestCase):
             '    line=16  id=1  name=1\n'
             )
 
-    def test_2_throw_catchpoint(self):
+    def test_045(self):
         """Set a breakpoint after deleting a 'throw' catchpoint"""
         self.cltest_redir(
             ':edit testsuite/overloaded.cc\n'
@@ -1041,70 +1049,4 @@ class Gdb(ClewnTestCase):
             '    line=16  id=2  name=2\n'
             '    line=16  id=1  name=1\n'
             )
-
-
-def main(verbose=False, stop=False):
-    """Run all the tests."""
-    # run make on the testsuite
-    misc.check_call(['make', '-C', 'testsuite'])
-
-    suite = TestSuite()
-    suite.addTest(Gdb('test_completion'))
-    suite.addTest(Gdb('test_not_gdb'))
-    suite.addTest(Gdb('test_bad_gdbpath'))
-    suite.addTest(Gdb('test_initial_setup'))
-    suite.addTest(Gdb('test_new_session'))
-    if ('CLEWN_PIPES' not in os.environ
-            and 'CLEWN_POPEN' not in os.environ
-            and os.name != 'nt'):
-        suite.addTest(Gdb('test_sigint'))
-    suite.addTest(Gdb('test_gdb_arglist'))
-    suite.addTest(Gdb('test_gdb_illegal'))
-    suite.addTest(Gdb('test_symbols_completion'))
-    if os.name != 'nt':
-        if gdb_v.split('.') < '6.4'.split('.'):
-            suite.addTest(Gdb('test_oob_command'))
-        elif gdb_v.split('.') < '7.0'.split('.'):
-            suite.addTest(Gdb('test_oob_command_v_64'))
-        else:
-            suite.addTest(Gdb('test_oob_command_v_70'))
-    suite.addTest(Gdb('test_frame_sign'))
-    suite.addTest(Gdb('test_annotation_lvl1'))
-    suite.addTest(Gdb('test_disable_bp'))
-    suite.addTest(Gdb('test_delete_once'))
-    suite.addTest(Gdb('test_breakpoint_open_file'))
-    suite.addTest(Gdb('test_delete_bp'))
-    suite.addTest(Gdb('test_clear_on_frame'))
-    suite.addTest(Gdb('test_break_completion'))
-    suite.addTest(Gdb('test_varobj'))
-    suite.addTest(Gdb('test_varobj_fold'))
-    suite.addTest(Gdb('test_varobj_del_last'))
-    suite.addTest(Gdb('test_varobj_del_first'))
-    suite.addTest(Gdb('test_varobj_del_middle'))
-    suite.addTest(Gdb('test_varobj_hilite'))
-    suite.addTest(Gdb('test_tabedit_bug'))
-    suite.addTest(Gdb('test_watch_print'))
-    suite.addTest(Gdb('test_frame_print'))
-    suite.addTest(Gdb('test_multiple_choice'))
-    suite.addTest(Gdb('test_project_cmd'))
-    suite.addTest(Gdb('test_project_cmd_unique_bp'))
-    suite.addTest(Gdb('test_project_option_load'))
-    suite.addTest(Gdb('test_project_option_save'))
-    suite.addTest(Gdb('test_project_option_vimquit'))
-    suite.addTest(Gdb('test_quit_display'))
-    suite.addTest(Gdb('test_cwindow_command'))
-    suite.addTest(Gdb('test_1_bp_after_quit'))
-    suite.addTest(Gdb('test_2_bp_after_quit'))
-    suite.addTest(Gdb('test_3_bp_after_quit'))
-    suite.addTest(Gdb('test_4_bp_after_quit'))
-    if os.name != 'nt':
-        suite.addTest(Gdb('test_template_function'))
-    suite.addTest(Gdb('test_sigint_as_first_command'))
-    suite.addTest(Gdb('test_frame_command'))
-    suite.addTest(Gdb('test_1_throw_catchpoint'))
-    suite.addTest(Gdb('test_2_throw_catchpoint'))
-    test_support.run_suite(suite, verbose, stop)
-
-if __name__ == '__main__':
-    main()
 

@@ -22,8 +22,6 @@
 
 """
 import sys
-from unittest2 import TestSuite
-import testsuite.test_support as test_support
 
 from test_support import ClewnTestCase
 
@@ -35,7 +33,7 @@ class Pyclewn(ClewnTestCase):
         ClewnTestCase.setUp(self)
         sys.argv.append('--simple')
 
-    def test_breakloadbuffer(self):
+    def test_001(self):
         """The buffer is automatically loaded on a break command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -55,7 +53,7 @@ class Pyclewn(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_steploadbuffer(self):
+    def test_002(self):
         """The buffer is automatically loaded on a step command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -80,7 +78,7 @@ class Pyclewn(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_wipeout(self):
+    def test_003(self):
         """The breakpoint and frame signs are restored after a wipeout"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -108,7 +106,7 @@ class Pyclewn(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_restart(self):
+    def test_004(self):
         """The simple debugger can be restarted"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -132,7 +130,7 @@ class Pyclewn(ClewnTestCase):
             'line 2\n'
             )
 
-    def test_cmdlist(self):
+    def test_005(self):
         """The list of commands is complete"""
         self.cltest_redir(
             ':redir! >> ${test_out}\n'
@@ -159,7 +157,7 @@ class Pyclewn(ClewnTestCase):
             'Cunmapkeys  0                    call s:unmapkeys()\n'
             )
 
-    def test_mapkeys(self):
+    def test_006(self):
         """The simple keys are mapped"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -187,7 +185,7 @@ class Pyclewn(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_delconsole(self):
+    def test_007(self):
         """The bdelete Vim command on the clewn console"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -208,19 +206,4 @@ class Pyclewn(ClewnTestCase):
             'line 1\n'
             'line 2\n'
             )
-
-def main(verbose=False, stop=False):
-    """Run all the tests."""
-    suite = TestSuite()
-    suite.addTest(Pyclewn('test_breakloadbuffer'))
-    suite.addTest(Pyclewn('test_steploadbuffer'))
-    suite.addTest(Pyclewn('test_wipeout'))
-    suite.addTest(Pyclewn('test_restart'))
-    suite.addTest(Pyclewn('test_cmdlist'))
-    suite.addTest(Pyclewn('test_mapkeys'))
-    suite.addTest(Pyclewn('test_delconsole'))
-    test_support.run_suite(suite, verbose, stop)
-
-if __name__ == "__main__":
-    main()
 

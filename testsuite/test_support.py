@@ -45,8 +45,8 @@ TESTFN_OUT = TESTFN + '_out'
 
 def get_description(test):
     """"Return a ClewnTestCase description."""
-    return '<%s:%s> %s' % (test.__class__.__name__,
-                            test.method, test.shortDescription())
+    description = test.shortDescription() or ''
+    return '<%s:%s> %s' % (test.__class__.__name__, test.method, description)
 
 class ClewnTestCase(TestCase):
     """Pyclewn test case abstract class.
@@ -205,6 +205,7 @@ class TextTestResult(TestResult):
             self.stream.write('ok\n')
         else:
             self.stream.write('.')
+            self.stream.flush()
 
     def addError(self, test, err):
         """Called when an error has occurred."""
@@ -213,6 +214,7 @@ class TextTestResult(TestResult):
             self.stream.write('ERROR\n')
         else:
             self.stream.write('E')
+            self.stream.flush()
         if self.stop_on_error:
             self.stop()
 
@@ -227,8 +229,17 @@ class TextTestResult(TestResult):
             self.stream.write('FAIL\n')
         else:
             self.stream.write('F')
+            self.stream.flush()
         if self.stop_on_error:
             self.stop()
+
+    def addSkip(self, test, reason):
+        TestResult.addSkip(self, test, reason)
+        if self.verbose:
+            self.stream.write('skipped (%s)\n' % reason)
+        else:
+            self.stream.write('s')
+            self.stream.flush()
 
     def print_errors(self):
         """"Print the errors and failures."""
@@ -268,17 +279,23 @@ class TextTestRunner(object):
         self.stream.write('\nRan %d test%s in %.3fs\n\n' %
                             (run, run != 1 and 's' or '', elapsed))
 
+        infos = []
         if not result.wasSuccessful():
-            self.stream.write('FAILED (')
+            self.stream.write('FAILED')
             failed, errored = map(len, (result.failures, result.errors))
             if failed:
-                self.stream.write('failures=%d' % failed)
+                infos.append('failures=%d' % failed)
             if errored:
-                if failed: self.stream.write(', ')
-                self.stream.write('errors=%d' % errored)
-            self.stream.write(')\n')
+                infos.append('errors=%d' % errored)
         else:
-            self.stream.write('OK\n')
+            self.stream.write('OK')
+        skipped = len(result.skipped)
+        if skipped:
+            infos.append('skipped=%d' % skipped)
+        if infos:
+            self.stream.write(' (%s)\n' % (', '.join(infos),))
+        else:
+            self.stream.write('\n')
         return result
 
 def run_suite(suite, verbose, stop_on_error):

@@ -24,8 +24,6 @@
 import sys
 import os
 import subprocess
-from unittest2 import TestSuite
-import testsuite.test_support as test_support
 
 from test_support import ClewnTestCase
 
@@ -45,7 +43,7 @@ class Pdb(ClewnTestCase):
                                     ['python', './foobar.py'],
                                      stdout=self.fnull)
 
-    def test_intr_load_buffer(self):
+    def test_001(self):
         """The buffer is automatically loaded on the interrupt command"""
         self.cltest_redir(
             ':Cinterrupt\n'
@@ -63,7 +61,7 @@ class Pdb(ClewnTestCase):
             '${cwd}foobar.py',
             )
 
-    def test_break(self):
+    def test_002(self):
         """The break command"""
         self.cltest_redir(
             ':Cinterrupt\n'
@@ -84,7 +82,7 @@ class Pdb(ClewnTestCase):
             'line=13  id=1  name=1\n',
             )
 
-    def test_disable(self):
+    def test_003(self):
         """The disable command"""
         self.cltest_redir(
             ':Cinterrupt\n'
@@ -106,7 +104,7 @@ class Pdb(ClewnTestCase):
             'line=13  id=1  name=1\n',
             )
 
-    def test_enable(self):
+    def test_004(self):
         """The enable command"""
         self.cltest_redir(
             ':Cinterrupt\n'
@@ -131,7 +129,7 @@ class Pdb(ClewnTestCase):
             'line=13  id=1  name=1\n',
             )
 
-    def test_clear(self):
+    def test_005(self):
         """The clear command"""
         self.cltest_redir(
             ':Cinterrupt\n'
@@ -156,7 +154,7 @@ class Pdb(ClewnTestCase):
             'line=13  id=1  name=1\n',
             )
 
-    def test_p_command(self):
+    def test_006(self):
         """The p command"""
         self.cltest_redir(
             ':Cinterrupt\n'
@@ -179,7 +177,7 @@ class Pdb(ClewnTestCase):
             '(pdb)\n',
             )
 
-    def test_temporary_breakpoint(self):
+    def test_007(self):
         """The temporary breakpoint command"""
         self.cltest_redir(
             ':Cinterrupt\n'
@@ -198,7 +196,7 @@ class Pdb(ClewnTestCase):
             "line=7  id=1  name=1\n"
             )
 
-    def test_delete_bp(self):
+    def test_008(self):
         """Delete a breakpoint"""
         self.cltest_redir(
             ':Cinterrupt\n'
@@ -221,7 +219,7 @@ class Pdb(ClewnTestCase):
             'line=13  id=1  name=1\n',
             )
 
-    def test_bp_open_file(self):
+    def test_009(self):
         """Setting a breakpoint opens the source file"""
         self.cltest_redir(
             ':Cinterrupt\n'
@@ -248,7 +246,7 @@ class Pdb(ClewnTestCase):
             'line=32  id=4  name=4\n',
             )
 
-    def test_frame_open_file(self):
+    def test_010(self):
         """Stepping opens the source file"""
         self.cltest_redir(
             ':Cinterrupt\n'
@@ -274,7 +272,7 @@ class Pdb(ClewnTestCase):
             'line=32  id=1  name=1\n',
             )
 
-    def test_locals_change(self):
+    def test_011(self):
         """Change a variable in the locals dictionary"""
         self.cltest_redir(
             ':Cinterrupt\n'
@@ -298,7 +296,7 @@ class Pdb(ClewnTestCase):
             '(pdb)\n',
             )
 
-    def test_infinite_loop(self):
+    def test_012(self):
         """Interrupting an infinite loop"""
         self.cltest_redir(
             ':sleep ${time}\n'
@@ -333,7 +331,7 @@ class Pdb(ClewnTestCase):
             'line=35  id=2  name=2\n',
             )
 
-    def test_zero_division(self):
+    def test_013(self):
         """A ZeroDivisionError exception"""
         self.cltest_redir(
             ':Cinterrupt\n'
@@ -360,7 +358,7 @@ class Pdb(ClewnTestCase):
             '(pdb)\n',
             )
 
-    def test_bp_restored_after_detach(self):
+    def test_014(self):
         """Breakpoints are restored after detach"""
         os.environ['PATH'] = '.:' + os.environ['PATH']
         self.cltest_redir(
@@ -400,26 +398,4 @@ class Pdb(ClewnTestCase):
             'line=38  id=8  name=1\n'
             'line=38  id=6  name=4\n',
             )
-
-def main(verbose=False, stop=False):
-    """Run all the tests."""
-    suite = TestSuite()
-    suite.addTest(Pdb('test_intr_load_buffer'))
-    suite.addTest(Pdb('test_break'))
-    suite.addTest(Pdb('test_disable'))
-    suite.addTest(Pdb('test_enable'))
-    suite.addTest(Pdb('test_clear'))
-    suite.addTest(Pdb('test_p_command'))
-    suite.addTest(Pdb('test_temporary_breakpoint'))
-    suite.addTest(Pdb('test_delete_bp'))
-    suite.addTest(Pdb('test_bp_open_file'))
-    suite.addTest(Pdb('test_frame_open_file'))
-    suite.addTest(Pdb('test_locals_change'))
-    suite.addTest(Pdb('test_infinite_loop'))
-    suite.addTest(Pdb('test_zero_division'))
-    suite.addTest(Pdb('test_bp_restored_after_detach'))
-    test_support.run_suite(suite, verbose, stop)
-
-if __name__ == "__main__":
-    main()
 

@@ -14,8 +14,11 @@ from os.path import join as pathjoin
 from distutils.command.install import install as _install
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_scripts import build_scripts as _build_scripts
+from unittest2 import defaultTestLoader
 
 import pyclewn_install
+import clewn.misc as misc
+import testsuite.test_support as test_support
 from clewn import *
 
 DESCRIPTION = """Pyclewn allows using Vim as a front end to a debugger.
@@ -194,6 +197,8 @@ class Test(core.Command):
         tests = self.test or findtests(testdir)
         test_prefix = os.path.basename(os.path.normpath(testdir)) + '.'
         for test in tests:
+            if test == 'test_gdb':
+                misc.check_call(['make', '-C', 'testsuite'])
             if test.startswith(test_prefix):
                 abstest = test
             else:
@@ -203,7 +208,9 @@ class Test(core.Command):
             # run the test
             print abstest
             sys.stdout.flush()
-            the_module.main(self.detail, self.stop)
+            test_support.run_suite(
+                    defaultTestLoader.loadTestsFromModule(the_module),
+                    self.detail, self.stop)
 
 core.setup(
     cmdclass={'sdist': sdist,

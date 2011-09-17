@@ -24,8 +24,6 @@
 import os
 import sys
 import os.path
-from unittest2 import TestSuite
-import testsuite.test_support as test_support
 
 from test_support import ClewnTestCase
 
@@ -38,7 +36,7 @@ class Simple(ClewnTestCase):
         sys.argv.append('--simple')
 
 
-    def test_break(self):
+    def test_001(self):
         """The break command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -54,7 +52,7 @@ class Simple(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_continue(self):
+    def test_002(self):
         """The continue command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -71,7 +69,7 @@ class Simple(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_dbgvar(self):
+    def test_003(self):
         """The dbgvar command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -96,7 +94,7 @@ class Simple(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_delvar(self):
+    def test_004(self):
         """The delvar command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -122,7 +120,7 @@ class Simple(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_disable(self):
+    def test_005(self):
         """The disable command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -139,7 +137,7 @@ class Simple(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_dumprepr(self):
+    def test_006(self):
         """The dumprepr command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -157,7 +155,7 @@ class Simple(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_enable(self):
+    def test_007(self):
         """The enable command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -179,7 +177,7 @@ class Simple(ClewnTestCase):
             'line 2\n'
             )
 
-    def test_help(self):
+    def test_008(self):
         """The help command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -210,7 +208,7 @@ class Simple(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_interrupt(self):
+    def test_009(self):
         """The interrupt command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -232,7 +230,7 @@ class Simple(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_mapkeys(self):
+    def test_010(self):
         """The mapkeys command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -253,7 +251,7 @@ class Simple(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_print(self):
+    def test_011(self):
         """The print command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -268,7 +266,7 @@ class Simple(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_step(self):
+    def test_012(self):
         """The step command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -287,7 +285,7 @@ class Simple(ClewnTestCase):
             'line 2\n'
             )
 
-    def test_unmapkeys(self):
+    def test_013(self):
         """The unmapkeys command"""
         self.cltest_redir(
             ':edit ${test_file}1\n'
@@ -304,7 +302,7 @@ class Simple(ClewnTestCase):
             'line 1\n'
             )
 
-    def test_maxlines(self):
+    def test_014(self):
         """Maximum number of lines in the console buffer"""
         sys.argv.extend(['--maxlines=70'])
         self.cltest_redir(
@@ -326,7 +324,7 @@ class Simple(ClewnTestCase):
             '"(clewn)_console" [readonly] line 73 of 73'
             )
 
-    def test_startupfile(self):
+    def test_015(self):
         """The first command on a file loaded at startup succeeds"""
         self.setup_vim_arg("testsuite/foobar.c")
         self.cltest_redir(
@@ -357,32 +355,4 @@ class Simple(ClewnTestCase):
             'symcompletion -- Populate the break and clear commands with symbols completion (not implemented).\n'
             'unmapkeys -- Unmap the pyclewn keys.'
             )
-
-def main(verbose=False, stop=False):
-    """Run all the tests."""
-    suite = TestSuite()
-    suite.addTest(Simple('test_break'))
-    suite.addTest(Simple('test_continue'))
-    suite.addTest(Simple('test_dbgvar'))
-    suite.addTest(Simple('test_delvar'))
-    suite.addTest(Simple('test_disable'))
-    suite.addTest(Simple('test_dumprepr'))
-    suite.addTest(Simple('test_enable'))
-    suite.addTest(Simple('test_help'))
-    suite.addTest(Simple('test_interrupt'))
-    suite.addTest(Simple('test_step'))
-    suite.addTest(Simple('test_mapkeys'))
-    suite.addTest(Simple('test_print'))
-    suite.addTest(Simple('test_unmapkeys'))
-    suite.addTest(Simple('test_maxlines'))
-    if os.name != 'nt':
-        vim_pgm = ''
-        if 'EDITOR' in os.environ:
-            vim_pgm = os.path.basename(os.environ['EDITOR'])
-        if vim_pgm != 'vim':
-            suite.addTest(Simple('test_startupfile'))
-    test_support.run_suite(suite, verbose, stop)
-
-if __name__ == "__main__":
-    main()
 

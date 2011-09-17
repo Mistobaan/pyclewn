@@ -1,5 +1,6 @@
 2011-09-17  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* setup.py testsuite/*py: Skip tests conditionnaly.
 	* simple.py unittest2/*py testsuite/*py: Add unittest2 to the python2
 	branch.
 	* setup.py testsuite/*py: Add the '--stop' option to 'setup.py test'.
