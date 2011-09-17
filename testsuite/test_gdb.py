@@ -23,7 +23,7 @@
 """
 import sys
 import os
-import unittest
+from unittest2 import TestSuite
 import testsuite.test_support as test_support
 
 import clewn.gdb as gdb
@@ -1048,7 +1048,7 @@ def main(verbose=False, stop=False):
     # run make on the testsuite
     misc.check_call(['make', '-C', 'testsuite'])
 
-    suite = unittest.TestSuite()
+    suite = TestSuite()
     suite.addTest(Gdb('test_completion'))
     suite.addTest(Gdb('test_not_gdb'))
     suite.addTest(Gdb('test_bad_gdbpath'))

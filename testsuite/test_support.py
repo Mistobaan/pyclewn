@@ -25,7 +25,7 @@ import os
 import string
 import time
 import traceback
-from unittest import TestCase, TestResult
+from unittest2 import TestCase, TestResult
 
 import clewn.vim as vim
 

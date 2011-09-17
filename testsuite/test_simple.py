@@ -24,7 +24,7 @@
 import os
 import sys
 import os.path
-import unittest
+from unittest2 import TestSuite
 import testsuite.test_support as test_support
 
 from test_support import ClewnTestCase
@@ -360,7 +360,7 @@ class Simple(ClewnTestCase):
 
 def main(verbose=False, stop=False):
     """Run all the tests."""
-    suite = unittest.TestSuite()
+    suite = TestSuite()
     suite.addTest(Simple('test_break'))
     suite.addTest(Simple('test_continue'))
     suite.addTest(Simple('test_dbgvar'))

@@ -88,7 +88,7 @@ class Target(threading.Thread):
         self.cnt = 0
 
         # do not print on stdout when running unittests
-        self.testrun = reduce(lambda x, y: x or (y == 'unittest'),
+        self.testrun = reduce(lambda x, y: x or (y == 'unittest2'),
                                         [False] + sys.modules.keys())
 
     def close(self):

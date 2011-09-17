@@ -24,7 +24,7 @@
 import sys
 import os
 import subprocess
-import unittest
+from unittest2 import TestSuite
 import testsuite.test_support as test_support
 
 from test_support import ClewnTestCase
@@ -403,7 +403,7 @@ class Pdb(ClewnTestCase):
 
 def main(verbose=False, stop=False):
     """Run all the tests."""
-    suite = unittest.TestSuite()
+    suite = TestSuite()
     suite.addTest(Pdb('test_intr_load_buffer'))
     suite.addTest(Pdb('test_break'))
     suite.addTest(Pdb('test_disable'))

@@ -1,5 +1,7 @@
-2011-09-16  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-09-17  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* simple.py unittest2/*py testsuite/*py: Add unittest2 to the python2
+	branch.
 	* setup.py testsuite/*py: Add the '--stop' option to 'setup.py test'.
 	* pyclewn_install.py setup.py testsuite/*py: Do not print the
 	traceback on failure of a test case from the testsuite, only on an
