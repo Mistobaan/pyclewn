@@ -176,14 +176,14 @@ class Test(core.Command):
             'run a comma separated list of tests, for example             '
             '"--test=simple,gdb", all the tests are run when this option'
             ' is not present'),
-        ('stop', 's',
-            'stop at the first test failure or error'),
-        ('detail', 'd',
-            'detailed test output, each test case is printed'),
+        ('prefix=', 'p', 'run only tests whose name starts with this prefix'),
+        ('stop', 's', 'stop at the first test failure or error'),
+        ('detail', 'd', 'detailed test output, each test case is printed'),
     ]
 
     def initialize_options(self):
         self.test = None
+        self.prefix = None
         self.stop = False
         self.detail = False
 
@@ -196,6 +196,8 @@ class Test(core.Command):
         testdir = 'testsuite'
         tests = self.test or findtests(testdir)
         test_prefix = os.path.basename(os.path.normpath(testdir)) + '.'
+        if self.prefix:
+            defaultTestLoader.testMethodPrefix = self.prefix
         for test in tests:
             if test == 'test_gdb':
                 misc.check_call(['make', '-C', 'testsuite'])
