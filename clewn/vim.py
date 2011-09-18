@@ -94,18 +94,27 @@ def exec_vimcmd(commands, pathname='', error_stream=None):
 
     output = f = None
     try:
-        try:
-            subprocess.Popen(args).wait()
-            f = os.fdopen(fd)
-            output = f.read()
-        except (OSError, IOError), err:
-            if isinstance(err, OSError) and err.errno == errno.ENOENT:
-                perror("Failed to run '%s' as Vim.\n" % args[0])
-                perror("Please run 'pyclewn"
-                                      " --editor=/path/to/(g)vim'.\n\n")
-            else:
+        while True:
+            try:
+                subprocess.Popen(args).wait()
+                f = os.fdopen(fd)
+                output = f.read()
+            except (OSError, IOError), err:
+                if isinstance(err, OSError):
+                    if err.errno == errno.ENOENT:
+                        perror("Failed to run '%s' as Vim.\n" % args[0])
+                        perror("Please run 'pyclewn"
+                                          " --editor=/path/to/(g)vim'.\n\n")
+                    # may be interrupted in a testrun
+                    elif err.errno == errno.EINTR:
+                        if f is not None:
+                            f.close()
+                            f = None
+                        continue
                 perror("Failed to run Vim as:\n'%s'\n\n" % str(args))
-            raise
+                raise
+            else:
+                break
     finally:
         if f is not None:
             f.close()
@@ -200,6 +209,7 @@ def main(testrun=False):
         if testrun:
             vim.debugger = vim.clazz(options)
             vim.spawn_vim()
+            vim.shutdown()
         elif options.args:
             # run pdb to debug the 'args' python script
             _pdb(vim)
@@ -442,7 +452,7 @@ class Vim(object):
         self.closed = True
 
         # remove the Vim script file in case the script failed to remove it
-        if self.f_script:
+        if self.f_script and not (self.options.pdb and self.testrun):
             del self.f_script
 
         if self.nbserver.netbeans:
@@ -451,19 +461,20 @@ class Vim(object):
         info('pyclewn exiting')
 
         if self.testrun:
-            # wait for Vim to close all files
+            # wait for Vim to terminate
             if self.vim is not None:
-                try:
-                    self.vim.wait()
-                except OSError:
-                    # ignore: [Errno 4] Interrupted system call
-                    pass
+                while True:
+                    try:
+                        self.vim.wait()
+                    except OSError, err:
+                        if err.errno == errno.EINTR:
+                            continue
+                        raise
+                    else:
+                        break
             if self.file_hdlr is not None:
                 logging.getLogger().removeHandler(self.file_hdlr)
                 self.file_hdlr.close()
-            # get: IOError: [Errno 2] No such file or directory: '@test_out'
-            # sleep does help avoiding this error
-            time.sleep(0.100)
 
         else:
             logging.shutdown()

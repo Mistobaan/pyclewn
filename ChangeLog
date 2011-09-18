@@ -1,5 +1,7 @@
-2011-09-17  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-09-18  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* vim.py testsuite/test_support.py: Testsuite: wait for vim to
+	terminate.
 	* setup.py: Add the '--prefix' option to 'setup.py test'.
 	* setup.py testsuite/*py: Skip tests conditionnaly.
 	* simple.py unittest2/*py testsuite/*py: Add unittest2 to the python2

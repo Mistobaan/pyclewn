@@ -32,16 +32,22 @@ class Pdb(ClewnTestCase):
 
     def setUp(self):
         """Test setup."""
-        # use always the same netbeans port
-        self._port = 0
         ClewnTestCase.setUp(self)
         sys.argv.append('--pdb')
 
         # start the python script being debugged
         self.fnull = open(os.devnull, 'w')
-        self.debugged_script = subprocess.Popen(
+        self.pdb_script = subprocess.Popen(
                                     ['python', './foobar.py'],
                                      stdout=self.fnull)
+
+    def tearDown(self):
+        """Cleanup stuff after the test."""
+        ClewnTestCase.tearDown(self)
+
+        # wait for the python script being debugged to terminate
+        if self.pdb_script:
+            self.pdb_script.wait()
 
     def test_001(self):
         """The buffer is automatically loaded on the interrupt command"""

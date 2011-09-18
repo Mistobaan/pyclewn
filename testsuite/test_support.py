@@ -26,6 +26,7 @@ import string
 import time
 import traceback
 from unittest2 import TestCase, TestResult
+from unittest2.result import failfast
 
 import clewn.vim as vim
 
@@ -35,6 +36,7 @@ elif 'CLEWN_PIPES' in os.environ:
     SLEEP_TIME = '600m'
 else:
     SLEEP_TIME = '600m'
+
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
 
@@ -51,26 +53,22 @@ def get_description(test):
 class ClewnTestCase(TestCase):
     """Pyclewn test case abstract class.
 
-    The netbeans port changes on each run, within the interval
-    [NETBEANS_PORT, NETBEANS_PORT + 99].
     In verbose mode, pyclewn runs at 'nbdebug' log level and the log is
     written to LOGFILE.
 
     """
-    _port = 0
     _verbose = False
 
     def __init__(self, method='runTest'):
         """Constructor."""
         TestCase.__init__(self, method)
         self.method = method
-        self.debugged_script = None
+        self.pdb_script = None
         self.fnull = None
 
     def setUp(self):
         """Setup pyclewn arguments."""
-        port = self._port + NETBEANS_PORT
-
+        port = NETBEANS_PORT
         sys.argv = [
             '-c',                       # argv[0], a script
             '--netbeans=:%d' % port,    # netbeans port
@@ -94,13 +92,14 @@ class ClewnTestCase(TestCase):
         argv.pop(i)
         assert len(argv) > i + 1
         args = argv.pop(i)
-        args += " " + newarg
+        args += ' ' + newarg
         argv.append('--cargs')
         argv.append(args)
 
     def tearDown(self):
         """Cleanup stuff after the test."""
-        self.__class__._port = (self._port + 1) % 100
+        if self.fnull:
+            self.fnull.close()
         for name in os.listdir(os.getcwd()):
             if name.startswith(TESTFN):
                 try:
@@ -145,12 +144,6 @@ class ClewnTestCase(TestCase):
         # process the commands
         unused = vim.main(True)
 
-        # wait for the python script being debugged to terminate
-        if self.debugged_script:
-            self.debugged_script.wait()
-            self.debugged_script = None
-            self.fnull.close()
-
         # check the result
         fp = open(outfile, 'r')
         output = fp.read()
@@ -189,7 +182,7 @@ class TextTestResult(TestResult):
         TestResult.__init__(self)
         self.stream = stream
         self.verbose = verbose
-        self.stop_on_error = stop_on_error
+        self.failfast = stop_on_error
 
     def startTest(self, test):
         "Called when the given test is about to be run"
@@ -207,6 +200,7 @@ class TextTestResult(TestResult):
             self.stream.write('.')
             self.stream.flush()
 
+    @failfast
     def addError(self, test, err):
         """Called when an error has occurred."""
         TestResult.addError(self, test, err)
@@ -215,9 +209,8 @@ class TextTestResult(TestResult):
         else:
             self.stream.write('E')
             self.stream.flush()
-        if self.stop_on_error:
-            self.stop()
 
+    @failfast
     def addFailure(self, test, err):
         """Called when an error has occurred."""
         exctype, value, tb = err
@@ -230,10 +223,9 @@ class TextTestResult(TestResult):
         else:
             self.stream.write('F')
             self.stream.flush()
-        if self.stop_on_error:
-            self.stop()
 
     def addSkip(self, test, reason):
+        """Called when a test is skipped."""
         TestResult.addSkip(self, test, reason)
         if self.verbose:
             self.stream.write('skipped (%s)\n' % reason)
