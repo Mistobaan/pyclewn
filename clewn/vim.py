@@ -151,10 +151,10 @@ def close_clewnthread(vim):
     except KeyboardInterrupt:
         close_clewnthread(vim)
 
-def _pdb(vim, attach=False):
+def _pdb(vim, attach=False, testrun=False):
     """Start the python debugger thread."""
     Vim.pdb_running = True
-    vim.debugger = vim.clazz(vim.options)
+    vim.debugger = vim.clazz(vim.options, testrun)
     pdb = vim.debugger
     pdb.target_thread_ident = thread.get_ident()
 
@@ -192,8 +192,12 @@ def pdb(run=False, **kwds):
     argv = ['pyclewn', '--pdb']
     if run:
         argv.append('--run')
-    argv.extend(['--' + k + '=' + str(v) for k,v in kwds.iteritems()])
-    _pdb(Vim(False, argv), True)
+    argv.extend(['--' + k + '=' + str(v)
+                 for k, v in kwds.iteritems()
+                 if k != 'testrun'
+                ])
+    testrun = 'testrun' in kwds
+    _pdb(Vim(False, argv), attach=True, testrun=testrun)
 
 def main(testrun=False):
     """Main.
@@ -238,7 +242,7 @@ def main(testrun=False):
                     gdb_pty.start()
                     options.tty = gdb_pty.ptyname
 
-            vim.debugger = vim.clazz(options)
+            vim.debugger = vim.clazz(options, testrun)
             vim.setup(True)
             vim.loop()
         except (KeyboardInterrupt, SystemExit):
@@ -455,6 +459,10 @@ class Vim(object):
         if self.f_script and not (self.options.pdb and self.testrun):
             del self.f_script
 
+        # allow vim to process the test results
+        if self.testrun:
+            time.sleep(0.500)
+
         if self.nbserver.netbeans:
             self.nbserver.netbeans.close()
         self.nbserver.close()
@@ -467,8 +475,11 @@ class Vim(object):
                     try:
                         self.vim.wait()
                     except OSError, err:
-                        if err.errno == errno.EINTR:
+                        errcode = err.errno
+                        if errcode == errno.EINTR:
                             continue
+                        elif errcode == errno.ECHILD:
+                            break
                         raise
                     else:
                         break
@@ -689,7 +700,7 @@ class Vim(object):
             elif nbsock.connected:
                 # instantiate a new debugger
                 if self.debugger.closed:
-                    self.debugger = self.clazz(self.options)
+                    self.debugger = self.clazz(self.options, self.testrun)
                     nbsock.set_debugger(self.debugger)
                     info('new "%s" instance', self.clazz.__name__.lower())
             else:

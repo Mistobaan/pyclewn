@@ -25,17 +25,21 @@ import os
 import string
 import time
 import traceback
+import atexit
+import random
 from unittest2 import TestCase, TestResult
 from unittest2.result import failfast
 
 import clewn.vim as vim
+import clewn.misc as misc
 
+# times are in milliseconds
 if os.name == 'nt':
-    SLEEP_TIME = '1400m'
+    SLEEP_TIME = 400
 elif 'CLEWN_PIPES' in os.environ:
-    SLEEP_TIME = '600m'
+    SLEEP_TIME = 400
 else:
-    SLEEP_TIME = '600m'
+    SLEEP_TIME = 400
 
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
@@ -44,6 +48,45 @@ LOGFILE = 'logfile'
 TESTFN = '@test'
 TESTFN_FILE = TESTFN + '_file_'
 TESTFN_OUT = TESTFN + '_out'
+
+# wait for pyclewn to process all previous commands
+WAIT_EOP = """
+:let incr = ${content}
+:function Wait_eop()
+:   let g:incr += 1
+:   exe "Cdumprepr ${eop_file} " . g:incr
+:   let l:start = localtime()
+:   while 1
+:       " allow vim to process netbeans events and messages
+:       sleep 10m
+:       if localtime() - l:start > 5
+:           break
+:       endif
+:       if filereadable("${eop_file}")
+:           let l:lines = readfile("${eop_file}")
+:           if len(lines) && l:lines[0] == g:incr
+:               sleep ${time}m
+:               break
+:           endif
+:       endif
+:   endwhile
+:endfunction
+"""
+
+eop_file = misc.tmpfile('testrun')
+atexit.register(misc.unlink, eop_file.name)
+
+def insert_sleep_after(command_list, commands, factor=1):
+    """Insert a sleep after each command found in 'command_list'.
+
+    When 'command_list' is empty, insert a sleep after each pyclewn command.
+    """
+    for cmd in commands:
+        yield cmd
+        if not command_list and cmd.startswith('C'):
+            yield 'sleep %dm' % (factor * SLEEP_TIME)
+        elif cmd in command_list:
+            yield 'sleep %dm' % (factor * SLEEP_TIME)
 
 def get_description(test):
     """"Return a ClewnTestCase description."""
@@ -107,16 +150,16 @@ class ClewnTestCase(TestCase):
                 except OSError:
                     pass
 
-    def clewn_test(self, cmd, expected, outfile, *test):
+    def clewn_test(self, commands, expected, outfile, *test):
         """The test method.
 
         arguments:
-            cmd: str
+            commands: list of str
                 the commands sourced by vim
-            expected: str
-                an expected string that must be found in outfile
+            expected: list of str
+                expected strings that must be found in outfile
             outfile: str
-                the output file
+                the output file name
             test: argument list
                 the content of the test files that vim is loading
 
@@ -125,14 +168,24 @@ class ClewnTestCase(TestCase):
 
         """
         cwd = os.getcwd() + os.sep
-        cmd = ':sleep ${time}\n' + cmd
+
+        if os.name == 'nt' or 'CLEWN_PIPES' in os.environ:
+            command_list = ()
+        else:
+            command_list = ('Cquit', 'Cinterrupt', 'Ccontinue', 'Cstep',
+                            'Cnext', 'Pyclewn pdb', 'Csigint', 'Crun')
+        commands = insert_sleep_after(command_list, commands)
+        commands = insert_sleep_after(('Cdetach', ), commands, 5)
+        commands = '%s:%s\n' % (WAIT_EOP, '\n:'.join(commands))
 
         # write the commands
         fp = open(TESTFN, 'w')
-        fp.write(string.Template(cmd).substitute(time=SLEEP_TIME,
-                                                    test_file=TESTFN_FILE,
-                                                    test_out=TESTFN_OUT,
-                                                    cwd=cwd))
+        fp.write(string.Template(commands).substitute(time=SLEEP_TIME,
+                                        test_file=TESTFN_FILE,
+                                        test_out=TESTFN_OUT,
+                                        eop_file=eop_file.name,
+                                        content=random.randint(0, 1000000000),
+                                        cwd=cwd))
         fp.close()
 
         # write the test files
@@ -149,6 +202,7 @@ class ClewnTestCase(TestCase):
         output = fp.read()
         fp.close()
 
+        expected = '\n'.join(expected)
         if os.name == 'nt':
             expected = expected.replace('/', '\\')
         expected = string.Template(expected).substitute(
@@ -163,14 +217,14 @@ class ClewnTestCase(TestCase):
         self.assertTrue(checked,
                 "\n\n...Expected:\n%s \n\n...Got:\n%s" % (expected, output))
 
-    def cltest_redir(self, cmd, expected, *test):
+    def cltest_redir(self, commands, expected, *test):
         """Test result redirected by vim to TESTFN_OUT."""
-        self.clewn_test(cmd, expected, TESTFN_OUT, *test)
+        self.clewn_test(commands, expected, TESTFN_OUT, *test)
 
-    def cltest_logfile(self, cmd, expected, level, *test):
+    def cltest_logfile(self, commands, expected, level, *test):
         """Test result in the log file."""
         sys.argv.append('--level=%s' % level)
-        self.clewn_test(cmd, expected, LOGFILE, *test)
+        self.clewn_test(commands, expected, LOGFILE, *test)
 
 class TextTestResult(TestResult):
     """A test result class that prints formatted text results to a stream."""

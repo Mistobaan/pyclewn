@@ -194,17 +194,6 @@ command! -bar ${pre}symcompletion call s:symcompletion()
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('gdb')
 
-def tmpfile():
-    """Return a closed file object to a new temporary file."""
-    f = None
-    try:
-        f = misc.TmpFile('gdb')
-        f.write('\n')
-    finally:
-        if f:
-            f.close()
-    return f
-
 def unwrap_stream_record(lines):
     """Remove the stream record wrapper from each line.
 
@@ -401,9 +390,9 @@ class GlobalSetup(misc.Singleton):
         self._run_cmds_prefix = self.run_cmds_prefix
         self._illegal_setargs_prefix = self.illegal_setargs_prefix
 
-        self._f_bps = tmpfile()
-        self._f_ack = tmpfile()
-        self._f_clist = tmpfile()
+        self._f_bps = misc.tmpfile('gdb')
+        self._f_ack = misc.tmpfile('gdb')
+        self._f_clist = misc.tmpfile('gdb')
 
     def __init__(self, gdbname, pyclewn_cmds):
         """Constructor."""
