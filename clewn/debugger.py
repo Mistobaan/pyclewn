@@ -359,6 +359,8 @@ class Debugger:
             feature.
         options: optparse.Values
             The pyclewn command line parameters.
+        testrun: boolean
+            True when run from a test suite
         started: boolean
             True when the debugger is started.
         closed: boolean
@@ -383,9 +385,10 @@ class Debugger:
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, options):
+    def __init__(self, options, testrun=False):
         """Initialize instance variables and the prompt."""
         self.options = options
+        self.testrun = testrun
 
         self.cmds = {
             'dumprepr': (),
@@ -963,10 +966,22 @@ class Debugger:
                         doc = method.__doc__.split('\n')[0]
                     self.console_print('%s -- %s\n', cmd, doc)
 
-    def cmd_dumprepr(self, *args):
+    def cmd_dumprepr(self, cmd, args):
         """Print debugging information on netbeans and the debugger."""
-        unused = args
-        self.console_print(
+        unused = cmd
+        # dumprepr is used by the testsuite to detect the end of
+        # processing by pyclewn of all commands, so as to parse the
+        # results and check the test
+        if self.testrun and args:
+            filename, line = args.split()
+            try:
+                f = open(filename, 'w')
+                f.write(line)
+                f.close()
+            except IOError:
+                raise ClewnError('Cannot write file: %s' % filename)
+        else:
+            self.console_print(
                 'netbeans:\n%s\n' % misc.pformat(self.__nbsock.__dict__)
                 + '%s:\n%s\n' % (self.__class__.__name__.lower(), self))
         self.print_prompt()

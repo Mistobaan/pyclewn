@@ -24,18 +24,17 @@
 import sys
 import os
 import subprocess
-import unittest
-import testsuite.test_support as test_support
+from unittest import skipIf
 
 from .test_support import ClewnTestCase
 
-class PdbTestCase(ClewnTestCase):
+use_select_emulation = ('CLEWN_PIPES' in os.environ or os.name == 'nt')
+
+class Pdb(ClewnTestCase):
     """Test pyclewn."""
 
     def setUp(self):
         """Test setup."""
-        # use always the same netbeans port
-        self._port = 0
         ClewnTestCase.setUp(self)
         sys.argv.append('--pdb')
 
@@ -45,385 +44,338 @@ class PdbTestCase(ClewnTestCase):
             python_name = 'python'
         else:
             python_name = 'python3'
-        self.debugged_script = subprocess.Popen(
+        self.pdb_script = subprocess.Popen(
                                     [python_name, './foobar.py'],
                                      stdout=self.fnull)
 
-    def test_intr_load_buffer(self):
-        """The buffer is automatically loaded on the interrupt command"""
-        self.cltest_redir(
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':echo bufname("%")\n'
-            ':redir! > ${test_file}1\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':qa!\n',
+    def tearDown(self):
+        """Cleanup stuff after the test."""
+        ClewnTestCase.tearDown(self)
 
-            'line=13  id=1  name=1\n'
+        # wait for the python script being debugged to terminate
+        if self.pdb_script:
+            self.pdb_script.wait()
+
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_001(self):
+        """The buffer is automatically loaded on the interrupt command"""
+        cmd = [
+            'Cinterrupt',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'echo bufname("%")',
+            'redir! > ${test_file}1',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            'line=15  id=1  name=1',
             '${cwd}foobar.py',
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_break(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_002(self):
         """The break command"""
-        self.cltest_redir(
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cbreak main\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':redir! > ${test_file}1\n'
-            ':Cclear 1\n'
-            ':sleep ${time}\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':qa!\n',
-
-            'line=5  id=2  name=2\n'
-            'line=13  id=1  name=1\n',
+        cmd = [
+            'Cinterrupt',
+            'Cbreak main',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'redir! > ${test_file}1',
+            'Cclear 1',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            'line=5  id=2  name=2',
+            'line=15  id=1  name=1',
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_disable(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_003(self):
         """The disable command"""
-        self.cltest_redir(
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cbreak ${cwd}foobar.py:5\n'
-            ':Cdisable 1\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':redir! > ${test_file}1\n'
-            ':Cclear 1\n'
-            ':sleep ${time}\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':qa!\n',
-
-            'line=5  id=3  name=3\n'
-            'line=13  id=1  name=1\n',
+        cmd = [
+            'Cinterrupt',
+            'Cbreak ${cwd}foobar.py:5',
+            'Cdisable 1',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'redir! > ${test_file}1',
+            'Cclear 1',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            'line=5  id=3  name=3',
+            'line=15  id=1  name=1',
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_enable(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_004(self):
         """The enable command"""
-        self.cltest_redir(
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cbreak ${cwd}foobar.py:5\n'
-            ':Cbreak ${cwd}foobar.py:7\n'
-            ':Cdisable 1 2\n'
-            ':Cenable 2\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':redir! > ${test_file}1\n'
-            ':Cclear 1 2\n'
-            ':sleep ${time}\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':qa!\n',
-
-            'line=5  id=3  name=3\n'
-            'line=7  id=4  name=4\n'
-            'line=13  id=1  name=1\n',
+        cmd = [
+            'Cinterrupt',
+            'Cbreak ${cwd}foobar.py:5',
+            'Cbreak ${cwd}foobar.py:7',
+            'Cdisable 1 2',
+            'Cenable 2',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'redir! > ${test_file}1',
+            'Cclear 1 2',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            'line=5  id=3  name=3',
+            'line=7  id=4  name=4',
+            'line=15  id=1  name=1',
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_clear(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_005(self):
         """The clear command"""
-        self.cltest_redir(
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cbreak ${cwd}foobar.py:5\n'
-            ':Cbreak ${cwd}foobar.py:7\n'
-            ':Cbreak ${cwd}foobar.py:7\n'
-            ':Cclear ${cwd}foobar.py:5\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':redir! > ${test_file}1\n'
-            ':Cclear 2 3\n'
-            ':sleep ${time}\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':qa!\n',
-
-            'line=7  id=6  name=6\n'
-            'line=7  id=4  name=4\n'
-            'line=13  id=1  name=1\n',
+        cmd = [
+            'Cinterrupt',
+            'Cbreak ${cwd}foobar.py:5',
+            'Cbreak ${cwd}foobar.py:7',
+            'Cbreak ${cwd}foobar.py:7',
+            'Cclear ${cwd}foobar.py:5',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'redir! > ${test_file}1',
+            'Cclear 2 3',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            'line=7  id=6  name=6',
+            'line=7  id=4  name=4',
+            'line=15  id=1  name=1',
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_p_command(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_006(self):
         """The p command"""
-        self.cltest_redir(
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cbreak foo.foo\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':Cnext\n'
-            ':sleep ${time}\n'
-            ':Cp c.value\n'
-            ':sleep ${time}\n'
-            ':edit (clewn)_console | $$-3,$$w! ${test_out}\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':qa!\n',
-
-            '(pdb) p c.value\n'
-            '1\n'
-            '(pdb)\n',
+        cmd = [
+            'Cinterrupt',
+            'Cbreak foo.foo',
+            'Ccontinue',
+            'Cnext',
+            'Cp c.value',
+            'call Wait_eop()',
+            'edit (clewn)_console | $$-4,$$w! ${test_out}',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            '(pdb) p c.value',
+            '1',
+            '(pdb)',
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_temporary_breakpoint(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_007(self):
         """The temporary breakpoint command"""
-        self.cltest_redir(
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Ctbreak main\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':redir! > ${test_file}1\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':qa!\n',
-
-            "line=7  id=1  name=1\n"
+        cmd = [
+            'Cinterrupt',
+            'Ctbreak main',
+            'Ccontinue',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'redir! > ${test_file}1',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            "line=7  id=1  name=1",
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_delete_bp(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_008(self):
         """Delete a breakpoint"""
-        self.cltest_redir(
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cbreak main\n'
-            ':Cbreak main\n'
-            ':Cclear 2\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':redir! > ${test_file}1\n'
-            ':Cclear 1\n'
-            ':sleep ${time}\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':qa!\n',
-
-            'line=5  id=2  name=2\n'
-            'line=13  id=1  name=1\n',
+        cmd = [
+            'Cinterrupt',
+            'Cbreak main',
+            'Cbreak main',
+            'Cclear 2',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'redir! > ${test_file}1',
+            'Cclear 1',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            'line=5  id=2  name=2',
+            'line=15  id=1  name=1',
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_bp_open_file(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_009(self):
         """Setting a breakpoint opens the source file"""
-        self.cltest_redir(
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cbreak main\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':Cbreak foo.foo\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':redir! > ${test_file}1\n'
-            ':Cclear 2\n'
-            ':sleep ${time}\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':qa!\n',
-
-            'Signs for ${cwd}foobar.py:\n'
-            'line=5  id=2  name=2\n'
-            'line=7  id=1  name=1\n'
-            'Signs for ${cwd}testsuite/foo.py:\n'
-            'line=32  id=4  name=4\n',
+        cmd = [
+            'Cinterrupt',
+            'Cbreak main',
+            'Ccontinue',
+            'Cbreak foo.foo',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'redir! > ${test_file}1',
+            'Cclear 2',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            'Signs for ${cwd}foobar.py:',
+            'line=5  id=2  name=2',
+            'line=7  id=1  name=1',
+            'Signs for ${cwd}testsuite/foo.py:',
+            'line=32  id=4  name=4',
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_frame_open_file(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_010(self):
         """Stepping opens the source file"""
-        self.cltest_redir(
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cbreak main\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':Cstep\n'
-            ':sleep ${time}\n'
-            ':Cstep\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':redir! > ${test_file}1\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':qa!\n',
-
-            'Signs for ${cwd}foobar.py:\n'
-            'line=5  id=2  name=2\n'
-            'Signs for ${cwd}testsuite/foo.py:\n'
-            'line=32  id=1  name=1\n',
+        cmd = [
+            'Cinterrupt',
+            'Cbreak main',
+            'Ccontinue',
+            'Cstep',
+            'Cstep',
+            'Cstep',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'redir! > ${test_file}1',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            'Signs for ${cwd}foobar.py:',
+            'line=5  id=2  name=2',
+            'Signs for ${cwd}testsuite/foo.py:',
+            'line=32  id=1  name=1',
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_locals_change(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_011(self):
         """Change a variable in the locals dictionary"""
-        self.cltest_redir(
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cbreak foo.foo\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':C run = 123\n'
-            ':sleep ${time}\n'
-            ':Cp run\n'
-            ':sleep ${time}\n'
-            ':edit (clewn)_console | $$-3,$$w! ${test_out}\n'
-            ':C run = False\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':qa!\n',
-
-            '(pdb) p run\n'
-            '123\n'
-            '(pdb)\n',
+        cmd = [
+            'Cinterrupt',
+            'Cbreak foo.foo',
+            'Ccontinue',
+            'C run = 123',
+            'Cp run',
+            'call Wait_eop()',
+            'edit (clewn)_console | $$-3,$$w! ${test_out}',
+            'C run = False',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            '(pdb) p run',
+            '123',
+            '(pdb)',
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_infinite_loop(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_012(self):
         """Interrupting an infinite loop"""
-        self.cltest_redir(
-            ':sleep ${time}\n'
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cbreak testsuite/foo.py:35\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':C run = True\n'
-            ':C c.value = -1\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cjump 19\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':redir! > ${test_file}1\n'
-            ':Cbreak testsuite/foo.py:39\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':C run = False\n'
-            ':sleep ${time}\n'
-            ':Ccontinue\n'
-            ':qa!\n',
-
-            'Signs for ${cwd}testsuite/foo.py:\n'
-            'line=19  id=1  name=1\n'
-            'line=35  id=2  name=2\n',
+        cmd = [
+            'Cinterrupt',
+            'Cbreak testsuite/foo.py:35',
+            'Ccontinue',
+            'C run = True',
+            'C c.value = -1',
+            'Ccontinue',
+            'Cinterrupt',
+            'Cjump 19',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'redir! > ${test_file}1',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            'Signs for ${cwd}testsuite/foo.py:',
+            'line=19  id=1  name=1',
+            'line=35  id=2  name=2',
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_zero_division(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_013(self):
         """A ZeroDivisionError exception"""
-        self.cltest_redir(
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cbreak testsuite/foo.py:35\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':C run = True\n'
-            ':C c.value = 0\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':edit (clewn)_console | $$-6,$$w! ${test_out}\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':qa!\n',
-
-            '(pdb) continue\n'
-            "An exception occured: ('ZeroDivisionError:', \"'division by zero'\")\n"
-            '> <module>() at ${cwd}foobar.py:13\n'
-            '  main() at ${cwd}foobar.py:8\n'
-            "  foo(run=True, args=('unused',)) at ${cwd}testsuite/foo.py:38\n"
-            "  bar(prefix='value', i=0) at ${cwd}testsuite/foo.py:25\n"
-            '(pdb)\n',
+        cmd = [
+            'Cinterrupt',
+            'Cbreak testsuite/foo.py:35',
+            'Ccontinue',
+            'C run = True',
+            'C c.value = 0',
+            'Ccontinue',
+            'call Wait_eop()',
+            'edit (clewn)_console | $$-7,$$w! ${test_out}',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            "An exception occured: ('ZeroDivisionError:', \"'division by zero'\")",
+            '> <module>() at ${cwd}foobar.py:15',
+            '  main() at ${cwd}foobar.py:9',
+            "  foo(run=True, do_sleep=[], args=('unused',)) at ${cwd}testsuite/foo.py:39",
+            "  bar(prefix='value', i=0) at ${cwd}testsuite/foo.py:25",
+            '(pdb)',
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_bp_restored_after_detach(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_014(self):
         """Breakpoints are restored after detach"""
-        os.environ['PATH'] = '.:' + os.environ['PATH']
-        self.cltest_redir(
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cbreak foo.foo\n'
-            ':sleep ${time}\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':C run = True\n'
-            ':sleep ${time}\n'
-            ':Cbreak testsuite/foo.py:38\n'
-            ':sleep ${time}\n'
-            ':Cclear 1\n'
-            ':sleep ${time}\n'
-            ':Cdetach\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Pyclewn pdb\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':Cinterrupt\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':redir! > ${test_file}1\n'
-            ':C run = False\n'
-            ':sleep ${time}\n'
-            ':Ccontinue\n'
-            ':sleep ${time}\n'
-            ':qa\n',
-
-            'Signs for ${cwd}testsuite/foo.py:\n'
-            'line=38  id=8  name=1\n'
-            'line=38  id=6  name=4\n',
+        cmd = [
+            'Cinterrupt',
+            'Cbreak foo.foo',
+            'Ccontinue',
+            'C run = True',
+            'Cbreak testsuite/foo.py:39',
+            'Cclear 1',
+            'Cdetach',
+            'Pyclewn pdb',
+            'Cinterrupt',
+            'Ccontinue',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'redir! > ${test_file}1',
+            'C run = False',
+            'Ccontinue',
+            'qa',
+            ]
+        expected = (
+            'Signs for ${cwd}testsuite/foo.py:',
+            'line=39  id=8  name=1',
+            'line=39  id=6  name=4',
             )
-
-def test_main():
-    """Run all the tests."""
-    suite = unittest.TestSuite()
-    suite.addTest(PdbTestCase('test_intr_load_buffer'))
-    suite.addTest(PdbTestCase('test_break'))
-    suite.addTest(PdbTestCase('test_disable'))
-    suite.addTest(PdbTestCase('test_enable'))
-    suite.addTest(PdbTestCase('test_clear'))
-    suite.addTest(PdbTestCase('test_p_command'))
-    suite.addTest(PdbTestCase('test_temporary_breakpoint'))
-    suite.addTest(PdbTestCase('test_delete_bp'))
-    suite.addTest(PdbTestCase('test_bp_open_file'))
-    suite.addTest(PdbTestCase('test_frame_open_file'))
-    suite.addTest(PdbTestCase('test_locals_change'))
-    suite.addTest(PdbTestCase('test_infinite_loop'))
-    suite.addTest(PdbTestCase('test_zero_division'))
-    suite.addTest(PdbTestCase('test_bp_restored_after_detach'))
-    test_support.run_suite(suite)
-
-if __name__ == "__main__":
-    test_main()
+        self.cltest_redir(cmd, expected)
+        os.environ['PATH'] = '.:' + os.environ['PATH']
 

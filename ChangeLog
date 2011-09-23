@@ -1,5 +1,18 @@
-2011-09-09  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
-
+2011-09-22  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+	* debugger.py gdb.py misc.py vim.py testsuite/*py: Remove all the
+	sleep statements in the commands that build the test cases. This
+	assumes that vim has been patched with the do_sleep() function calling
+	netbeans_parse_messages().
+	* vim.py testsuite/test_support.py: Testsuite: wait for vim to
+	terminate.
+	* setup.py: Add the '--prefix' option to 'setup.py test'.
+	* setup.py testsuite/*py: Skip tests conditionnaly.
+	* simple.py unittest2/*py testsuite/*py: Add unittest2 to the python2
+	branch.
+	* setup.py testsuite/*py: Add the '--stop' option to 'setup.py test'.
+	* pyclewn_install.py setup.py testsuite/*py: Do not print the
+	traceback on failure of a test case from the testsuite, only on an
+	error.
 	* gdb.py: Fix some gdb error and warning messages are ignored.
 	* gdbmi.py: Fix no breakpoint signs after setting a 'throw'
 	catchpoint.

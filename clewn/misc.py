@@ -242,6 +242,11 @@ def offset_gen(lines):
         yield offset
         offset += len(l)
 
+def tmpfile(prefix):
+    """Return a closed file object to a new temporary file."""
+    with TmpFile(prefix) as f:
+        f.write('\n')
+    return f
 
 class PrettyPrinterString(pprint.PrettyPrinter):
     """Strings are printed with str() to avoid duplicate backslashes."""

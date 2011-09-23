@@ -90,17 +90,27 @@ def exec_vimcmd(commands, pathname='', error_stream=None):
 
     output = f = None
     try:
-        subprocess.Popen(args).wait()
-        f = os.fdopen(fd)
-        output = f.read()
-    except (OSError, IOError) as err:
-        if isinstance(err, OSError) and err.errno == errno.ENOENT:
-            perror("Failed to run '%s' as Vim.\n" % args[0])
-            perror("Please run 'pyclewn"
+        while True:
+            try:
+                subprocess.Popen(args).wait()
+                f = os.fdopen(fd)
+                output = f.read()
+            except (OSError, IOError) as err:
+                if isinstance(err, OSError):
+                    if err.errno == errno.ENOENT:
+                        perror("Failed to run '%s' as Vim.\n" % args[0])
+                        perror("Please run 'pyclewn"
                                   " --editor=/path/to/(g)vim'.\n\n")
-        else:
-            perror("Failed to run Vim as:\n'%s'\n\n" % str(args))
-        raise
+                    # may be interrupted in a testrun
+                    elif err.errno == errno.EINTR:
+                        if f is not None:
+                            f.close()
+                            f = None
+                        continue
+                perror("Failed to run Vim as:\n'%s'\n\n" % str(args))
+                raise
+            else:
+                break
     finally:
         if f is not None:
             f.close()
@@ -137,10 +147,10 @@ def close_clewnthread(vim):
     except KeyboardInterrupt:
         close_clewnthread(vim)
 
-def _pdb(vim, attach=False):
+def _pdb(vim, attach=False, testrun=False):
     """Start the python debugger thread."""
     Vim.pdb_running = True
-    vim.debugger = vim.clazz(vim.options)
+    vim.debugger = vim.clazz(vim.options, testrun)
     pdb = vim.debugger
     pdb.target_thread_ident = _thread.get_ident()
 
@@ -178,8 +188,12 @@ def pdb(run=False, **kwds):
     argv = ['pyclewn', '--pdb']
     if run:
         argv.append('--run')
-    argv.extend(['--' + k + '=' + str(v) for k, v in kwds.items()])
-    _pdb(Vim(False, argv), True)
+    argv.extend(['--' + k + '=' + str(v)
+                 for k, v in kwds.items()
+                 if k != 'testrun'
+                ])
+    testrun = 'testrun' in kwds
+    _pdb(Vim(False, argv), attach=True, testrun=testrun)
 
 def main(testrun=False):
     """Main.
@@ -195,6 +209,7 @@ def main(testrun=False):
         if testrun:
             vim.debugger = vim.clazz(options)
             vim.spawn_vim()
+            vim.shutdown()
         elif options.args:
             # run pdb to debug the 'args' python script
             _pdb(vim)
@@ -222,7 +237,7 @@ def main(testrun=False):
                 gdb_pty.start()
                 options.tty = gdb_pty.ptyname
 
-        vim.debugger = vim.clazz(options)
+        vim.debugger = vim.clazz(options, testrun)
         vim.setup(True)
         vim.loop()
     except (KeyboardInterrupt, SystemExit):
@@ -436,8 +451,12 @@ class Vim:
         self.closed = True
 
         # remove the Vim script file in case the script failed to remove it
-        if self.f_script:
+        if self.f_script and not (self.options.pdb and self.testrun):
             del self.f_script
+
+        # allow vim to process the test results
+        if self.testrun:
+            time.sleep(0.500)
 
         if self.nbserver.netbeans:
             self.nbserver.netbeans.close()
@@ -445,19 +464,23 @@ class Vim:
         info('pyclewn exiting')
 
         if self.testrun:
-            # wait for Vim to close all files
+            # wait for Vim to terminate
             if self.vim is not None:
-                try:
-                    self.vim.wait()
-                except OSError:
-                    # ignore: [Errno 4] Interrupted system call
-                    pass
+                while True:
+                    try:
+                        self.vim.wait()
+                    except OSError as err:
+                        errcode = err.errno
+                        if errcode == errno.EINTR:
+                            continue
+                        elif errcode == errno.ECHILD:
+                            break
+                        raise
+                    else:
+                        break
             if self.file_hdlr is not None:
                 logging.getLogger().removeHandler(self.file_hdlr)
                 self.file_hdlr.close()
-            # get: IOError: [Errno 2] No such file or directory: '@test_out'
-            # sleep does help avoiding this error
-            time.sleep(0.100)
 
         else:
             logging.shutdown()
@@ -679,7 +702,7 @@ class Vim:
             elif nbsock.connected:
                 # instantiate a new debugger
                 if self.debugger.closed:
-                    self.debugger = self.clazz(self.options)
+                    self.debugger = self.clazz(self.options, self.testrun)
                     nbsock.set_debugger(self.debugger)
                     info('new "%s" instance', self.clazz.__name__.lower())
             else:

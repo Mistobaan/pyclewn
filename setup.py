@@ -8,15 +8,18 @@ import os
 import os.path
 import string
 import re
+import subprocess
 import distutils.core as core
 
 from os.path import join as pathjoin
 from distutils.command.install import install as _install
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_scripts import build_scripts as _build_scripts
+from unittest import defaultTestLoader
 
-import testsuite.regrtest as regrtest
 import pyclewn_install
+import clewn.misc as misc
+import testsuite.test_support as test_support
 from clewn import *
 
 DESCRIPTION = """Pyclewn allows using Vim as a front end to a debugger.
@@ -78,6 +81,7 @@ class install(_install):
             mapping = {'pgm': '"pyclewn"', 'start': ''}
             pyclewn_install.substitute_autoload('runtime', mapping)
 
+        print('Vim user data files location: "%s"' % vimdir)
         pyclewn_install.vim_features()
         _install.run(self)
         pyclewn_install.build_vimhelp()
@@ -139,6 +143,22 @@ def hg_revert(pathnames):
     except (ImportError, IOError, OSError):
         pass
 
+NOTTESTS = [
+    'test_support',
+    ]
+
+def findtests(testdir, nottests=NOTTESTS):
+    """Return a list of all applicable test modules."""
+    names = os.listdir(testdir)
+    tests = []
+    for name in names:
+        if name[:5] == 'test_' and name[-3:] == os.extsep + 'py':
+            modname = name[:-3]
+            if modname not in nottests:
+                tests.append(modname)
+    tests.sort()
+    return tests
+
 class sdist(_sdist):
     """Specialized sdister."""
     def run(self):
@@ -157,23 +177,43 @@ class Test(core.Command):
             'run a comma separated list of tests, for example             '
             '"--test=simple,gdb", all the tests are run when this option'
             ' is not present'),
-        ('detail', 'd',
-            'detailed test output, each test case is printed'),
+        ('prefix=', 'p', 'run only tests whose name starts with this prefix'),
+        ('stop', 's', 'stop at the first test failure or error'),
+        ('detail', 'd', 'detailed test output, each test case is printed'),
     ]
 
     def initialize_options(self):
         self.test = None
-        self.detail = 0
+        self.prefix = None
+        self.stop = False
+        self.detail = False
 
     def finalize_options(self):
         if self.test is not None:
             self.test = ['test_' + t for t in self.test.split(',')]
-        if self.detail:
-            self.detail = 1
 
     def run (self):
         """Run the test suite."""
-        regrtest.run('testsuite', self.test, self.detail)
+        testdir = 'testsuite'
+        tests = self.test or findtests(testdir)
+        test_prefix = os.path.basename(os.path.normpath(testdir)) + '.'
+        if self.prefix:
+            defaultTestLoader.testMethodPrefix = self.prefix
+        for test in tests:
+            if test == 'test_gdb':
+                subprocess.check_call(['make', '-C', 'testsuite'])
+            if test.startswith(test_prefix):
+                abstest = test
+            else:
+                abstest = test_prefix + test
+            the_package = __import__(abstest, globals(), locals(), [])
+            the_module = getattr(the_package, test)
+            # run the test
+            print(abstest)
+            sys.stdout.flush()
+            test_support.run_suite(
+                    defaultTestLoader.loadTestsFromModule(the_module),
+                    self.detail, self.stop)
 
 core.setup(
     cmdclass={'sdist': sdist,

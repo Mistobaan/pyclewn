@@ -29,14 +29,17 @@ def bar(prefix, i):
     print(prefix, i)
     return i + 1
 
-def foo(run, *args):
+def foo(run, do_sleep, *args):
     """Main function."""
     c = C(1)
     unused = args
     while run:
-        time.sleep(.200)
+        if do_sleep:
+            time.sleep(.200)
         val = bar('value', c.get_value())
         c = C(val)
+        if c.value == 0:
+            break
 
     return 0
 

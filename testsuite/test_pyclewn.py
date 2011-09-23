@@ -22,12 +22,14 @@
 
 """
 import sys
-import unittest
-import testsuite.test_support as test_support
+import os
+from unittest import skipIf
 
 from .test_support import ClewnTestCase
 
-class PyclewnTestCase(ClewnTestCase):
+use_select_emulation = ('CLEWN_PIPES' in os.environ or os.name == 'nt')
+
+class Pyclewn(ClewnTestCase):
     """Test pyclewn."""
 
     def setUp(self):
@@ -35,192 +37,156 @@ class PyclewnTestCase(ClewnTestCase):
         ClewnTestCase.setUp(self)
         sys.argv.append('--simple')
 
-    def test_breakloadbuffer(self):
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_001(self):
         """The buffer is automatically loaded on a break command"""
-        self.cltest_redir(
-            ':edit ${test_file}1\n'
-            ':sleep ${time}\n'
-            ':Cbreak ${test_file}2:1\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':echo bufname("%")\n'
-            ':qa!\n',
-
-            'line=1  id=1  name=1\n'
+        cmd = [
+            'edit ${test_file}1',
+            'Cbreak ${test_file}2:1',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'echo bufname("%")',
+            'qa!',
+            ]
+        expected = (
+            'line=1  id=1  name=1',
             '${cwd}${test_file}2',
-
-            'line 1\n',
-
-            'line 1\n'
             )
+        self.cltest_redir(cmd, expected, 'line 1\n', 'line 1\n')
 
-    def test_steploadbuffer(self):
+    def test_002(self):
         """The buffer is automatically loaded on a step command"""
-        self.cltest_redir(
-            ':edit ${test_file}1\n'
-            ':sleep ${time}\n'
-            ':Cbreak ${test_file}1:2\n'
-            ':edit ${test_file}2\n'
-            ':sleep ${time}\n'
-            ':Cstep\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':echo bufname("%")\n'
-            ':qa!\n',
-
-            'line=1  id=3  name=3\n'
-            'line=2  id=1  name=1\n'
-            '${test_file}1',
-
-            'line 1\n'
-            'line 2\n',
-
-            'line 1\n'
+        cmd = [
+            'edit ${test_file}1',
+            'Cbreak ${test_file}1:2',
+            'edit ${test_file}2',
+            'Cstep',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'qa!',
+            ]
+        expected = (
+            'line=1  id=3  name=3',
+            'line=2  id=1  name=1',
             )
+        self.cltest_redir(cmd, expected, 'line 1\nline 2\n', 'line 1\n')
 
-    def test_wipeout(self):
+    def test_003(self):
         """The breakpoint and frame signs are restored after a wipeout"""
-        self.cltest_redir(
-            ':edit ${test_file}1\n'
-            ':sleep ${time}\n'
-            ':Cbreak ${test_file}1:2\n'
-            ':sleep ${time}\n'
-            ':edit ${test_file}2:1\n'
-            ':sleep ${time}\n'
-            ':1bwipeout\n'
-            ':Cstep\n'
-            ':sleep ${time}\n'
-            ':sleep ${time}\n'
-            ':redir! > ${test_out}\n'
-            ':sign place\n'
-            ':echo bufname("%")\n'
-            ':qa!\n',
-
-            'line=1  id=3  name=3\n'
-            'line=2  id=1  name=1\n'
+        cmd = [
+            'edit ${test_file}1',
+            'Cbreak ${test_file}1:2',
+            'edit ${test_file}2',
+            '1bwipeout',
+            'Cstep',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'echo bufname("%")',
+            'qa!',
+            ]
+        expected = (
+            'line=1  id=3  name=3',
+            'line=2  id=1  name=1',
             '${cwd}${test_file}1',
-
-            'line 1\n'
-            'line 2\n',
-
-            'line 1\n'
             )
+        self.cltest_redir(cmd, expected, 'line 1\nline 2\n', 'line 1\n')
 
-    def test_restart(self):
+    def test_004(self):
         """The simple debugger can be restarted"""
-        self.cltest_redir(
-            ':edit ${test_file}1\n'
-            ':sleep ${time}\n'
-            ':Cbreak ${test_file}1:1\n'
-            ':Cquit\n'
-            ':sleep ${time}\n'
-            ':Cbreak ${test_file}1:2\n'
-            ':sleep ${time}\n'
-            ':edit (clewn)_console | $$-1w! ${test_out}\n'
-            ':redir! >> ${test_out}\n'
-            ':sign place\n'
-            ':qa!\n',
-
-            'Breakpoint 1 at file ${cwd}${test_file}1, line 2.\n'
-            '--- Signs ---\n'
-            'Signs for ${test_file}1:\n'
-            '    line=2  id=1  name=1\n',
-
-            'line 1\n'
-            'line 2\n'
+        cmd = [
+            'edit ${test_file}1',
+            'Cbreak ${test_file}1:1',
+            'Cquit',
+            'Cbreak ${test_file}1:2',
+            'call Wait_eop()',
+            'edit (clewn)_console | $$-2w! ${test_out}',
+            'redir! >> ${test_out}',
+            'sign place',
+            'qa!',
+            ]
+        expected = (
+            'Breakpoint 1 at file ${cwd}${test_file}1, line 2.',
+            '--- Signs ---',
+            'Signs for ${test_file}1:',
+            '    line=2  id=1  name=1',
             )
+        self.cltest_redir(cmd, expected, 'line 1\nline 2\n')
 
-    def test_cmdlist(self):
+    def test_005(self):
         """The list of commands is complete"""
-        self.cltest_redir(
-            ':redir! >> ${test_out}\n'
-            ':command C\n'
-            ':qa!\n',
-
-            'Name        Args Range Complete  Definition\n'
-            'C           *          custom    call s:nbcommand("", <f-args>)\n'
-            'Cbreak      *          file      call s:nbcommand("break", <f-args>)\n'
-            'Ccontinue   *                    call s:nbcommand("continue", <f-args>)\n'
-            'Cdbgvar     *                    call s:nbcommand("dbgvar", <f-args>)\n'
-            'Cdelvar     *                    call s:nbcommand("delvar", <f-args>)\n'
-            'Cdisable    *                    call s:nbcommand("disable", <f-args>)\n'
-            'Cdumprepr   *                    call s:nbcommand("dumprepr", <f-args>)\n'
-            'Cenable     *                    call s:nbcommand("enable", <f-args>)\n'
-            'Chelp       *                    call s:nbcommand("help", <f-args>)\n',
-            'Cinterrupt  *                    call s:nbcommand("interrupt", <f-args>)\n'
-            'Cmapkeys    *                    call s:nbcommand("mapkeys", <f-args>)\n'
-            'Cprint      *                    call s:nbcommand("print", <f-args>)\n'
-            'Cquit       *                    call s:nbcommand("quit", <f-args>)\n'
-            'Csigint     *                    call s:nbcommand("sigint", <f-args>)\n',
-            'Cstep       *                    call s:nbcommand("step", <f-args>)\n'
-            'Csymcompletion *                 call s:nbcommand("symcompletion", <f-args>)\n'
-            'Cunmapkeys  0                    call s:unmapkeys()\n'
+        cmd = [
+            'redir! >> ${test_out}',
+            'command C',
+            'qa!',
+            ]
+        expected = (
+            'Name        Args Range Complete  Definition',
+            'C           *          custom    call s:nbcommand("", <f-args>)',
+            'Cbreak      *          file      call s:nbcommand("break", <f-args>)',
+            'Ccontinue   *                    call s:nbcommand("continue", <f-args>)',
+            'Cdbgvar     *                    call s:nbcommand("dbgvar", <f-args>)',
+            'Cdelvar     *                    call s:nbcommand("delvar", <f-args>)',
+            'Cdisable    *                    call s:nbcommand("disable", <f-args>)',
+            'Cdumprepr   *                    call s:nbcommand("dumprepr", <f-args>)',
+            'Cenable     *                    call s:nbcommand("enable", <f-args>)',
+            'Chelp       *                    call s:nbcommand("help", <f-args>)',
+            'Cinterrupt  *                    call s:nbcommand("interrupt", <f-args>)',
+            'Cloglevel   *          custom    call s:nbcommand("loglevel", <f-args>)',
+            'Cmapkeys    *                    call s:nbcommand("mapkeys", <f-args>)',
+            'Cprint      *                    call s:nbcommand("print", <f-args>)',
+            'Cquit       *                    call s:nbcommand("quit", <f-args>)',
+            'Csigint     *                    call s:nbcommand("sigint", <f-args>)',
+            'Cstep       *                    call s:nbcommand("step", <f-args>)',
+            'Csymcompletion *                 call s:nbcommand("symcompletion", <f-args>)',
+            'Cunmapkeys  0                    call s:unmapkeys()',
             )
+        self.cltest_redir(cmd, expected)
 
-    def test_mapkeys(self):
+    def test_006(self):
         """The simple keys are mapped"""
-        self.cltest_redir(
-            ':edit ${test_file}1\n'
-            ':sleep ${time}\n'
-            ':Cmapkeys\n'
-            ':sleep ${time}\n'
-            ':redir! >> ${test_out}\n'
-            ':map <C-B> \n'
-            ':map <C-E> \n'
-            ':map <C-P>\n'
-            ':map <C-Z>\n'
-            ':map <S-C>\n'
-            ':map <S-Q>\n'
-            ':map <S-S>\n'
-            ':qa!\n',
-
-            'n  <C-B>         :nbkey C-B<CR>\n'
-            'n  <C-E>         :nbkey C-E<CR>\n'
-            'n  <C-P>         :nbkey C-P<CR>\n'
-            'n  <C-Z>         :nbkey C-Z<CR>\n'
-            'n  <S-C>         :nbkey S-C<CR>\n'
-            'n  <S-Q>         :nbkey S-Q<CR>\n'
-            'n  <S-S>         :nbkey S-S<CR>\n',
-
-            'line 1\n'
+        cmd = [
+            'edit ${test_file}1',
+            'Cmapkeys',
+            'call Wait_eop()',
+            'redir! >> ${test_out}',
+            'map <C-B> ',
+            'map <C-E> ',
+            'map <C-P>',
+            'map <C-Z>',
+            'map <S-C>',
+            'map <S-Q>',
+            'map <S-S>',
+            'qa!',
+            ]
+        expected = (
+            'n  <C-B>         :nbkey C-B<CR>',
+            'n  <C-E>         :nbkey C-E<CR>',
+            'n  <C-P>         :nbkey C-P<CR>',
+            'n  <C-Z>         :nbkey C-Z<CR>',
+            'n  <S-C>         :nbkey S-C<CR>',
+            'n  <S-Q>         :nbkey S-Q<CR>',
+            'n  <S-S>         :nbkey S-S<CR>',
             )
+        self.cltest_redir(cmd, expected, 'line 1\n')
 
-    def test_delconsole(self):
+    def test_007(self):
         """The bdelete Vim command on the clewn console"""
-        self.cltest_redir(
-            ':edit ${test_file}1\n'
-            ':sleep ${time}\n'
-            ':Cbreak ${test_file}1:1\n'
-            ':sleep ${time}\n'
-            ':bdelete (clewn)_console\n'
-            ':Cquit\n'
-            ':sleep ${time}\n'
-            ':Cbreak ${test_file}1:2\n'
-            ':sleep ${time}\n'
-            ':edit (clewn)_console | $$-2,$$-1w! ${test_out}\n'
-            ':qa!\n',
-
-            '(simple) break ${test_file}1:2\n'
-            'Breakpoint 1 at file ${cwd}${test_file}1, line 2.\n',
-
-            'line 1\n'
-            'line 2\n'
+        cmd = [
+            'edit ${test_file}1',
+            'Cbreak ${test_file}1:1',
+            'bdelete (clewn)_console',
+            'Cquit',
+            'Cbreak ${test_file}1:2',
+            'call Wait_eop()',
+            'edit (clewn)_console | $$-3,$$-2w! ${test_out}',
+            'qa!',
+            ]
+        expected = (
+            '(simple) break ${test_file}1:2',
+            'Breakpoint 1 at file ${cwd}${test_file}1, line 2.',
             )
-
-def test_main():
-    """Run all the tests."""
-    suite = unittest.TestSuite()
-    suite.addTest(PyclewnTestCase('test_breakloadbuffer'))
-    suite.addTest(PyclewnTestCase('test_steploadbuffer'))
-    suite.addTest(PyclewnTestCase('test_wipeout'))
-    suite.addTest(PyclewnTestCase('test_restart'))
-    suite.addTest(PyclewnTestCase('test_cmdlist'))
-    suite.addTest(PyclewnTestCase('test_mapkeys'))
-    suite.addTest(PyclewnTestCase('test_delconsole'))
-    test_support.run_suite(suite)
-
-if __name__ == "__main__":
-    test_main()
+        self.cltest_redir(cmd, expected, 'line 1\nline 2\n')
 

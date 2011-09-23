@@ -23,18 +23,24 @@
 import sys
 import os
 import string
-import unittest
+import time
+import traceback
+import atexit
+import random
+from unittest import TestCase, TestResult
+from unittest.result import failfast
 
 import clewn.vim as vim
+import clewn.misc as misc
 
-verbose = 0              # flag set by regrtest.py
-
+# times are in milliseconds
 if os.name == 'nt':
-    SLEEP_TIME = '1400m'
+    SLEEP_TIME = 400
 elif 'CLEWN_PIPES' in os.environ:
-    SLEEP_TIME = '600m'
+    SLEEP_TIME = 400
 else:
-    SLEEP_TIME = '600m'
+    SLEEP_TIME = 400
+
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
 
@@ -43,39 +49,69 @@ TESTFN = '@test'
 TESTFN_FILE = TESTFN + '_file_'
 TESTFN_OUT = TESTFN + '_out'
 
-class TestFailed(Exception):
-    """Test failed."""
+# wait for pyclewn to process all previous commands
+WAIT_EOP = """
+:let incr = ${content}
+:function Wait_eop()
+:   let g:incr += 1
+:   exe "Cdumprepr ${eop_file} " . g:incr
+:   let l:start = localtime()
+:   while 1
+:       " allow vim to process netbeans events and messages
+:       sleep 10m
+:       if localtime() - l:start > 5
+:           break
+:       endif
+:       if filereadable("${eop_file}")
+:           let l:lines = readfile("${eop_file}")
+:           if len(lines) && l:lines[0] == g:incr
+:               sleep ${time}m
+:               break
+:           endif
+:       endif
+:   endwhile
+:endfunction
+"""
 
-class BasicTestRunner:
-    """BasicTestRunner."""
-    def run(self, test):
-        """Run the test."""
-        unused = self
-        result = unittest.TestResult()
-        test(result)
-        return result
+eop_file = misc.tmpfile('testrun')
+atexit.register(misc.unlink, eop_file.name)
 
-class ClewnTestCase(unittest.TestCase):
+def insert_sleep_after(command_list, commands, factor=1):
+    """Insert a sleep after each command found in 'command_list'.
+
+    When 'command_list' is empty, insert a sleep after each pyclewn command.
+    """
+    for cmd in commands:
+        yield cmd
+        if not command_list and cmd.startswith('C'):
+            yield 'sleep %dm' % (factor * SLEEP_TIME)
+        elif cmd in command_list:
+            yield 'sleep %dm' % (factor * SLEEP_TIME)
+
+def get_description(test):
+    """"Return a ClewnTestCase description."""
+    description = test.shortDescription() or ''
+    return '<%s:%s> %s' % (test.__class__.__name__, test.method, description)
+
+class ClewnTestCase(TestCase):
     """Pyclewn test case abstract class.
 
-    The netbeans port changes on each run, within the interval
-    [NETBEANS_PORT, NETBEANS_PORT + 99].
-    In 'verbose' mode, pyclewn runs at 'nbdebug' log level and the log is
+    In verbose mode, pyclewn runs at 'nbdebug' log level and the log is
     written to LOGFILE.
 
     """
-    _port = 0
+    _verbose = False
 
-    def __init__(self, methodName='runTest'):
+    def __init__(self, method='runTest'):
         """Constructor."""
-        unittest.TestCase.__init__(self, methodName)
-        self.debugged_script = None
+        TestCase.__init__(self, method)
+        self.method = method
+        self.pdb_script = None
         self.fnull = None
 
     def setUp(self):
         """Setup pyclewn arguments."""
-        port = self._port + NETBEANS_PORT
-
+        port = NETBEANS_PORT
         sys.argv = [
             '-c',                       # argv[0], a script
             '--netbeans=:%d' % port,    # netbeans port
@@ -88,7 +124,7 @@ class ClewnTestCase(unittest.TestCase):
         ]
         if 'EDITOR' in os.environ:
             sys.argv.append('--editor=%s' % os.environ['EDITOR'])
-        if verbose:
+        if self._verbose:
             sys.argv.append('--level=nbdebug')
 
     def setup_vim_arg(self, newarg):
@@ -99,13 +135,14 @@ class ClewnTestCase(unittest.TestCase):
         argv.pop(i)
         assert len(argv) > i + 1
         args = argv.pop(i)
-        args += " " + newarg
+        args += ' ' + newarg
         argv.append('--cargs')
         argv.append(args)
 
     def tearDown(self):
         """Cleanup stuff after the test."""
-        self.__class__._port = (self._port + 1) % 100
+        if self.fnull:
+            self.fnull.close()
         for name in os.listdir(os.getcwd()):
             if name.startswith(TESTFN):
                 try:
@@ -113,16 +150,16 @@ class ClewnTestCase(unittest.TestCase):
                 except OSError:
                     pass
 
-    def clewn_test(self, cmd, expected, outfile, *test):
+    def clewn_test(self, commands, expected, outfile, *test):
         """The test method.
 
         arguments:
-            cmd: str
+            commands: list of str
                 the commands sourced by vim
-            expected: str
-                an expected string that must be found in outfile
+            expected: list of str
+                expected strings that must be found in outfile
             outfile: str
-                the output file
+                the output file name
             test: argument list
                 the content of the test files that vim is loading
 
@@ -131,13 +168,23 @@ class ClewnTestCase(unittest.TestCase):
 
         """
         cwd = os.getcwd() + os.sep
-        cmd = ':sleep ${time}\n' + cmd
+
+        if os.name == 'nt' or 'CLEWN_PIPES' in os.environ:
+            command_list = ()
+        else:
+            command_list = ('Cquit', 'Cinterrupt', 'Ccontinue', 'Cstep',
+                            'Cnext', 'Pyclewn pdb', 'Csigint', 'Crun')
+        commands = insert_sleep_after(command_list, commands)
+        commands = insert_sleep_after(('Cdetach', ), commands, 5)
+        commands = '%s:%s\n' % (WAIT_EOP, '\n:'.join(commands))
 
         # write the commands
         fp = open(TESTFN, 'w')
-        fp.write(string.Template(cmd).substitute(time=SLEEP_TIME,
+        fp.write(string.Template(commands).substitute(time=SLEEP_TIME,
                                                     test_file=TESTFN_FILE,
                                                     test_out=TESTFN_OUT,
+                                        eop_file=eop_file.name,
+                                        content=random.randint(0, 1000000000),
                                                     cwd=cwd))
         fp.close()
 
@@ -150,17 +197,12 @@ class ClewnTestCase(unittest.TestCase):
         # process the commands
         unused = vim.main(True)
 
-        # wait for the python script being debugged to terminate
-        if self.debugged_script:
-            self.debugged_script.wait()
-            self.debugged_script = None
-            self.fnull.close()
-
         # check the result
         fp = open(outfile, 'r')
         output = fp.read()
         fp.close()
 
+        expected = '\n'.join(expected)
         if os.name == 'nt':
             expected = expected.replace('/', '\\')
         expected = string.Template(expected).substitute(
@@ -172,42 +214,138 @@ class ClewnTestCase(unittest.TestCase):
         if os.name == 'nt' and not checked:
             output = output.replace('/', '\\')
             checked = ' '.join(expected.split()) in ' '.join(output.split())
-        verify(checked,
+        self.assertTrue(checked,
                 "\n\n...Expected:\n%s \n\n...Got:\n%s" % (expected, output))
 
-    def cltest_redir(self, cmd, expected, *test):
+    def cltest_redir(self, commands, expected, *test):
         """Test result redirected by vim to TESTFN_OUT."""
-        self.clewn_test(cmd, expected, TESTFN_OUT, *test)
+        self.clewn_test(commands, expected, TESTFN_OUT, *test)
 
-    def cltest_logfile(self, cmd, expected, level, *test):
+    def cltest_logfile(self, commands, expected, level, *test):
         """Test result in the log file."""
         sys.argv.append('--level=%s' % level)
-        self.clewn_test(cmd, expected, LOGFILE, *test)
+        self.clewn_test(commands, expected, LOGFILE, *test)
 
-def verify(condition, reason='test failed'):
-    """Verify that condition is true. If not, raise TestFailed.
+class TextTestResult(TestResult):
+    """A test result class that prints formatted text results to a stream."""
+    separator1 = '=' * 70
+    separator2 = '-' * 70
 
-       The optional argument reason can be given to provide
-       a better error text.
-    """
+    def __init__(self, stream, verbose, stop_on_error):
+        """"Constructor."""
+        TestResult.__init__(self)
+        self.stream = stream
+        self.verbose = verbose
+        self.failfast = stop_on_error
 
-    if not condition:
-        raise TestFailed(reason)
+    def startTest(self, test):
+        "Called when the given test is about to be run"
+        TestResult.startTest(self, test)
+        if self.verbose:
+            self.stream.write(get_description(test))
+            self.stream.write(' ... ')
 
-def run_suite(suite):
-    """Run tests from a unittest.TestSuite-derived class."""
-    if verbose:
-        result = unittest.TextTestRunner(sys.stdout, descriptions=False,
-                                                     verbosity=2).run(suite)
-    else:
-        result = BasicTestRunner().run(suite)
-
-    if not result.wasSuccessful():
-        if len(result.errors) == 1 and not result.failures:
-            err = result.errors[0][1]
-        elif len(result.failures) == 1 and not result.errors:
-            err = result.failures[0][1]
+    def addSuccess(self, test):
+        "Called when a test has completed successfully"
+        TestResult.addSuccess(self, test)
+        if self.verbose:
+            self.stream.write('ok\n')
         else:
-            err = "errors occurred; run in verbose mode for details"
-        raise TestFailed(err)
+            self.stream.write('.')
+            self.stream.flush()
+
+    @failfast
+    def addError(self, test, err):
+        """Called when an error has occurred."""
+        TestResult.addError(self, test, err)
+        if self.verbose:
+            self.stream.write('ERROR\n')
+        else:
+            self.stream.write('E')
+            self.stream.flush()
+
+    @failfast
+    def addFailure(self, test, err):
+        """Called when an error has occurred."""
+        exctype, value, tb = err
+        unused = tb
+        # do not print the traceback on failure
+        self.failures.append((test,
+                ''.join(traceback.format_exception(exctype, value, None))))
+        if self.verbose:
+            self.stream.write('FAIL\n')
+        else:
+            self.stream.write('F')
+            self.stream.flush()
+
+    def addSkip(self, test, reason):
+        """Called when a test is skipped."""
+        TestResult.addSkip(self, test, reason)
+        if self.verbose:
+            self.stream.write('skipped (%s)\n' % reason)
+        else:
+            self.stream.write('s')
+            self.stream.flush()
+
+    def print_errors(self):
+        """"Print the errors and failures."""
+        self.stream.write('\n')
+        self.print_error_list('ERROR', self.errors)
+        self.print_error_list('FAIL', self.failures)
+
+    def print_error_list(self, flavour, errors):
+        """"Print the list of one flavour of errors."""
+        for test, err in errors:
+            self.stream.write(self.separator1)
+            self.stream.write('\n%s: %s\n' % (flavour, get_description(test)))
+            self.stream.write(self.separator2)
+            self.stream.write('\n%s\n' % err)
+
+class TextTestRunner(object):
+    """A test runner class that prints results as they are run and a summary."""
+    def __init__(self, verbose, stop_on_error, stream=sys.stderr):
+        """"Constructor."""
+        self.verbose = verbose
+        self.stop_on_error = stop_on_error
+        self.stream = stream
+
+    def run(self, test):
+        """Run the given test case or test suite."""
+        result = TextTestResult(self.stream, self.verbose, self.stop_on_error)
+        start = time.time()
+        test(result)
+        stop = time.time()
+        elapsed = stop - start
+
+        result.print_errors()
+
+        # print the summary
+        self.stream.write(result.separator2)
+        run = result.testsRun
+        self.stream.write('\nRan %d test%s in %.3fs\n\n' %
+                            (run, run != 1 and 's' or '', elapsed))
+
+        infos = []
+        if not result.wasSuccessful():
+            self.stream.write('FAILED')
+            failed, errored = map(len, (result.failures, result.errors))
+            if failed:
+                infos.append('failures=%d' % failed)
+            if errored:
+                infos.append('errors=%d' % errored)
+        else:
+            self.stream.write('OK')
+        skipped = len(result.skipped)
+        if skipped:
+            infos.append('skipped=%d' % skipped)
+        if infos:
+            self.stream.write(' (%s)\n' % (', '.join(infos),))
+        else:
+            self.stream.write('\n')
+        return result
+
+def run_suite(suite, verbose, stop_on_error):
+    """Run the suite."""
+    ClewnTestCase._verbose = verbose
+    TextTestRunner(verbose, stop_on_error).run(suite)
 

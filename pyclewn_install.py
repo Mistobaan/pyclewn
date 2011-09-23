@@ -53,7 +53,6 @@ def vimdir():
                 ' by Vim, but this is not an existing directory.' % path)
             raise DistutilsExecError(nodir)
         dir = pathjoin(path, 'vimfiles')
-    print('Vim user data files location: "%s"' % dir)
     return dir
 
 def build_vimhelp():

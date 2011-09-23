@@ -5,10 +5,12 @@ import testsuite.foo as foo
 def main():
     """Main."""
     run = sys.argv[1:] and sys.argv[1:][0]
-    foo.foo(run, 'unused')
+    do_sleep = sys.argv[2:] and sys.argv[2:][0]
+    foo.foo(run, do_sleep, 'unused')
     print('Terminated.')
 
 if __name__ == '__main__':
-    import clewn.vim as vim; vim.pdb(level='nbdebug', file='logfile')
+    import clewn.vim as vim; vim.pdb(testrun=True,
+                            level='nbdebug', file='logfile')
     main()
 
