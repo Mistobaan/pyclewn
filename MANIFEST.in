@@ -21,3 +21,4 @@ include testsuite/Makefile*
 include testsuite/README
 include testsuite/function_template_sub/Makefile
 include testsuite/function_template_sub/*.cpp
+include unittest2/*.py
