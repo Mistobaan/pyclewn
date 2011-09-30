@@ -33,14 +33,6 @@ from unittest.result import failfast
 import clewn.vim as vim
 import clewn.misc as misc
 
-# times are in milliseconds
-if os.name == 'nt':
-    SLEEP_TIME = 400
-elif 'CLEWN_PIPES' in os.environ:
-    SLEEP_TIME = 400
-else:
-    SLEEP_TIME = 400
-
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
 
@@ -51,10 +43,10 @@ TESTFN_OUT = TESTFN + '_out'
 
 # wait for pyclewn to process all previous commands
 WAIT_EOP = """
-:let incr = ${content}
+:let g:testrun_key = ${key}
 :function Wait_eop()
-:   let g:incr += 1
-:   exe "Cdumprepr ${eop_file} " . g:incr
+:   let g:testrun_key += 1
+:   exe "Cdumprepr " . ${eop_file} . " " . g:testrun_key
 :   let l:start = localtime()
 :   while 1
 :       " allow vim to process netbeans events and messages
@@ -62,9 +54,9 @@ WAIT_EOP = """
 :       if localtime() - l:start > 5
 :           break
 :       endif
-:       if filereadable("${eop_file}")
-:           let l:lines = readfile("${eop_file}")
-:           if len(lines) && l:lines[0] == g:incr
+:       if filereadable(${eop_file})
+:           let l:lines = readfile(${eop_file})
+:           if len(lines) && l:lines[0] == g:testrun_key
 :               sleep ${time}m
 :               break
 :           endif
@@ -84,9 +76,9 @@ def insert_sleep_after(command_list, commands, factor=1):
     for cmd in commands:
         yield cmd
         if not command_list and cmd.startswith('C'):
-            yield 'sleep %dm' % (factor * SLEEP_TIME)
+            yield 'sleep %dm' % (factor * vim.TESTRUN_SLEEP_TIME)
         elif cmd in command_list:
-            yield 'sleep %dm' % (factor * SLEEP_TIME)
+            yield 'sleep %dm' % (factor * vim.TESTRUN_SLEEP_TIME)
 
 def get_description(test):
     """"Return a ClewnTestCase description."""
@@ -180,12 +172,13 @@ class ClewnTestCase(TestCase):
 
         # write the commands
         fp = open(TESTFN, 'w')
-        fp.write(string.Template(commands).substitute(time=SLEEP_TIME,
-                                                    test_file=TESTFN_FILE,
-                                                    test_out=TESTFN_OUT,
-                                        eop_file=eop_file.name,
-                                        content=random.randint(0, 1000000000),
-                                                    cwd=cwd))
+        fp.write(string.Template(commands).substitute(
+                                    time=vim.TESTRUN_SLEEP_TIME,
+                                    test_file=TESTFN_FILE,
+                                    test_out=TESTFN_OUT,
+                                    eop_file=misc.quote(eop_file.name),
+                                    key=random.randint(0, 1000000000),
+                                    cwd=cwd))
         fp.close()
 
         # write the test files

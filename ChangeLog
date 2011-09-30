@@ -1,4 +1,6 @@
-2011-09-22  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-09-30  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+	* debugger.py gdbmi.py netbeans.py vim.py: Fix the testsuite on
+	Windows.
 	* debugger.py gdb.py misc.py vim.py testsuite/*py: Remove all the
 	sleep statements in the commands that build the test cases. This
 	assumes that vim has been patched with the do_sleep() function calling

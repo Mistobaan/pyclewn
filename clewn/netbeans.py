@@ -116,7 +116,10 @@ def parse_msg(msg):
         end = args.rfind(misc.DOUBLEQUOTE)
         if end != -1 and end != 0:
             nbstring = args[1:end]
-            nbstring = misc.unquote(nbstring)
+            # do not unquote nbkey parameter twice since vim already parses
+            # function parameters as strings (see :help expr-quote)
+            if event != 'keyAtPos':
+                nbstring = misc.unquote(nbstring)
         else:
             end = -1
     else:

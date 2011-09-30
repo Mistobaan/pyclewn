@@ -469,9 +469,11 @@ class Info:
             if ('line' not in bp_dictionary[num]
                     and 'file' not in bp_dictionary[num]):
                 try:
-                    fn, lno = bp_dictionary[num]['original-location'].split(':')
-                except ValueError:
-                    info('breakpoint %s ignored:'
+                    fn, lno = (
+                        bp_dictionary[num]['original-location'].rsplit(':', 1))
+                except ValueError as err:
+                    error(repr(err))
+                    error('breakpoint %s ignored:'
                             ' cannot split "original-location"', num)
                     del bp_dictionary[num]
                     continue

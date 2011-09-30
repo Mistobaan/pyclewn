@@ -973,10 +973,10 @@ class Debugger:
         # processing by pyclewn of all commands, so as to parse the
         # results and check the test
         if self.testrun and args:
-            filename, line = args.split()
+            filename, key = args.rsplit(' ', 1)
             try:
                 f = open(filename, 'w')
-                f.write(line)
+                f.write(key)
                 f.close()
             except IOError:
                 raise ClewnError('Cannot write file: %s' % filename)

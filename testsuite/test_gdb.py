@@ -30,8 +30,20 @@ from .test_support import ClewnTestCase, TESTFN_FILE, TESTFN_OUT
 
 if os.name == 'nt':
     debuggee = 'file ${cwd}testsuite/foobar.exe'
+    expected_break_main = (
+        '--- Signs ---',
+        'Signs for testsuite/overloaded.cc:',
+        '    line=13  id=2  name=2',
+        '    line=13  id=1  name=1',
+        )
 else:
     debuggee = 'file ${cwd}testsuite/foobar'
+    expected_break_main = (
+        '--- Signs ---',
+        'Signs for testsuite/overloaded.cc:',
+        '    line=16  id=2  name=2',
+        '    line=16  id=1  name=1',
+        )
 use_select_emulation = ('CLEWN_PIPES' in os.environ or os.name == 'nt')
 
 gdb_v = gdb.gdb_version('gdb')
@@ -986,13 +998,7 @@ class Gdb(ClewnTestCase):
             'sign place',
             'qa!',
             ]
-        expected = (
-            '--- Signs ---',
-            'Signs for testsuite/overloaded.cc:',
-            '    line=16  id=2  name=2',
-            '    line=16  id=1  name=1',
-            )
-        self.cltest_redir(cmd, expected)
+        self.cltest_redir(cmd, expected_break_main)
 
     def test_046(self):
         """Set a breakpoint after deleting a 'throw' catchpoint"""
@@ -1008,11 +1014,5 @@ class Gdb(ClewnTestCase):
             'sign place',
             'qa!',
             ]
-        expected = (
-            '--- Signs ---',
-            'Signs for testsuite/overloaded.cc:',
-            '    line=16  id=2  name=2',
-            '    line=16  id=1  name=1',
-            )
-        self.cltest_redir(cmd, expected)
+        self.cltest_redir(cmd, expected_break_main)
 
