@@ -100,7 +100,7 @@ class Pyclewn(ClewnTestCase):
             'Cquit',
             'Cbreak ${test_file}1:2',
             'call Wait_eop()',
-            'edit (clewn)_console | $$-2w! ${test_out}',
+            'edit (clewn)_console | $$-1w! ${test_out}',
             'redir! >> ${test_out}',
             'sign place',
             'qa!',
@@ -179,7 +179,7 @@ class Pyclewn(ClewnTestCase):
             'Cquit',
             'Cbreak ${test_file}1:2',
             'call Wait_eop()',
-            'edit (clewn)_console | $$-3,$$-2w! ${test_out}',
+            'edit (clewn)_console | $$-2,$$-1w! ${test_out}',
             'qa!',
             ]
         expected = (

@@ -59,7 +59,6 @@ else:
 WINDOW_LOCATION = ('top', 'bottom', 'left', 'right', 'none')
 CONNECTION_DEFAULTs = '', 3219, 'changeme'
 CONNECTION_TIMEOUT = 30
-TESTRUN_SLEEP_TIME = 400
 CONNECTION_ERROR = """Connection to Vim timed out after %s seconds.
 Please check that the netbeans_intg feature is compiled
 in your Vim version by running the Vim command ':version',
@@ -459,10 +458,6 @@ class Vim(object):
         # remove the Vim script file in case the script failed to remove it
         if self.f_script and not (self.options.pdb and self.testrun):
             del self.f_script
-
-        # allow vim to process the test results
-        if self.testrun:
-            time.sleep((TESTRUN_SLEEP_TIME + 100) / 1000.0)
 
         if self.nbserver.netbeans:
             self.nbserver.netbeans.close()

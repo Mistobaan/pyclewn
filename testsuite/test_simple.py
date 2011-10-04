@@ -103,7 +103,7 @@ class Simple(ClewnTestCase):
             'Cdelvar unknown',
             'Cdelvar testvar',
             'call Wait_eop()',
-            'edit (clewn)_console | $$-8,$$-2w! ${test_out}',
+            'edit (clewn)_console | $$-7,$$-1w! ${test_out}',
             'edit (clewn)_dbgvar',
             'redir! >> ${test_out}',
             'file',
@@ -308,8 +308,8 @@ class Simple(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            # Cmapkeys outputs 8 lines, thus: 9 * 8 + 2 = 74 lines
-            '"(clewn)_console" [readonly] line 74 of 74',
+            # Cmapkeys outputs 8 lines, thus: 9 * 8 + 1 = 73 lines
+            '"(clewn)_console" [readonly] line 73 of 73',
             )
         self.cltest_redir(cmd, expected)
 
