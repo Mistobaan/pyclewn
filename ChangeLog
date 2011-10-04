@@ -1,4 +1,6 @@
-2011-09-30  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-10-02  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+	* debugger.py vim.py testsuite/*py: Use a marker in '(clewn)_console'
+	instead of a file to detect the end of processing in a test case.
 	* debugger.py gdbmi.py netbeans.py vim.py: Fix the testsuite on
 	Windows.
 	* debugger.py gdb.py misc.py vim.py testsuite/*py: Remove all the

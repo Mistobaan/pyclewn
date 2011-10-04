@@ -25,7 +25,6 @@ import os
 import string
 import time
 import traceback
-import atexit
 import random
 from unittest import TestCase, TestResult
 from unittest.result import failfast
@@ -35,6 +34,7 @@ import clewn.misc as misc
 
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
+TESTRUN_SLEEP_TIME = 400
 
 # filenames used for testing
 TESTFN = '@test'
@@ -46,7 +46,8 @@ WAIT_EOP = """
 :let g:testrun_key = ${key}
 :function Wait_eop()
 :   let g:testrun_key += 1
-:   exe "Cdumprepr " . ${eop_file} . " " . g:testrun_key
+:   let l:marker = "dumprepr " . g:testrun_key
+:   exe "C" . l:marker
 :   let l:start = localtime()
 :   while 1
 :       " allow vim to process netbeans events and messages
@@ -54,31 +55,27 @@ WAIT_EOP = """
 :       if localtime() - l:start > 5
 :           break
 :       endif
-:       if filereadable(${eop_file})
-:           let l:lines = readfile(${eop_file})
-:           if len(lines) && l:lines[0] == g:testrun_key
-:               sleep ${time}m
-:               break
-:           endif
+:       let l:lines = getbufline("(clewn)_console", "$$")
+:       if len(lines) && l:lines[0] =~# l:marker
+:           break
 :       endif
 :   endwhile
 :endfunction
 """
 
-eop_file = misc.tmpfile('testrun')
-atexit.register(misc.unlink, eop_file.name)
+def append_command(command_list, commands, append=None):
+    """Append a command after each command found in 'command_list'.
 
-def insert_sleep_after(command_list, commands, factor=1):
-    """Insert a sleep after each command found in 'command_list'.
-
-    When 'command_list' is empty, insert a sleep after each pyclewn command.
+    When 'command_list' is empty, append the command after each pyclewn command.
     """
+    if not append:
+        append = 'sleep %dm' % TESTRUN_SLEEP_TIME
     for cmd in commands:
         yield cmd
         if not command_list and cmd.startswith('C'):
-            yield 'sleep %dm' % (factor * vim.TESTRUN_SLEEP_TIME)
+            yield append
         elif cmd in command_list:
-            yield 'sleep %dm' % (factor * vim.TESTRUN_SLEEP_TIME)
+            yield append
 
 def get_description(test):
     """"Return a ClewnTestCase description."""
@@ -161,22 +158,27 @@ class ClewnTestCase(TestCase):
         """
         cwd = os.getcwd() + os.sep
 
-        if os.name == 'nt' or 'CLEWN_PIPES' in os.environ:
+        use_select_emulation = ('CLEWN_PIPES' in os.environ or os.name == 'nt')
+        if use_select_emulation:
+            # handle interrupt in a pdb test
+            if commands[0] == 'Cinterrupt':
+                commands[0:0] = ['sleep %dm' % (3 * TESTRUN_SLEEP_TIME)]
+            commands = append_command(('Cinterrupt', ), commands,
+                                                'call Wait_eop()')
             command_list = ()
         else:
             command_list = ('Cquit', 'Cinterrupt', 'Ccontinue', 'Cstep',
                             'Cnext', 'Pyclewn pdb', 'Csigint', 'Crun')
-        commands = insert_sleep_after(command_list, commands)
-        commands = insert_sleep_after(('Cdetach', ), commands, 5)
+        commands = append_command(command_list, commands)
+        commands = append_command(('Cdetach', ), commands,
+                        'sleep %dm' % (5 * TESTRUN_SLEEP_TIME))
         commands = '%s:%s\n' % (WAIT_EOP, '\n:'.join(commands))
 
         # write the commands
         fp = open(TESTFN, 'w')
         fp.write(string.Template(commands).substitute(
-                                    time=vim.TESTRUN_SLEEP_TIME,
                                     test_file=TESTFN_FILE,
                                     test_out=TESTFN_OUT,
-                                    eop_file=misc.quote(eop_file.name),
                                     key=random.randint(0, 1000000000),
                                     cwd=cwd))
         fp.close()

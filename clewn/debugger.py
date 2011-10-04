@@ -972,19 +972,11 @@ class Debugger:
         # dumprepr is used by the testsuite to detect the end of
         # processing by pyclewn of all commands, so as to parse the
         # results and check the test
-        if self.testrun and args:
-            filename, key = args.rsplit(' ', 1)
-            try:
-                f = open(filename, 'w')
-                f.write(key)
-                f.close()
-            except IOError:
-                raise ClewnError('Cannot write file: %s' % filename)
-        else:
+        if not (self.testrun and args):
             self.console_print(
                 'netbeans:\n%s\n' % misc.pformat(self.__nbsock.__dict__)
                 + '%s:\n%s\n' % (self.__class__.__name__.lower(), self))
-        self.print_prompt()
+            self.print_prompt()
 
     def cmd_loglevel(self, cmd, level):
         """Get or set the pyclewn log level."""

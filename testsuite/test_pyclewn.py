@@ -27,8 +27,6 @@ from unittest import skipIf
 
 from .test_support import ClewnTestCase
 
-use_select_emulation = ('CLEWN_PIPES' in os.environ or os.name == 'nt')
-
 class Pyclewn(ClewnTestCase):
     """Test pyclewn."""
 
@@ -102,7 +100,7 @@ class Pyclewn(ClewnTestCase):
             'Cquit',
             'Cbreak ${test_file}1:2',
             'call Wait_eop()',
-            'edit (clewn)_console | $$-2w! ${test_out}',
+            'edit (clewn)_console | $$-1w! ${test_out}',
             'redir! >> ${test_out}',
             'sign place',
             'qa!',
@@ -181,11 +179,11 @@ class Pyclewn(ClewnTestCase):
             'Cquit',
             'Cbreak ${test_file}1:2',
             'call Wait_eop()',
-            'edit (clewn)_console | $$-3,$$-2w! ${test_out}',
+            'edit (clewn)_console | $$-2,$$-1w! ${test_out}',
             'qa!',
             ]
         expected = (
-            '(simple) break ${test_file}1:2',
+            'break ${test_file}1:2',
             'Breakpoint 1 at file ${cwd}${test_file}1, line 2.',
             )
         self.cltest_redir(cmd, expected, 'line 1\nline 2\n')

@@ -56,7 +56,6 @@ class Pdb(ClewnTestCase):
         if self.pdb_script:
             self.pdb_script.wait()
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_001(self):
         """The buffer is automatically loaded on the interrupt command"""
         cmd = [
@@ -75,7 +74,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_002(self):
         """The break command"""
         cmd = [
@@ -95,7 +93,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_003(self):
         """The disable command"""
         cmd = [
@@ -116,7 +113,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_004(self):
         """The enable command"""
         cmd = [
@@ -140,7 +136,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_005(self):
         """The clear command"""
         cmd = [
@@ -164,7 +159,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_006(self):
         """The p command"""
         cmd = [
@@ -185,7 +179,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_007(self):
         """The temporary breakpoint command"""
         cmd = [
@@ -204,7 +197,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_008(self):
         """Delete a breakpoint"""
         cmd = [
@@ -226,7 +218,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_009(self):
         """Setting a breakpoint opens the source file"""
         cmd = [
@@ -251,7 +242,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_010(self):
         """Stepping opens the source file"""
         cmd = [
@@ -276,7 +266,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_011(self):
         """Change a variable in the locals dictionary"""
         cmd = [
@@ -324,7 +313,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_013(self):
         """A ZeroDivisionError exception"""
         cmd = [
@@ -362,6 +350,8 @@ class Pdb(ClewnTestCase):
             'Cdetach',
             'Pyclewn pdb',
             'Cinterrupt',
+            'Ccontinue',
+            'call Wait_eop()',
             'Ccontinue',
             'call Wait_eop()',
             'redir! > ${test_out}',

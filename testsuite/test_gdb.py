@@ -177,7 +177,7 @@ class Gdb(ClewnTestCase):
             'Crun',
             'Cprint max',
             'call Wait_eop()',
-            'edit (clewn)_console | $$ | $$-2w!  ${test_out}',
+            'edit (clewn)_console | $$ | $$-1w!  ${test_out}',
             'qa!',
             ]
         expected = (
@@ -193,7 +193,7 @@ class Gdb(ClewnTestCase):
             'Cset con',       # set confirm command
             'C def',          # define command
             'call Wait_eop()',
-            'edit (clewn)_console | $$ | ?con?,$$-2w!  ${test_out}',
+            'edit (clewn)_console | $$ | ?con?,$$-1w!  ${test_out}',
             'qa!',
             ]
         expected = (
