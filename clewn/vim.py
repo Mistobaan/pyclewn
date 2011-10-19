@@ -30,7 +30,6 @@ import time
 import os.path
 import tempfile
 import subprocess
-import asyncore
 import inspect
 import optparse
 import logging
@@ -41,7 +40,6 @@ import atexit
 
 from .__init__ import *
 from . import (misc, gdb, simple, netbeans, evtloop)
-from . import buffer as vimbuffer
 from . import pydb
 if os.name == 'nt':
     from .nt import hide_console as daemonize

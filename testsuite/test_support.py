@@ -30,7 +30,6 @@ from unittest import TestCase, TestResult
 from unittest.result import failfast
 
 import clewn.vim as vim
-import clewn.misc as misc
 
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'

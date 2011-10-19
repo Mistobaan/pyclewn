@@ -134,13 +134,12 @@ def hg_revert(pathnames):
     """Revert files in a mercurial repository."""
     # silently ignore all errors
     try:
-        import subprocess
         fnull = open(os.devnull, 'r+')
         for fname in pathnames:
             subprocess.call(['hg', 'revert', '--no-backup', fname],
                                                         stderr=fnull)
         fnull.close()
-    except (ImportError, IOError, OSError):
+    except (IOError, OSError):
         pass
 
 NOTTESTS = [

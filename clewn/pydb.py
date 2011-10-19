@@ -428,12 +428,11 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def dispatch_return(self, frame, arg):
         """Override 'dispatch_return' to fix issue 13183."""
-        if self.stop_here(frame) or frame == self.returnframe:
+        try:
             self.frame_returning = frame
-            self.user_return(frame, arg)
+            return pdb.Pdb.dispatch_return(self, frame, arg)
+        finally:
             self.frame_returning = None
-            if self.quitting: raise BdbQuit
-        return self.trace_dispatch
 
     def dispatch_exception(self, frame, arg):
         """Override 'dispatch_exception' to allow stopping at script frame level."""
