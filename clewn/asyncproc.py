@@ -221,6 +221,8 @@ class ProcessChannel:
     received from the program stdout and stderr.
 
     Instance attributes:
+        socket_map: dict
+            the asyncore socket dictionary
         argv: tuple or list
             argv arguments
         pgm_name: str
@@ -236,9 +238,10 @@ class ProcessChannel:
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, argv):
+    def __init__(self, socket_map, argv):
         """Constructor."""
         assert argv
+        self.socket_map = socket_map
         self.argv = argv
         self.pgm_name = os.path.basename(self.argv[0])
         self.fileasync = None
@@ -252,8 +255,10 @@ class ProcessChannel:
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
                             close_fds=(os.name != 'nt'))
-        self.fileasync = (FileAsynchat(proc.stdout, self, True),
-                            FileAsynchat(proc.stdin, self, False))
+        self.fileasync = (FileAsynchat(
+                                proc.stdout, self, True, self.socket_map),
+                          FileAsynchat(
+                                proc.stdin, self, False, self.socket_map))
         self.pid = proc.pid
         info('starting "%s" with two pipes', self.pgm_name)
 

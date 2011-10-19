@@ -50,7 +50,7 @@ class Simple(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=1  id=1  name=1',
+            'line=1  id=2  name=1',
             )
         self.cltest_redir(cmd, expected, 'line 1\n')
 
@@ -131,7 +131,7 @@ class Simple(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=1  id=2  name=2',
+            'line=1  id=3  name=2',
             )
         self.cltest_redir(cmd, expected, 'line 1\n')
 
@@ -167,8 +167,8 @@ class Simple(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=1  id=2  name=2',
-            'line=2  id=3  name=3',
+            'line=1  id=3  name=2',
+            'line=2  id=4  name=3',
             )
         self.cltest_redir(cmd, expected, 'line 1\nline 2\n')
 
@@ -269,8 +269,8 @@ class Simple(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=1  id=3  name=3',
-            'line=2  id=1  name=1',
+            'line=1  id=1  name=3',
+            'line=2  id=2  name=1',
             )
         self.cltest_redir(cmd, expected, 'line 1\nline 2\n')
 

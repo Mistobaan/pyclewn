@@ -125,9 +125,9 @@ class ProcessChannel(asyncproc.ProcessChannel):
 
     INTERRUPT_CHAR = b'\x03'    # <Ctl-C>
 
-    def __init__(self, argv):
+    def __init__(self, socket_map, argv):
         """Constructor."""
-        asyncproc.ProcessChannel.__init__(self, argv)
+        asyncproc.ProcessChannel.__init__(self, socket_map, argv)
         self.sig_handler = None
         self.debug = (logging.getLogger().getEffectiveLevel() <= logging.INFO)
         self.pid_status = ''
@@ -199,7 +199,7 @@ class ProcessChannel(asyncproc.ProcessChannel):
             error("    at %s:%s", filename, lnum)
             self.popen()
         else:
-            pty = asyncproc.FileAsynchat(master, self)
+            pty = asyncproc.FileAsynchat(master, self, map=self.socket_map)
             self.fileasync = (pty, pty)
             info('starting "%s" with a pseudo tty', self.pgm_name)
 

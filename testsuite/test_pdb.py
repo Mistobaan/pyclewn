@@ -363,8 +363,8 @@ class Pdb(ClewnTestCase):
             ]
         expected = (
             'Signs for ${cwd}testsuite/foo.py:',
-            'line=39  id=8  name=1',
-            'line=39  id=6  name=4',
+            'line=39  id=1  name=1',
+            'line=39  id=2  name=4',
             )
         self.cltest_redir(cmd, expected)
         os.environ['PATH'] = '.:' + os.environ['PATH']

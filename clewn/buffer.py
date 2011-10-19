@@ -48,31 +48,6 @@ def is_clewnbuf(bufname):
             return True
     return False
 
-class Sernum(misc.Singleton):
-    """Netbeans sernum counter."""
-
-    def init(self, *args):
-        """Singleton initialisation."""
-        unused = args
-        self.i = 0
-
-    def __init__(self, *args):
-        """Constructor."""
-        if args:
-            self.i = args[0]
-
-    def __int__(self):
-        """Return sernum value."""
-        self.i += 1
-        return self.i
-
-class LastSernum:
-    """Last annotation serial number."""
-
-    def __init__(self):
-        """Constructor."""
-        self.value = int(Sernum())
-
 class Buffer(dict):
     """A Vim buffer is a dictionary of annotations {anno_id: annotation}.
 
@@ -130,7 +105,9 @@ class Buffer(dict):
         """Add an annotation."""
         if anno_id not in self.keys():
             if anno_id == FRAME_ANNO_ID:
-                self[anno_id] = FrameAnnotation(self, lnum, self.nbsock)
+                frame = self.nbsock.frame_annotation
+                frame.set_buf_lnum(self, lnum)
+                self[anno_id] = frame
             else:
                 self[anno_id] = Annotation(self, anno_id, lnum, self.nbsock)
         else:
@@ -207,8 +184,8 @@ class Annotation:
         self.lnum = lnum
         self.nbsock = nbsock
         self.disabled = disabled
-        self.enabled_sernum = self.sernum = LastSernum()
-        self.disabled_sernum  = LastSernum()
+        self.enabled_sernum = self.sernum = nbsock.sernum.last
+        self.disabled_sernum  = nbsock.sernum.last
 
         self.enabled_typeNum = buf.last_typeNum
         self.disabled_typeNum = buf.last_typeNum
@@ -242,7 +219,7 @@ class Annotation:
                 self.sernum = self.enabled_sernum
                 typeNum = self.enabled_typeNum
             self.nbsock.send_cmd(self.buf, 'addAnno', '%d %d %d/0 -1'
-                                    % (self.sernum.value, typeNum, self.lnum))
+                                    % (self.sernum, typeNum, self.lnum))
             self.nbsock.last_buf = self.buf
             self.nbsock.last_buf.lnum = self.lnum
             self.nbsock.last_buf.col = 0
@@ -253,7 +230,7 @@ class Annotation:
     def remove_anno(self):
         """Remove the annotation."""
         if self.buf.registered and self.is_set:
-            self.nbsock.send_cmd(self.buf, 'removeAnno', str(self.sernum.value))
+            self.nbsock.send_cmd(self.buf, 'removeAnno', str(self.sernum))
         self.is_set = False
 
     def __repr__(self):
@@ -263,28 +240,23 @@ class Annotation:
             state = 'disabled'
         return 'bp %s at line %d' % (state, self.lnum)
 
-class FrameAnnotation(misc.Singleton, Annotation):
+class FrameAnnotation(Annotation):
     """The frame annotation is the sign set in the current frame."""
 
-    def init(self, buf, lnum, nbsock):
-        """Singleton initialisation."""
-        unused = buf
-        unused = lnum
-        self.disabled = False
-        self.sernum = LastSernum()
-        self.nbsock = nbsock
-
-    def __init__(self, buf, lnum, nbsock):
+    def __init__(self, nbsock):
         """Constructor."""
-        self.buf = buf
-        self.lnum = lnum
-        unused = nbsock
+        self.nbsock = nbsock
+        self.buf = None
+        self.lnum = 0
         self.disabled = False
         self.is_set = False
-        # this happens when running regtests
-        if self.nbsock is not nbsock:
-            self.nbsock = nbsock
-            self.sernum = LastSernum()
+        self.sernum = nbsock.sernum.last
+
+    def set_buf_lnum(self, buf, lnum):
+        """Buffer and line number for the frame."""
+        self.buf = buf
+        self.lnum = lnum
+        self.is_set = False
 
     def update(self, disabled=False):
         """Update the annotation."""
@@ -292,7 +264,7 @@ class FrameAnnotation(misc.Singleton, Annotation):
         if not self.is_set:
             self.buf.define_frameanno()
             self.nbsock.send_cmd(self.buf, 'addAnno', '%d %d %d/0 -1'
-                            % (self.sernum.value, self.buf.frame_typeNum, self.lnum))
+                            % (self.sernum, self.buf.frame_typeNum, self.lnum))
             self.nbsock.last_buf = self.buf
             self.nbsock.last_buf.lnum = self.lnum
             self.nbsock.last_buf.col = 0

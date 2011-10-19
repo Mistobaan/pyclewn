@@ -180,6 +180,12 @@ class Test(core.Command):
         ('prefix=', 'p', 'run only tests whose name starts with this prefix'),
         ('stop', 's', 'stop at the first test failure or error'),
         ('detail', 'd', 'detailed test output, each test case is printed'),
+        ('pdb', 'b', 'debug a single test with pyclewn and pdb: start the'
+                     ' test with \'python setup.py test --test=gdb --pdb -p'
+                     ' test_021\''
+                     ' then start a Vim instance and run'
+                     ' \':let g:pyclewn_connection="localhost:3220:foo" |'
+                     ' Pyclewn pdb\''),
     ]
 
     def initialize_options(self):
@@ -187,6 +193,7 @@ class Test(core.Command):
         self.prefix = None
         self.stop = False
         self.detail = False
+        self.pdb = False
 
     def finalize_options(self):
         if self.test is not None:
@@ -194,26 +201,31 @@ class Test(core.Command):
 
     def run (self):
         """Run the test suite."""
+        if self.pdb and self.test != ['test_gdb']:
+            print('One can only debug a gdb test case for now.')
+            return
+
         testdir = 'testsuite'
         tests = self.test or findtests(testdir)
-        test_prefix = os.path.basename(os.path.normpath(testdir)) + '.'
+        test_prefix = testdir + '.'
         if self.prefix:
             defaultTestLoader.testMethodPrefix = self.prefix
         for test in tests:
-            if test == 'test_gdb':
-                subprocess.check_call(['make', '-C', 'testsuite'])
-            if test.startswith(test_prefix):
-                abstest = test
-            else:
-                abstest = test_prefix + test
+            abstest = test_prefix + test
             the_package = __import__(abstest, globals(), locals(), [])
             the_module = getattr(the_package, test)
+            suite = defaultTestLoader.loadTestsFromModule(the_module)
+            if self.pdb and (len(tests) > 1 or suite.countTestCases() > 1):
+                print('Only one test at a time can be debugged, use the'
+                      ' \'--test=\' and \'--prefix=\' options to set'
+                      ' this test.')
+                return
+            if test == 'test_gdb':
+                subprocess.check_call(['make', '-C', 'testsuite'])
             # run the test
             print(abstest)
             sys.stdout.flush()
-            test_support.run_suite(
-                    defaultTestLoader.loadTestsFromModule(the_module),
-                    self.detail, self.stop)
+            test_support.run_suite(suite, self.detail, self.stop, self.pdb)
 
 core.setup(
     cmdclass={'sdist': sdist,

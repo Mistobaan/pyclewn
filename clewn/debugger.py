@@ -359,6 +359,8 @@ class Debugger:
             feature.
         options: optparse.Values
             The pyclewn command line parameters.
+        vim_socket_map: dict
+            The asyncore socket dictionary
         testrun: boolean
             True when run from a test suite
         started: boolean
@@ -385,9 +387,10 @@ class Debugger:
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, options, testrun=False):
+    def __init__(self, options, vim_socket_map, testrun):
         """Initialize instance variables and the prompt."""
         self.options = options
+        self.vim_socket_map = vim_socket_map
         self.testrun = testrun
 
         self.cmds = {
@@ -1025,8 +1028,14 @@ class Debugger:
     def __str__(self):
         """Return the string representation."""
         shallow = copy.copy(self.__dict__)
-        for name in ('cmds', 'pyclewn_cmds', 'mapkeys'):
-            if name in shallow:
+        for name in list(shallow):
+            if name in ('cmds', 'pyclewn_cmds', 'mapkeys'):
                 del shallow[name]
+            # avoid "RuntimeError: dictionary changed size during
+            # iteration" on socket_map when running pdb
+            else:
+                item = shallow[name]
+                if isinstance(item, dict):
+                    item = dict(item)
         return misc.pformat(shallow)
 

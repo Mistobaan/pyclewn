@@ -150,8 +150,7 @@ def close_clewnthread(vim):
 def _pdb(vim, attach=False, testrun=False):
     """Start the python debugger thread."""
     Vim.pdb_running = True
-    vim.debugger = vim.clazz(vim.options, testrun)
-    pdb = vim.debugger
+    pdb = vim.create_debugger(testrun)
     pdb.target_thread_ident = _thread.get_ident()
 
     # use a daemon thread
@@ -207,7 +206,7 @@ def main(testrun=False):
     options = vim.options
     if options.pdb:
         if testrun:
-            vim.debugger = vim.clazz(options)
+            vim.create_debugger()
             vim.spawn_vim()
             vim.shutdown()
         elif options.args:
@@ -218,7 +217,7 @@ def main(testrun=False):
             # vim is attaching to a python process,
             # just write the vim script
             vim.vim_version()
-            vim.clazz(options)._vim_script(options)
+            vim.create_debugger()._vim_script(options)
         return vim
 
     except_str = ''
@@ -237,7 +236,7 @@ def main(testrun=False):
                 gdb_pty.start()
                 options.tty = gdb_pty.ptyname
 
-        vim.debugger = vim.clazz(options, testrun)
+        vim.create_debugger(testrun)
         vim.setup(True)
         vim.loop()
     except (KeyboardInterrupt, SystemExit):
@@ -314,17 +313,13 @@ class Vim:
     def __init__(self, testrun, argv):
         """Constructor"""
         self.testrun = testrun
-        # reinitialize the sernum counter
-        if testrun:
-            vimbuffer.Sernum(0)
-
         self.file_hdlr = None
         self.stderr_hdlr = None
-        self.socket_map = asyncore.socket_map
+        self.socket_map = {}
         self.debugger = None
         self.clazz = None
         self.f_script = None
-        self.nbserver = netbeans.Server()
+        self.nbserver = netbeans.Server(self.socket_map)
         # instantiate 'poll' after addition of 'nbserver' sot the asyncore
         # 'socket_map'
         self.poll = evtloop.Poll(self.socket_map)
@@ -333,6 +328,13 @@ class Vim:
         self.parse_options(argv)
         self.setlogger()
         self.closed = False
+
+    def create_debugger(self, testrun=None):
+        """Instantiate the debugger."""
+        if testrun is None:
+            testrun = self.testrun
+        self.debugger = self.clazz(self.options, self.socket_map, testrun)
+        return self.debugger
 
     def vim_version(self):
         """Check Vim version."""
@@ -698,7 +700,7 @@ class Vim:
             elif nbsock.connected:
                 # instantiate a new debugger
                 if self.debugger.closed:
-                    self.debugger = self.clazz(self.options, self.testrun)
+                    self.create_debugger()
                     nbsock.set_debugger(self.debugger)
                     info('new "%s" instance', self.clazz.__name__.lower())
             else:

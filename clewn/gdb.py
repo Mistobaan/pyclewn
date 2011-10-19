@@ -561,7 +561,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
         self.arglist = self.options.args
         self.version = gdb_version(self.pgm)
         self.f_init = None
-        ProcessChannel.__init__(self, self.getargv())
+        ProcessChannel.__init__(self, self.vim_socket_map, self.getargv())
 
         self.info = gdbmi.Info(self)
         self.globaal = GlobalSetup(self.pgm, self.pyclewn_cmds)

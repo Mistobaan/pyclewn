@@ -313,8 +313,8 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "    line=9  id=3  name=3",
-            "    line=9  id=1  name=1",
+            "    line=9  id=1  name=3",
+            "    line=9  id=2  name=1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -351,7 +351,7 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "line=9  id=2  name=2",
+            "line=9  id=3  name=2",
             )
         self.cltest_redir(cmd, expected)
 
@@ -371,7 +371,7 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "line=10  id=3  name=3",
+            "line=10  id=1  name=3",
             )
         self.cltest_redir(cmd, expected)
 
@@ -388,7 +388,7 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for ${cwd}testsuite/foo.c:",
-            "line=30  id=1  name=1",
+            "line=30  id=2  name=1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -407,7 +407,7 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "line=9  id=3  name=3",
+            "line=9  id=4  name=3",
             )
         self.cltest_redir(cmd, expected)
 
@@ -426,7 +426,7 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "line=9  id=3  name=3",
+            "line=9  id=1  name=3",
             )
         self.cltest_redir(cmd, expected)
 
@@ -661,10 +661,10 @@ class Gdb(ClewnTestCase):
         expected = (
             '--- Signs ---',
             'Signs for testsuite/foobar.c:',
-            '    line=9  id=5  name=5',
-            '    line=9  id=1  name=1',
+            '    line=9  id=1  name=5',
+            '    line=9  id=2  name=1',
             'Signs for ${cwd}testsuite/foo.c:',
-            '    line=30  id=3  name=3',
+            '    line=30  id=4  name=3',
             'sign 1 text=1  texthl=NB_2',
             'sign 2 text=1  texthl=NB_3',
             'sign 3 text=2  texthl=NB_4',
@@ -687,9 +687,9 @@ class Gdb(ClewnTestCase):
         expected = (
             '--- Signs ---',
             'Signs for testsuite/overloaded.cc:',
-            '    line=3  id=3  name=3',
-            '    line=4  id=5  name=5',
-            '    line=5  id=1  name=1',
+            '    line=3  id=4  name=3',
+            '    line=4  id=6  name=5',
+            '    line=5  id=2  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -748,9 +748,9 @@ class Gdb(ClewnTestCase):
         expected = (
             '--- Signs ---',
             'Signs for testsuite/foobar.c:',
-            '    line=9  id=1  name=1',
+            '    line=9  id=2  name=1',
             'Signs for ${cwd}testsuite/foo.c:',
-            '    line=30  id=3  name=3',
+            '    line=30  id=4  name=3',
             )
         self.cltest_redir(cmd, expected,
             'cd testsuite\n'
@@ -851,7 +851,7 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "line=16  id=1  name=1",
+            "line=16  id=2  name=1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -874,8 +874,8 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for ${cwd}testsuite/foo.c:",
-            "line=30  id=5  name=1",
-            "line=30  id=3  name=3",
+            "line=30  id=6  name=1",
+            "line=30  id=4  name=3",
             )
         self.cltest_redir(cmd, expected)
 
@@ -897,8 +897,8 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "line=9  id=5  name=3",
-            "line=9  id=1  name=1",
+            "line=9  id=6  name=3",
+            "line=9  id=2  name=1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -924,9 +924,9 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "line=9  id=1  name=1",
+            "line=9  id=2  name=1",
             "Signs for ${cwd}testsuite/foo.c:",
-            "line=30  id=3  name=3",
+            "line=30  id=4  name=3",
             )
         self.cltest_redir(cmd, expected)
 
@@ -943,7 +943,7 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for ${cwd}testsuite/function_template_sub/localmax.cpp:",
-            "line=7  id=1  name=1",
+            "line=7  id=2  name=1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -961,7 +961,7 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for ${cwd}testsuite/foo.c:",
-            "line=30  id=1  name=1",
+            "line=30  id=2  name=1",
             )
         self.cltest_redir(cmd, expected)
 

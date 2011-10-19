@@ -565,9 +565,9 @@ class Server(asyncore.dispatcher):
             the connection password
     """
 
-    def __init__(self):
+    def __init__(self, socket_map):
         """Constructor."""
-        asyncore.dispatcher.__init__(self)
+        asyncore.dispatcher.__init__(self, map=socket_map)
         self.oneshot = False
         self.netbeans = None
         self.passwd = ''
@@ -624,7 +624,7 @@ class Server(asyncore.dispatcher):
                 return
 
             conn.setblocking(0)
-            self.netbeans = Netbeans(addr, self.passwd)
+            self.netbeans = Netbeans(self._map, addr, self.passwd)
             self.netbeans.set_socket(conn)
             self.netbeans.connected = True
             if self.oneshot:
@@ -637,6 +637,21 @@ class Server(asyncore.dispatcher):
         """Handle an asyncore close event."""
         unused = self
         assert False, 'unhandled close event in server'
+
+class Sernum:
+    """Netbeans sernum counter."""
+
+    def __init__(self):
+        """Constructor."""
+        self._last = 0
+
+    # readonly property
+    def get_sernum(self):
+        """Return a unique sernum."""
+        self._last += 1
+        return self._last
+
+    last = property(get_sernum, None, None, 'last sernum')
 
 class Netbeans(asynchat.async_chat):
     """A Netbeans instance exchanges netbeans messages on a socket.
@@ -672,6 +687,14 @@ class Netbeans(asynchat.async_chat):
             netbeans sequence number
         last_seqno: int
             last reply sequence number
+        owner_thread: int
+            the identity of the thread handling select events.
+        lock: threading.Lock
+            when not None, serialize access to some resources
+        sernum: Sernum
+            returns its incremented value, each time it is read
+        frame_annotation: FrameAnnotation
+            the frame annotation
 
     Class attributes:
         remove_fix: str
@@ -685,8 +708,6 @@ class Netbeans(asynchat.async_chat):
         bg_colors: tuple
             The three sign background colors of the bp enabled, bp disabled and
             the frame (in this order)
-        owner_thread: int
-            The identity of the thread handling select events.
 
     """
 
@@ -696,9 +717,9 @@ class Netbeans(asynchat.async_chat):
     max_lines = CONSOLE_MAXLINES
     bg_colors = ('Cyan', 'Green', 'Magenta')
 
-    def __init__(self, addr, passwd):
+    def __init__(self, socket_map, addr, passwd):
         """Constructor."""
-        asynchat.async_chat.__init__(self)
+        asynchat.async_chat.__init__(self, map=socket_map)
         self._fileno = None
         self.addr = addr
         self.passwd = passwd
@@ -712,11 +733,14 @@ class Netbeans(asynchat.async_chat):
         self.ready = False
         self.detached = False
         self.debugger = None
-        self.nbversion = None
+        self.nbversion = 'unknown'
         self.ibuff = []
         self.seqno = 0
         self.last_seqno = 0
         self.set_terminator(b'\n')
+        self.lock = None
+        self.sernum = Sernum()
+        self.frame_annotation = vimbuffer.FrameAnnotation(self)
 
     def set_debugger(self, debugger):
         """Notify of the current debugger."""
@@ -1031,7 +1055,17 @@ class Netbeans(asynchat.async_chat):
         """
         if self.ready:
             try:
-                asynchat.async_chat.initiate_send(self)
+                # the pdb Clewn-thread calls scheduled jobs (flush the console)
+                # even when it does not own 'nbsock', therefore calls to
+                # initiate_send must be serialized
+                if self.lock:
+                    self.lock.acquire()
+                    try:
+                        asynchat.async_chat.initiate_send(self)
+                    finally:
+                        self.lock.release()
+                else:
+                    asynchat.async_chat.initiate_send(self)
             except socket.error:
                 self.close()
 

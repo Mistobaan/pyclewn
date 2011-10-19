@@ -1,4 +1,9 @@
-2011-10-02  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-10-16  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+	* setup.py asyncproc.py buffer.py debugger.py gdb.py netbeans.py
+	posix.py vim.py: Pyclewn can debug a pyclewn gdb test case.
+	* pydb.py: Fix Python issue 13183.
+	* debugger.py: Fix a 'RuntimeError: dictionary changed size during
+	iteration' occuring when running pdb.
 	* debugger.py vim.py testsuite/*py: Use a marker in '(clewn)_console'
 	instead of a file to detect the end of processing in a test case.
 	* debugger.py gdbmi.py netbeans.py vim.py: Fix the testsuite on

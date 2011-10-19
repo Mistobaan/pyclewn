@@ -66,8 +66,8 @@ class Pyclewn(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=1  id=3  name=3',
-            'line=2  id=1  name=1',
+            'line=1  id=1  name=3',
+            'line=2  id=2  name=1',
             )
         self.cltest_redir(cmd, expected, 'line 1\nline 2\n', 'line 1\n')
 
@@ -86,8 +86,8 @@ class Pyclewn(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=1  id=3  name=3',
-            'line=2  id=1  name=1',
+            'line=1  id=1  name=3',
+            'line=2  id=2  name=1',
             '${cwd}${test_file}1',
             )
         self.cltest_redir(cmd, expected, 'line 1\nline 2\n', 'line 1\n')
@@ -109,7 +109,7 @@ class Pyclewn(ClewnTestCase):
             'Breakpoint 1 at file ${cwd}${test_file}1, line 2.',
             '--- Signs ---',
             'Signs for ${test_file}1:',
-            '    line=2  id=1  name=1',
+            '    line=2  id=2  name=1',
             )
         self.cltest_redir(cmd, expected, 'line 1\nline 2\n')
 
@@ -170,6 +170,7 @@ class Pyclewn(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected, 'line 1\n')
 
+    @skipIf(True, 'test cancelled')
     def test_007(self):
         """The bdelete Vim command on the clewn console"""
         cmd = [
