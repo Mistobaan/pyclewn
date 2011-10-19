@@ -238,6 +238,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     """The Pdb debugger.
 
     Instance attributes:
+        frame_returning: frame
+            set to the current frame when entering interaction on 'return'
         curframe_locals: dict
             cache the current frame locals
         thread: threading.Thread
@@ -280,6 +282,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.lineno = None
         self.curframe = None
         self.stack = []
+        self.frame_returning = None
 
         self.curframe_locals = None
         self.thread = None
@@ -310,6 +313,11 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.cmds.update(PDB_CMDS)
         self.cmds['help'] = self.cmds.keys()
         self.mapkeys.update(MAPKEYS)
+
+    def set_nbsock(self, nbsock):
+        """Set the netbeans socket."""
+        nbsock.lock = threading.Lock()
+        debugger.Debugger.set_nbsock(self, nbsock)
 
     def _start(self):
         """Start the debugger."""
@@ -419,6 +427,14 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             if self.quitting: raise bdb.BdbQuit
         return self.trace_dispatch
 
+    def dispatch_return(self, frame, arg):
+        """Override 'dispatch_return' to fix issue 13183."""
+        try:
+            self.frame_returning = frame
+            return pdb.Pdb.dispatch_return(self, frame, arg)
+        finally:
+            self.frame_returning = None
+
     def dispatch_exception(self, frame, arg):
         """Override 'dispatch_exception' to allow stopping at script frame level."""
         if pdb.Pdb.stop_here(self, frame):
@@ -457,6 +473,18 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.stopframe = self.botframe
         self.returnframe = None
         self.quitting = 0
+
+    def set_step(self):
+        """Stop after one line of code."""
+        # Issue #13183: pdb skips frames after hitting a breakpoint and running
+        # step commands.
+        # Restore the trace function in the caller (that may not have been set
+        # for performance reasons) when returning from the current frame.
+        if self.frame_returning:
+            caller_frame = self.frame_returning.f_back
+            if caller_frame and not caller_frame.f_trace:
+                caller_frame.f_trace = self.trace_dispatch
+        pdb.Pdb.set_step(self)
 
     def stop_here(self, frame):
         """Override 'stop_here' to fix 'continue' at the script frame level."""

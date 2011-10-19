@@ -30,7 +30,6 @@ from unittest2 import TestCase, TestResult
 from unittest2.result import failfast
 
 import clewn.vim as vim
-import clewn.misc as misc
 
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
@@ -52,7 +51,7 @@ WAIT_EOP = """
 :   while 1
 :       " allow vim to process netbeans events and messages
 :       sleep 10m
-:       if localtime() - l:start > 5
+:       if ${timeout} > 0 && localtime() - l:start > ${timeout}
 :           break
 :       endif
 :       let l:lines = getbufline("(clewn)_console", "$$")
@@ -90,6 +89,7 @@ class ClewnTestCase(TestCase):
 
     """
     _verbose = False
+    _debug = False
 
     def __init__(self, method='runTest'):
         """Constructor."""
@@ -175,11 +175,16 @@ class ClewnTestCase(TestCase):
         commands = '%s:%s\n' % (WAIT_EOP, '\n:'.join(commands))
 
         # write the commands
+        if self._debug:
+            timeout = -1
+        else:
+            timeout = 5
         fp = open(TESTFN, 'w')
         fp.write(string.Template(commands).substitute(
                                     test_file=TESTFN_FILE,
                                     test_out=TESTFN_OUT,
                                     key=random.randint(0, 1000000000),
+                                    timeout=timeout,
                                     cwd=cwd))
         fp.close()
 
@@ -190,6 +195,8 @@ class ClewnTestCase(TestCase):
             fp.close()
 
         # process the commands
+        if self._debug:
+            vim.pdb(netbeans='localhost:3220:foo')
         unused = vim.main(True)
 
         # check the result
@@ -339,8 +346,9 @@ class TextTestRunner(object):
             self.stream.write('\n')
         return result
 
-def run_suite(suite, verbose, stop_on_error):
+def run_suite(suite, verbose, stop_on_error, debug):
     """Run the suite."""
     ClewnTestCase._verbose = verbose
+    ClewnTestCase._debug = debug
     TextTestRunner(verbose, stop_on_error).run(suite)
 

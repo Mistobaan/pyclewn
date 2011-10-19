@@ -4,7 +4,14 @@ News
 Pyclewn 1.8
 -----------
 
-.. September 9th, 2011
+.. October 16, 2011
+
+New feature
+^^^^^^^^^^^
+
+* The new ``pdb`` test option enables the debugging of a gdb test case from
+  the test suite by pyclewn. Run the ``python setup.py --help test`` command
+  to see how to proceed to debug a test case with this option.
 
 Change
 ^^^^^^
