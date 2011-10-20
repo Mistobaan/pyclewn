@@ -813,7 +813,6 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(True, 'test cancelled')
     def test_037(self):
         """The cwindow command opens the quickfix window of breakpoints"""
         cmd = [
@@ -824,8 +823,8 @@ class Gdb(ClewnTestCase):
             'Cbreak bar',
             'Cdisable 1',
             'Cdelete 2',
-            'Ccwindow',
             'call Wait_eop()',
+            'Ccwindow',
             '1,$$w! >> ${test_out}',
             'qa!',
             ]

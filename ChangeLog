@@ -1,4 +1,7 @@
-2011-10-16  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-10-19  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+	* debugger.py: Fix after changing directory from vim, a second console
+	is created after the first one is hidden, which causes problems when
+	starting the next session with ':Pyclewn'.
 	* setup.py asyncproc.py buffer.py debugger.py gdb.py netbeans.py
 	posix.py vim.py: Pyclewn can debug a pyclewn gdb test case.
 	* pydb.py: Fix Python issue 13183.

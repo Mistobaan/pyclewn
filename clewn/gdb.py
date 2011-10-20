@@ -109,13 +109,7 @@ re_anno_1 = re.compile(RE_ANNO_1, re.VERBOSE)
 CWINDOW = """
 " open the quickfix window of breakpoints
 function s:cwindow()
-    let l:gp=&gp
-    let l:gfm=&gfm
-    set gp=${gp}
-    set gfm=%f:%l:%m
-    grep
-    let &gp=l:gp
-    let &gfm=l:gfm
+    cfile ${tmpfile}
     cwindow
 endfunction
 
@@ -650,12 +644,8 @@ class Gdb(debugger.Debugger, ProcessChannel):
                         complete_tmpfile=misc.quote(self.globaal.f_clist.name),
                         complete_timeout=SYMBOL_COMPLETION_TIMEOUT)
 
-        if os.name == 'nt':
-            grepprg = 'cmd\\ /c\\ type'
-        else:
-            grepprg = 'cat'
-        grepprg += '\\ ' + self.globaal.f_bps.name
-        cwindow = string.Template(CWINDOW).substitute(pre=prefix, gp=grepprg)
+        cwindow = string.Template(CWINDOW).substitute(pre=prefix,
+                                            tmpfile=self.globaal.f_bps.name)
 
         return symcompletion + cwindow
 

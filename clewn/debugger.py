@@ -170,7 +170,13 @@ function s:split(bufname, location)
 	    exe nr . "wincmd w"
 	endif
     endif
-    exe &previewheight . split . " " . a:bufname
+    let nr = bufnr(a:bufname)
+    if nr != -1
+        exe &previewheight . split
+        exe nr . "buffer"
+    else
+        exe &previewheight . split . " " . a:bufname
+    endif
     let &splitright = spr
     let &splitbelow = sb
     exe prevbuf_winnr . "wincmd w"
