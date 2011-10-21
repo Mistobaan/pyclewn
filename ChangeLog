@@ -1,4 +1,5 @@
-2011-10-19  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-10-21  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+	* debugger.py: Only map 'nbkey' when pyclewn keys are being mapped.
 	* debugger.py: Fix after changing directory from vim, a second console
 	is created after the first one is hidden, which causes problems when
 	starting the next session with ':Pyclewn'.

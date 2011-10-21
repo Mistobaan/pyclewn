@@ -206,6 +206,15 @@ endfunction
 
 """
 
+FUNCTION_MAPKEYS = """
+" Popup gdb console on pyclewn mapped keys.
+function s:mapkeys()
+    call s:nbcommand("mapkeys")
+    cnoremap nbkey call <SID>winsplit("${console}", "${location}") <Bar> nbkey
+endfunction
+
+"""
+
 FUNCTION_NBCOMMAND = """
 " Run the nbkey netbeans Vim command.
 function s:nbcommand(...)
@@ -795,23 +804,22 @@ class Debugger:
                                         variables=netbeans.VARIABLES_BUFFER,
                                         bufferlist_autocmd=bufferlist_autocmd))
 
-            # popup gdb console on pyclewn mapped keys
-            f.write(string.Template(
-                'cnoremap nbkey call <SID>winsplit'
-                '("${console}", "${location}") <Bar> nbkey'
-                ).substitute(console=netbeans.CONSOLE,
-                            location=options.window))
-
             # utility vim functions
             if options.noname_fix == '0':
                 f.write(FUNCTION_BUFLIST)
             f.write(FUNCTION_SPLIT)
             f.write(FUNCTION_CONSOLE)
 
-            # unmapkeys script
+            # mapkeys function
+            f.write(string.Template(FUNCTION_MAPKEYS).substitute(
+                                        console=netbeans.CONSOLE,
+                                        location=options.window))
+
+            # unmapkeys function
             f.write('function s:unmapkeys()\n')
+            f.write('    cunmap nbkey\n')
             for key in self.mapkeys:
-                f.write('unmap <%s>\n' % key)
+                f.write('    unmap <%s>\n' % key)
             f.write('endfunction\n')
 
             # setup pyclewn vim user defined commands
@@ -839,12 +847,12 @@ class Debugger:
             argsList = string.Template('function s:Arg_${cmd}(A, L, P)\n'
                                     '\treturn "${args}"\n'
                                     'endfunction\n')
-            unmapkeys = string.Template('command! -bar ${pre}unmapkeys '
-                                        'call s:unmapkeys()\n')
             for cmd, completion in self._get_cmds().items():
-                if cmd == 'unmapkeys':
-                    f.write(unmapkeys.substitute(pre=prefix))
+                if cmd in ('mapkeys', 'unmapkeys'):
+                    f.write(string.Template('command! -bar ${pre}${cmd} call '
+                            's:${cmd}()\n').substitute(cmd=cmd, pre=prefix))
                     continue
+
                 try:
                     iter(completion)
                 except TypeError:

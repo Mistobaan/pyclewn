@@ -133,7 +133,7 @@ class Pyclewn(ClewnTestCase):
             'Chelp       *                    call s:nbcommand("help", <f-args>)',
             'Cinterrupt  *                    call s:nbcommand("interrupt", <f-args>)',
             'Cloglevel   *          custom    call s:nbcommand("loglevel", <f-args>)',
-            'Cmapkeys    *                    call s:nbcommand("mapkeys", <f-args>)',
+            'Cmapkeys  0                      call s:mapkeys()',
             'Cprint      *                    call s:nbcommand("print", <f-args>)',
             'Cquit       *                    call s:nbcommand("quit", <f-args>)',
             'Csigint     *                    call s:nbcommand("sigint", <f-args>)',
