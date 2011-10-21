@@ -4,7 +4,7 @@ News
 Pyclewn 1.8
 -----------
 
-.. October 16, 2011
+.. October 21, 2011
 
 New feature
 ^^^^^^^^^^^
@@ -16,6 +16,8 @@ New feature
 Change
 ^^^^^^
 
+* Avoid having the cursor hang for one second on the character ``n`` in Vim
+  command line when pyclewn keys are not mapped.
 * Gdb/mi log stream messages are now written to the console instead of being
   ignored. This stream is dedicated to gdb debugging messages, but a bug in
   gdb (see `gdb bug 13170

@@ -84,7 +84,7 @@ class Gdb(ClewnTestCase):
             'Name        Args Range Complete  Definition',
             'Cfile       *          file      call s:nbcommand("file", <f-args>)',
             'Name        Args Range Complete  Definition',
-            'Cmapkeys    *                    call s:nbcommand("mapkeys", <f-args>)',
+            'Cmapkeys  0                      call s:mapkeys()',
             )
         self.cltest_redir(cmd, expected)
 
