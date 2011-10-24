@@ -870,7 +870,9 @@ class Gdb(debugger.Debugger, ProcessChannel):
             self.cmd_quit()
             return
 
-        if self.state == self.STATE_CLOSING and not self.closed:
+        if (not self.closed and
+                    (self.state == self.STATE_CLOSING
+                     or self.state == self.STATE_QUITTING)):
             debugger.Debugger.close(self)
             ProcessChannel.close(self)
 

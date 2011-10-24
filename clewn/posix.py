@@ -224,10 +224,16 @@ class ProcessChannel(asyncproc.ProcessChannel):
             critical('cannot start process "%s"', self.pgm_name); raise
         info('program argv list: %s', str(self.argv))
 
-    def waitpid(self):
+    def waitpid(self, nohang=os.WNOHANG):
         """Wait on the process."""
         if self.pid != 0:
-            pid, status = os.waitpid(self.pid, os.WNOHANG)
+            try:
+                pid, status = os.waitpid(self.pid, nohang)
+            except OSError as err:
+                # may be called by sigchld_handler while in close()
+                if err.errno == errno.ECHILD:
+                    return
+                raise
             if (pid, status) != (0, 0):
                 self.pid = 0
                 if self.sig_handler is not None:
@@ -249,10 +255,16 @@ class ProcessChannel(asyncproc.ProcessChannel):
                 self.close()
 
     def close(self):
-        """Close the channel an wait on the process."""
+        """Close the channel and wait on the process."""
         if self.fileasync is not None:
             asyncproc.ProcessChannel.close(self)
-            self.waitpid()
+            if self.pid != 0:
+                try:
+                    os.kill(self.pid, signal.SIGTERM)
+                except OSError:
+                    pass
+                else:
+                    self.waitpid(0)
 
     def sendintr(self):
         """Send a SIGINT interrupt to the program."""

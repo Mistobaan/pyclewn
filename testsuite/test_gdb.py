@@ -825,6 +825,7 @@ class Gdb(ClewnTestCase):
             'Cdelete 2',
             'call Wait_eop()',
             'Ccwindow',
+            '5buffer',
             '1,$$w! >> ${test_out}',
             'qa!',
             ]
@@ -971,6 +972,7 @@ class Gdb(ClewnTestCase):
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Crun',
+            'call Wait_eop()',
             'edit testsuite/foobar.c',
             'echo bufname("%")',
             'Cframe',

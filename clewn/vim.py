@@ -88,35 +88,23 @@ def exec_vimcmd(commands, pathname='', error_stream=None):
 
     output = f = None
     try:
-        while True:
-            try:
-                subprocess.Popen(args).wait()
-                f = os.fdopen(fd)
-                output = f.read()
-            except (OSError, IOError) as err:
-                if isinstance(err, OSError):
-                    if err.errno == errno.ENOENT:
-                        perror("Failed to run '%s' as Vim.\n" % args[0])
-                        perror("Please run 'pyclewn"
+        try:
+            subprocess.Popen(args).wait()
+            f = os.fdopen(fd)
+            output = f.read()
+        except (OSError, IOError) as err:
+            if isinstance(err, OSError) and err.errno == errno.ENOENT:
+                perror("Failed to run '%s' as Vim.\n" % args[0])
+                perror("Please run 'pyclewn"
                                   " --editor=/path/to/(g)vim'.\n\n")
-                    # may be interrupted in a testrun
-                    elif err.errno == errno.EINTR:
-                        if f is not None:
-                            f.close()
-                            f = None
-                        continue
-                perror("Failed to run Vim as:\n'%s'\n\n" % str(args))
-                raise
             else:
-                break
+                perror("Failed to run Vim as:\n'%s'\n\n" % str(args))
+                perror("Error; %s\n", err)
+            raise
     finally:
         if f is not None:
             f.close()
-        if tmpname and os.path.exists(tmpname):
-            try:
-                os.unlink(tmpname)
-            except OSError:
-                pass
+        misc.unlink(tmpname)
 
     if not output:
         raise ClewnError(
