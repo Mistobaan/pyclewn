@@ -191,7 +191,6 @@ class Gdb(ClewnTestCase):
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cset con',       # set confirm command
-            'C def',          # define command
             'call Wait_eop()',
             'edit (clewn)_console | $$ | ?con?,$$-1w!  ${test_out}',
             'qa!',
@@ -199,8 +198,6 @@ class Gdb(ClewnTestCase):
         expected = (
             '(gdb) set con',
             'Illegal argument in pyclewn.',
-            '(gdb) def',
-            'Illegal command in pyclewn.',
             )
         self.cltest_redir(cmd, expected)
 

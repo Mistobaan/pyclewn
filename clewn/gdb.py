@@ -182,6 +182,86 @@ command! -bar ${pre}symcompletion call s:symcompletion()
 
 """
 
+SEQUENCES = r"""
+" Implement the 'define', 'commands' and 'document' gdb commands.
+
+function s:error(msg)
+    echohl ErrorMsg
+    echo a:msg
+    call inputsave()
+    call input("Press the <Enter> key to continue.")
+    call inputrestore()
+    echohl None
+endfunction
+
+function s:source_commands(gdb_cmd, prompt)
+    " input user commands
+    let l:prompt = a:prompt . ", one per line.\n"
+    let l:prompt .= "End with a line saying just 'end'.\n"
+    let l:prompt .= "These commands are then sourced by the"
+    \               . " 'Csource' gdb command.\n"
+    let l:prompt .= ">"
+
+    let l:commands = [a:gdb_cmd]
+    call inputsave()
+    while 1
+        let l:cmd = input(l:prompt)
+        let l:commands += [l:cmd]
+        echo "\n"
+        let l:prompt = ">"
+        if substitute(l:cmd, " ", "", "g") == "end"
+            break
+        endif
+    endwhile
+    call inputrestore()
+
+    " store them in a file and source the file
+    let l:tmpfile = tempname()
+    call writefile(commands, l:tmpfile)
+    exe "Csource " . l:tmpfile
+endfunction
+
+function s:define(...)
+    if a:0 != 1
+        call s:error("One argument required (name of command to define).")
+        return
+    endif
+    call s:source_commands("define " . a:1,
+    \       "Type commands for definition of '" . a:1 . "'")
+endfunction
+
+function s:document(...)
+    if a:0 != 1
+        call s:error("One argument required (name of command to document).")
+        return
+    endif
+    call s:source_commands("document " . a:1,
+    \       "Type documentation for '" . a:1 . "'")
+endfunction
+
+function s:commands(...)
+    if a:0 == 0
+        call s:error("Argument required (one or more breakpoint numbers).")
+        return
+    endif
+    for bp in a:000
+        let l:x = "" + bp
+        if l:x == 0
+            call s:error("Not a breakpoint number: '" . bp . "'")
+            return
+        endif
+    endfor
+    let l:bplist = join(a:000)
+    call s:source_commands("command " . l:bplist,
+    \       "Type commands for breakpoint(s) " . l:bplist . "")
+endfunction
+
+command! -bar -nargs=* ${pre}define call s:define(<f-args>)
+command! -bar -nargs=* ${pre}document call s:document(<f-args>)
+command! -bar -nargs=* ${pre}commands call s:commands(<f-args>)
+
+"""
+
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('gdb')
 
@@ -329,9 +409,7 @@ class GlobalSetup(misc.Singleton):
         )
     illegal_cmds = (
         '-', '+', '<', '>',
-        'commands',
         'complete',
-        'define',
         'edit',
         'end',
         # tui commands
@@ -547,6 +625,9 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 'sigint': (),
                 'cwindow': (),
                 'symcompletion': (),
+                'define': (),
+                'document': (),
+                'commands': (),
             })
         self.mapkeys.update(MAPKEYS)
 
@@ -647,7 +728,9 @@ class Gdb(debugger.Debugger, ProcessChannel):
         cwindow = string.Template(CWINDOW).substitute(pre=prefix,
                                             tmpfile=self.globaal.f_bps.name)
 
-        return symcompletion + cwindow
+        sequences = string.Template(SEQUENCES).substitute(pre=prefix)
+
+        return symcompletion + cwindow + sequences
 
     def _start(self):
         """Start gdb."""
@@ -976,6 +1059,24 @@ class Gdb(debugger.Debugger, ProcessChannel):
         """Populate the break and clear commands with symbols completion."""
         unused = args
         gdbmi.CompleteBreakCommand(self).sendcmd()
+
+    def cmd_define(self, *args):
+        """Define a new command name.  Command name is argument."""
+        # never called dummy method, its documentation is used for the help
+        unused = self
+        unused = args
+
+    def cmd_commands(self, *args):
+        """Set commands to be executed when a breakpoint is hit."""
+        # never called dummy method, its documentation is used for the help
+        unused = self
+        unused = args
+
+    def cmd_document(self, *args):
+        """Document a user-defined command."""
+        # never called dummy method, its documentation is used for the help
+        unused = self
+        unused = args
 
     def cmd_dbgvar(self, cmd, args):
         """Add a variable to the debugger variable buffer."""
