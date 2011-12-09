@@ -4,11 +4,12 @@ News
 Pyclewn 1.8
 -----------
 
-.. October 21, 2011
+.. December 9, 2011
 
-New feature
-^^^^^^^^^^^
+New features
+^^^^^^^^^^^^
 
+* The ``define``, ``commands`` and ``document`` gdb commands are implemented.
 * The new ``pdb`` test option enables the debugging of a gdb test case from
   the test suite by pyclewn. Run the ``python setup.py --help test`` command
   to see how to proceed to debug a test case with this option.

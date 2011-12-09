@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2011 August 16
+*pyclewn.txt*                                   Last change: 2011 December 9
 
 
                             PYCLEWN USER MANUAL
@@ -666,15 +666,6 @@ project file was saved, gdb ignores silently the breakpoint (see gdb help on
 
 Limitations:
 ------------
-The <define> command is not allowed. To build gdb user-defined commands in
-pyclewn, edit the commands in a temporary file with vim, and load the
-commands into gdb by using the gdb <source> command on this file.
-
-The <commands> command is not allowed. To give a breakpoint a series of
-commands to execute when the debuggee stops due to that breakpoint, edit the
-commands in a temporary file with vim, and load the commands into gdb by using
-the gdb <source> command on this file.
-
 When pyclewn cannot setup a pseudo tty to communicate with gdb, pyclewn falls
 back to pipes. In this case, the Csigint command does not work as gdb does not
 handle interrupts over a pipe. Instead, one must send a SIGINT signal to the
@@ -758,9 +749,7 @@ List of illegal gdb commands:
 -----------------------------
 The following gdb commands cannot be run from pyclewn:
 
-        commands
         complete
-        define
         edit
         end
         set annotate
