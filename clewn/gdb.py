@@ -218,7 +218,7 @@ function s:source_commands(gdb_cmd, prompt)
     " store them in a file and source the file
     let l:tmpfile = tempname()
     call writefile(commands, l:tmpfile)
-    exe "Csource " . l:tmpfile
+    exe "${pre}source " . l:tmpfile
 endfunction
 
 function s:define(...)
@@ -349,15 +349,15 @@ class GlobalSetup(misc.Singleton):
     """Container for gdb data constant across all Gdb instances.
 
     Class attributes:
-        filename_complt: tuple
+        filename_complt: list
             list of gdb commands with file name completion
-        illegal_cmds: tuple
+        illegal_cmds: list
             list of gdb illegal commands
         run_cmds: tuple
             list of gdb commands that cause the frame sign to be turned off
         illegal_setargs: tuple
             list of illegal arguments to the gdb set command
-        symbol_complt: tuple
+        symbol_complt: list
             list of gdb commands with symbol completion
             they are initialized with file name completion and are set to
             symbol completion after running the Csymcompletion pyclewn command
@@ -394,7 +394,7 @@ class GlobalSetup(misc.Singleton):
     _f_ack = None
     _f_clist = None
 
-    filename_complt = (
+    filename_complt = [
         'cd',
         'directory',
         'file',
@@ -406,8 +406,8 @@ class GlobalSetup(misc.Singleton):
         'source',
         'start',
         'tty',
-        )
-    illegal_cmds = (
+        ]
+    illegal_cmds = [
         '-', '+', '<', '>',
         'complete',
         'edit',
@@ -420,7 +420,7 @@ class GlobalSetup(misc.Singleton):
         'tui',
         'update',
         'winheight',
-        )
+        ]
     run_cmds = (
         'attach', 'detach', 'kill',
         'run', 'start', 'continue', 'fg', 'step', 'next', 'finish', 'until', 'advance',
@@ -433,15 +433,16 @@ class GlobalSetup(misc.Singleton):
         'height',
         'width',
         )
-    symbol_complt = (
+    symbol_complt = [
         'break',
         'clear',
-        )
+        ]
 
-    def init(self, gdbname, pyclewn_cmds):
+    def init(self, gdbname, pyclewn_cmds, vim_implementation):
         """Singleton initialisation."""
         self.gdbname = gdbname
         self.pyclewn_cmds = pyclewn_cmds
+        self.vim_implementation = vim_implementation
 
         self.cmds = self._cmds = {}
         self.illegal_cmds_prefix = []
@@ -458,10 +459,11 @@ class GlobalSetup(misc.Singleton):
         self._f_ack = misc.tmpfile('gdb')
         self._f_clist = misc.tmpfile('gdb')
 
-    def __init__(self, gdbname, pyclewn_cmds):
+    def __init__(self, gdbname, pyclewn_cmds, vim_implementation):
         """Constructor."""
         self.gdbname = gdbname
         self.pyclewn_cmds = pyclewn_cmds
+        self.vim_implementation = vim_implementation
 
         # tricking pychecker
         self.cmds = self._cmds
@@ -532,9 +534,10 @@ class GlobalSetup(misc.Singleton):
             if cmd and cmd != 'help':
                 self.cmds[cmd] = completion
 
-        keys = list(self.cmds.keys())
+        keys = list(set(self.cmds.keys()).difference(self.vim_implementation))
         self.illegal_cmds_prefix = {misc.smallpref_inlist(x, keys)
-                                            for x in self.illegal_cmds}
+                            for x in
+                                (self.illegal_cmds + self.vim_implementation)}
 
         keys = list(set(keys).difference(set(self.run_cmds)))
         self.run_cmds_prefix = {misc.smallpref_inlist(x, keys)
@@ -629,6 +632,13 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 'document': (),
                 'commands': (),
             })
+        self.vim_implementation.extend(
+            [
+                'cwindow',
+                'define',
+                'document',
+                'commands'
+            ])
         self.mapkeys.update(MAPKEYS)
 
         self.state = self.STATE_INIT
@@ -639,7 +649,8 @@ class Gdb(debugger.Debugger, ProcessChannel):
         ProcessChannel.__init__(self, self.vim_socket_map, self.getargv())
 
         self.info = gdbmi.Info(self)
-        self.globaal = GlobalSetup(self.pgm, self.pyclewn_cmds)
+        self.globaal = GlobalSetup(self.pgm, self.pyclewn_cmds,
+                                                self.vim_implementation)
         self.cmds = self.globaal.cmds
         self.results = gdbmi.Result()
         self.oob_list = gdbmi.OobList(self)
@@ -1049,34 +1060,34 @@ class Gdb(debugger.Debugger, ProcessChannel):
             self.console_print('\nGdb help:\n')
         self.default_cmd_processing(cmd, line)
 
-    def cmd_cwindow(self, *args):
+    def cmd_cwindow(self, cmd, *args):
         """List the breakpoints in a quickfix window."""
-        # never called dummy method, its documentation is used for the help
         unused = self
         unused = args
+        self.not_a_pyclewn_method(cmd)
 
     def cmd_symcompletion(self, *args):
         """Populate the break and clear commands with symbols completion."""
         unused = args
         gdbmi.CompleteBreakCommand(self).sendcmd()
 
-    def cmd_define(self, *args):
+    def cmd_define(self, cmd, *args):
         """Define a new command name.  Command name is argument."""
-        # never called dummy method, its documentation is used for the help
         unused = self
         unused = args
+        self.not_a_pyclewn_method(cmd)
 
-    def cmd_commands(self, *args):
+    def cmd_commands(self, cmd, *args):
         """Set commands to be executed when a breakpoint is hit."""
-        # never called dummy method, its documentation is used for the help
         unused = self
         unused = args
+        self.not_a_pyclewn_method(cmd)
 
-    def cmd_document(self, *args):
+    def cmd_document(self, cmd, *args):
         """Document a user-defined command."""
-        # never called dummy method, its documentation is used for the help
         unused = self
         unused = args
+        self.not_a_pyclewn_method(cmd)
 
     def cmd_dbgvar(self, cmd, args):
         """Add a variable to the debugger variable buffer."""

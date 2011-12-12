@@ -415,6 +415,7 @@ class Debugger:
             'mapkeys': (),
             'unmapkeys': (),
         }
+        self.vim_implementation = ['unmapkeys']
         self.pyclewn_cmds = self.cmds
         self.mapkeys = {}
         self.cmds[''] = []
@@ -764,7 +765,9 @@ class Debugger:
         """Return the commands dictionary."""
         # the 'C' command by itself has the whole list of commands
         # as its 1st arg completion list, excluding the '' command
-        self.cmds[''] += [x for x in self.cmds.keys() if x]
+        # and pure vim commands
+        self.cmds[''] += [x for x in self.cmds.keys()
+                            if x and x not in self.vim_implementation]
 
         return self.cmds
 
@@ -817,9 +820,15 @@ class Debugger:
 
             # unmapkeys function
             f.write('function s:unmapkeys()\n')
-            f.write('    cunmap nbkey\n')
+            f.write('    try\n')
+            f.write('       cunmap nbkey\n')
+            f.write('   catch /.*/\n')
+            f.write('   endtry\n')
             for key in self.mapkeys:
-                f.write('    unmap <%s>\n' % key)
+                f.write('try\n')
+                f.write('   unmap <%s>\n' % key)
+                f.write('catch /.*/\n')
+                f.write('endtry\n')
             f.write('endfunction\n')
 
             # setup pyclewn vim user defined commands
@@ -1031,13 +1040,22 @@ class Debugger:
         self.console_print(text)
         self.print_prompt()
 
-    def cmd_unmapkeys(self, *args):
+    def not_a_pyclewn_method(self, cmd):
+        """"Warn that 'cmd' cannot be used as 'C' parameter."""
+        table = {'cmd': cmd, 'C': self.options.prefix}
+        self.console_print("'%(cmd)s' cannot be used as '%(C)s' parameter,"
+                " use '%(C)s%(cmd)s' instead.\n" % table)
+        self.prompt()
+
+    def cmd_unmapkeys(self, cmd, *args):
         """Unmap the pyclewn keys.
 
         This is actually a Vim command and it does not involve pyclewn.
 
         """
-        pass
+        unused = self
+        unused = args
+        self.not_a_pyclewn_method(cmd)
 
     def __str__(self):
         """Return the string representation."""

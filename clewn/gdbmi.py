@@ -685,6 +685,8 @@ class Command:
     Instance attributes:
         gdb: Gdb
             the Gdb instance
+        stream_record: str
+            the stream record
 
     """
 
@@ -693,6 +695,7 @@ class Command:
     def __init__(self, gdb):
         """Constructor."""
         self.gdb = gdb
+        self.stream_record = ''
 
     @abstractmethod
     def handle_result(self, result):
@@ -726,6 +729,7 @@ class CliCommand(Command):
 
         self.gdb.gdb_busy = True
         cmd = misc.norm_unixpath(cmd)
+        self.stream_record = ''
         return self.send('-interpreter-exec console %s\n', misc.quote(cmd))
 
     def handle_result(self, line):
@@ -736,13 +740,16 @@ class CliCommand(Command):
             matchobj = misc.re_quoted.match(line)
             if matchobj:
                 line = misc.unquote(matchobj.group(1))
-                self.gdb.console_print('%s\n' % line)
+                # do not repeat the log stream record
+                if line + '\n' != self.stream_record:
+                    self.gdb.console_print('%s\n' % line)
                 return
         info(line)
 
     def handle_strrecord(self, stream_record):
         """Process the stream records output by the command."""
         self.gdb.console_print(stream_record)
+        self.stream_record = stream_record
 
 class CliCommandNoPrompt(CliCommand):
     """The prompt is printed by one of the OobCommands."""

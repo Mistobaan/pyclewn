@@ -1,5 +1,7 @@
-2011-12-09  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-12-12  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* debugger.py gdb.py gdbmi.py: Pure vim command implementations cannot be
+	invoked as a 'C' parameter. Do not print twice log stream records.
 	* gdb.py: Implement the ``define``, ``commands`` and ``document`` gdb
 	commands.
 	* debugger.py: Only map 'nbkey' when pyclewn keys are being mapped.
