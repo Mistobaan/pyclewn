@@ -1,5 +1,8 @@
-2011-12-12  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2011-12-28  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* netbeans.py: change the RE_UNIDIFF regular expression to take into
+	account that Python difflib in Python 2.7.2 and Python 3.2.2 may now omit
+	"the comma and trailing value s".
 	* debugger.py gdb.py gdbmi.py: Pure vim command implementations cannot be
 	invoked as a 'C' parameter. Do not print twice log stream records.
 	* gdb.py: Implement the ``define``, ``commands`` and ``document`` gdb

@@ -49,7 +49,8 @@ RE_EVENT = r'^\s*(?P<buf_id>\d+):(?P<event>\S+)=(?P<seqno>\d+)'         \
            r'# RE: a netbeans event message'
 RE_LNUMCOL = r'^(?P<lnum>\d+)/(?P<col>\d+)'                             \
              r'# RE: lnum/col'
-RE_UNIDIFF = r'^@@\s-\d+,(?P<a>\d+)\s\+(?P<lnum>\d+),(?P<b>\d+)\s@@$'   \
+RE_UNIDIFF = r'^@@\s-\d+(?:,(?P<a>\d+))?'                               \
+             r'\s\+(?P<lnum>\d+)(?:,(?P<b>\d+))?\s@@$'                  \
              r'# RE: @@ -%d,%d +%d,%d @@'
 
 # compile regexps
@@ -437,8 +438,21 @@ class DebuggerVarBuffer(ClewnBuffer):
                     matchobj = re_unidiff.match(line.strip())
                     if matchobj:
                         lnum = int(matchobj.group('lnum'))
-                        hunk_a = int(matchobj.group('a'))
-                        hunk_b = int(matchobj.group('b'))
+                        if lnum == 0:
+                            lnum = 1
+                        # @@ -l,s +l,s @@
+                        # each range can omit the comma and trailing value s, in
+                        # which case s defaults to 1
+                        hunk_a = matchobj.group('a')
+                        if hunk_a is not None:
+                            hunk_a = int(hunk_a)
+                        else:
+                            hunk_a = 1
+                        hunk_b = matchobj.group('b')
+                        if hunk_b is not None:
+                            hunk_b = int(hunk_b)
+                        else:
+                            hunk_b = 1
                     else:
                         assert False, "missing unified-diff control line"
                     continue
@@ -619,7 +633,7 @@ class Server(asyncore.dispatcher):
             conn, addr = self.socket.accept()
             if self.netbeans and self.netbeans.connected:
                 conn.close()
-                info('rejecting connection from %: netbeans already connected',
+                info('rejecting connection from %s: netbeans already connected',
                                                                         addr)
                 return
 

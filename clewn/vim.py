@@ -95,8 +95,8 @@ def exec_vimcmd(commands, pathname='', error_stream=None):
         except (OSError, IOError) as err:
             if isinstance(err, OSError) and err.errno == errno.ENOENT:
                 perror("Failed to run '%s' as Vim.\n" % args[0])
-                perror("Please run 'pyclewn"
-                                  " --editor=/path/to/(g)vim'.\n\n")
+                perror("Please set the EDITOR environment variable or run "
+                                "'pyclewn --editor=/path/to/(g)vim'.\n\n")
             else:
                 perror("Failed to run Vim as:\n'%s'\n\n" % str(args))
                 perror("Error; %s\n", err)
@@ -466,7 +466,9 @@ class Vim:
                 logging.getLogger().removeHandler(self.file_hdlr)
                 self.file_hdlr.close()
 
-        else:
+        elif self.clazz != gdb.Gdb:
+            # do not shutdown logging with gdb as the SIGCHLD handler may
+            # overwrite all the traces after the shutdown
             logging.shutdown()
 
         # terminate daemon peeker threads
