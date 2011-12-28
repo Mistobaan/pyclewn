@@ -4,7 +4,7 @@ News
 Pyclewn 1.8
 -----------
 
-.. December 9, 2011
+.. December 28, 2011
 
 New features
 ^^^^^^^^^^^^
@@ -29,6 +29,8 @@ Change
 Bug fixes
 ^^^^^^^^^
 
+* Fix the ``dbgvar`` command crashes pyclewn with Python 2.7.2 and Python
+  3.2.2.
 * Fix no breakpoint signs after setting a ``throw`` catchpoint.
 * Fix after starting a new gdb session, breakpoint signs may be placed in the
   wrong files.
