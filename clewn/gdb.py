@@ -408,7 +408,7 @@ class GlobalSetup(misc.Singleton):
         'tty',
         ]
     illegal_cmds = [
-        '-', '+', '<', '>',
+        '-', '+', '<', '>', '!',
         'complete',
         'edit',
         'end',
