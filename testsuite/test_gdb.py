@@ -670,6 +670,8 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
+    @skipUnless((gdb_v <= '7.3'),
+        'gdb 7.4 introduces the concept of a breakpoint with multiple signs')
     def test_030(self):
         """Set automatically all breakpoints on a multiple choice"""
         cmd = [
