@@ -71,9 +71,10 @@ class FileDispatcher(asyncore.file_dispatcher):
     When 'enable_cmds' is True, handle the command character 'C-a'.
     """
 
-    def __init__(self, fd, source=None, reader=True, enable_cmds=False):
+    def __init__(self, fd, source=None, reader=True,
+                            enable_cmds=False, map=None):
         """Constructor."""
-        asyncore.file_dispatcher.__init__(self, fd)
+        asyncore.file_dispatcher.__init__(self, fd, map)
         self.source = source
         self.reader = reader
         self.enable_cmds = enable_cmds
@@ -149,9 +150,10 @@ class FileDispatcher(asyncore.file_dispatcher):
 class GdbInferiorPty:
     """Gdb inferior terminal."""
 
-    def __init__(self, stderr_hdlr=None):
+    def __init__(self, stderr_hdlr=None, map=None):
         """Constructor."""
         self.stderr_hdlr = stderr_hdlr
+        self.map = map
         self.master_fd = -1
         self.slave_fd = -1
         self.ptyname = ''
@@ -175,11 +177,11 @@ class GdbInferiorPty:
         self.ptyname = os.ttyname(self.slave_fd)
         info('creating gdb inferior pseudo tty \'%s\'', self.ptyname)
         self.stdin_dsptch = FileDispatcher(sys.stdin.fileno(),
-                                                enable_cmds=enable_cmds)
+                                    enable_cmds=enable_cmds, map=self.map)
         self.master_dsptch = FileDispatcher(self.master_fd,
-                                                source=self.stdin_dsptch)
+                                    source=self.stdin_dsptch, map=self.map)
         FileDispatcher(sys.stdout.fileno(), source=self.master_dsptch,
-                                                reader=False)
+                                                reader=False, map=self.map)
 
         # update pseudo terminal size
         self.master_dsptch.update_size()

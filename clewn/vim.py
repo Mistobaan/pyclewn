@@ -210,7 +210,7 @@ def main(testrun=False):
     try:
         gdb_pty = None
         if os.name != 'nt' and not testrun:
-            gdb_pty = tty.GdbInferiorPty(vim.stderr_hdlr)
+            gdb_pty = tty.GdbInferiorPty(vim.stderr_hdlr, vim.socket_map)
         if (vim.clazz == gdb.Gdb
                     and gdb_pty
                     and not options.daemon
