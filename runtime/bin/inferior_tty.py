@@ -184,11 +184,17 @@ def main():
 
     print >> sys.stderr, usage
     if not gdb_wrapper:
-        print >> sys.stderr, (
-            "'%s' pseudo terminal has been created.\n"
-            "Set the tty for the program being debugged with the gdb commands:"
-            "\n\n    'set inferior-tty %s'\n"
-            "    'set environment TERM = %s'\n" % (ptyname, ptyname, term))
+        print >> sys.stderr, '%s pseudo terminal has been created.' % ptyname
+
+        gdb_commands = ('set inferior-tty %s\n'
+                        'set environment TERM = %s\n' % (ptyname, term))
+        if len(sys.argv) > 1:
+            f = open(sys.argv[1], 'w')
+            f.write(gdb_commands)
+            f.close()
+        else:
+            print >> sys.stderr, ('Set the tty for the program being debugged'
+            ' with the gdb commands:\n%s' % gdb_commands)
 
     loop(gdb_pty)
 

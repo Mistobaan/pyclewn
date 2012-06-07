@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2011 December 9
+*pyclewn.txt*                                   Last change: 2012 June 6
 
 
                             PYCLEWN USER MANUAL
@@ -203,6 +203,9 @@ options:
   -g PARAM_LIST, --gdb=PARAM_LIST
                               select the gdb application (the default), with a
                               mandatory, possibly empty, PARAM_LIST
+  --terminal=TERMINAL         set the terminal to use with the inferiortty
+                              command for running gdb inferior (default
+                              'xterm,-e')
   -d, --daemon                run as a daemon (default 'False')
   -p PGM, --pgm=PGM           set the debugger program to PGM
   -a ARGS, --args=ARGS        set the debugger program arguments to ARGS
@@ -279,6 +282,11 @@ The full description of pyclewn options follows:
                     For example on unix: >
 
                         pyclewn --gdb=async,./project_name
+
+--terminal=TERMINAL Set the terminal to use with the inferiortty command for
+                    running gdb inferior (default 'xterm,-e'). The option is a
+                    comma separated list of the arguments needed to start the
+                    terminal and a program running in this terminal.
 
 -d
 --daemon            Run as a daemon (default 'False'): on unix, pyclewn is
@@ -526,8 +534,13 @@ such as vim, run in this terminal. A <Ctl-C> typed in the terminal interrupts
 the debuggee.
 
 When pyclewn is started from vim with the|:Pyclewn|command, there is no
-terminal associated with pyclewn. Use instead the "inferior_tty.py" script
-installed with pyclewn to get the same functionality. This script creates a
+terminal associated with pyclewn. The|:Cinferiortty|command provides the same
+functionality as above and spawns the controlling terminal (using the
+--terminal option, default xterm) of the debuggee and sets accordingly gdb
+'inferior-tty' variable and the TERM environment variable.
+
+One can also do step by step what the above command does automatically: start
+the "inferior_tty.py" script installed with pyclewn. This script creates a
 pseudo terminal to be used as the controlling terminal of the process debugged
 by gdb. For example, to debug vim (not gvim) and start the debugging session
 at vim's main function.  From pyclewn, spawn an xterm terminal and launch
@@ -721,6 +734,10 @@ commands that are listed here:
     * Chelp          print on the console, help on the pyclewn specific
                      commands (those on this list) in addition to the help on
                      the debugger commands
+
+    * Cinferiortty  spawn the controlling terminal (default xterm) of the
+                    debuggee and sets accordingly gdb 'inferior-tty' variable
+                    and the TERM environment variable
 
     * Cloglevel      print or set the log level dynamically from inside Vim
 

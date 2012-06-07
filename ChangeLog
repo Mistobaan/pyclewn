@@ -1,4 +1,5 @@
-2012-06-05  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2012-06-06  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+	* vim.py gdb.py inferior_tty.py: Add the 'inferiortty' command.
 	* vim.py tty.py: Fix pyclewn terminal fails to print the output of the
 	debuggee.
 

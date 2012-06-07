@@ -641,6 +641,8 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 'document': (),
                 'commands': (),
             })
+        if os.name != 'nt':
+            self.pyclewn_cmds['inferiortty'] = ()
         self.vim_implementation.extend(
             [
                 'cwindow',
@@ -1072,6 +1074,49 @@ class Gdb(debugger.Debugger, ProcessChannel):
             debugger.Debugger.cmd_help(self, cmd)
             self.console_print('\nGdb help:\n')
         self.default_cmd_processing(cmd, line)
+
+    def cmd_inferiortty(self, *args):
+        """Spawn gdb inferior terminal and setup gdb with this terminal."""
+        args = self.options.terminal.split(',')
+        result_file = misc.tmpfile('gdb')
+        args.extend(['inferior_tty.py', result_file.name])
+        info('inferiortty: %s', args)
+        try:
+            subprocess.Popen(args)
+        except OSError, e:
+            self.console_print('Cannot spawn terminal: %s\n' % e)
+            self.prompt()
+            return
+
+        start = time.time()
+        while True:
+            f = None
+            try:
+                try:
+                    f = open(result_file.name)
+                    lines = f.readlines()
+                    # gdb commands found in the result file
+                    if len(lines) == 2 and lines[0].startswith('set'):
+                        def set_inferior_tty(line):
+                            cmd, args = line.split(' ', 1)
+                            self.cmd_fifo.append(
+                                    (self.default_cmd_processing,
+                                     cmd, args.strip()))
+                        set_inferior_tty(lines[0])
+                        set_inferior_tty(lines[1])
+                        break
+                except IOError, e:
+                    self.console_print('Cannot set gdb inferior-tty: %s\n' % e)
+                    break
+            finally:
+                if f:
+                    f.close()
+            if time.time() - start > 2:
+                self.console_print('Cannot spawn the terminal:'
+                            ' "%s".\n' % self.options.terminal)
+                break
+            time.sleep(.20)
+        self.prompt()
 
     def cmd_cwindow(self, cmd, *args):
         """List the breakpoints in a quickfix window."""
