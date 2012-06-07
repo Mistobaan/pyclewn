@@ -531,10 +531,6 @@ class Vim:
                 action="store_true", default=False,
                 help=('allow the debuggee to run after the pdb() call'
                 ' (default \'%default\')'))
-        parser.add_option('--tty',
-                type='string', metavar='TTY', default=os.devnull,
-                help=('use TTY for input/output by the python script being'
-                ' debugged (default \'%default\')'))
         parser.add_option('-e', '--editor', default=editor,
                 help='set Vim pathname to VIM (default \'%default\');'
                 + ' Vim is not spawned by pyclewn when this parameter is'
@@ -547,6 +543,16 @@ class Vim:
         parser.add_option('-a', '--args',
                 type='string', action='callback', callback=args_callback,
                 help='set the debugger arguments to ARGS')
+        if os.name != 'nt':
+            parser.add_option('--terminal',
+                    type='string', default='xterm,-e',
+                    help=('set the terminal to use with the inferiortty'
+                    ' command for running gdb inferior'
+                    ' (default \'%default\')'))
+        parser.add_option('--tty',
+                type='string', metavar='TTY', default=os.devnull,
+                help=('use TTY for input/output by the python script being'
+                ' debugged (default \'%default\')'))
         parser.add_option('-w', '--window', default='top',
                 type='string', metavar='LOCATION',
                 help="%s%s%s" % ("open the debugger console window at LOCATION "

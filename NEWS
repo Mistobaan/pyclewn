@@ -4,7 +4,14 @@ News
 Pyclewn 1.9
 -----------
 
-.. June 5, 2012
+.. June 6, 2012
+
+New features
+^^^^^^^^^^^^
+
+* Add the ``inferiortty`` command. This new command spawns the controlling
+  terminal (default xterm) of the debuggee and sets accordingly gdb
+  ``inferior-tty`` variable and the TERM environment variable.
 
 Bug fix
 ^^^^^^^
