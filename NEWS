@@ -1,13 +1,23 @@
 News
 ====
 
+Pyclewn 1.10
+------------
+
+.. June 13, 2012
+
+Bug fix
+^^^^^^^
+
+* Fix customized key mappings are lost when starting the second gdb session.
+
 Pyclewn 1.9
 -----------
 
 .. June 6, 2012
 
-New features
-^^^^^^^^^^^^
+New feature
+^^^^^^^^^^^
 
 * Add the ``inferiortty`` command. This new command spawns the controlling
   terminal (default xterm) of the debuggee and sets accordingly gdb

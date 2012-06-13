@@ -50,7 +50,7 @@ Features
   that may be sourced later by the gdb ``source`` command. These settings are
   the working directory, the debuggee program file name, the program arguments
   and the breakpoints. The sourcing and saving of the project file can be
-  automated to occur on each gdb startup and termination, whith the
+  automated to occur on each gdb startup and termination, with the
   ``project`` command line option. The ``project`` command is currently only
   available with gdb.
 
@@ -70,7 +70,8 @@ Features
 Comparison of clewn, vimGdb and pyclewn
 ---------------------------------------
 
-The following table lists the differences between clewn_, vimGdb_ and pyclewn.
+The following table lists the differences between clewn, vimGdb and pyclewn
+(clewn and vimGdb are hosted at clewn_).
 
     +---------------+-------------+-----------------------+------------------------+
     |               | vimGdb      | clewn                 | pyclewn                |
@@ -142,6 +143,5 @@ The following table lists the differences between clewn_, vimGdb_ and pyclewn.
 .. _gdb: http://www.gnu.org/software/gdb/gdb.html
 .. _pdb: http://docs.python.org/library/pdb.html
 .. _clewn: http://clewn.sourceforge.net
-.. _vimGdb: http://clewn.sourceforge.net
 .. vim:filetype=rst:tw=78:ts=8:et:
 
