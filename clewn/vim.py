@@ -694,7 +694,7 @@ class Vim:
             elif nbsock.connected:
                 # instantiate a new debugger
                 if self.debugger.closed:
-                    self.create_debugger()
+                    self.create_debugger()._read_keysfile()
                     nbsock.set_debugger(self.debugger)
                     info('new "%s" instance', self.clazz.__name__.lower())
             else:
