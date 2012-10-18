@@ -28,6 +28,7 @@ import re
 import string
 import time
 import collections
+from itertools import takewhile
 
 from .__init__ import *
 from . import (asyncproc, gdbmi, misc, debugger)
@@ -44,7 +45,7 @@ else:
     _timer = time.time
 
 # minimum gdb version
-GDB_VERSION = '6.2.1'
+GDB_VERSION = [6, 2, 1]
 Unused = GDB_VERSION
 
 # gdb initial settings
@@ -88,8 +89,6 @@ MAPKEYS = {
                 'print value referenced by word at mouse position'),
 }
 
-RE_VERSION = r'GNU\s*gdb[^\d]*(?P<version>[0-9.]+)'            \
-             r'# RE: gdb version'
 RE_COMPLETION = r'^(?P<cmd>\S+)\s*(?P<arg>\S+)(?P<rest>.*)$'    \
                 r'# RE: cmd 1st_arg_completion'
 RE_MIRECORD = r'^(?P<token>\d\d\d)[\^*+=](?P<result>.*)$'       \
@@ -100,8 +99,6 @@ RE_ANNO_1 = r'^[~@&]"\\032\\032([a-zA-Z]:|)[^:]+:[^:]+:[^:]+:[^:]+:[^:]+$'  \
             r'# ^Z^ZD:FILENAME:LINE:CHARACTER:MIDDLE:ADDR'
 
 # compile regexps
-re_version = re.compile(RE_VERSION, re.VERBOSE|re.MULTILINE)
-Unused = re_version
 re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_mirecord = re.compile(RE_MIRECORD, re.VERBOSE)
 re_anno_1 = re.compile(RE_ANNO_1, re.VERBOSE)
@@ -265,25 +262,6 @@ command! -bar -nargs=* ${pre}commands call s:commands(<f-args>)
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('gdb')
 
-def unwrap_stream_record(lines):
-    """Remove the stream record wrapper from each line.
-
-    Return 'lines' unchanged, if one of them is not a stream record.
-
-    """
-    unwrapped = []
-    for line in lines.splitlines():
-        if line:
-            # ignore an ASYNC-RECORD
-            if line[0] in '*+=':
-                continue
-            elif line.startswith('~"') and line.endswith(r'\n"'):
-                line = line[2:-3]
-            else:
-                return lines
-            unwrapped.append(line)
-    return '\n'.join(unwrapped)
-
 def gdb_batch(pgm, job):
     """Run job in gdb batch mode and return the result as a string."""
     # create the gdb script as a temporary file
@@ -325,25 +303,32 @@ def gdb_version(pgm):
             except OSError as err:
                 raise ClewnError("Gdb cannot open the terminal: %s" % err)
 
-    version = None
     header = gdb_batch(pgm, 'show version')
-    if header:
-        matchobj = re_version.search(unwrap_stream_record(header))
-        if matchobj:
-            version = matchobj.group('version')
-
-    if not version:
-        if header:
-            critical('response to "show version":\n%s%s%s',
-                        '***START***\n',
-                        header,
-                        '***END***\n')
-        raise ClewnError('cannot find the gdb version')
-    elif version.split('.') < GDB_VERSION.split('.'):
-        raise ClewnError('invalid gdb version "%s"' % version)
+    lines = (x[2:-3] for x in header.splitlines() if x.startswith('~"') and
+                                                        x.endswith(r'\n"'))
+    # From GNU coding standards: the version starts after the last space of the
+    # first line.
+    try:
+        version = next(lines).rsplit(' ', 1)
+    except StopIteration:
+        pass
     else:
-        info('gdb version: %s', version)
-        return version
+        if len(version) == 2:
+            # Strip after first non digit or '.' character.
+            version = ''.join(takewhile(lambda x: x.isdigit() or x == '.',
+                                                                version[1]))
+            if version:
+                if [int(x) for x in version.split('.')] < GDB_VERSION:
+                    raise ClewnError('invalid gdb version "%s"' % version)
+                info('gdb version: %s', version)
+                return version
+
+    if header:
+        critical('response to "show version":\n%s%s%s',
+                    '***START***\n',
+                    header,
+                    '***END***\n')
+    raise ClewnError('cannot find the gdb version')
 
 class GlobalSetup(misc.Singleton):
     """Container for gdb data constant across all Gdb instances.
@@ -490,8 +475,9 @@ class GlobalSetup(misc.Singleton):
         nocomplt_cmds = (self.illegal_cmds + self.filename_complt +
                                                         self.symbol_complt)
         # get the list of gdb commands
-        cmdlist = unwrap_stream_record(gdb_batch(self.gdbname, 'complete'))
-        for cmd in cmdlist.splitlines():
+        for cmd in (x[2:-3] for x in gdb_batch(
+                                self.gdbname, 'complete').splitlines()
+                                if x.startswith('~"') and x.endswith(r'\n"')):
             if not cmd:
                 continue
             else:
@@ -506,8 +492,9 @@ class GlobalSetup(misc.Singleton):
                 firstarg_complt += 'complete %s \n' % cmd
 
         # get first arg completion commands
-        cmdlist = unwrap_stream_record(gdb_batch(self.gdbname, firstarg_complt))
-        for result in cmdlist.splitlines():
+        for result in (x[2:-3] for x in gdb_batch(
+                                self.gdbname, firstarg_complt).splitlines()
+                                if x.startswith('~"') and x.endswith(r'\n"')):
             matchobj = re_completion.match(result)
             if matchobj:
                 cmd = matchobj.group('cmd')

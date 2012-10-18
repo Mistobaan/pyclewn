@@ -4,11 +4,12 @@ News
 Pyclewn 1.10
 ------------
 
-.. June 13, 2012
+.. October 18, 2012
 
 Bug fix
 ^^^^^^^
 
+* Fix gdb version detection.
 * Fix customized key mappings are lost when starting the second gdb session.
 
 Pyclewn 1.9
