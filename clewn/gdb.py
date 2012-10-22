@@ -318,10 +318,11 @@ def gdb_version(pgm):
             version = ''.join(takewhile(lambda x: x.isdigit() or x == '.',
                                                                 version[1]))
             if version:
-                if [int(x) for x in version.split('.')] < GDB_VERSION:
+                v = [int(x) for x in version.split('.')]
+                if v < GDB_VERSION:
                     raise ClewnError('invalid gdb version "%s"' % version)
                 info('gdb version: %s', version)
-                return version
+                return v
 
     if header:
         critical('response to "show version":\n%s%s%s',
@@ -543,7 +544,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
     """The Gdb debugger is a frontend to GDB/MI.
 
     Instance attributes:
-        version: str
+        version: list
             current gdb version
         state: enum
             gdb state

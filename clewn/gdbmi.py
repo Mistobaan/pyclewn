@@ -1342,7 +1342,7 @@ FrameCli =      \
     type('FrameCli', (OobGdbCommand,),
             {
                 '__doc__': """Get the frame information.""",
-                'version_max': '6.3',
+                'version_max': [6, 3],
                 'gdb_cmd': 'frame\n',
                 'info_attribute': 'frame',
                 'prefix': 'done,',
@@ -1357,7 +1357,7 @@ Frame=          \
     type('Frame', (OobGdbCommand,),
             {
                 '__doc__': """Get the frame information.""",
-                'version_min': '6.4',
+                'version_min': [6, 4],
                 'gdb_cmd': '-stack-info-frame\n',
                 'info_attribute': 'frame',
                 'prefix': 'done,',
