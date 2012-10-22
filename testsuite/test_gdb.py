@@ -218,7 +218,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipUnless((gdb_v.split('.') < '6.4'.split('.')),
+    @skipUnless(gdb_v < [6, 4],
                         'gdb version more recent than 6.4')
     def test_010(self):
         """Checking result of oob commands"""
@@ -240,7 +240,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipUnless((gdb_v.split('.') < '7.0'.split('.')),
+    @skipUnless(gdb_v < [7, 0],
                         'gdb version more recent than 7.0')
     def test_011(self):
         """Checking result of oob commands"""
@@ -268,7 +268,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipUnless((gdb_v.split('.') >= '7.0'.split('.')),
+    @skipUnless(gdb_v >= [7, 0],
                         'gdb version less recent than 7.0')
     def test_012(self):
         """Checking result of oob commands"""
@@ -670,7 +670,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipUnless((gdb_v <= '7.3'),
+    @skipUnless(gdb_v <= [7, 3],
         'gdb 7.4 introduces the concept of a breakpoint with multiple signs')
     def test_030(self):
         """Set automatically all breakpoints on a multiple choice"""
