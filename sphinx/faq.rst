@@ -1,6 +1,21 @@
 FAQ
 ===
 
+Why isn't the async-option enabled by default ?
+-----------------------------------------------
+
+A drawback of having async-option enabled is that it might lead to unintended
+command execution. For example, you might issue a ``step`` command before another
+``step`` command has finished executing and unintentionally execute two step
+commands, with no way to go back.
+
+Use -x with gnome-terminal instead of -e in the --terminal option
+-----------------------------------------------------------------
+
+Konsole and rxvt both use -e in the same way that xterm does, to specify the
+program (and its command  line  arguments) to be run in the terminal window,
+but gnome-terminal uses -x instead.
+
 Installation process on Windows could not find gvim
 ---------------------------------------------------
 
