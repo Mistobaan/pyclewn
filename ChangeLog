@@ -1,5 +1,6 @@
-2012-10-18  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2012-12-01  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* gdb.py: Add file completion on 'shell' first argument.
 	* gdb.py: Fix gdb version detection.
 	* vim.py: Fix mapkeys lost in a new gdb session.
 

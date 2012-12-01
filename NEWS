@@ -4,7 +4,12 @@ News
 Pyclewn 1.10
 ------------
 
-.. October 18, 2012
+.. December 1st, 2012
+
+Change
+^^^^^^
+
+* Add file completion on ``shell`` first argument.
 
 Bug fix
 ^^^^^^^

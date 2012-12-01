@@ -400,6 +400,7 @@ class GlobalSetup(misc.Singleton):
         'source',
         'start',
         'tty',
+        'shell',
         ]
     illegal_cmds = [
         '-', '+', '<', '>', '!',
