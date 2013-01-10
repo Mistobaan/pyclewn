@@ -436,8 +436,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             self.frame_returning = None
 
     def dispatch_exception(self, frame, arg):
-        """Override 'dispatch_exception' to allow stopping at script frame level."""
-        if pdb.Pdb.stop_here(self, frame):
+        """Override to handle the exception before termination."""
+        if self.stop_here(frame) or frame is self.botframe:
             self.user_exception(frame, arg)
             if self.quitting: raise bdb.BdbQuit
         return self.trace_dispatch
@@ -471,6 +471,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     def set_continue(self):
         """Override set_continue: the trace function is not removed."""
         self.stopframe = self.botframe
+        self.stoplineno = -1
         self.returnframe = None
         self.quitting = 0
 
@@ -486,11 +487,23 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                 caller_frame.f_trace = self.trace_dispatch
         pdb.Pdb.set_step(self)
 
+    def _set_stopinfo(self, stopframe, returnframe, stoplineno=0):
+        self.stopframe = stopframe
+        self.returnframe = returnframe
+        self.quitting = False
+        # Python 2.6 has stoplineno but with different semantics.
+        # stoplineno >= 0 means: stop at line >= the stoplineno
+        # stoplineno -1 means: don't stop at all
+        self.stoplineno = stoplineno
+
     def stop_here(self, frame):
         """Override 'stop_here' to fix 'continue' at the script frame level."""
-        if frame is self.stopframe and frame is self.botframe:
+        stop = pdb.Pdb.stop_here(self, frame)
+        # Python 2.4 does not have stoplineno.
+        # Python 2.6 has stoplineno but with different semantics.
+        if stop and frame is self.stopframe and self.stoplineno == -1:
             return False
-        return pdb.Pdb.stop_here(self, frame)
+        return stop
 
     def set_break(self, filename, lineno, temporary=0, cond=None,
                   funcname=None):
@@ -614,6 +627,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         """This method is called when there is the remote possibility
         that we ever need to stop in this function."""
         unused = argument_list
+        self.stoplineno = 0
         if self._wait_for_mainpyfile:
             return
         if self.stop_here(frame):
@@ -622,6 +636,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def user_line(self, frame):
         """This function is called when we stop or break at this line."""
+        self.stoplineno = 0
         if self._wait_for_mainpyfile:
             if (self.mainpyfile != self.canonic(frame.f_code.co_filename)
                 or frame.f_lineno<= 0):
@@ -638,6 +653,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def user_return(self, frame, return_value):
         """This function is called when a return trap is set here."""
+        self.stoplineno = 0
         frame.f_locals['__return__'] = return_value
         self.trace_type = '--Return--'
         self.interaction(frame, None)
@@ -645,6 +661,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     def user_exception(self, frame, (exc_type, exc_value, exc_traceback)):
         """This function is called if an exception occurs,
         but only if we are to stop at or just below this level."""
+        self.stoplineno = 0
         frame.f_locals['__exception__'] = exc_type, exc_value
         if type(exc_type) == type(''):
             exc_type_name = exc_type
@@ -1096,5 +1113,9 @@ def main(pdb, options):
     mainpyfile = argv[0]
     sys.path[0] = os.path.dirname(mainpyfile)
     sys.argv = argv
-    pdb._runscript(mainpyfile)
+    try:
+        pdb._runscript(mainpyfile)
+    finally:
+        pdb.console_print('Script "%s" terminated.\n\n' % mainpyfile)
+        pdb.console_flush()
 

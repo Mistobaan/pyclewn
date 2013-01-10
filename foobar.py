@@ -13,4 +13,5 @@ if __name__ == '__main__':
     import clewn.vim as vim; vim.pdb(testrun=True,
                             level='nbdebug', file='logfile')
     main()
+    next_line = 1
 

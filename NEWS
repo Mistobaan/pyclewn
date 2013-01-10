@@ -4,16 +4,19 @@ News
 Pyclewn 1.10
 ------------
 
-.. December 1st, 2012
+.. January 9, 2013
 
 Change
 ^^^^^^
 
-* Add file completion on ``shell`` first argument.
+* ``pdb`` prints now a message to the console when the script has terminated.
+* Add file completion to the gdb command ``shell`` first argument.
 
 Bug fix
 ^^^^^^^
 
+* ``pdb`` stops now at the next statement in the main module when the ``next``
+  command has been issued.
 * Fix gdb version detection.
 * Fix customized key mappings are lost when starting the second gdb session.
 
