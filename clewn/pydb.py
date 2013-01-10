@@ -435,8 +435,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             self.frame_returning = None
 
     def dispatch_exception(self, frame, arg):
-        """Override 'dispatch_exception' to allow stopping at script frame level."""
-        if pdb.Pdb.stop_here(self, frame):
+        """Override to handle the exception before termination."""
+        if self.stop_here(frame) or frame is self.botframe:
             self.user_exception(frame, arg)
             if self.quitting: raise bdb.BdbQuit
         return self.trace_dispatch
@@ -470,6 +470,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     def set_continue(self):
         """Override set_continue: the trace function is not removed."""
         self.stopframe = self.botframe
+        self.stoplineno = -1
         self.returnframe = None
         self.quitting = 0
 
@@ -484,12 +485,6 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             if caller_frame and not caller_frame.f_trace:
                 caller_frame.f_trace = self.trace_dispatch
         pdb.Pdb.set_step(self)
-
-    def stop_here(self, frame):
-        """Override 'stop_here' to fix 'continue' at the script frame level."""
-        if frame is self.stopframe and frame is self.botframe:
-            return False
-        return pdb.Pdb.stop_here(self, frame)
 
     def set_break(self, filename, lineno, temporary=0, cond=None,
                   funcname=None):
@@ -1018,5 +1013,9 @@ def main(pdb, options):
     mainpyfile = argv[0]
     sys.path[0] = os.path.dirname(mainpyfile)
     sys.argv = argv
-    pdb._runscript(mainpyfile)
+    try:
+        pdb._runscript(mainpyfile)
+    finally:
+        pdb.console_print('Script "%s" terminated.\n\n' % mainpyfile)
+        pdb.console_flush()
 

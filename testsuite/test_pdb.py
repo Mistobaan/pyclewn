@@ -369,3 +369,19 @@ class Pdb(ClewnTestCase):
         self.cltest_redir(cmd, expected)
         os.environ['PATH'] = '.:' + os.environ['PATH']
 
+    def test_015(self):
+        """The next command in the main module frame"""
+        cmd = [
+            'Cinterrupt',
+            'Cnext',
+            'Cwhere',
+            'call Wait_eop()',
+            'edit (clewn)_console | $$-1w! ${test_out}',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            '> <module>() at ${cwd}foobar.py:16',
+            )
+        self.cltest_redir(cmd, expected)
+
