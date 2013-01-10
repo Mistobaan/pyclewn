@@ -385,3 +385,32 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
+    @skipIf(use_select_emulation, 'when using select emulation')
+    def test_016(self):
+        """Stop at breakpoint set in caller after interrupt"""
+        cmd = [
+            'Cinterrupt',
+            'Cbreak testsuite/foo.py:35',
+            'Ccontinue',
+            'C run = True',
+            'C c.value = -1',
+            'Ccontinue',
+            'Cinterrupt',
+            'Cjump 19',
+            'Cbreak testsuite/foo.py:40',
+            'Ccontinue',
+            'call Wait_eop()',
+            'redir! > ${test_out}',
+            'sign place',
+            'redir! > ${test_file}1',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            'Signs for ${cwd}testsuite/foo.py:',
+            'line=35  id=2  name=2',
+            'line=40  id=1  name=1',
+            'line=40  id=4  name=4',
+            )
+        self.cltest_redir(cmd, expected)
+

@@ -284,6 +284,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.curframe = None
         self.stack = []
         self.frame_returning = None
+        self.interrupted = False
 
         self.curframe_locals = None
         self.thread = None
@@ -612,6 +613,10 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             del self.socket_map[fd]
             return
 
+        if self.interrupted:
+            self.interrupted = False
+            self.set_trace(frame)
+
         self.setup(frame, traceback)
         if self.trace_type or self.doprint_trace:
             if self.get_console().timed_out:
@@ -866,6 +871,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def cmd_interrupt(self, cmd, args):
         """Interrupt the debuggee."""
+        self.interrupted = True
         self.doprint_trace = True
         self.cmd_step(cmd, args)
 
