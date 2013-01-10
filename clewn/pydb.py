@@ -283,6 +283,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.curframe = None
         self.stack = []
         self.frame_returning = None
+        self.interrupted = False
 
         self.curframe_locals = None
         self.thread = None
@@ -488,10 +489,10 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         pdb.Pdb.set_step(self)
 
     def _set_stopinfo(self, stopframe, returnframe, stoplineno=0):
+        """Python 2.6 has stoplineno but with different semantics."""
         self.stopframe = stopframe
         self.returnframe = returnframe
         self.quitting = False
-        # Python 2.6 has stoplineno but with different semantics.
         # stoplineno >= 0 means: stop at line >= the stoplineno
         # stoplineno -1 means: don't stop at all
         self.stoplineno = stoplineno
@@ -711,6 +712,10 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         if fd is None or self.closed:
             del self.socket_map[fd]
             return
+
+        if self.interrupted:
+            self.interrupted = False
+            self.set_trace(frame)
 
         self.setup(frame, traceback)
         if self.trace_type or self.doprint_trace:
@@ -966,6 +971,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def cmd_interrupt(self, cmd, args):
         """Interrupt the debuggee."""
+        self.interrupted = True
         self.doprint_trace = True
         self.cmd_step(cmd, args)
 

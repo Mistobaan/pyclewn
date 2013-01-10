@@ -4,7 +4,7 @@ News
 Pyclewn 1.10
 ------------
 
-.. January 9, 2013
+.. January 10, 2013
 
 Change
 ^^^^^^
@@ -15,6 +15,8 @@ Change
 Bug fix
 ^^^^^^^
 
+* ``pdb`` stops now at a breakpoint set in one of the callers after an
+  interrupt.
 * ``pdb`` stops now at the next statement in the main module when the ``next``
   command has been issued.
 * Fix gdb version detection.

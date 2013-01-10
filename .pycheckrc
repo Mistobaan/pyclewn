@@ -139,7 +139,7 @@ checkSpecialMethods = 1
 
 # int: warnings for code complexity, max value before generating a warning
 maxLines = 120
-maxBranches = 12
+maxBranches = 14
 maxReturns = 10
 maxArgs = 10
 maxLocals = 20
@@ -232,6 +232,10 @@ suppressions = {
 	'pydb.ShortRepr': 'no-callinit',
 	'pydb.BalloonRepr': 'no-callinit',
 	'test_support': 'no-returnvalues',
+	'pydb.Pdb._set_stopinfo': 'no-initattr',
+	'pydb.Pdb.user_call': 'no-initattr',
+	'pydb.Pdb.user_return': 'no-initattr',
+	'pydb.Pdb.user_exception': 'no-initattr',
     }
 
 # dict: suppress warnings where keys can be regular expressions

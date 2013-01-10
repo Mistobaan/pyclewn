@@ -1,5 +1,7 @@
-2013-01-09  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2013-01-10  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* pydb.py: Pdb stops now at a breakpoint set in one of the callers
+	after an interrupt.
 	* pydb.py: Pdb stops now at the next statement in the main module when
 	the 'next' command has been issued. Pdb prints now a message to the
 	console when the script has terminated.
