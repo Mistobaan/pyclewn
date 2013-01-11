@@ -251,25 +251,29 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             stdout redirection
         ping_r, ping_w: file descriptors
             ping file descriptors
-        stop_loop: boolean
+        stop_loop: bool
             when True, stop the asyncore loop
-        let_target_run: boolean
+        let_target_run: bool
             when True, the target does not hang waiting for an established
             netbeans session
         trace_type: str
             trace type
-        doprint_trace: boolean
+        doprint_trace: bool
             when True, print the stack entry
         clewn_thread_ident, target_thread_ident: int
             thread identifiers
         synchronisation_evt: Event
             used to synchronise both threads
-        closing: boolean
+        closing: bool
             when True, terminate the clewn thread asyncore loop
-        do_exit: boolean
+        do_exit: bool
             when True, run exit()
         poll: evtloop.Poll
             manage the select thread
+        interrupted: bool
+            the interrupt command has been issued
+        attach: bool
+            pdb is attached to a running process
 
     """
 
@@ -285,6 +289,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.stack = []
         self.frame_returning = None
         self.interrupted = False
+        self.attach = True
 
         self.curframe_locals = None
         self.thread = None
@@ -897,13 +902,18 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         """Remove the python trace function and close the netbeans session."""
         unused = args
         self.clear_all_breaks()
-        pdb.Pdb.set_continue(self)
-        self.console_print('Python trace function removed.\n')
 
-        # terminate the clewn thread in the run_pdb() loop
+        self.console_print('Python trace function removed.\n')
         self.console_print('Clewn thread terminated.\n')
+        if self.attach:
+            pdb.Pdb.set_continue(self)
+        else:
+            self.console_print('Script "%s" terminated.\n' % self.mainpyfile)
+            self.set_quit()
         self.console_print('---\n\n')
         self.console_flush()
+
+        # terminate the clewn thread in the run_pdb() loop
         self.netbeans_detach()
         self.do_exit = True
         self.stop_loop = True
@@ -1020,8 +1030,10 @@ def main(pdb, options):
     sys.path[0] = os.path.dirname(mainpyfile)
     sys.argv = argv
     try:
+        pdb.attach = False
         pdb._runscript(mainpyfile)
     finally:
-        pdb.console_print('Script "%s" terminated.\n\n' % mainpyfile)
+        pdb.console_print('Script "%s" terminated.\n' % mainpyfile)
+        pdb.console_print('---\n\n')
         pdb.console_flush()
 
