@@ -4,7 +4,7 @@ News
 Pyclewn 1.10
 ------------
 
-.. January 10, 2013
+.. January 11, 2013
 
 Change
 ^^^^^^
@@ -15,6 +15,9 @@ Change
 Bug fix
 ^^^^^^^
 
+* When the Python script is started from Vim with the command ``:Pyclewn pdb
+  script.py``, the script is now terminated after the ``quit`` command has
+  been issued.
 * ``pdb`` stops now at a breakpoint set in one of the callers after an
   interrupt.
 * ``pdb`` stops now at the next statement in the main module when the ``next``
