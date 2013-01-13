@@ -4,12 +4,24 @@ News
 Pyclewn 1.10
 ------------
 
-.. January 11, 2013
+.. January 27, 2013
+
+New feature
+^^^^^^^^^^^
+
+* Use now pdb-clone_ instead of the standard library python debugger, pdb_.
+
+  * pdb-clone improves significantly pdb performance. With breakpoints,
+    pdb-clone runs at about 2 times the speed of the interpreter while pdb
+    runs at 10 to 100 times the speed of the interpreter.
+
+  * pdb-clone fixes also some pdb long standing bugs and is easier to
+    maintain.
 
 Change
 ^^^^^^
 
-* ``pdb`` prints now a message to the console when the script has terminated.
+* pdb prints now a message to the console when the script has terminated.
 * Add file completion to the gdb command ``shell`` first argument.
 
 Bug fix
@@ -18,9 +30,8 @@ Bug fix
 * When the Python script is started from Vim with the command ``:Pyclewn pdb
   script.py``, the script is now terminated after the ``quit`` command has
   been issued.
-* ``pdb`` stops now at a breakpoint set in one of the callers after an
-  interrupt.
-* ``pdb`` stops now at the next statement in the main module when the ``next``
+* pdb stops now at a breakpoint set in one of the callers after an interrupt.
+* pdb stops now at the next statement in the main module when the ``next``
   command has been issued.
 * Fix gdb version detection.
 * Fix customized key mappings are lost when starting the second gdb session.
@@ -451,5 +462,7 @@ Initial release.
 
 .. _sphinx: http://sphinx.pocoo.org/
 .. _reStructuredText: http://docutils.sf.net/rst.html
+.. _pdb-clone: http://code.google.com/p/pdb-clone/
+.. _pdb: http://docs.python.org/3/library/pdb.html
 .. vim:filetype=rst:tw=78:ts=8:et:
 

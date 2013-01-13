@@ -785,7 +785,7 @@ class Netbeans(asynchat.async_chat):
         if not self.connected:
             return
 
-        info('enter close')
+        info('enter Netbeans.close')
         # close the debugger on a netbeans disconnect
         if self.debugger is not None:
             self.debugger.close()

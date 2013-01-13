@@ -39,11 +39,11 @@ http://pyclewn.sourceforge.net/install.html).
 
 DEBUGGERS = ('simple', 'gdb', 'pdb')
 if os.name == 'nt':
-    SCRIPTS = ['pyclewn', 'pyclewn_install.py']
+    SCRIPTS = ['pdb-clone', 'pyclewn', 'pyclewn_install.py']
     vimdir = 'pyclewn'
     LONG_DESCRIPTION = WINDOWS_INSTALL
 else:
-    SCRIPTS = ['pyclewn', 'runtime/bin/inferior_tty.py']
+    SCRIPTS = ['pdb-clone', 'pyclewn', 'runtime/bin/inferior_tty.py']
     vimdir = pyclewn_install.vimdir()
     LONG_DESCRIPTION = DESCRIPTION
 
@@ -226,6 +226,10 @@ class Test(core.Command):
             sys.stdout.flush()
             test_support.run_suite(suite, self.detail, self.stop, self.pdb)
 
+_bdb = core.Extension('_bdb',
+                sources=['pdb_clone/_bdbmodule.c'],
+                optional=True)
+
 core.setup(
     cmdclass={'sdist': sdist,
               'build_scripts': build_scripts,
@@ -233,7 +237,8 @@ core.setup(
               'test': Test},
     requires=['subprocess'],
     scripts=SCRIPTS,
-    packages=['clewn'],
+    ext_modules = [_bdb],
+    packages=['pdb_clone', 'clewn'],
     data_files=DATA_FILES,
 
     # meta-data

@@ -734,9 +734,9 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
         return symcompletion + cwindow + sequences
 
-    def _start(self):
+    def start(self):
         """Start gdb."""
-        debugger.Debugger._start(self)
+        self.console_print('\n')
         ProcessChannel.start(self)
 
     def prompt(self):

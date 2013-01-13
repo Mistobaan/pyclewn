@@ -313,6 +313,7 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
+    @skipIf(True, 'debuggee is attached')
     def test_013(self):
         """A ZeroDivisionError exception"""
         cmd = [
@@ -328,12 +329,11 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            "An exception occured: ('ZeroDivisionError:', \"'division by zero'\")",
+            "ZeroDivisionError: division by zero",
             '> <module>() at ${cwd}foobar.py:15',
             '  main() at ${cwd}foobar.py:9',
             "  foo(run=True, do_sleep=[], args=('unused',)) at ${cwd}testsuite/foo.py:39",
             "  bar(prefix='value', i=0) at ${cwd}testsuite/foo.py:25",
-            '(pdb)',
             )
         self.cltest_redir(cmd, expected)
 

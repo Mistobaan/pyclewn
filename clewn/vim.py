@@ -130,6 +130,8 @@ def close_clewnthread(vim):
         pdb.exit()
         if pdb.thread:
             pdb.thread.join()
+        debug('Vim instance: ' + str(vim))
+        logging.shutdown()
     except KeyboardInterrupt:
         close_clewnthread(vim)
 
@@ -432,7 +434,7 @@ class Vim:
             script = self.debugger._vim_script(self.options)
             info('building the Vim script file: %s', script)
 
-    def shutdown(self):
+    def shutdown(self, logging_shutdown=True):
         """Shutdown the asyncore dispatcher."""
         if self.closed:
             return
@@ -466,9 +468,9 @@ class Vim:
                 logging.getLogger().removeHandler(self.file_hdlr)
                 self.file_hdlr.close()
 
-        elif self.clazz != gdb.Gdb:
-            # do not shutdown logging with gdb as the SIGCHLD handler may
-            # overwrite all the traces after the shutdown
+        # do not shutdown logging with gdb as the SIGCHLD handler may overwrite
+        # all the traces after the shutdown
+        elif self.clazz != gdb.Gdb and logging_shutdown:
             logging.shutdown()
 
         # terminate daemon peeker threads
@@ -630,11 +632,14 @@ class Vim:
 
         # can't use basicConfig with kwargs, only supported with 2.4
         root = logging.getLogger()
-        # don't print on stderr after logging module teardown
-        # 'lastResort' has been introduced with Python 3.2
-        # bug in Python 3.2: 'lastResort' prints all messages,
-        # even those with level < WARNING
-        if getattr(logging, 'lastResort', None):
+
+        # Don't print on stderr after logging module teardown.
+        # 'lastResort' has been introduced with Python 3.2.
+        # Issue 12637 in Python 3.2: 'lastResort' prints all messages, even
+        # those with level < WARNING.
+        # See also issue 9501 in Python 3.3.0.
+        if (sys.version_info[:2] == (3, 2) and
+                getattr(logging, 'lastResort', None)):
             logging.lastResort = None
 
         if not root.handlers:
@@ -718,12 +723,12 @@ class Vim:
 
         pdb.synchronisation_evt.set()
         last_nbsock = None
-        session_logged = True
         while not pdb.closing:
             nbsock = self.nbserver.netbeans
             # a new netbeans connection, the server has closed last_nbsock
             if nbsock != last_nbsock and nbsock.ready:
                 info(nbsock)
+                last_nbsock = nbsock
                 nbsock.set_debugger(pdb)
                 if last_nbsock is None:
                     version = __tag__
@@ -731,21 +736,13 @@ class Vim:
                         version += '.' + __changeset__
                     info('pyclewn version %s and the %s debugger',
                                         version, self.clazz.__name__)
-                last_nbsock = nbsock
-                session_logged = False
-
-            # log the vim instance
-            if not session_logged and nbsock and not nbsock.connected:
-                session_logged = True
-                debug('Vim instance: ' + str(self))
 
             timeout = pdb._call_jobs()
             self.poll.run(timeout=timeout)
             pdb.synchronisation_evt.set()
 
-        if not session_logged and nbsock:
-            debug('Vim instance: ' + str(self))
-        self.shutdown()
+        info('clewn thread terminating')
+        self.shutdown(logging_shutdown=False)
 
     def __str__(self):
         """Return a representation of the whole stuff."""

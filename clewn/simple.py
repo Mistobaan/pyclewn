@@ -37,6 +37,10 @@ import time
 import functools
 
 from . import (misc, debugger)
+try:
+    from collections import OrderedDict
+except ImportError:
+    from .misc import OrderedDict
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('simp')
@@ -158,7 +162,7 @@ class Varobj:
 
     def __init__(self):
         """Constructor."""
-        self.var = {}
+        self.var = OrderedDict()
         self.current = None
         self.hilite = False
         self.dirty = False
@@ -262,9 +266,9 @@ class Simple(debugger.Debugger):
         self.lnum = 0
         self.varobj = Varobj()
 
-    def _start(self):
+    def start(self):
         """Start the debugger."""
-        debugger.Debugger._start(self)
+        self.console_print('\n')
         self.prompt()
 
         # start the debuggee

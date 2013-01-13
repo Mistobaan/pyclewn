@@ -23,14 +23,14 @@
 
 import sys
 import os
-import bdb
-import pdb
 import threading
 import time
 import reprlib as _repr
 import io
+import signal
+from pdb_clone import pdb, bdb, __version__
 
-from . import (misc, debugger, asyncproc, evtloop)
+from . import misc, debugger, asyncproc, evtloop
 try:
     from collections import OrderedDict
 except ImportError:
@@ -39,6 +39,17 @@ except ImportError:
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('pdb')
 Unused = warning
+
+HELP_EMPTY_CMD = (
+"""The empty command executes the (one-line) statement in the context of the
+current stack frame after alias expansion. The first word of the statement
+must not be a debugger command and may be an alias. Prefer using single quotes
+to double quotes as the later must be backslash escaped in Vim command line.
+To assign to a global variable you must always prefix the command with a
+'global' command, e.g.:
+
+    C global list_options; list_options = ['-l']
+""")
 
 # list of pdb commands mapped to vim user commands C<command>
 PDB_CMDS = {
@@ -92,6 +103,7 @@ MAPKEYS = {
 }
 
 CLEWN_CMDS = ('interrupt', 'detach', 'threadstack')
+STATE_INIT, STATE_RUN, STATE_DETACH, STATE_EXIT = range(4)
 
 def remove_quotes(args):
     """Remove quotes from a string."""
@@ -99,64 +111,6 @@ def remove_quotes(args):
     if matchobj:
         args = matchobj.group(1)
     return args
-
-def breakpoint_by_number(i):
-    """Return a (breakpoint, error msg) by the breakpoint number."""
-    try:
-        i = int(i)
-    except ValueError:
-        err = 'Breakpoint index %r is not a number' % i
-    else:
-        try:
-            bp = bdb.Breakpoint.bpbynumber[i]
-        except IndexError:
-            err = 'Breakpoint number (%d) out of range' % i
-        else:
-            if bp:
-                return bp, ''
-            err = 'Breakpoint (%d) already deleted' % i
-    return None, err
-
-def update_condition(arg):
-    """Update the condition of a breakpoint."""
-    # arg is breakpoint number and condition
-    args = arg.split(' ', 1)
-    bp, err = breakpoint_by_number(args[0])
-    if bp:
-        if len(args) == 1:
-            cond = None
-        else:
-            cond = args[1].strip()
-        bp.cond = cond
-        if not cond:
-            print('Breakpoint', bp.number, end=' ')
-            print('is now unconditional.')
-    else:
-        print('***', err)
-
-def update_ignore(arg):
-    """Sets the ignore count for the given breakpoint number."""
-    args = arg.split(' ', 1)
-    bp, err = breakpoint_by_number(args[0])
-    if bp:
-        try:
-            count = int(args[1].strip())
-        except:
-            err = 'Error, please enter: ignore <bpnumber> <count>'
-        else:
-            bp.ignore = count
-            if count > 0:
-                reply = 'Will ignore next '
-                if count > 1:
-                    reply = reply + '%d crossings' % count
-                else:
-                    reply = reply + '1 crossing'
-                print(reply + ' of breakpoint %d.' % bp.number)
-            else:
-                print('Will stop next time breakpoint', end=' ')
-                print(bp.number, 'is reached.')
-            return
-    print('***', err)
 
 def tty_fobj(ttyname):
     """Return the tty file object."""
@@ -180,6 +134,14 @@ def tty_fobj(ttyname):
         except IOError as err:
             critical(err)
     return tty
+
+def user_method_redirect(f):
+    """user_method_redirect decorator."""
+    def newf(self, *args, **kwds):
+        """Decorated function."""
+        self.message = self.set_trace_type
+        f(self, *args, **kwds)
+    return newf
 
 class ShortRepr(_repr.Repr):
     """Minimum length object representation."""
@@ -239,10 +201,6 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     """The Pdb debugger.
 
     Instance attributes:
-        frame_returning: frame
-            set to the current frame when entering interaction on 'return'
-        curframe_locals: dict
-            cache the current frame locals
         thread: threading.Thread
             the clewn thread
         socket_map: dict
@@ -251,8 +209,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             stdout redirection
         ping_r, ping_w: file descriptors
             ping file descriptors
-        stop_loop: bool
-            when True, stop the asyncore loop
+        stop_interaction: bool
+            when True, stop the interaction loop
         let_target_run: bool
             when True, the target does not hang waiting for an established
             netbeans session
@@ -266,13 +224,13 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             used to synchronise both threads
         closing: bool
             when True, terminate the clewn thread asyncore loop
-        do_exit: bool
-            when True, run exit()
+        state: int
+            pdb state
         poll: evtloop.Poll
             manage the select thread
         interrupted: bool
             the interrupt command has been issued
-        attach: bool
+        attached: bool
             pdb is attached to a running process
 
     """
@@ -280,22 +238,21 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     def __init__(self, *args):
         """Constructor."""
         debugger.Debugger.__init__(self, *args)
-        pdb.Pdb.__init__(self)
+        nosigint = True if os.name == 'nt' else False
+        pdb.Pdb.__init__(self, nosigint=nosigint)
 
         # avoid pychecker warnings (not initialized in base class)
         self.curindex = 0
         self.lineno = None
         self.curframe = None
         self.stack = []
-        self.frame_returning = None
         self.interrupted = False
-        self.attach = True
+        self.attached = True
 
-        self.curframe_locals = None
         self.thread = None
         self.socket_map = {}
         self.stdout = io.StringIO()
-        self.stop_loop = False
+        self.stop_interaction = False
         self.let_target_run = False
         self.trace_type = ''
         self.doprint_trace = False
@@ -303,7 +260,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.target_thread_ident = 0
         self.synchronisation_evt = threading.Event()
         self.closing = False
-        self.do_exit = False
+        self._previous_sigint_handler = None
+        self.state = STATE_INIT
 
         # the ping pipe is used to ping the clewn thread asyncore loop to enable
         # switching nbsock to the loop running in the main thread, in the
@@ -326,11 +284,12 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         nbsock.lock = threading.Lock()
         debugger.Debugger.set_nbsock(self, nbsock)
 
-    def _start(self):
+    def start(self):
         """Start the debugger."""
         info('starting a new netbeans session')
-        debugger.Debugger._start(self)
-
+        mode = 'with' if bdb._bdb else 'without'
+        self.console_print('pdb-clone {} ({} the _bdb extension module).\n\n'
+                                                .format(__version__, mode))
         # restore the breakpoint signs
         for bp in bdb.Breakpoint.bpbynumber:
             if bp:
@@ -343,20 +302,25 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     def close(self):
         """Close the netbeans session."""
         # we do not really close the thread here, just netbeans
-        debug('enter close')
+        info('enter Pdb.close')
         debugger.Debugger.close(self)
         self.let_target_run = True
+        self.set_continue()
 
     def do_prompt(self, timed=False):
         """Print the prompt in the Vim debugger console."""
-        if self.stop_loop:
+        if self.stop_interaction:
             self._prompt_str = '[running...] '
-            if timed:
-                self.get_console().timeout_append(self._prompt_str)
-                return
         else:
             self._prompt_str = '(pdb) '
-        self.print_prompt()
+            # Do not flush on timeout when running the test suite.
+            if self.testrun:
+                self.print_prompt()
+                return
+        if timed:
+            self.get_console().timeout_append(self._prompt_str)
+        else:
+            self.print_prompt()
 
     def hilite_frame(self):
         """Highlite the frame sign."""
@@ -368,10 +332,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def frame_args(self, frame):
         """Return the frame arguments as a dictionary."""
-        if frame is self.curframe:
-            locals_ = self.curframe_locals
-        else:
-            locals_ = frame.f_locals
+        locals_ = self.get_locals(frame)
         args = OrderedDict()
 
         # see python source: Python/ceval.c
@@ -403,8 +364,19 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                 error('Cannot ping the clewn thread:'
                                 ' \'synchronisation_evt\' not set.')
 
+    def detach(self):
+        """Detach the netbeans connection."""
+        self.console_print('Netbeans connection closed.\n')
+        self.console_print('---\n\n')
+        self.console_flush()
+        self.netbeans_detach()
+
     def exit(self):
         """Terminate the clewn thread."""
+        if self._previous_sigint_handler:
+            signal.signal(signal.SIGINT, self._previous_sigint_handler)
+            self._previous_sigint_handler = None
+
         # clear the 'socket_map' to terminate the 'select_thread'
         self.socket_map.clear()
         self.poll.close()
@@ -413,39 +385,6 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     #-----------------------------------------------------------------------
     #   Bdb methods
     #-----------------------------------------------------------------------
-
-    def trace_dispatch(self, frame, event, arg):
-        """Hide the clewn part of the backtrace after a KeyboardInterrupt."""
-        try:
-            return pdb.Pdb.trace_dispatch(self, frame, event, arg)
-        except KeyboardInterrupt:
-            # hide bdb traceback to the user: prevent exception chaining
-            raise KeyboardInterrupt() from KeyboardInterrupt()
-
-    def dispatch_line(self, frame):
-        """Override dispatch_line to set 'doprint_trace' when breaking."""
-        dobreak_here = self.break_here(frame)
-        if dobreak_here:
-            self.doprint_trace = True
-        if self.stop_here(frame) or dobreak_here:
-            self.user_line(frame)
-            if self.quitting: raise bdb.BdbQuit
-        return self.trace_dispatch
-
-    def dispatch_return(self, frame, arg):
-        """Override 'dispatch_return' to fix issue 13183."""
-        try:
-            self.frame_returning = frame
-            return pdb.Pdb.dispatch_return(self, frame, arg)
-        finally:
-            self.frame_returning = None
-
-    def dispatch_exception(self, frame, arg):
-        """Override to handle the exception before termination."""
-        if self.stop_here(frame) or frame is self.botframe:
-            self.user_exception(frame, arg)
-            if self.quitting: raise bdb.BdbQuit
-        return self.trace_dispatch
 
     def format_stack_entry(self, frame_lineno, lprefix=': '):
         """Override format_stack_entry: no line, add args, gdb format."""
@@ -460,10 +399,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         s = s + '(' + ', '.join([a + '=' + _saferepr(v)
                             for a, v in args.items()]) + ')'
 
-        if frame is self.curframe:
-            locals_ = self.curframe_locals
-        else:
-            locals_ = frame.f_locals
+        locals_ = self.get_locals(frame)
         if '__return__' in locals_:
             rv = locals_['__return__']
             s = s + '->'
@@ -474,111 +410,65 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         return s
 
     def set_continue(self):
-        """Override set_continue: the trace function is not removed."""
-        self.stopframe = self.botframe
-        self.stoplineno = -1
-        self.returnframe = None
-        self.quitting = 0
+        """Override set_continue."""
+        if os.name == 'nt':
+            # Do not remove the trace function.
+            self._set_stopinfo(None, -1)
+        else:
+            pdb.Pdb.set_continue(self)
 
-    def set_step(self):
-        """Stop after one line of code."""
-        # Issue #13183: pdb skips frames after hitting a breakpoint and running
-        # step commands.
-        # Restore the trace function in the caller (that may not have been set
-        # for performance reasons) when returning from the current frame.
-        if self.frame_returning:
-            caller_frame = self.frame_returning.f_back
-            if caller_frame and not caller_frame.f_trace:
-                caller_frame.f_trace = self.trace_dispatch
-        pdb.Pdb.set_step(self)
-
-    def set_break(self, filename, lineno, temporary=0, cond=None,
+    def set_break(self, filename, lineno, temporary=False, cond=None,
                   funcname=None):
         """Override set_break to install a netbeans hook."""
-        result = pdb.Pdb.set_break(self, filename, lineno, temporary, cond,
-                                   funcname)
-        if result is None:
-            bp = self.get_breaks(filename, lineno)[-1]
-            self.add_bp(bp.number, bp.file, bp.line)
-        return result
-
-    def clear_break(self, filename, lineno):
-        """Override clear_break to install a netbeans hook."""
-        bplist = []
-        if (filename, lineno) in bdb.Breakpoint.bplist:
-            bplist = [bp.number for bp in bdb.Breakpoint.bplist[filename, lineno]]
-
-        result = pdb.Pdb.clear_break(self, filename, lineno)
-        if result is None:
-            for bpno in bplist:
-                self.delete_bp(bpno)
-            print('Deleted breakpoint(s): %r' % bplist)
-        return result
-
-    def clear_bpbynumber(self, arg):
-        """Fix bug in standard library: clear _one_ breakpoint."""
-        bp, err = breakpoint_by_number(arg)
+        bp = pdb.Pdb.set_break(self, filename, lineno, temporary, cond,
+                                                               funcname)
         if bp:
-            self.delete_bp(bp.number)
-            bp.deleteMe()
-            if (bp.file, bp.line) not in bdb.Breakpoint.bplist:
-                self.breaks[bp.file].remove(bp.line)
-            if not self.breaks[bp.file]:
-                del self.breaks[bp.file]
-        else:
-            return err
+            self.add_bp(bp.number, bp.file, bp.line)
+            return bp
 
     #-----------------------------------------------------------------------
     #   Pdb and Cmd methods
     #-----------------------------------------------------------------------
 
+    def message(self, *args, **kwds):
+        """Allow 'end' keyword in message method."""
+        print(*args, file=self.stdout, **kwds)
+
+    # Use 'console_print' for all messages printed outside the 'onecmd' method,
+    # (onecmd executes pdb commands, as opposed to pyclewn commands).  Otherwise
+    # use 'message'.
+    onecmd_message = message
+
+    def set_trace_type(self, msg):
+        """trace_type setter."""
+        self.trace_type = msg
+
+    @user_method_redirect
     def user_call(self, frame, argument_list):
         """This method is called when there is the remote possibility
         that we ever need to stop in this function."""
-        unused = argument_list
-        if self._wait_for_mainpyfile:
-            return
-        if self.stop_here(frame):
-            self.trace_type = '--Call--'
-            self.interaction(frame, None)
+        pdb.Pdb.user_call(self, frame, argument_list)
 
-    def user_line(self, frame):
-        """This function is called when we stop or break at this line."""
-        if self._wait_for_mainpyfile:
-            if (self.mainpyfile != self.canonic(frame.f_code.co_filename)
-                or frame.f_lineno<= 0):
-                return
-            self._wait_for_mainpyfile = 0
-            # hide the frames above mainpyfile
-            self.botframe = frame
-        # the 'bp_commands' method was introduced after python 2.4
-        interact = True
-        if hasattr(self, 'bp_commands'):
-            interact = self.bp_commands(frame)
-        if interact:
-            self.interaction(frame, None)
+    @user_method_redirect
+    def user_line(self, frame, breakpoint_hits=None):
+        """Override user_line to set 'doprint_trace' when breaking."""
+        if self.get_breaks(frame.f_code.co_filename, frame.f_lineno):
+            self.doprint_trace = True
+        pdb.Pdb.user_line(self, frame, breakpoint_hits)
 
+    @user_method_redirect
     def user_return(self, frame, return_value):
         """This function is called when a return trap is set here."""
-        frame.f_locals['__return__'] = return_value
-        self.trace_type = '--Return--'
-        self.interaction(frame, None)
+        pdb.Pdb.user_return(self, frame, return_value)
 
+    @user_method_redirect
     def user_exception(self, frame, exc_info):
-        """This function is called if an exception occurs,
-        but only if we are to stop at or just below this level."""
-        (exc_type, exc_value, exc_traceback) = exc_info
-        frame.f_locals['__exception__'] = exc_type, exc_value
-        if isinstance(exc_type, type('')):
-            exc_type_name = exc_type
-        else: exc_type_name = exc_type.__name__
-        self.trace_type = ('An exception occured: %s'
-                        % repr((exc_type_name + ':', repr(exc_value))))
-        self.interaction(frame, exc_traceback)
+        """This function is called if an exception occurs."""
+        pdb.Pdb.user_exception(self, frame, exc_info)
 
     def default(self, line):
         """Override 'default' to allow ':C import sys; sys.exit(0)'."""
-        locals_ = self.curframe_locals
+        locals_ = self.get_locals(self.curframe)
         globals_ = self.curframe.f_globals
         try:
             code = compile(line + '\n', '<stdin>', 'single')
@@ -590,7 +480,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             if isinstance(t, type('')):
                 exc_type_name = t
             else: exc_type_name = t.__name__
-            print('***', exc_type_name + ':', v)
+            self.message('***', exc_type_name + ':', v)
 
     def print_stack_entry(self, frame_lineno, prompt_prefix=pdb.line_prefix):
         """Override print_stack_entry."""
@@ -602,11 +492,27 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.console_print('%s%s\n', prefix,
                     self.format_stack_entry(frame_lineno, prompt_prefix))
 
-    def interaction(self, frame, traceback):
+    def sigint_handler(self, signum, frame):
+        """Override sigint_handler."""
+        if self.allow_kbdint:
+            raise KeyboardInterrupt
+        self.console_print("Program interrupted. (Use 'cont' to resume).\n")
+        self.doprint_trace = True
+        self.set_trace(frame)
+
+    def interaction(self, frame, traceback, post_mortem=False):
         """Handle user interaction in the asyncore loop."""
         # wait for the netbeans session to be established
-        while not self.started or not self.stop_loop:
+        while not self.started or self.state == STATE_INIT:
             if self.let_target_run:
+                # After having been detached, the first <Ctl-C> restores the
+                # initial (default) signal handler and sets the trace function.
+                # So, the debuggee can be killed with the next <Ctl-C>, while
+                # still being allowed to be interrupted from the clewn thread at
+                # a call debug event since the trace function is set.
+                if self._previous_sigint_handler:
+                    signal.signal(signal.SIGINT, self._previous_sigint_handler)
+                    self._previous_sigint_handler = None
                 return
             time.sleep(debugger.LOOP_TIMEOUT)
 
@@ -620,117 +526,125 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
         if self.interrupted:
             self.interrupted = False
-            self.set_trace(frame)
+            # do not set the trace function in post mortem debugging, as
+            # interaction() is not called from the trace function
+            # trace_dispatch() then
+            if not post_mortem:
+                self.set_trace(frame)
 
-        self.setup(frame, traceback)
+        if not self.nosigint and not self._previous_sigint_handler:
+            self._previous_sigint_handler = signal.signal(signal.SIGINT,
+                                                    self.sigint_handler)
+
+        if self.setup(frame, traceback):
+            # no interaction desired at this time (happens if .pdbrc contains
+            # a command like "continue")
+            self.stop_interaction = False
+            self.forget()
+            return
+
         if self.trace_type or self.doprint_trace:
             if self.get_console().timed_out:
                 self.console_print('\n')
             if self.trace_type:
                 self.console_print(self.trace_type + '\n')
-            if traceback:
-                self.print_stack_trace()
-            else:
+            if self.doprint_trace or traceback:
                 self.print_stack_entry(self.stack[self.curindex])
         self.trace_type = ''
         self.doprint_trace = False
 
         self.hilite_frame()
-        self.stop_loop = False
         self.do_prompt()
-
+        assert not self.stop_interaction
         try:
-            while not self.stop_loop and self.started:
+            while not self.stop_interaction and self.started:
+                if self.state == STATE_DETACH:
+                    self.set_continue()
+                    break
+
                 try:
+                    self.allow_kbdint = True
+                    # commands queued after the ';;' separator
                     if self.cmdqueue:
-                        self.do_line_cmd(self.cmdqueue.pop(0))
+                        self.onecmd(self.cmdqueue.pop(0))
                     else:
                         self.poll.run(debugger.LOOP_TIMEOUT)
                 except KeyboardInterrupt:
-                    # ignore a KeyboardInterrupt to avoid breaking
-                    # the debugging session
-                    self.console_print('\nIgnoring a KeyboardInterrupt.\n')
+                    self.console_print('--KeyboardInterrupt--\n')
                     self.do_prompt()
+                finally:
+                    self.allow_kbdint = False
+            self.stop_interaction = False
             self.show_frame()
             self.forget()
         finally:
             self.set_nbsock_owner(0)
             del self.socket_map[fd]
             self.ping()
-            if self.do_exit:
+
+        if not self.attached and not self.started:
+            info('terminate the debuggee started from Vim')
+            raise bdb.BdbQuit
+
+        if self.state != STATE_RUN:
+            self.detach()
+            if self.state == STATE_EXIT:
                 self.exit()
+            self.state = STATE_INIT
 
     #-----------------------------------------------------------------------
     #   commands
     #-----------------------------------------------------------------------
 
-    def do_line_cmd(self, line):
+    def onecmd(self, line):
         """Process a line as a command."""
-        if line:
-            cmd, args = (lambda a, b='': (a, b))(*line.split(None, 1))
-            try:
-                method = getattr(self, 'cmd_%s' % cmd)
-            except AttributeError:
-                method = self.default_cmd_processing
-            self._do_cmd(method, cmd, args)
-
-    def _do_cmd(self, method, cmd, args):
-        """Process a command received from netbeans."""
-        unused = method
-        if args:
-            cmd = '%s %s' % (cmd, args)
-        debug(cmd)
-        if not cmd:
-            error('_do_cmd: processing an empty line')
-            return
+        debug('onecmd: %s', line)
+        if not line:
+            return False
 
         # alias substitution
-        line = self.precmd(cmd)
+        line = self.precmd(line)
         self.console_print('%s\n', line)
 
-        cmd, args = (lambda a, b='': (a, b))(*line.split(None, 1))
-        if threading.currentThread() == self.thread:
-            # restricted set of commands allowed in clewn thread
-            if cmd not in CLEWN_CMDS:
-                self.console_print('Target running, allowed commands'
-                                        ' are: %s\n', str(CLEWN_CMDS))
-            else:
-                self.onecmd(line)
-        else:
-            if cmd == 'interrupt':
-                self.console_print('The target is already interrupted.\n')
-            else:
-                self.onecmd(line)
-
-        if cmd not in ('mapkeys', 'dumprepr', 'loglevel'):
-            self.do_prompt(True)
-
-    def onecmd(self, line):
-        """Execute a command.
-
-        Note that not all commands are valid at instantiation time, when reading
-        '.pdbrc'.
-
-        """
-        if not line:
-            return
         cmd, args = (lambda a, b='': (a, b))(*line.split(None, 1))
         try:
             method = getattr(self, 'cmd_%s' % cmd)
         except AttributeError:
             method = self.default_cmd_processing
 
-        _stdout = sys.stdout
-        sys.stdout = self.stdout
-        try:
-            method(cmd, args.strip())
-        finally:
-            sys.stdout = _stdout
+        # restricted set of commands allowed in clewn thread
+        if threading.currentThread() == self.thread and cmd not in CLEWN_CMDS:
+            self.console_print('Target running, allowed commands'
+                                        ' are: %s\n', str(CLEWN_CMDS))
+        else:
+            self.message = self.onecmd_message
+            _stdout = sys.stdout
+            sys.stdout = self.stdout
+            try:
+                method(cmd, args.strip())
+            finally:
+                sys.stdout = _stdout
 
-        r = self.stdout.getvalue()
-        if r:
-            self.console_print(r)
-            self.stdout = io.StringIO()
+            r = self.stdout.getvalue()
+            if r:
+                self.console_print(r)
+                self.stdout = io.StringIO()
+
+        if cmd not in ('mapkeys', 'dumprepr', 'loglevel'):
+            # A timed printout, printed  by the background task when it flushes
+            # the console 500 msecs msecs after the do_prompt call, unless a new
+            # console_print call wipes out the prompt mean time, see
+            # netbeans.Console.
+            self.do_prompt(True)
+
+        return self.stop_interaction
+
+    def _do_cmd(self, method, cmd, args):
+        """Override to handle alias substitution."""
+        unused = method
+        if args:
+            cmd = '%s %s' % (cmd, args)
+        self.onecmd(cmd)
 
     def default_cmd_processing(self, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""
@@ -739,6 +653,10 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         # exec python statements
         self.default(cmd)
 
+    for n in ('enable', 'disable', 'condition', 'ignore', 'where',
+                                'bt', 'p', 'pp', 'alias', 'unalias'):
+        exec('def cmd_%s(self, cmd, args): return self.do_%s(args)' % (n, n))
+
     def cmd_help(self, *args):
         """Print help on the pdb commands."""
         unused, cmd = args
@@ -746,28 +664,21 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         allowed = list(PDB_CMDS.keys()) + ['mapkeys', 'unmapkeys', 'dumprepr',
                                                                     'loglevel']
         if not cmd:
-            print("\nAvailable commands:")
+            self.message("Available commands (typing in Vim ':C<CTRL-D>'"
+                         " prints this same list):")
             count = 0
             for item in sorted(allowed):
                 count += 1
                 if count % 7 == 0:
-                    print(item)
+                    self.message(item)
                 else:
-                    print(item.ljust(11), end=' ')
-            print('\n')
-            print ("The empty command executes the (one-line) statement in the\n"
-            "context of the current stack frame after alias expansion.\n"
-            "The first word of the statement must not be a debugger\n"
-            "command and may be an alias.\n"
-            "Prefer using single quotes to double quotes as the later must\n"
-            "be backslash escaped in Vim command line.\n"
-            "To assign to a global variable you must always prefix the\n"
-            "command with a 'global' command, e.g.:\n\n"
-            ":C global list_options; list_options = ['-l']\n")
+                    self.message(item.ljust(11), end=' ')
+            self.message('\n')
+            self.message(HELP_EMPTY_CMD)
         elif cmd not in allowed:
-            print('*** No help on', cmd)
+            self.message('*** No help on', cmd)
         elif cmd == 'help':
-            print ("h(elp)\n"
+            self.message("h(elp)\n"
             "Without argument, print the list of available commands.\n"
             "With a command name as argument, print help about that command.")
         elif cmd in ('interrupt', 'detach', 'quit',
@@ -775,14 +686,15 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                      'loglevel', 'threadstack',):
             method = getattr(self, 'cmd_%s' % cmd, None)
             if method is not None and method.__doc__ is not None:
-                print(method.__doc__.split('\n')[0])
+                self.message(method.__doc__.split('\n')[0])
         else:
             self.do_help(cmd)
             if cmd == 'clear':
-                print ('\nPyclewn does not support clearing all the'
+                self.message('\nPyclewn does not support clearing all the'
                 ' breakpoints when\nthe command is invoked without argument.')
             if cmd == 'alias':
-                print ("When setting an alias from Vim command line, prefer\n"
+                self.message(
+                "\nWhen setting an alias from Vim command line, prefer\n"
                 "using single quotes to double quotes as the later must be\n"
                 "backslash escaped in Vim command line.\n"
                 "For example, the previous example could be entered on Vim\n"
@@ -802,59 +714,26 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         unused = cmd
         self.do_break(remove_quotes(args), True)
 
-    def cmd_enable(self, cmd, arg):
-        """Enable breakpoints."""
-        unused = cmd
-        args = arg.split()
-        for i in args:
-            bp, err = breakpoint_by_number(i)
-            if bp:
-                bp.enable()
-                self.update_bp(bp.number, False)
-            else:
-                print('***', err)
+    def done_breakpoint_state(self, bp, state):
+        """Override done_breakpoint_state to update breakpoint sign."""
+        pdb.Pdb.done_breakpoint_state(self, bp, state)
+        self.update_bp(bp.number, not state)
 
-    def cmd_disable(self, cmd, arg):
-        """Disable breakpoints."""
-        unused = cmd
-        args = arg.split()
-        for i in args:
-            bp, err = breakpoint_by_number(i)
-            if bp:
-                bp.disable()
-                self.update_bp(bp.number, True)
-            else:
-                print('***', err)
-
-    def cmd_condition(self, cmd, args):
-        """Update the condition of a breakpoint."""
-        unused = self
-        unused = cmd
-        update_condition(args)
-
-    def cmd_ignore(self, cmd, args):
-        """Sets the ignore count for the given breakpoint number."""
-        unused = self
-        unused = cmd
-        update_ignore(args)
+    def done_delete_breakpoint(self, bp):
+        """Override done_delete_breakpoint to clear the breakpoint sign."""
+        pdb.Pdb.done_delete_breakpoint(self, bp)
+        self.delete_bp(bp.number)
 
     def cmd_clear(self, cmd, args):
         """Clear breakpoints."""
         unused = cmd
         if not args:
-            self.console_print(
+            self.message(
                 'An argument is required:\n'
                 '   clear file:lineno -> clear all breaks at file:lineno\n'
-                '   clear bpno bpno ... -> clear breakpoints by number\n')
+                '   clear bpno bpno ... -> clear breakpoints by number')
             return
         self.do_clear(remove_quotes(args))
-
-    def cmd_where(self, cmd, args):
-        """Print a stack trace, with the most recent frame at the bottom."""
-        unused = cmd
-        self.do_where(args)
-
-    cmd_bt = cmd_where
 
     def cmd_up(self, cmd, args):
         """Move the current frame one level up in the stack trace."""
@@ -872,51 +751,61 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         """Execute the current line, stop at the first possible occasion."""
         unused = cmd
         self.do_step(args)
-        self.stop_loop = True
+        self.stop_interaction = True
 
     def cmd_interrupt(self, cmd, args):
         """Interrupt the debuggee."""
-        self.interrupted = True
-        self.doprint_trace = True
-        self.cmd_step(cmd, args)
+        if self.state == STATE_INIT:
+            self.state = STATE_RUN
+
+        # A debugging session always start with an interrupt (sent from Vim
+        # pyclewn.vim startup script) and the interrupt of the first debugging
+        # session is a soft interrupt (does not use SIGINT), the signal handler
+        # being only set in the ensuing interaction.
+        if self._previous_sigint_handler:
+            os.kill(os.getpid(), signal.SIGINT)
+        else:
+            # This supposes that the trace function has not been removed so that
+            # we can enter interaction on a call debug event (because of the
+            # call to set_step).
+            self.interrupted = True
+            self.doprint_trace = True
+            self.set_step()
 
     def cmd_next(self, cmd, args):
         """Continue execution until the next line in the current function."""
         unused = cmd
         self.do_next(args)
-        self.stop_loop = True
+        self.stop_interaction = True
 
     def cmd_return(self, cmd, args):
         """Continue execution until the current function returns."""
         unused = cmd
         self.do_return(args)
-        self.stop_loop = True
+        self.stop_interaction = True
 
     def cmd_continue(self, *args):
         """Continue execution."""
         unused = args
         self.set_continue()
-        self.stop_loop = True
+        self.stop_interaction = True
 
     def cmd_quit(self, *args):
         """Remove the python trace function and close the netbeans session."""
         unused = args
-        self.clear_all_breaks()
-
         self.console_print('Python trace function removed.\n')
-        self.console_print('Clewn thread terminated.\n')
-        if self.attach:
-            pdb.Pdb.set_continue(self)
+        if self.attached:
+            self.clear_all_breaks()
+            self.set_continue()
         else:
             self.console_print('Script "%s" terminated.\n' % self.mainpyfile)
+            # This will raise BdbQuit and termine the script.
             self.set_quit()
-        self.console_print('---\n\n')
-        self.console_flush()
 
-        # terminate the clewn thread in the run_pdb() loop
-        self.netbeans_detach()
-        self.do_exit = True
-        self.stop_loop = True
+        # Terminate the clewn thread in the run_pdb() loop.
+        self.console_print('Clewn thread terminated.\n')
+        self.state = STATE_EXIT
+        self.stop_interaction = True
 
     def cmd_jump(self, cmd, args):
         """Set the next line that will be executed."""
@@ -927,37 +816,18 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     def cmd_detach(self, *args):
         """Close the netbeans session."""
         unused = args
-        self.console_print('Netbeans connection closed.\n')
-        self.console_print('---\n\n')
-        self.console_flush()
-        self.netbeans_detach()
-        self.stop_loop = True
+        if not self.attached:
+            self.console_print('Cannot detach, the debuggee is not attached.\n')
+            return
+        self.state = STATE_DETACH
+        if threading.currentThread() == self.thread:
+            self.cmd_interrupt(*args)
 
     def cmd_args(self, *args):
         """Print the argument list of the current function."""
         fargs = self.frame_args(self.curframe)
         args = '\n'.join(name + ' = ' + repr(fargs[name]) for name in fargs)
-        self.console_print(args + '\n')
-
-    def cmd_p(self, cmd, args):
-        """Evaluate the expression and print its value."""
-        unused = cmd
-        self.do_p(args)
-
-    def cmd_pp(self, cmd, args):
-        """Evaluate the expression and pretty print its value."""
-        unused = cmd
-        self.do_pp(args)
-
-    def cmd_alias(self, cmd, args):
-        """Create an alias called name that executes command."""
-        unused = cmd
-        self.do_alias(args)
-
-    def cmd_unalias(self, cmd, args):
-        """Deletes the specified alias."""
-        unused = cmd
-        self.do_unalias(args)
+        self.message(args)
 
     def cmd_threadstack(self, *args):
         """Print a stack of the frames of all the threads."""
@@ -992,7 +862,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             return
 
         try:
-            value = eval(arg, self.curframe.f_globals, self.curframe_locals)
+            value = eval(arg, self.curframe.f_globals,
+                            self.get_locals(self.curframe))
         except:
             t, v = sys.exc_info()[:2]
             if isinstance(t, str):
@@ -1025,13 +896,20 @@ def main(pdb, options):
         critical('usage: Pyclewn pdb scriptfile [arg] ...')
         sys.exit(1)
 
-    sys.stdin = sys.stdout = sys.stderr = tty_fobj(options.tty)
+    if os.name != 'nt':
+        sys.stdin = sys.stdout = sys.stderr = tty_fobj(options.tty)
     mainpyfile = argv[0]
     sys.path[0] = os.path.dirname(mainpyfile)
     sys.argv = argv
     try:
-        pdb.attach = False
+        pdb.attached = False
         pdb._runscript(mainpyfile)
+    except BaseException as e:
+        trace_type = 'Uncaught exception:\n    %r\n' %e
+        trace_type += 'Entering post mortem debugging.'
+        pdb.trace_type = trace_type
+        t = sys.exc_info()[2]
+        pdb.interaction(None, t, True)
     finally:
         pdb.console_print('Script "%s" terminated.\n' % mainpyfile)
         pdb.console_print('---\n\n')

@@ -716,7 +716,7 @@ class Debugger:
 
     def close(self):
         """Close the debugger and remove all signs in Vim."""
-        info('enter close')
+        info('enter Debugger.close')
         if not self.closed:
             self.started = False
             self.closed = True
@@ -744,13 +744,17 @@ class Debugger:
             # print the banner only with the first netbeans instance
             if not self.closed:
                 self.console_print(
-                    'Pyclewn version %s starting a new instance of %s.\n\n',
+                    'Pyclewn version %s starting a new instance of %s.\n',
                             __tag__, self.__class__.__name__.lower())
             else:
                 self.console_print(
-                    'Pyclewn restarting the %s debugger.\n\n',
+                    'Pyclewn restarting the %s debugger.\n',
                             self.__class__.__name__.lower())
             self.closed = False
+            self.start()
+
+    def start(self):
+        """This method must be implemented in a subclass."""
 
     @restart_timer(LOOP_TIMEOUT)
     def debugger_background_jobs(self):
@@ -1063,11 +1067,5 @@ class Debugger:
         for name in list(shallow):
             if name in ('cmds', 'pyclewn_cmds', 'mapkeys'):
                 del shallow[name]
-            # avoid "RuntimeError: dictionary changed size during
-            # iteration" on socket_map when running pdb
-            else:
-                item = shallow[name]
-                if isinstance(item, dict):
-                    item = dict(item)
         return misc.pformat(shallow)
 

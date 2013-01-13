@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2012 June 6
+*pyclewn.txt*                                   Last change: 2013 January 27
 
 
                             PYCLEWN USER MANUAL
@@ -40,8 +40,7 @@ On Windows, gdb pops up a console attached to the program to debug.
 
 Pyclewn currently supports the following debuggers:
 
-    * gdb:      version 6.2.1 and above,
-                pyclewn uses the gdb MI interface
+    * gdb:      version 6.2.1 and above, pyclewn uses the gdb MI interface
 
     * pdb:      the Python debugger
 
@@ -779,24 +778,19 @@ The following gdb commands cannot be run from pyclewn:
 6. Pdb                                              *pyclewn-pdb*
 
 
-One may either start a python script and debug it, or attach to a running
-python process. In both cases, once the debugging session is terminated, the
-":Cdetach" or ":Cquit" command closes the netbeans session, but does not
-terminate the debuggee. To kill the debuggee, use the following command at the
-pdb prompt: >
-
-    :C import sys; sys.exit(1)
+Start a python script from Vim and debug it, or attach to a running python
+process and start the debugging session.
 
 
-Start a python script and debug it:
------------------------------------
+Start a python script from Vim and debug it:
+-------------------------------------------
 To debug a python script named "scriptname", run the vim command (arg1, arg2,
 ... being the scriptname command line arguments): >
 
     :Pyclewn pdb scriptname arg1 arg2 ...
 
-One may also debug the python script being edited in vim as the current buffer
-conveniently with: >
+Or, more conveniently, debug the python script being edited in vim as the
+current buffer with: >
 
     :Pyclewn pdb %:p
 
@@ -805,6 +799,10 @@ the "pyclewn_args" vim global variable before starting the script. For
 example: >
 
     :let g:pyclewn_args="--tty=/dev/pts/4"
+
+The ":Cquit" command and the Vim ":quitall" command terminate the debugging
+session and the script being debugged. Both commands MUST be issued at the pdb
+prompt.
 
 
 Attach to a python process and debug it: >
@@ -824,13 +822,29 @@ command: >
 
     :Pyclewn pdb
 
-Note:
+Notes:
 When the pyclewn installation has been made following the "home scheme" (see
 INSTALL) and in order to have python find the clewn package, one must set the
 PYTHONPATH environment variable to include the python home library pathname.
 For example with bash, run the script as: >
 
  PYTHONPATH=$HOME/lib/python python script_pathname
+
+The current debugging session may be terminated with the ":Cdetach" or the Vim
+":quitall" command. Another debugging session with the same process can be
+started later with the ":Pyclewn pdb" command.
+
+The ":Cdetach", ":Cquit" or the Vim ":quitall" commands do not terminate the
+debuggee. To kill the debuggee, issue the following command at the pdb prompt:
+>
+    :C import sys; sys.exit(1)
+
+On posix platforms, when the python process is not attached, typing two
+<Ctl-C> instead of one, is needed to kill the process. This is actually a
+feature that allows the process to run without any tracing overhead (before
+the first <Ctl-C>) when it is not attached and no breakpoints are being set
+(there is still the small overhead of the context switches between the idle
+clewn thread and the process threads).
 
 
 Pdb commands:
@@ -847,10 +861,6 @@ differently from the pdb commands of the Python standard library:
 interrupt
     This command interrupts the debuggee and is available from the
     "[running...]" prompt.
-    The debuggee cannot be interrupted when blocked in a python C call, for
-    example in a blocking I/O read. One need to use the gdb debugger in that
-    case. Note that the "threadstack" command is useful to find out why the
-    debuggee cannot be interrupted.
 
                                                     *Cdetach*
 detach
@@ -868,9 +878,12 @@ quit
     This command terminates the debugging session by closing the netbeans
     socket, and removes the python trace function. The pyclewn thread in
     charge of handling netbeans connection terminates and it is not possible
-    anymore to debug the process. Since there is no trace function, the
+    anymore to attach to the process. Since there is no trace function, the
     breakpoints are ineffective and the process performance is not impaired
     anymore by the debugging overhead.
+
+    When the script has been started from Vim, this command terminates the
+    script.
 
                                                     *Cthreadstack*
 threadstack
@@ -897,11 +910,6 @@ the prefix alone:
 
 .   The first word of the statement must not be a pdb command and will be
     expanded if it is an alias.
-
-    Notes: Changes in the "locals" dictionary of the current frame are lost
-    when the frame is changed with the "up" or "down" command.  This is a
-    "pdb" Python bug, see http://bugs.python.org/issue9633.  The changes are
-    not lost when the "step" command is run before the "up" or "down" command.
 
 not implemented:
     The following pdb commands are not implemented: "list", "commands".
@@ -991,6 +999,11 @@ And change the corresponding keyword argument: >
 
 Limitations:
 ------------
+On Windows, the netbeans session is not closed in Vim after the Python script
+terminates normaly. The Vim ":nbclose" command must be issued in order to
+start a new debugging session. See Vim issue 107 at
+http://code.google.com/p/vim/.
+
 When the debuggee is running multiple threads, the current I/O redirection
 scheme implemented by pyclewn may cause those non-debugged threads to write to
 the clewn console instead of sys.stdout. Note that this may be fixed in a
