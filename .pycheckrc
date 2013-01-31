@@ -139,7 +139,7 @@ checkSpecialMethods = 1
 
 # int: warnings for code complexity, max value before generating a warning
 maxLines = 120
-maxBranches = 14
+maxBranches = 20
 maxReturns = 10
 maxArgs = 10
 maxLocals = 20
@@ -219,23 +219,19 @@ checkImplicitReturns = 1
 #	  'module2.my_func': 'argsused',
 #	  'module3.my_class': 'no-initreturn', }
 suppressions = {
-	'netbeans.parse_msg': 'no-returnvalues',
 	'buffer.FrameAnnotation.init': 'no-override',
 	'buffer.Sernum.init': 'no-override',
 	'gdb.GlobalSetup.init': 'no-override',
 	'gdbmi.OobGdbCommand': 'no-classattr',
-	'pydb.Pdb.set_continue': 'no-classattr no-initattr',
-	'pydb.Pdb.dispatch_line': 'no-classattr',
-	'pydb.Pdb.user_line': 'no-initattr',
-	'pydb.Pdb.dispatch_exception': 'no-classattr',
-	'pydb.Pdb.stop_here': 'no-classattr',
+	'netbeans.parse_msg': 'no-returnvalues',
+	'pydb.Pdb': 'no-exec no-badexcept',
+	'pydb.Pdb.message': 'no-override',
+	'pydb.Pdb.interaction': 'no-override',
+	'pydb.Pdb.sigint_handler': 'no-badexcept',
 	'pydb.ShortRepr': 'no-callinit',
 	'pydb.BalloonRepr': 'no-callinit',
 	'test_support': 'no-returnvalues',
-	'pydb.Pdb._set_stopinfo': 'no-initattr',
-	'pydb.Pdb.user_call': 'no-initattr',
-	'pydb.Pdb.user_return': 'no-initattr',
-	'pydb.Pdb.user_exception': 'no-initattr',
+	'vim': 'no-badexcept',
     }
 
 # dict: suppress warnings where keys can be regular expressions

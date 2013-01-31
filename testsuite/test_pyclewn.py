@@ -208,7 +208,7 @@ class Pyclewn(ClewnTestCase):
             ]
         expected = (
             '1 #    "${test_file}1"                 line 1',
-            '2  a=  "(clewn)_console"               line 2',
+            '2  a=  "(clewn)_console"               line 1',
             '3 %a   "${test_file}2"                 line 1',
 
             )

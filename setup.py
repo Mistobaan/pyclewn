@@ -9,11 +9,13 @@ import os.path
 import string
 import re
 import distutils.core as core
+from distutils.errors import *
 
 from os.path import join as pathjoin
 from distutils.command.install import install as _install
 from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_scripts import build_scripts as _build_scripts
+from distutils.command.build_ext import build_ext as _build_ext
 from unittest2 import defaultTestLoader
 
 import pyclewn_install
@@ -38,11 +40,11 @@ http://pyclewn.sourceforge.net/install.html).
 
 DEBUGGERS = ('simple', 'gdb', 'pdb')
 if os.name == 'nt':
-    SCRIPTS = ['pyclewn', 'pyclewn_install.py']
+    SCRIPTS = ['pdb-clone', 'pyclewn', 'pyclewn_install.py']
     vimdir = 'pyclewn'
     LONG_DESCRIPTION = WINDOWS_INSTALL
 else:
-    SCRIPTS = ['pyclewn', 'runtime/bin/inferior_tty.py']
+    SCRIPTS = ['pdb-clone', 'pyclewn', 'runtime/bin/inferior_tty.py']
     vimdir = pyclewn_install.vimdir()
     LONG_DESCRIPTION = DESCRIPTION
 
@@ -167,6 +169,13 @@ class sdist(_sdist):
         _sdist.run(self)
         hg_revert(('runtime/plugin/pyclewn.vim', 'INSTALL'))
 
+class build_ext(_build_ext):
+    def run(self):
+        try:
+            _build_ext.run(self)
+        except (CCompilerError, DistutilsError, CompileError):
+            self.warn('\n\n*** Building the _bdb extension failed. ***')
+
 class Test(core.Command):
     """Run the test suite.
     """
@@ -226,14 +235,20 @@ class Test(core.Command):
             sys.stdout.flush()
             test_support.run_suite(suite, self.detail, self.stop, self.pdb)
 
+_bdb = core.Extension('_bdb',
+                sources=['pdb_clone/_bdbmodule.c']
+                )
+
 core.setup(
     cmdclass={'sdist': sdist,
               'build_scripts': build_scripts,
               'install': install,
+              'build_ext': build_ext,
               'test': Test},
     requires=['subprocess'],
     scripts=SCRIPTS,
-    packages=['clewn'],
+    ext_modules = [_bdb],
+    packages=['pdb_clone', 'clewn'],
     data_files=DATA_FILES,
 
     # meta-data

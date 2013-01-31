@@ -129,6 +129,15 @@ The following table lists the differences between clewn, vimGdb and pyclewn
     |               |             |                       |   command              |
     +---------------+-------------+-----------------------+------------------------+
 
+Licensing
+---------
+
+This software is licensed under the GNU General Public License Version 2.
+
+Copyright © 2001-2012 Python Software Foundation; All Rights Reserved.
+pdb-clone is a derivative work of a part of Python and as such, subject to the
+python license_.
+
 .. toctree::
    :maxdepth: 2
    :hidden:
@@ -143,5 +152,6 @@ The following table lists the differences between clewn, vimGdb and pyclewn
 .. _gdb: http://www.gnu.org/software/gdb/gdb.html
 .. _pdb: http://docs.python.org/library/pdb.html
 .. _clewn: http://clewn.sourceforge.net
+.. _license: http://docs.python.org/2.7/license.html
 .. vim:filetype=rst:tw=78:ts=8:et:
 
