@@ -83,7 +83,7 @@ PDB_CMDS = {
     'threadstack': (),
 }
 
-# list of key mappings, used to build the .pyclewn_keys.gdb file
+# list of key mappings, used to build the .pyclewn_keys.pdb file
 #     key : (mapping, comment)
 MAPKEYS = {
     'S-B' : ('break',),
@@ -115,27 +115,18 @@ def remove_quotes(args):
     return args
 
 def tty_fobj(ttyname):
-    """Return the tty file object."""
-    tty = None
-    if ttyname and ttyname != os.devnull:
-        if not os.path.exists(ttyname):
-            critical('"%s" does not exist', ttyname)
-        else:
-            try:
-                tty = open(ttyname, 'r+')
-            except IOError, err:
-                critical(err)
-            else:
-                if os.name == 'posix' and not os.isatty(tty.fileno()):
-                    tty = None
-                    critical('"%s" is not a tty.', ttyname)
-    # fall back to '/dev/null'
-    if not tty:
-        try:
-            tty = open(os.devnull, 'r+')
-        except IOError, err:
-            critical(err)
-    return tty
+    """Return the tty stream object."""
+    if not os.path.exists(ttyname):
+        critical('terminal "%s" does not exist', ttyname)
+        return
+    try:
+        tty = open(ttyname, 'r+')
+    except IOError, err:
+        critical('%s: %s', ttyname, err)
+    else:
+        if not os.isatty(tty.fileno()):
+            info('"%s" is not a tty.', tty.name)
+        return tty
 
 def user_method_redirect(f):
     """user_method_redirect decorator."""
@@ -280,6 +271,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.poll = evtloop.Poll(self.socket_map)
 
         self.cmds.update(PDB_CMDS)
+        if os.name != 'nt':
+            self.pyclewn_cmds['inferiortty'] = ()
         self.cmds['help'] = self.cmds.keys()
         self.mapkeys.update(MAPKEYS)
 
@@ -629,13 +622,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                                         ' are: %s\n', str(CLEWN_CMDS))
         else:
             self.message = self.onecmd_message
-            _stdout = sys.stdout
-            sys.stdout = self.stdout
-            try:
-                method(cmd, args.strip())
-            finally:
-                sys.stdout = _stdout
-
+            method(cmd, args.strip())
             r = self.stdout.getvalue()
             if r:
                 self.console_print(r)
@@ -663,6 +650,22 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             cmd = '%s %s' % (cmd, args)
         # exec python statements
         self.default(cmd)
+
+    def cmd_inferiortty(self, cmd, args):
+        """Spawn pdb inferior terminal and setup pdb with this terminal."""
+        unused = cmd
+        ttyname = args
+        if not ttyname:
+            lines = self.inferiortty()
+            if lines:
+                ttyname = lines[0].split()[2]
+            else:
+                ttyname = os.devnull
+        tty = tty_fobj(ttyname)
+        if tty:
+            sys.stdin = sys.stdout = sys.stderr = tty
+            info('set inferior tty to %s', tty.name)
+            self.console_print('inferiortty %s\n' % tty.name)
 
     for n in ('enable', 'disable', 'condition', 'ignore', 'where',
                                 'bt', 'p', 'pp', 'alias', 'unalias'):
@@ -910,7 +913,10 @@ def main(pdb, options):
         sys.exit(1)
 
     if os.name != 'nt':
-        sys.stdin = sys.stdout = sys.stderr = tty_fobj(options.tty)
+        tty = tty_fobj(options.tty)
+        if tty:
+            info('set inferior tty to %s', tty.name)
+            sys.stdin = sys.stdout = sys.stderr = tty
     mainpyfile = argv[0]
     sys.path[0] = os.path.dirname(mainpyfile)
     sys.argv = argv

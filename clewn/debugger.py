@@ -47,6 +47,7 @@ import logging
 import heapq
 import string
 import copy
+import subprocess
 
 from clewn import *
 import clewn.misc as misc
@@ -717,6 +718,39 @@ class Debugger(object):
 
         """
         heapq.heappush(self._jobs, Job(time.time() + delta, callme))
+
+    def inferiortty(self):
+        """Spawn the inferior terminal."""
+        args = self.options.terminal.split(',')
+        result_file = misc.tmpfile('dbg')
+        args.extend(['inferior_tty.py', result_file.name])
+        info('inferiortty: %s' % args)
+        try:
+            subprocess.Popen(args)
+        except OSError, e:
+            self.console_print('Cannot spawn terminal: %s\n' % e)
+            return
+
+        start = time.time()
+        while time.time() - start < 2:
+            try:
+                f = None
+                try:
+                    f = open(result_file.name)
+                    lines = f.readlines()
+                    # commands found in the result file
+                    if len(lines) == 2 and lines[0].startswith('set'):
+                        return lines
+                finally:
+                    if f:
+                        f.close()
+            except IOError, e:
+                self.console_print(
+                        'Cannot set the inferior tty: %s\n' % e)
+                return
+            time.sleep(.20)
+
+        self.console_print('Failed to start inferior_tty.py.\n')
 
     def close(self):
         """Close the debugger and remove all signs in Vim."""

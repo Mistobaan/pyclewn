@@ -50,7 +50,7 @@ debug = False
 this_pgm = os.path.basename(sys.argv[0]).rsplit('.py', 1)[0]
 usage = ("""'%s' two characters sequence commands:
     'C-a q' exit immediately
-    'C-a c' close the slave pseudo terminal and exit after the gdb inferior has
+    'C-a c' close the slave pseudo terminal and exit after the inferior has
             terminated
     'C-a a' send a \'C-a\' character
 """ % this_pgm)

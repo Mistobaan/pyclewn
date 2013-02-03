@@ -554,7 +554,7 @@ class Vim(object):
             parser.add_option('--terminal',
                     type='string', default='xterm,-e',
                     help=('set the terminal to use with the inferiortty'
-                    ' command for running gdb inferior'
+                    ' command for running gdb or pdb inferior'
                     ' (default \'%default\')'))
         parser.add_option('--tty',
                 type='string', metavar='TTY', default=os.devnull,

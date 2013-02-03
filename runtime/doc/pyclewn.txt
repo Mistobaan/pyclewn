@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2013 January 27
+*pyclewn.txt*                                   Last change: 2013 February 3
 
 
                             PYCLEWN USER MANUAL
@@ -129,7 +129,7 @@ gdb debugger: >
 
 To start pyclewn with the pdb debugger: >
 
-    :Pyclewn pdb [scriptname]
+    :Pyclewn pdb [script.py]
 
 Next, the gdb debugger is started by running a debugger command from vim
 command line. For example, load foobar with the gdb command "file" and start
@@ -203,7 +203,7 @@ options:
                               select the gdb application (the default), with a
                               mandatory, possibly empty, PARAM_LIST
   --terminal=TERMINAL         set the terminal to use with the inferiortty
-                              command for running gdb inferior (default
+                              command for running gdb or pdb inferior (default
                               'xterm,-e')
   -d, --daemon                run as a daemon (default 'False')
   -p PGM, --pgm=PGM           set the debugger program to PGM
@@ -283,9 +283,10 @@ The full description of pyclewn options follows:
                         pyclewn --gdb=async,./project_name
 
 --terminal=TERMINAL Set the terminal to use with the inferiortty command for
-                    running gdb inferior (default 'xterm,-e'). The option is a
-                    comma separated list of the arguments needed to start the
-                    terminal and a program running in this terminal.
+                    running gdb or pdb inferior (default 'xterm,-e'). The
+                    option is a comma separated list of the arguments needed
+                    to start the terminal and a program running in this
+                    terminal.
 
 -d
 --daemon            Run as a daemon (default 'False'): on unix, pyclewn is
@@ -533,10 +534,11 @@ such as vim, run in this terminal. A <Ctl-C> typed in the terminal interrupts
 the debuggee.
 
 When pyclewn is started from vim with the|:Pyclewn|command, there is no
-terminal associated with pyclewn. The|:Cinferiortty|command provides the same
+terminal associated with pyclewn. The|inferiortty|command provides the same
 functionality as above and spawns the controlling terminal (using the
 --terminal option, default xterm) of the debuggee and sets accordingly gdb
-'inferior-tty' variable and the TERM environment variable.
+'inferior-tty' variable and the TERM environment variable. The gdb
+'inferior-tty' variable *MUST* be set *BEFORE* the inferior is started.
 
 One can also do step by step what the above command does automatically: start
 the "inferior_tty.py" script installed with pyclewn. This script creates a
@@ -733,10 +735,11 @@ commands that are listed here:
     * Chelp          print on the console, help on the pyclewn specific
                      commands (those on this list) in addition to the help on
                      the debugger commands
-
+                                                    *inferiortty*
     * Cinferiortty  spawn the controlling terminal (default xterm) of the
                     debuggee and sets accordingly gdb 'inferior-tty' variable
-                    and the TERM environment variable
+                    and the TERM environment variable; this command  *MUST* be
+                    issued *BEFORE* starting the inferior.
 
     * Cloglevel      print or set the log level dynamically from inside Vim
 
@@ -784,19 +787,25 @@ process and start the debugging session.
 
 Start a python script from Vim and debug it:
 -------------------------------------------
-To debug a python script named "scriptname", run the vim command (arg1, arg2,
-... being the scriptname command line arguments): >
+To debug a python script named "script.py", run the vim command (arg1, arg2,
+... being the script.py command line arguments): >
 
-    :Pyclewn pdb scriptname arg1 arg2 ...
+    :Pyclewn pdb script.py arg1 arg2 ...
 
 Or, more conveniently, debug the python script being edited in vim as the
 current buffer with: >
 
     :Pyclewn pdb %:p
 
-To redirect the debuggee output to another tty, use the "tty" option and set
-the "pyclewn_args" vim global variable before starting the script. For
-example: >
+On unix, the script is started without a controlling terminal unless the "tty"
+option has been set (see below). The|Cinferiortty|command spawns a controlling
+terminal (using the --terminal option that defaults to xterm) connected to a
+pseudo tty, and redirects all three standard streams of the script to this
+pseudo tty.
+
+One may also redirect the script output to another tty, using the "tty" option
+and setting the "pyclewn_args" vim global variable before starting the script.
+For example: >
 
     :let g:pyclewn_args="--tty=/dev/pts/4"
 
@@ -861,6 +870,17 @@ differently from the pdb commands of the Python standard library:
 interrupt
     This command interrupts the debuggee and is available from the
     "[running...]" prompt.
+
+                                                    *Cinferiortty*
+inferiortty
+    Without argument, the pdb command "inferiortty" spawns a terminal
+    connected to a pseudo tty and redirects all three standard streams to this
+    pseudo tty.
+    With the name of an existing pseudo tty as an argument, "inferiortty'
+    redirects all three standard streams to this pseudo tty (convenient for
+    re-using the same pseudo tty across multiple debugging sessions).
+    This command can be issued after the script has been started.
+    Available on unix.
 
                                                     *Cdetach*
 detach
@@ -1004,11 +1024,11 @@ terminates normaly. The Vim ":nbclose" command must be issued in order to
 start a new debugging session. See Vim issue 107 at
 http://code.google.com/p/vim/.
 
-When the debuggee is running multiple threads, the current I/O redirection
-scheme implemented by pyclewn may cause those non-debugged threads to write to
-the clewn console instead of sys.stdout. Note that this may be fixed in a
-later pyclewn release, by using the stdout redirection introduced by the "pdb"
-package in python 2.5.
+The|Cinterrupt|command does not properly interrupt the input() Python
+function. Workaround: after the Cinterrupt command has been issued while at
+the prompt displayed by input(), enter some data to allow the input() function
+to complete execution of its C code implementation, this allows pdb to gain
+control when back in python code and to stop.
 
 ==============================================================================
 7. Windows                                          *pyclewn-windows*

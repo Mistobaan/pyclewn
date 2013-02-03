@@ -4,7 +4,7 @@ News
 Pyclewn 1.10
 ------------
 
-.. January 27, 2013
+.. February 3, 2013
 
 New feature
 ^^^^^^^^^^^
@@ -18,9 +18,24 @@ New feature
   * pdb-clone fixes also some pdb long standing bugs and is easier to
     maintain.
 
+* Add the pdb ``inferiortty`` command to be used on unix when the python
+  script is started from Vim. The command can be issued at any time during the
+  debugging session.
+
+    * Without argument, ``inferiortty`` spawns a terminal connected to a
+      pseudo tty and redirects the script three standard streams to this
+      pseudo tty.
+
+    * With the name of an existing pseudo tty as an argument, ``inferiortty``
+      redirects all three standard streams to this pseudo tty (convenient for
+      re-using the same pseudo tty across multiple debugging sessions).
+
 Change
 ^^^^^^
 
+* An error message warns now the user when attempting to spawn the terminal
+  from gdb with the ``inferiortty`` command and the inferior has been already
+  started (this is too late).
 * pdb prints now a message to the console when the script has terminated.
 * Add file completion to the gdb command ``shell`` first argument.
 

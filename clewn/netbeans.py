@@ -28,6 +28,8 @@ import re
 import socket
 import asyncore
 import asynchat
+if os.name == 'posix':
+    import fcntl
 import difflib
 
 from clewn import *
@@ -135,6 +137,13 @@ def full_pathname(name):
     elif not os.path.isabs(name):
         name = os.path.abspath(name)
     return name
+
+def set_close_on_exec(socket):
+    if os.name == 'posix' and hasattr(fcntl, 'F_SETFD'):
+        fd = socket.fileno()
+        flags = fcntl.fcntl(fd, fcntl.F_GETFD, 0)
+        flags = flags | fcntl.FD_CLOEXEC
+        fcntl.fcntl(fd, fcntl.F_SETFD, flags)
 
 class LineCluster(object):
     """Group lines in a bounded list of elements of a maximum size.
@@ -621,6 +630,7 @@ class Server(asyncore.dispatcher):
         except ValueError:
             critical('"%s" is not a port number', port); raise
         try:
+            set_close_on_exec(self.socket)
             self.set_reuse_addr()
             self.bind((host, port))
             self.listen(1)
@@ -637,6 +647,7 @@ class Server(asyncore.dispatcher):
                                                                         addr)
                 return
 
+            set_close_on_exec(conn)
             conn.setblocking(0)
             self.netbeans = Netbeans(self._map, addr, self.passwd)
             self.netbeans.set_socket(conn)
