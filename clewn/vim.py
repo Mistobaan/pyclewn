@@ -549,7 +549,7 @@ class Vim:
             parser.add_option('--terminal',
                     type='string', default='xterm,-e',
                     help=('set the terminal to use with the inferiortty'
-                    ' command for running gdb inferior'
+                    ' command for running gdb or pdb inferior'
                     ' (default \'%default\')'))
         parser.add_option('--tty',
                 type='string', metavar='TTY', default=os.devnull,
@@ -638,8 +638,7 @@ class Vim:
         # Issue 12637 in Python 3.2: 'lastResort' prints all messages, even
         # those with level < WARNING.
         # See also issue 9501 in Python 3.3.0.
-        if (sys.version_info[:2] == (3, 2) and
-                getattr(logging, 'lastResort', None)):
+        if (sys.version_info[:2] == (3, 2) and hasattr(logging, 'lastResort')):
             logging.lastResort = None
 
         if not root.handlers:

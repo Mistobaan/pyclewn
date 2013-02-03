@@ -1,5 +1,6 @@
-2013-01-27  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+2013-02-3  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
+	* pydb.py debugger.py gdb.py: pdb script output redirection.
 	* setup.py pydb.py vim.py: Replace pdb with pdb-clone.
 	* pydb.py: When the Python script is started from Vim with the command
 	':Pyclewn pdb script.py', the script is terminated after the 'quit'

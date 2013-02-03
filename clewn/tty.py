@@ -175,7 +175,7 @@ class GdbInferiorPty:
         """Interconnect pty with our terminal."""
         self.master_fd, self.slave_fd = pty.openpty()
         self.ptyname = os.ttyname(self.slave_fd)
-        info('creating gdb inferior pseudo tty \'%s\'', self.ptyname)
+        info('creating inferior pseudo tty \'%s\'', self.ptyname)
         self.stdin_dsptch = FileDispatcher(sys.stdin.fileno(),
                                     enable_cmds=enable_cmds, map=self.map)
         self.master_dsptch = FileDispatcher(self.master_fd,

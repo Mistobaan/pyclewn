@@ -1053,41 +1053,25 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
     def cmd_inferiortty(self, *args):
         """Spawn gdb inferior terminal and setup gdb with this terminal."""
-        args = self.options.terminal.split(',')
-        result_file = misc.tmpfile('gdb')
-        args.extend(['inferior_tty.py', result_file.name])
-        info('inferiortty: {}'.format(args))
-        try:
-            subprocess.Popen(args)
-        except OSError as e:
-            self.console_print('Cannot spawn terminal: {}\n'.format(e))
-            self.prompt()
-            return
+        unused = args
 
-        start = time.time()
-        while True:
-            try:
-                with open(result_file.name) as f:
-                    lines = f.readlines()
-                    # gdb commands found in the result file
-                    if len(lines) == 2 and lines[0].startswith('set'):
-                        def set_inferior_tty(line):
-                            cmd, args = line.split(' ', 1)
-                            self.cmd_fifo.append(
-                                    (self.default_cmd_processing,
-                                     cmd, args.strip()))
-                        set_inferior_tty(lines[0])
-                        set_inferior_tty(lines[1])
-                        break
-            except IOError as e:
-                self.console_print(
-                        'Cannot set gdb inferior-tty: {}\n'.format(e))
-                break
-            if time.time() - start > 2:
-                self.console_print('Cannot spawn the terminal:'
-                            ' "{}".\n'.format(self.options.terminal))
-                break
-            time.sleep(.20)
+        def set_inferior_tty(line):
+            cmd, args = line.split(' ', 1)
+            self.cmd_fifo.append(
+                    (self.default_cmd_processing,
+                     cmd, args.strip()))
+
+        if self.info.frame:
+            self.console_print(
+            'Cannot create the terminal, the inferior is already started.\n'
+            'The gdb variable inferior-tty must be set *before*'
+            ' starting the inferior.\n'
+            )
+        else:
+            lines = self.inferiortty()
+            if lines:
+                set_inferior_tty(lines[0])
+                set_inferior_tty(lines[1])
         self.prompt()
 
     def cmd_cwindow(self, cmd, *args):

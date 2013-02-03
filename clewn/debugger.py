@@ -47,6 +47,7 @@ import logging
 import heapq
 import string
 import copy
+import subprocess
 from abc import ABCMeta, abstractmethod
 
 from .__init__ import *
@@ -713,6 +714,34 @@ class Debugger:
 
         """
         heapq.heappush(self._jobs, Job(time.time() + delta, callme))
+
+    def inferiortty(self):
+        """Spawn the inferior terminal."""
+        args = self.options.terminal.split(',')
+        result_file = misc.tmpfile('dbg')
+        args.extend(['inferior_tty.py', result_file.name])
+        info('inferiortty: {}'.format(args))
+        try:
+            subprocess.Popen(args)
+        except OSError as e:
+            self.console_print('Cannot spawn terminal: {}\n'.format(e))
+            return
+
+        start = time.time()
+        while time.time() - start < 2:
+            try:
+                with open(result_file.name) as f:
+                    lines = f.readlines()
+                    # commands found in the result file
+                    if len(lines) == 2 and lines[0].startswith('set'):
+                        return lines
+            except IOError as e:
+                self.console_print(
+                        'Cannot set the inferior tty: {}\n'.format(e))
+                return
+            time.sleep(.20)
+
+        self.console_print('Failed to start inferior_tty.py.\n')
 
     def close(self):
         """Close the debugger and remove all signs in Vim."""
