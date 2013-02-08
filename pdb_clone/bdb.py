@@ -542,6 +542,17 @@ class Tracer:
                 frame.f_code.co_firstlineno in self.breakpoints[filename]):
             return True
 
+    def settrace(self, do_set):
+        """Set or remove the trace function."""
+        if do_set:
+            sys.settrace(self.trace_dispatch)
+        else:
+            sys.settrace(None)
+
+    def gettrace(self):
+        """Return the trace object."""
+        return sys.gettrace()
+
     # The following methods are not on the fast path.
 
     def user_method(self, frame, method, *args, **kwds):
@@ -639,7 +650,7 @@ class Bdb(BdbTracer):
         # Stop tracing, the thread trace function 'c_tracefunc' is NULL and
         # thus, call_trampoline() is not called anymore for all debug events:
         # PyTrace_CALL, PyTrace_RETURN, PyTrace_EXCEPTION and PyTrace_LINE.
-        sys.settrace(None)
+        self.settrace(False)
 
         # See PyFrame_GetLineNumber() in Objects/frameobject.c for why the
         # local trace functions must be deleted.
@@ -681,7 +692,7 @@ class Bdb(BdbTracer):
         # First disable tracing temporarily as set_trace() may be called while
         # tracing is in use. For example when called from a signal handler and
         # within a debugging session started with runcall().
-        sys.settrace(None)
+        self.settrace(False)
 
         if not frame:
             frame = sys._getframe().f_back
@@ -704,10 +715,7 @@ class Bdb(BdbTracer):
         if not self.botframe.f_trace:
             self.botframe.f_trace = self.trace_dispatch
 
-        if _bdb:
-            self.set_trace_dispatch()
-        else:
-            sys.settrace(self.trace_dispatch)
+        self.settrace(True)
 
     def get_traceobj(self):
         # Do not raise BdbQuit when debugging is started with set_trace.
@@ -715,7 +723,7 @@ class Bdb(BdbTracer):
             raise BdbQuit
         # Do not re-install the local trace when we are finished debugging, see
         # issues 16482 and 7238.
-        if not sys.gettrace():
+        if not self.gettrace():
             return None
         if _bdb:
             return self
@@ -916,16 +924,13 @@ class Bdb(BdbTracer):
         self.reset()
         if isinstance(cmd, str):
             cmd = compile(cmd, "<string>", "exec")
-        if _bdb:
-            self.set_trace_dispatch()
-        else:
-            sys.settrace(self.trace_dispatch)
+        self.settrace(True)
         try:
             exec(cmd, globals, locals)
         except BdbQuit:
             pass
         finally:
-            sys.settrace(None)
+            self.settrace(False)
 
     def runeval(self, expr, globals=None, locals=None):
         if globals is None:
@@ -934,16 +939,13 @@ class Bdb(BdbTracer):
         if locals is None:
             locals = globals
         self.reset()
-        if _bdb:
-            self.set_trace_dispatch()
-        else:
-            sys.settrace(self.trace_dispatch)
+        self.settrace(True)
         try:
             return eval(expr, globals, locals)
         except BdbQuit:
             pass
         finally:
-            sys.settrace(None)
+            self.settrace(False)
 
     def runctx(self, cmd, globals, locals):
         # B/W compatibility
@@ -953,17 +955,14 @@ class Bdb(BdbTracer):
 
     def runcall(self, func, *args, **kwds):
         self.reset(ignore_first_call_event=False)
-        if _bdb:
-            self.set_trace_dispatch()
-        else:
-            sys.settrace(self.trace_dispatch)
+        self.settrace(True)
         res = None
         try:
             res = func(*args, **kwds)
         except BdbQuit:
             pass
         finally:
-            sys.settrace(None)
+            self.settrace(False)
         return res
 
 

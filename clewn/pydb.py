@@ -78,6 +78,7 @@ PDB_CMDS = {
     'pp': (),
     'alias': (),
     'unalias': (),
+    'commands': (),
     'threadstack': (),
 }
 
@@ -290,7 +291,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                 if not bp.enabled:
                     self.update_bp(bp.number, True)
 
-        self.do_prompt()
+        self.print_prompt()
 
     def close(self):
         """Close the netbeans session."""
@@ -300,20 +301,20 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.let_target_run = True
         self.set_continue()
 
-    def do_prompt(self, timed=False):
+    def print_prompt(self, timed=False):
         """Print the prompt in the Vim debugger console."""
         if self.stop_interaction:
-            self._prompt_str = '[running...] '
+            self.prompt = '[running...] '
         else:
-            self._prompt_str = '(pdb) '
+            self.prompt = '(Pdb) '
             # Do not flush on timeout when running the test suite.
             if self.testrun:
-                self.print_prompt()
+                debugger.Debugger.print_prompt(self)
                 return
         if timed:
-            self.get_console().timeout_append(self._prompt_str)
+            self.get_console().timeout_append(self.prompt)
         else:
-            self.print_prompt()
+            debugger.Debugger.print_prompt(self)
 
     def hilite_frame(self):
         """Highlite the frame sign."""
@@ -445,9 +446,19 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     @user_method_redirect
     def user_line(self, frame, breakpoint_hits=None):
         """Override user_line to set 'doprint_trace' when breaking."""
-        if self.get_breaks(frame.f_code.co_filename, frame.f_lineno):
+        if breakpoint_hits:
             self.doprint_trace = True
-        pdb.Pdb.user_line(self, frame, breakpoint_hits)
+            commands_result = self.bp_commands(frame, breakpoint_hits)
+            if commands_result:
+                self.stop_interaction = False
+                self.doprint_trace = False
+                doprompt, silent = commands_result
+                if not silent:
+                    self.print_stack_entry(self.stack[self.curindex])
+                self.forget()
+                if not doprompt:
+                    return
+        self.interaction(frame, None)
 
     @user_method_redirect
     def user_return(self, frame, return_value):
@@ -459,21 +470,15 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         """This function is called if an exception occurs."""
         pdb.Pdb.user_exception(self, frame, exc_info)
 
-    def default(self, line):
-        """Override 'default' to allow ':C import sys; sys.exit(0)'."""
-        locals_ = self.get_locals(self.curframe)
-        globals_ = self.curframe.f_globals
-        try:
-            code = compile(line + '\n', '<stdin>', 'single')
-            exec(code, globals_, locals_)
-        except SystemExit:
-            raise
-        except:
-            t, v = sys.exc_info()[:2]
-            if isinstance(t, type('')):
-                exc_type_name = t
-            else: exc_type_name = t.__name__
-            self.message('***', exc_type_name + ':', v)
+    def cmdloop(self):
+        """Command loop used in pyclewn, only to define breakpoint commands."""
+        while not self.stop_interaction and self.started:
+            # commands queued after the ';;' separator
+            if self.cmdqueue:
+                self.onecmd(self.cmdqueue.pop(0))
+            else:
+                self.poll.run(debugger.LOOP_TIMEOUT)
+        self.stop_interaction = False
 
     def print_stack_entry(self, frame_lineno, prompt_prefix=pdb.line_prefix):
         """Override print_stack_entry."""
@@ -547,7 +552,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.doprint_trace = False
 
         self.hilite_frame()
-        self.do_prompt()
+        self.print_prompt()
         assert not self.stop_interaction
         try:
             while not self.stop_interaction and self.started:
@@ -564,7 +569,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                         self.poll.run(debugger.LOOP_TIMEOUT)
                 except KeyboardInterrupt:
                     self.console_print('--KeyboardInterrupt--\n')
-                    self.do_prompt()
+                    self.print_prompt()
                 finally:
                     self.allow_kbdint = False
             self.stop_interaction = False
@@ -590,14 +595,26 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     #-----------------------------------------------------------------------
 
     def onecmd(self, line):
-        """Process a line as a command."""
+        """Process a line as a command.
+
+        This method is called from the asyncore loop, and also when parsing
+        .pdbrc or executing breakpoint commands.
+        """
         debug('onecmd: %s', line)
         if not line:
             return False
 
         # alias substitution
         line = self.precmd(line)
-        self.console_print('%s\n', line)
+
+        if self.commands_defining:
+            if line == 'interrupt':
+                raise KeyboardInterrupt
+            if self.handle_command_def(line):
+                self.stop_interaction = True
+            else:
+                debugger.Debugger.print_prompt(self)
+            return self.stop_interaction
 
         cmd, args = (lambda a, b='': (a, b))(*line.split(None, 1))
         try:
@@ -619,10 +636,10 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
         if cmd not in ('mapkeys', 'dumprepr', 'loglevel'):
             # A timed printout, printed  by the background task when it flushes
-            # the console 500 msecs msecs after the do_prompt call, unless a new
-            # console_print call wipes out the prompt mean time, see
+            # the console 500 msecs msecs after the print_prompt call, unless a
+            # new console_print call wipes out the prompt mean time, see
             # netbeans.Console.
-            self.do_prompt(True)
+            self.print_prompt(True)
 
         return self.stop_interaction
 
@@ -631,6 +648,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         unused = method
         if args:
             cmd = '%s %s' % (cmd, args)
+        self.console_print('%s\n', cmd)
         self.onecmd(cmd)
 
     def default_cmd_processing(self, cmd, args):
@@ -854,6 +872,19 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             except KeyboardInterrupt:
                 pass
 
+    def cmd_commands(self, cmd, args):
+        """Enter breakpoint commands."""
+        unused = cmd
+        self.console_print(
+            'Type the commands to be executed when this breakpoint is hit:\n'
+            'In Vim command line, type the "C" prefix, followed by a space'
+            ' and the command.\n'
+            'End with a line saying just "C end".\n'
+            )
+        self.prompt = '(com) '
+        debugger.Debugger.print_prompt(self)
+        return self.do_commands(args)
+
     #-----------------------------------------------------------------------
     #   netbeans events
     #-----------------------------------------------------------------------
@@ -910,7 +941,9 @@ def main(pdb, options):
     try:
         pdb.attached = False
         pdb._runscript(mainpyfile)
-    except BaseException as e:
+    except SystemExit:
+        raise
+    except Exception as e:
         trace_type = 'Uncaught exception:\n    %r\n' %e
         trace_type += 'Entering post mortem debugging.'
         pdb.trace_type = trace_type

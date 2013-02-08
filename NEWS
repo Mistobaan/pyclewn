@@ -4,19 +4,20 @@ News
 Pyclewn 1.10
 ------------
 
-.. February 3, 2013
+.. February 7, 2013
 
 New feature
 ^^^^^^^^^^^
 
-* Use now pdb-clone_ instead of the standard library python debugger, pdb_.
+* Use now pdb-clone_ instead of the standard library Python debugger, pdb_.
 
-  * pdb-clone improves significantly pdb performance. With breakpoints,
-    pdb-clone runs at about 2 times the speed of the interpreter while pdb
-    runs at 10 to 100 times the speed of the interpreter.
+  * With breakpoints, pyclewn runs now just above the speed of the
+    Python interpreter, while the command line Python debugger pdb runs at 10
+    to 100 times the speed of the interpreter.
 
-  * pdb-clone fixes also some pdb long standing bugs and is easier to
-    maintain.
+  * pdb-clone fixes also many pdb long standing bugs.
+
+* Add the pdb ``commands`` command.
 
 * Add the pdb ``inferiortty`` command to be used on unix when the python
   script is started from Vim. The command can be issued at any time during the

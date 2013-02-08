@@ -140,6 +140,7 @@ def full_pathname(name):
     return name
 
 def set_close_on_exec(socket):
+    """Set the FD_CLOEXEC flag."""
     if os.name == 'posix' and hasattr(fcntl, 'F_SETFD'):
         fd = socket.fileno()
         flags = fcntl.fcntl(fd, fcntl.F_GETFD, 0)

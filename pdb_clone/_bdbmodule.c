@@ -4,6 +4,16 @@
 #include "structmember.h"
 #include "frameobject.h"
 
+/* The trace function receives all the PyTrace_LINE events, even when f_trace
+ * is NULL. The interpreter calls _PyCode_CheckLineNumber() for each of these
+ * events and the processing in this function is costly. An optimization is
+ * done when TRACE_AND_PROFILE is defined that uses a profiler function
+ * whenever possible (when there is no need to trace the lines of a function).
+ * The profiler still gets PyTrace_C_CALL events but there is not much overhead
+ * with these events. The performance gain obtained is about 30%.
+*/
+#define TRACE_AND_PROFILE 1
+
 typedef struct {
     PyObject_HEAD
 
@@ -35,6 +45,13 @@ typedef struct {
     PyObject *code_bps;         /* The current code_bps object. */
     PyCodeObject *f_code;       /* The current f_code object. */
 } BdbTracer;
+
+static int tracer(PyObject *, PyFrameObject *, int, PyObject *);
+static PyObject * trace_call(BdbTracer *, PyFrameObject *, PyObject *);
+static PyObject * trace_return(BdbTracer *, PyFrameObject *, PyObject *);
+#ifdef TRACE_AND_PROFILE
+static int profiler(PyObject *, PyFrameObject *, int, PyObject *);
+#endif
 
 static PyMemberDef
 BdbTracer_members[] = {
@@ -343,135 +360,60 @@ tracer(PyObject *traceobj, PyFrameObject *frame, int what, PyObject *arg)
 {
     BdbTracer *self = (BdbTracer *)traceobj;
     PyObject *module_bps;
-    PyFrameObject *f_back;
     PyObject *result;
     PyObject *tmp;
-    int lineno;
     int rc;
 
     if(what != PyTrace_CALL && frame->f_trace == NULL)
-        return 0;
+        goto exit;
 
     /* One case where arg is NULL is at the return event that follows an
      * exception event. */
     if (arg == NULL)
         arg = Py_None;
 
-    /* A LINE event. */
-    if (what == PyTrace_LINE) {
-        rc = stop_here(self, frame);
-        if (rc == -1)
-            goto fail;
-        else if (rc) {
-            result = user_method(self, frame, "user_line", NULL);
-            goto fin;
-        }
-
-        module_bps = bkpt_at_line(self, frame);
-        if (module_bps == NULL)
-            goto fail;
-        else if (module_bps == Py_None)
-            Py_DECREF(Py_None);
-        else {
-            result = user_method(self, frame, "bkpt_user_line", module_bps);
-            Py_DECREF(module_bps);
-            goto fin;
-        }
-    }
-
-    /* A CALL event. */
-    else if (what == PyTrace_CALL) {
-        if (self->ignore_first_call_event) {
-            self->ignore_first_call_event = 0;
-            Py_INCREF(self);
-            result = (PyObject *)self;
-            goto fin;
-        }
-
-        rc = PySequence_Contains(self->skip_calls, (PyObject *)frame->f_code);
-        if (rc == -1)
-            goto fail;
-        else if (rc) {
-            Py_INCREF(Py_None);
-            result = Py_None;
-            goto fin;
-        }
-
-        rc = stop_here(self, frame);
-        if (rc == -1)
-            goto fail;
-        result = bkpt_in_code(self, frame);
-        if (result == NULL)
-            goto fail;
-        if (! rc && result == Py_None)
-            goto fin;
-        Py_DECREF(result);
-        if (rc) {
-            result = user_method(self, frame, "user_call", arg);
-            goto fin;
-        }
-    }
-
-    /* A RETURN event. */
-    else if (what == PyTrace_RETURN) {
-        rc = stop_here(self, frame);
-        if (rc == -1)
-            goto fail;
-        if (rc || (PyObject *)frame == self->stopframe) {
-            result = user_method(self, frame, "user_return", arg);
-            if (result == NULL)
+    switch (what) {
+        case PyTrace_LINE:
+            rc = stop_here(self, frame);
+            if (rc == -1)
                 goto fail;
-            else if (result == Py_None)
+            else if (rc) {
+                result = user_method(self, frame, "user_line", NULL);
                 goto fin;
-            Py_DECREF(result);
-
-            lineno = PyLong_AsLong(self->stop_lineno);
-            if (lineno == -1 && PyErr_Occurred())
-                goto fail;
-            if ((PyObject *)frame != self->botframe &&
-                    ((self->stopframe == Py_None && lineno == 0) ||
-                    (PyObject *)frame == self->stopframe)) {
-                f_back = frame->f_back;
-                if (f_back != NULL && f_back->f_trace == NULL) {
-                    Py_INCREF(self);
-                    /* f_lineno must be accurate when f_trace is set. */
-                    f_back->f_lineno = PyFrame_GetLineNumber(f_back);
-                    f_back->f_trace = (PyObject *)self;
-                }
-
-                tmp = self->stopframe;
-                Py_INCREF(Py_None);
-                self->stopframe = Py_None;
-                Py_DECREF(tmp);
-
-                tmp = self->stop_lineno;
-                self->stop_lineno = PyLong_FromLong(0L);
-                Py_DECREF(tmp);
-
             }
-        }
 
-        if ((PyObject *)frame == self->botframe) {
-            result = PyObject_CallMethod((PyObject *)self,
-                                         "stop_tracing", "(O)", frame);
-            if (result == NULL)
+            module_bps = bkpt_at_line(self, frame);
+            if (module_bps == NULL)
                 goto fail;
-            Py_DECREF(result);
-            Py_INCREF(Py_None);
-            result = Py_None;
-            goto fin;
-        }
-    }
+            else if (module_bps == Py_None)
+                Py_DECREF(Py_None);
+            else {
+                result = user_method(self, frame, "bkpt_user_line", module_bps);
+                Py_DECREF(module_bps);
+                goto fin;
+            }
+            break;
 
-    /* An EXCEPTION event. */
-    else if (what == PyTrace_EXCEPTION) {
-        rc = stop_here(self, frame);
-        if (rc == -1)
-            goto fail;
-        else if (rc) {
-            result = user_method(self, frame, "user_exception", arg);
+        case PyTrace_CALL:
+            result = trace_call(self, frame, arg);
             goto fin;
-        }
+
+        case PyTrace_RETURN:
+            result = trace_return(self, frame, arg);
+            goto fin;
+
+        case PyTrace_EXCEPTION:
+            rc = stop_here(self, frame);
+            if (rc == -1)
+                goto fail;
+            else if (rc) {
+                result = user_method(self, frame, "user_exception", arg);
+                goto fin;
+            }
+            break;
+
+        default:
+            break;
     }
 
     Py_INCREF(self);
@@ -486,8 +428,27 @@ fin:
         Py_XDECREF(tmp);
         frame->f_trace = result;
     }
-    else
+    else {
         Py_DECREF(result);
+#ifdef TRACE_AND_PROFILE
+        /* Lines are not traced in this frame. */
+        if (what == PyTrace_CALL) {
+            PyEval_SetProfile(profiler, (PyObject *)self);
+            PyEval_SetTrace(NULL, NULL);
+        }
+#endif
+    }
+
+exit:
+#ifdef TRACE_AND_PROFILE
+    /* Returning to the calling frame where lines are not traced. */
+    if (what == PyTrace_RETURN && (PyObject *)frame != self->botframe) {
+        if (frame->f_back != NULL && frame->f_back->f_trace == NULL) {
+            PyEval_SetProfile(profiler, (PyObject *)self);
+            PyEval_SetTrace(NULL, NULL);
+        }
+    }
+#endif
     return 0;
 
 fail:
@@ -496,6 +457,151 @@ fail:
     Py_XDECREF(frame->f_trace);
     frame->f_trace = NULL;
     return -1;
+}
+
+#ifdef TRACE_AND_PROFILE
+static int
+profiler(PyObject *traceobj, PyFrameObject *frame, int what, PyObject *arg)
+{
+    BdbTracer *self = (BdbTracer *)traceobj;
+    PyObject *result;
+    PyObject *tmp;
+
+    switch (what) {
+        case PyTrace_CALL:
+            result = trace_call(self, frame, arg);
+            if (result == NULL) {
+                PyTraceBack_Here(frame);
+                PyEval_SetProfile(NULL, NULL);
+                return -1;
+            }
+            /* Need to trace the lines in this frame. */
+            else if (result != Py_None) {
+                tmp = frame->f_trace;
+                frame->f_trace = NULL;
+                Py_XDECREF(tmp);
+                frame->f_trace = result;
+                PyEval_SetTrace(tracer, (PyObject *)self);
+                PyEval_SetProfile(NULL, NULL);
+            }
+            else
+                Py_DECREF(result);
+            break;
+
+        case PyTrace_RETURN:
+            if ((PyObject *)frame == self->botframe)
+                PyEval_SetProfile(NULL, NULL);
+            else if (frame->f_back != NULL && frame->f_back->f_trace != NULL) {
+                PyEval_SetTrace(tracer, (PyObject *)self);
+                PyEval_SetProfile(NULL, NULL);
+            }
+            break;
+
+        /* PyTrace_EXCEPTION
+           PyTrace_C_CALL
+           PyTrace_C_RETURN
+           PyTrace_C_EXCEPTION */
+        default:
+            break;
+    }
+    return 0;
+}
+#endif
+
+static PyObject *
+trace_call(BdbTracer *self, PyFrameObject *frame, PyObject *arg)
+{
+    PyObject *result;
+    int rc;
+
+    if (self->ignore_first_call_event) {
+        self->ignore_first_call_event = 0;
+        Py_INCREF(self);
+        return (PyObject *)self;
+    }
+
+    rc = PySequence_Contains(self->skip_calls, (PyObject *)frame->f_code);
+    if (rc == -1)
+        return NULL;
+    else if (rc) {
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+
+    rc = stop_here(self, frame);
+    if (rc == -1)
+        return NULL;
+    result = bkpt_in_code(self, frame);
+    if (result == NULL)
+        return NULL;
+    if (! rc && result == Py_None)
+        return result;
+    Py_DECREF(result);
+    if (rc)
+        return user_method(self, frame, "user_call", arg);
+
+    Py_INCREF(self);
+    return (PyObject *)self;
+}
+
+static PyObject *
+trace_return(BdbTracer *self, PyFrameObject *frame, PyObject *arg)
+{
+    PyFrameObject *f_back;
+    PyObject *result;
+    PyObject *tmp;
+    int lineno;
+    int rc;
+
+    rc = stop_here(self, frame);
+    if (rc == -1)
+        return NULL;
+    if (rc || (PyObject *)frame == self->stopframe) {
+        result = user_method(self, frame, "user_return", arg);
+        if (result == NULL)
+            return NULL;
+        else if (result == Py_None)
+            return Py_None;
+        Py_DECREF(result);
+
+        lineno = PyLong_AsLong(self->stop_lineno);
+        if (lineno == -1 && PyErr_Occurred())
+            return NULL;
+        if ((PyObject *)frame != self->botframe &&
+                ((self->stopframe == Py_None && lineno == 0) ||
+                (PyObject *)frame == self->stopframe)) {
+            f_back = frame->f_back;
+            if (f_back != NULL && f_back->f_trace == NULL) {
+                Py_INCREF(self);
+                /* f_lineno must be accurate when f_trace is set. */
+                f_back->f_lineno = PyFrame_GetLineNumber(f_back);
+                f_back->f_trace = (PyObject *)self;
+            }
+
+            tmp = self->stopframe;
+            Py_INCREF(Py_None);
+            self->stopframe = Py_None;
+            Py_DECREF(tmp);
+
+            tmp = self->stop_lineno;
+            self->stop_lineno = PyLong_FromLong(0L);
+            Py_DECREF(tmp);
+
+        }
+    }
+
+    if ((PyObject *)frame == self->botframe) {
+        result = PyObject_CallMethod((PyObject *)self,
+                                     "stop_tracing", "(O)", frame);
+        if (result == NULL)
+            return NULL;
+        Py_DECREF(result);
+        Py_INCREF(Py_None);
+        return Py_None;
+    }
+
+    Py_INCREF(self);
+    return (PyObject *)self;
 }
 
 static PyObject *
@@ -553,7 +659,7 @@ BdbTracer_stop_here(BdbTracer *self, PyObject *args)
     PyFrameObject *frame;
     int rc;
 
-    if (! PyArg_ParseTuple(args, "O!", &PyFrame_Type, &frame))
+    if (! PyArg_ParseTuple(args, "O!:stop_here", &PyFrame_Type, &frame))
         return NULL;
 
     rc = stop_here(self, frame);
@@ -566,11 +672,47 @@ BdbTracer_stop_here(BdbTracer *self, PyObject *args)
 }
 
 static PyObject *
-BdbTracer_set_trace_dispatch(BdbTracer *self)
+BdbTracer_settrace(BdbTracer *self, PyObject *args)
 {
-    PyEval_SetTrace(tracer, (PyObject *)self);
+    PyObject *do_set;
+
+    if (! PyArg_ParseTuple(args, "O!:settrace", &PyBool_Type, &do_set))
+        return NULL;
+
+    if (do_set == Py_True) {
+        PyEval_SetTrace(tracer, (PyObject *)self);
+#ifdef TRACE_AND_PROFILE
+        PyEval_SetProfile(NULL, NULL);
+#endif
+    }
+    else {
+        PyEval_SetTrace(NULL, NULL);
+#ifdef TRACE_AND_PROFILE
+        PyEval_SetProfile(NULL, NULL);
+#endif
+    }
+
     Py_INCREF(Py_None);
     return Py_None;
+}
+
+static PyObject *
+BdbTracer_gettrace(BdbTracer *self)
+{
+    PyObject *temp;
+
+    PyThreadState *tstate = PyThreadState_GET();
+    if (tstate->c_traceobj != NULL
+#ifdef TRACE_AND_PROFILE
+            || tstate->c_profileobj != NULL
+#endif
+            )
+        temp = (PyObject *) self;
+    else
+        temp = Py_None;
+
+    Py_INCREF(temp);
+    return temp;
 }
 
 static PyObject *
@@ -596,8 +738,8 @@ static PyMethodDef BdbTracer_methods[] = {
     {"reset", (PyCFunction)BdbTracer_reset, METH_VARARGS | METH_KEYWORDS,
             NULL},
     {"stop_here", (PyCFunction)BdbTracer_stop_here, METH_VARARGS, NULL},
-    {"set_trace_dispatch", (PyCFunction)BdbTracer_set_trace_dispatch,
-            METH_NOARGS, NULL},
+    {"settrace", (PyCFunction)BdbTracer_settrace, METH_VARARGS, NULL},
+    {"gettrace", (PyCFunction)BdbTracer_gettrace, METH_NOARGS, NULL},
     {"stop_tracing", (PyCFunction)BdbTracer_stop_tracing,
             METH_VARARGS | METH_KEYWORDS, PyDoc_STR("Method overriden.")},
     {"is_skipped_module", (PyCFunction)BdbTracer_is_skipped_module,

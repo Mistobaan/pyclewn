@@ -394,7 +394,7 @@ class Debugger:
             process enqueued jobs when True
         _last_balloon: str
             The last balloonText event received.
-        _prompt_str: str
+        prompt: str
             The prompt printed on the console.
         _consbuffered: boolean
             True when output to the vim debugger console is buffered
@@ -425,7 +425,7 @@ class Debugger:
         self._jobs = []
         self._jobs_enabled = False
         self._last_balloon = ''
-        self._prompt_str = '(%s) ' % self.__class__.__name__.lower()
+        self.prompt = '(%s) ' % self.__class__.__name__.lower()
         self._consbuffered = False
         self.__nbsock = None
 
@@ -661,19 +661,16 @@ class Debugger:
         """
         self.__nbsock.show_balloon(text)
 
-    def prompt(self):
+    def print_prompt(self):
         """Print the prompt in the Vim debugger console."""
         # no buffering until the first prompt:
         # workaround to a bug in netbeans/Vim that does not redraw the
         # console on the first 'insert'
         self._consbuffered = True
-        self.console_print(self._prompt_str)
+        self.console_print(self.prompt)
         console = self.__nbsock.console
         if self.started and console.buf.registered:
             console.flush()
-
-    # prompt is a Cmd class attribute, do not use it with pdb
-    print_prompt = prompt
 
     def get_console(self):
         """Return the console."""
@@ -1078,7 +1075,7 @@ class Debugger:
         table = {'cmd': cmd, 'C': self.options.prefix}
         self.console_print("'%(cmd)s' cannot be used as '%(C)s' parameter,"
                 " use '%(C)s%(cmd)s' instead.\n" % table)
-        self.prompt()
+        self.print_prompt()
 
     def cmd_unmapkeys(self, cmd, *args):
         """Unmap the pyclewn keys.
