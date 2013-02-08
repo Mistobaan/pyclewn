@@ -1488,7 +1488,7 @@ class Project(OobCommand):
                     info(msg)
                     self.gdb.console_print('%s\n', msg)
                     if not quitting:
-                        self.gdb.prompt()
+                        self.gdb.print_prompt()
                 except IOError, errmsg:
                     pass
             else:
@@ -1498,7 +1498,7 @@ class Project(OobCommand):
                 error(errmsg)
                 self.gdb.console_print('%s\n', errmsg)
                 if not quitting:
-                    self.gdb.prompt()
+                    self.gdb.print_prompt()
         return False
 
 class Quit(OobCommand):

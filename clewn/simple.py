@@ -266,7 +266,7 @@ class Simple(debugger.Debugger):
     def start(self):
         """Start the debugger."""
         self.console_print('\n')
-        self.prompt()
+        self.print_prompt()
 
         # start the debuggee
         if self.inferior is None:
@@ -330,7 +330,7 @@ class Simple(debugger.Debugger):
         unused = cmd
         unused = args
         self.console_print('Command ignored.\n')
-        self.prompt()
+        self.print_prompt()
 
     def cmd_break(self, cmd, args):
         """Set a breakpoint at a specified line.
@@ -356,7 +356,7 @@ class Simple(debugger.Debugger):
                 self.lnum = 0
 
         self.console_print(result)
-        self.prompt()
+        self.print_prompt()
 
     def cmd_dbgvar(self, cmd, args):
         """Add a variable to the debugger variable buffer."""
@@ -367,7 +367,7 @@ class Simple(debugger.Debugger):
             self.console_print('Invalid arguments.\n')
         else:
             self.varobj.add(args[0])
-        self.prompt()
+        self.print_prompt()
 
     def cmd_delvar(self, cmd, args):
         """Delete a variable from the debugger variable buffer."""
@@ -378,12 +378,12 @@ class Simple(debugger.Debugger):
             self.console_print('Invalid arguments.\n')
         elif not self.varobj.delete(args[0]):
             self.console_print('"%s" not found.\n' % args[0])
-        self.prompt()
+        self.print_prompt()
 
     def cmd_help(self, *args):
         """Print help on the simple commands."""
         debugger.Debugger.cmd_help(self, *args)
-        self.prompt()
+        self.print_prompt()
 
     def set_bpstate(self, cmd, args, enable):
         """Change the state of one breakpoint."""
@@ -403,7 +403,7 @@ class Simple(debugger.Debugger):
                     result = 'No breakpoint number %d.\n' % bp_id
 
         self.console_print(result)
-        self.prompt()
+        self.print_prompt()
 
     def cmd_disable(self, cmd, args):
         """Disable one breakpoint.
@@ -426,7 +426,7 @@ class Simple(debugger.Debugger):
         unused = cmd
         if args:
             self.console_print('%s\n', args)
-        self.prompt()
+        self.print_prompt()
 
     def cmd_step(self, *args):
         """Step program until it reaches a different source line."""
@@ -440,7 +440,7 @@ class Simple(debugger.Debugger):
                 self.move_frame(True)
             else:
                 self.console_print('The inferior progam is running.\n')
-        self.prompt()
+        self.print_prompt()
 
     def cmd_continue(self, *args):
         """Continue the program being debugged, also used to start the program."""
@@ -452,7 +452,7 @@ class Simple(debugger.Debugger):
             if not self.inferior.run_continue():
                 self.console_print('The inferior progam is running.\n')
         self.move_frame(False)
-        self.prompt()
+        self.print_prompt()
 
     def cmd_interrupt(self, *args):
         """Interrupt the execution of the debugged program."""
@@ -460,7 +460,7 @@ class Simple(debugger.Debugger):
         assert self.inferior is not None
         if self.inferior.interrupt():
             self.move_frame(True)
-        self.prompt()
+        self.print_prompt()
 
     def cmd_quit(self, *args):
         """Quit the current simple session."""
@@ -473,14 +473,14 @@ class Simple(debugger.Debugger):
         unused = self
         unused = args
         self.console_print('Not implemented.\n')
-        self.prompt()
+        self.print_prompt()
 
     def cmd_symcompletion(self, *args):
         """Populate the break and clear commands with symbols completion (not implemented)."""
         unused = self
         unused = args
         self.console_print('Not implemented.\n')
-        self.prompt()
+        self.print_prompt()
 
     #-----------------------------------------------------------------------
     #   netbeans events

@@ -752,10 +752,10 @@ class Gdb(debugger.Debugger, ProcessChannel):
         self.console_print('\n')
         ProcessChannel.start(self)
 
-    def prompt(self):
+    def print_prompt(self):
         """Print the prompt."""
         if not self.gdb_busy:   # print prompt only after gdb has started
-            debugger.Debugger.prompt(self)
+            debugger.Debugger.print_prompt(self)
 
     @debugger.restart_timer(debugger.LOOP_TIMEOUT)
     def gdb_background_jobs(self):
@@ -786,7 +786,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
         self.multiple_choice = 0
         if self.doprompt:
             self.doprompt = False
-            self.prompt()
+            self.print_prompt()
 
         # source the project file
         if self.state == self.STATE_INIT:
@@ -1032,7 +1032,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
         if misc.any([cmd.startswith(x)
                 for x in self.globaal.illegal_cmds_prefix]):
             self.console_print('Illegal command in pyclewn.\n')
-            self.prompt()
+            self.print_prompt()
             return
 
         if cmd == 'set' and args:
@@ -1040,7 +1040,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
             if misc.any([firstarg.startswith(x)
                     for x in self.globaal.illegal_setargs_prefix]):
                 self.console_print('Illegal argument in pyclewn.\n')
-                self.prompt()
+                self.print_prompt()
                 return
 
         # turn off the frame sign after a run command
@@ -1085,7 +1085,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
             if lines:
                 set_inferior_tty(lines[0])
                 set_inferior_tty(lines[1])
-        self.prompt()
+        self.print_prompt()
 
     def cmd_cwindow(self, cmd, *args):
         """List the breakpoints in a quickfix window."""
@@ -1138,7 +1138,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 gdbmi.VarDeleteCommand(self, varobj).sendcmd()
                 return
             self.console_print('"%s" not found.\n' % name)
-        self.prompt()
+        self.print_prompt()
 
     def cmd_foldvar(self, cmd, args):
         """Collapse/expand a variable from the debugger variable buffer."""
@@ -1174,7 +1174,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 errmsg = 'Not a valid line number.'
         if errmsg:
             self.console_print('%s\n' % errmsg)
-        self.prompt()
+        self.print_prompt()
 
     def cmd_setfmtvar(self, cmd, args):
         """Set the output format of the value of the watched variable."""
@@ -1198,13 +1198,13 @@ class Gdb(debugger.Debugger, ProcessChannel):
                         self.oob_list.push(gdbmi.VarObjCmdEvaluate(self, varobj))
                     return
                 self.console_print('"%s" not found.\n' % name)
-        self.prompt()
+        self.print_prompt()
 
     def cmd_project(self, cmd, args):
         """Save information to a project file."""
         if not args:
             self.console_print('Invalid argument.\n')
-            self.prompt()
+            self.print_prompt()
             return
         self.clicmd_notify('%s %s\n' % (cmd, args), console=False, gdb=False)
         self.gdb_busy = False

@@ -169,9 +169,9 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            '(pdb) p c.value',
+            '(Pdb) p c.value',
             '1',
-            '(pdb)',
+            '(Pdb)',
             )
         self.cltest_redir(cmd, expected)
 
@@ -277,9 +277,9 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            '(pdb) p run',
+            '(Pdb) p run',
             '123',
-            '(pdb)',
+            '(Pdb)',
             )
         self.cltest_redir(cmd, expected)
 
@@ -407,6 +407,33 @@ class Pdb(ClewnTestCase):
             'line=35  id=2  name=2',
             'line=40  id=1  name=1',
             'line=40  id=4  name=4',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_017(self):
+        """The commands command"""
+        cmd = [
+            'Cinterrupt',
+            'Cbreak foo.foo',
+            'Ccontinue',
+            'Cbreak bar',
+            'Ccommands 2',
+            'C silent',
+            'C print(prefix)',
+            'C end',
+            'call Wait_eop()',
+            'C run = True',
+            'Ccontinue',
+            'call Wait_eop()',
+            'edit (clewn)_console | $$-1,$$w! ${test_out}',
+            'Creturn',
+            'Cnext',
+            'C run = False',
+            'Ccontinue',
+            'qa!',
+            ]
+        expected = (
+            'value',
             )
         self.cltest_redir(cmd, expected)
 

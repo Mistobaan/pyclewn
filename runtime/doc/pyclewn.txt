@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2013 February 3
+*pyclewn.txt*                                   Last change: 2013 February 8
 
 
                             PYCLEWN USER MANUAL
@@ -932,7 +932,8 @@ the prefix alone:
     expanded if it is an alias.
 
 not implemented:
-    The following pdb commands are not implemented: "list", "commands".
+    The following pdb commands are not implemented: list, ll, whatis, source,
+    display, undisplay, interact, run, restart.
 
 
                                                     *pdb-pdbrc*
