@@ -59,6 +59,13 @@ def fullpath(filename):
         rootdir = fullpath.rootdir = command(['hg', 'root'])
     return os.path.join(rootdir, filename)
 
+def sort_tags(tags):
+    """Sort 'major.minor.version' tags in decreasing order."""
+    tags = map(lambda x: (int(x[0]), int(x[1]), x[2]),
+            (s for s in (t.split('.') for t in tags) if len(s) == 3))
+    for tag in sorted(tags, reverse=True):
+        yield '.'.join(str(x) for x in tag)
+
 def version(args, debug):
     """Return the version."""
     htype = hook_type(args)
@@ -86,7 +93,7 @@ def version(args, debug):
         del tagmap[tag]
 
     # browse the tags in lexical decreasing order
-    for tag in sorted(list(tagmap.keys()), reverse=True):
+    for tag in sort_tags(tagmap):
         nodeid = tagmap[tag]
         if debug:
             sys.stderr.write('tag-nodeid: %s %s\n' % (str(tag), str(nodeid)))
