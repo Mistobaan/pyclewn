@@ -463,7 +463,7 @@ class Info:
             self.gdb.delete_bp(number)
 
         # create signs for new breakpoints
-        for num in (nset - oldset):
+        for num in sorted(nset - oldset):
             # when file/line is missing (template function), use the
             # original-location
             if ('line' not in bp_dictionary[num]
