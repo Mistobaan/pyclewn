@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2013 February 8
+*pyclewn.txt*                                   Last change: 2013 March 11
 
 
                             PYCLEWN USER MANUAL
@@ -538,7 +538,7 @@ terminal associated with pyclewn. The|inferiortty|command provides the same
 functionality as above and spawns the controlling terminal (using the
 --terminal option, default xterm) of the debuggee and sets accordingly gdb
 'inferior-tty' variable and the TERM environment variable. The gdb
-'inferior-tty' variable *MUST* be set *BEFORE* the inferior is started.
+'inferior-tty' variable MUST be set BEFORE the inferior is started.
 
 One can also do step by step what the above command does automatically: start
 the "inferior_tty.py" script installed with pyclewn. This script creates a
@@ -738,8 +738,8 @@ commands that are listed here:
                                                     *inferiortty*
     * Cinferiortty  spawn the controlling terminal (default xterm) of the
                     debuggee and sets accordingly gdb 'inferior-tty' variable
-                    and the TERM environment variable; this command  *MUST* be
-                    issued *BEFORE* starting the inferior.
+                    and the TERM environment variable; this command  MUST be
+                    issued BEFORE starting the inferior.
 
     * Cloglevel      print or set the log level dynamically from inside Vim
 
