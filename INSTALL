@@ -65,6 +65,19 @@ the command::
 
     vimdir=$HOME/.vim python setup.py install --force --home=$HOME
 
+Uninstall on unix
+^^^^^^^^^^^^^^^^^
+
+To uninstall pyclewn on unix, run the same command that you have been using
+for installing pyclewn and record into ``files.txt`` the list of files that
+are being installed with the ``--record`` option. For example::
+
+    python setup.py install --force --home=$HOME --record files.txt
+
+Then remove all the installed files::
+
+    rm $(cat files.txt)
+
 Install on Windows
 ------------------
 
@@ -88,11 +101,11 @@ value to::
     C:\path\to\vim73;%PATH%
 
 To install pyclewn, double-click on the installer:
-pyclewn-__tag__.win32.exe. This will install pyclewn, configure Vim and create
-a shortcut on the Desktop. The installation is complete after the following
-message is printed by the installer: ``pyclewn postinstall completed``. You
-can now use the ``:help pyclewn`` command within vim, to access the
-documentation.
+``pyclewn-__tag__.win32.exe``. This will install pyclewn, configure Vim and
+create a shortcut on the Desktop. The installation is complete after the
+following message is printed by the installer: ``pyclewn postinstall
+completed``. You can now use the ``:help pyclewn`` command within vim, to
+access the documentation.
 
 You may have to edit the installed shortcut (right-click > Properties) to
 update the gdb full pathname when gdb has not been installed in the standard
