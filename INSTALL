@@ -65,6 +65,19 @@ the command::
 
     vimdir=$HOME/.vim python setup.py install --force --home=$HOME
 
+Uninstall on unix
+^^^^^^^^^^^^^^^^^
+
+To uninstall pyclewn on unix, run the same command that you have been using
+for installing pyclewn and record into ``files.txt`` the list of files that
+are being installed with the ``--record`` option. For example::
+
+    python setup.py install --force --home=$HOME --record files.txt
+
+Then remove all the installed files::
+
+    rm $(cat files.txt)
+
 Install on Windows
 ------------------
 
