@@ -1,3 +1,9 @@
+2013-07-11  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* gdb.py misc.py: Fix gdb version detection on linux Suse 12.2 that
+	prints a gdb header not conformant to GNU standards.
+
+===============================================================================
 2013-02-7  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* pydb.py: Add the 'commands' pdb command.

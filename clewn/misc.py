@@ -78,13 +78,9 @@ Unused = info
 def previous_evaluation(f, previous={}):
     """Decorator for functions returning previous result when args are unchanged."""
     def _dec(*args):
-        """The decorator."""
-        if f in previous and previous[f][0] == args:
-            return previous[f][1]
-        previous[f] = [args]
-        ret = f(*args)
-        previous[f].append(ret)
-        return ret
+        if f not in previous or previous[f][0] != args:
+            previous[f] = [args, f(*args)]
+        return previous[f][1]
     return _dec
 
 def escape_char(matchobj):
@@ -104,7 +100,7 @@ def dequote(msg):
     """Return the list of whitespace separated tokens from 'msg', handling
     double quoted substrings as a token.
 
-    >>> print dequote(r'"a c" b v "this \\"is\\" foobar argument" Y ')
+    >>> print(dequote(r'"a c" b v "this \\"is\\" foobar argument" Y '))
     ['a c', 'b', 'v', 'this "is" foobar argument', 'Y']
 
     """

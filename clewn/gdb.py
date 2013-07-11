@@ -280,6 +280,40 @@ def gdb_batch(pgm, job):
 
     return result.decode()
 
+def parse_gdb_version(header):
+    r"""Parse the gdb version from the gdb header.
+
+    From GNU coding standards: the version starts after the last space of the
+    first line.
+
+    >>> DOCTEST_GDB_VERSIONS = [
+    ... r'~"GNU gdb (GDB) 7.5.1\n"',
+    ... r'~"GNU gdb (Sourcery CodeBench Lite 2011.09-69) 7.2.50.20100908-cvs\n"',
+    ... r'~"GNU gdb (GDB) SUSE (7.5.1-2.5.1)\n"',
+    ... ]
+    >>> for header in DOCTEST_GDB_VERSIONS:
+    ...     print(parse_gdb_version(header))
+    [7, 5, 1]
+    [7, 2, 50, 20100908]
+    [7, 5, 1]
+
+    """
+    lines = (x[2:-3] for x in header.splitlines() if x.startswith('~"') and
+                                                        x.endswith(r'\n"'))
+    try:
+        version = next(lines).rsplit(' ', 1)
+    except StopIteration:
+        pass
+    else:
+        if len(version) == 2:
+            # Strip after first non digit or '.' character. Allow for linux
+            # Suse non conformant implementation that encloses the version in
+            # brackets (issue 119).
+            version = ''.join(takewhile(lambda x: x.isdigit() or x == '.',
+                                                    version[1].lstrip('(')))
+            if version:
+                return [int(x) for x in version.split('.')]
+
 @misc.previous_evaluation
 def gdb_version(pgm):
     """Check that the gdb version is valid.
@@ -304,25 +338,12 @@ def gdb_version(pgm):
                 raise ClewnError("Gdb cannot open the terminal: %s" % err)
 
     header = gdb_batch(pgm, 'show version')
-    lines = (x[2:-3] for x in header.splitlines() if x.startswith('~"') and
-                                                        x.endswith(r'\n"'))
-    # From GNU coding standards: the version starts after the last space of the
-    # first line.
-    try:
-        version = next(lines).rsplit(' ', 1)
-    except StopIteration:
-        pass
-    else:
-        if len(version) == 2:
-            # Strip after first non digit or '.' character.
-            version = ''.join(takewhile(lambda x: x.isdigit() or x == '.',
-                                                                version[1]))
-            if version:
-                v = [int(x) for x in version.split('.')]
-                if v < GDB_VERSION:
-                    raise ClewnError('invalid gdb version "%s"' % version)
-                info('gdb version: %s', version)
-                return v
+    version = parse_gdb_version(header)
+    if version:
+        if version < GDB_VERSION:
+            raise ClewnError('invalid gdb version "%s"' % version)
+        info('gdb version: %s', version)
+        return version
 
     if header:
         critical('response to "show version":\n%s%s%s',
@@ -1266,4 +1287,12 @@ class Gdb(debugger.Debugger, ProcessChannel):
         debugger.Debugger.balloon_text(self, text)
         if self.info.frame:
             gdbmi.WhatIs(self, text).sendcmd()
+
+def _test():
+    """Run the doctests."""
+    import doctest
+    doctest.testmod()
+
+if __name__ == "__main__":
+    _test()
 
