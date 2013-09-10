@@ -14,7 +14,7 @@ Clone pyclewn repository
 The following command will clone pyclewn repository in a local directory named
 ``pyclewn``::
 
-        $ hg clone http://pyclewn.hg.sourceforge.net/hgweb/pyclewn/pyclewn
+        $ hg clone http://hg.code.sf.net/p/pyclewn/pyclewn
 
 A version hook must be setup to update the ``clewn/__version__.py`` file after
 each commit or update. To setup the hook, add the following lines to the

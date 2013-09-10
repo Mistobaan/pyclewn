@@ -4,13 +4,13 @@ News
 Pyclewn 1.11
 ------------
 
-.. July 11, 2013
+.. September 10, 2013
 
 Bug fix
 ^^^^^^^
 
-* Fix gdb version detection on linux Suse 12.2 that prints a gdb header not
-  conformant to GNU standards.
+* Fix gdb version detection on linux Suse 12.2 and Fedora 19 that print a gdb
+  header not GNU standards compliant.
 
 Pyclewn 1.10
 ------------

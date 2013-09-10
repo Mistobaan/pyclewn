@@ -290,12 +290,16 @@ def parse_gdb_version(header):
     ... r'~"GNU gdb (GDB) 7.5.1\n"',
     ... r'~"GNU gdb (Sourcery CodeBench Lite 2011.09-69) 7.2.50.20100908-cvs\n"',
     ... r'~"GNU gdb (GDB) SUSE (7.5.1-2.5.1)\n"',
+    ... r'~"GNU gdb (GDB) Fedora (7.6-32.fc19)\n"',
+    ... r'~"GNU gdb (GDB) 7.6.1.dummy\n"',
     ... ]
     >>> for header in DOCTEST_GDB_VERSIONS:
     ...     print(parse_gdb_version(header))
     [7, 5, 1]
     [7, 2, 50, 20100908]
     [7, 5, 1]
+    [7, 6]
+    [7, 6, 1]
 
     """
     lines = (x[2:-3] for x in header.splitlines() if x.startswith('~"') and
@@ -312,7 +316,7 @@ def parse_gdb_version(header):
             version = ''.join(takewhile(lambda x: x.isdigit() or x == '.',
                                                     version[1].lstrip('(')))
             if version:
-                return [int(x) for x in version.split('.')]
+                return [int(x) for x in version.split('.') if x]
 
 @misc.previous_evaluation
 def gdb_version(pgm):
