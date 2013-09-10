@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2013 March 11
+*pyclewn.txt*                                   Last change: 2013 September 10
 
 
                             PYCLEWN USER MANUAL
@@ -1298,6 +1298,10 @@ CLASSES
      |          feature.
      |      options: optparse.Values
      |          The pyclewn command line parameters.
+     |      vim_socket_map: dict
+     |          The asyncore socket dictionary
+     |      testrun: boolean
+     |          True when run from a test suite
      |      started: boolean
      |          True when the debugger is started.
      |      closed: boolean
@@ -1313,14 +1317,14 @@ CLASSES
      |          process enqueued jobs when True
      |      _last_balloon: str
      |          The last balloonText event received.
-     |      _prompt_str: str
+     |      prompt: str
      |          The prompt printed on the console.
      |      _consbuffered: boolean
      |          True when output to the vim debugger console is buffered
      |
      |  Methods defined here:
      |
-     |  __init__(self, options)
+     |  __init__(self, options, vim_socket_map, testrun)
      |      Initialize instance variables and the prompt.
      |
      |  __str__(self)
@@ -1352,7 +1356,7 @@ CLASSES
      |  close(self)
      |      Close the debugger and remove all signs in Vim.
      |
-     |  cmd_dumprepr(self, *args)
+     |  cmd_dumprepr(self, cmd, args)
      |      Print debugging information on netbeans and the debugger.
      |
      |  cmd_help(self, *args)
@@ -1365,7 +1369,7 @@ CLASSES
      |  cmd_mapkeys(self, *args)
      |      Map the pyclewn keys.
      |
-     |  cmd_unmapkeys(self, *args)
+     |  cmd_unmapkeys(self, cmd, *args)
      |      Unmap the pyclewn keys.
      |
      |      This is actually a Vim command and it does not involve pyclewn.
@@ -1398,20 +1402,6 @@ CLASSES
      |          args: str
      |              The arguments of the command.
      |
-     |  delete_all(self, pathname=None, lnum=None)
-     |      Delete all the breakpoints in a Vim buffer or in all buffers.
-     |
-     |      Delete all the breakpoints in a Vim buffer at 'lnum'.
-     |      Delete all the breakpoints in a Vim buffer when 'lnum' is None.
-     |      Delete all the breakpoints in all the buffers when 'pathname' is
-     |      None.
-     |
-     |      Method parameters:
-     |          pathname: str
-     |              The absolute pathname to the Vim buffer.
-     |          lnum: int
-     |              The line number in the Vim buffer.
-     |
      |  delete_bp(self, bp_id)
      |      Delete a breakpoint.
      |
@@ -1436,8 +1426,14 @@ CLASSES
      |          pathname: str
      |              The absolute pathname to the Vim buffer.
      |
+     |  inferiortty(self)
+     |      Spawn the inferior terminal.
+     |
      |  netbeans_detach(self)
      |      Request vim to close the netbeans session.
+     |
+     |  not_a_pyclewn_method(self, cmd)
+     |      "Warn that 'cmd' cannot be used as 'C' parameter.
      |
      |  post_cmd(self, cmd, args)
      |      The method called after each invocation of a 'cmd_<name>'
@@ -1463,9 +1459,7 @@ CLASSES
      |          args: str
      |              The arguments of the command.
      |
-     |  print_prompt = prompt(self)
-     |
-     |  prompt(self)
+     |  print_prompt(self)
      |      Print the prompt in the Vim debugger console.
      |
      |  remove_all(self)
@@ -1498,6 +1492,9 @@ CLASSES
      |              The absolute pathname to the Vim buffer.
      |          lnum: int
      |              The line number in the Vim buffer.
+     |
+     |  start(self)
+     |      This method must be implemented in a subclass.
      |
      |  timer(self, callme, delta)
      |      Schedule the 'callme' job at 'delta' time from now.
