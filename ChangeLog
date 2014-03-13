@@ -1,3 +1,11 @@
+2014-03-13  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
+
+	* setup.py: On RedHat (and Fedora Core) and in the home installation
+	scheme, the library is installed at $HOME/lib64/python instead of
+	$HOME/lib/python.
+	* testsuite/Makefile: Fix a bashism.
+
+===============================================================================
 2013-07-11  Xavier de Gaye <xdegaye at users dot sourceforge dot net>
 
 	* gdb.py misc.py: Fix gdb version detection on linux Suse 12.2 that
