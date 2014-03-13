@@ -68,7 +68,7 @@ class install(_install):
     """
     def run(self):
         global pythonpath
-        pythonpath = self.install_purelib
+        pythonpath = self.install_platlib
         # rename the 'debugger' directory present in old versions
         debugger_dir = os.path.join(pythonpath, 'clewn', 'debugger')
         if os.path.isdir(debugger_dir):

@@ -1,6 +1,17 @@
 News
 ====
 
+Pyclewn 1.12
+------------
+
+.. March 13, 2014
+
+Bug fix
+^^^^^^^
+
+* On Red Hat and Fedora Core, in the home installation scheme, the
+  library is installed at $HOME/lib64/python instead of $HOME/lib/python.
+
 Pyclewn 1.11
 ------------
 
