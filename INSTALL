@@ -78,49 +78,5 @@ Then remove all the installed files::
 
     rm $(cat files.txt)
 
-Install on Windows
-------------------
-
-Pyclewn is installed with a Windows installer.
-
-The following software must have been installed on Windows:
-
-* the win32 python package from http://starship.python.net/crew/mhammond/
-* MinGW and the MinGW components MSYS and gdb from http://www.mingw.org/
-
-Vim must be in the PATH before starting the installation, otherwise the
-installation will fail. Use the Control Panel on Windows XP to add the vim
-directory to ``%PATH%``::
-
-    Control Panel > System > Advanced tab
-    Advanced tab > Environment Variables > Edit "PATH"
-
-On Vista, add the ``PATH`` environment variable to your account, and set its
-value to::
-
-    C:\path\to\vim73;%PATH%
-
-To install pyclewn, double-click on the installer:
-``pyclewn-__tag__.win32.exe``. This will install pyclewn, configure Vim and
-create a shortcut on the Desktop. The installation is complete after the
-following message is printed by the installer: ``pyclewn postinstall
-completed``. You can now use the ``:help pyclewn`` command within vim, to
-access the documentation.
-
-You may have to edit the installed shortcut (right-click > Properties) to
-update the gdb full pathname when gdb has not been installed in the standard
-MinGW location.
-
-When you run pyclewn from within gvim (vim version 7.3 or newer) with the
-``:Pyclewn`` vim command, the directory of ``gdb.exe`` must be in Windows
-``%PATH%``, or the full pathname of gdb must be entered in
-``autoload\pyclewn.vim``.
-
-Pyclewn may be uninstalled with the Control Panel.
-
-Please note that the installation will fail when you upgrade to version 1.0 if
-you did not uninstall the previous pyclewn version with the Control Panel.
-This will not be required when upgrading to the next versions.
-
 .. vim:filetype=rst:tw=78:ts=8:et:
 

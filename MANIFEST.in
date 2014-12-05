@@ -8,8 +8,6 @@ include runtime/autoload/pyclewn.vim
 include runtime/.pyclewn_keys.*
 include runtime/doc/pyclewn.txt
 include runtime/syntax/dbgvar.vim
-include images/*
-include pyclewn_install.py
 include foobar.py
 include .pdbrc
 include testsuite/*.py

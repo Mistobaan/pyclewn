@@ -28,8 +28,6 @@ from unittest import skipIf
 
 from .test_support import ClewnTestCase
 
-use_select_emulation = ('CLEWN_PIPES' in os.environ or os.name == 'nt')
-
 class Pdb(ClewnTestCase):
     """Test pyclewn."""
 
@@ -40,10 +38,7 @@ class Pdb(ClewnTestCase):
 
         # start the python script being debugged
         self.fnull = open(os.devnull, 'w')
-        if os.name == 'nt':
-            python_name = 'python'
-        else:
-            python_name = 'python3'
+        python_name = 'python3'
         self.pdb_script = subprocess.Popen(
                                     [python_name, './foobar.py'],
                                      stdout=self.fnull)
@@ -287,7 +282,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_012(self):
         """Interrupting an infinite loop"""
         cmd = [
@@ -337,7 +331,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_014(self):
         """Breakpoints are restored after detach"""
         cmd = [
@@ -385,7 +378,6 @@ class Pdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_016(self):
         """Stop at breakpoint set in caller after interrupt"""
         cmd = [

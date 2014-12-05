@@ -28,23 +28,13 @@ from unittest import skipUnless, skipIf
 import clewn.gdb as gdb
 from .test_support import ClewnTestCase, TESTFN_FILE, TESTFN_OUT
 
-if os.name == 'nt':
-    debuggee = 'file ${cwd}testsuite/foobar.exe'
-    expected_break_main = (
-        '--- Signs ---',
-        'Signs for testsuite/overloaded.cc:',
-        '    line=13  id=2  name=2',
-        '    line=13  id=1  name=1',
-        )
-else:
-    debuggee = 'file ${cwd}testsuite/foobar'
-    expected_break_main = (
-        '--- Signs ---',
-        'Signs for testsuite/overloaded.cc:',
-        '    line=16  id=2  name=2',
-        '    line=16  id=1  name=1',
-        )
-use_select_emulation = ('CLEWN_PIPES' in os.environ or os.name == 'nt')
+debuggee = 'file ${cwd}testsuite/foobar'
+expected_break_main = (
+    '--- Signs ---',
+    'Signs for testsuite/overloaded.cc:',
+    '    line=16  id=2  name=2',
+    '    line=16  id=1  name=1',
+    )
 
 gdb_v = gdb.gdb_version('gdb')
 
@@ -147,10 +137,6 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_logfile(cmd, expected, 'info', 'line 1\n')
 
-    @skipUnless(('CLEWN_PIPES' not in os.environ
-                        and 'CLEWN_POPEN' not in os.environ
-                        and os.name != 'nt'),
-                            'sigint is not supported on Windows')
     def test_006(self):
         """The program is interrupted with the sigint command"""
         self.setup_gdb_args()
@@ -201,7 +187,6 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_009(self):
         """The break and clear commands symbols completion"""
         cmd = [
@@ -285,13 +270,13 @@ class Gdb(ClewnTestCase):
         expected = (
             "'file': {'file': 'foobar.c',",
             "         'fullname': '${cwd}testsuite/foobar.c',",
-            "         'line': '9'},",
+            "         'line': '10'},",
             "'frame': {'file': 'foobar.c',",
             "          'fullname': '${cwd}testsuite/foobar.c',",
             "          'func': 'main',",
             "          'level': '0',",
-            "          'line': '9'},",
-            "'frame_location': {'lnum': 9,",
+            "          'line': '10'},",
+            "'frame_location': {'lnum': 10,",
             "             'pathname': '${cwd}testsuite/foobar.c'},",
             )
         self.cltest_redir(cmd, expected)
@@ -310,8 +295,8 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "    line=9  id=1  name=3",
-            "    line=9  id=2  name=1",
+            "    line=10  id=1  name=3",
+            "    line=10  id=2  name=1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -348,7 +333,7 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "line=9  id=3  name=2",
+            "line=10  id=3  name=2",
             )
         self.cltest_redir(cmd, expected)
 
@@ -368,7 +353,7 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "line=10  id=1  name=3",
+            "line=11  id=1  name=3",
             )
         self.cltest_redir(cmd, expected)
 
@@ -404,7 +389,7 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "line=9  id=4  name=3",
+            "line=10  id=4  name=3",
             )
         self.cltest_redir(cmd, expected)
 
@@ -423,11 +408,10 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "line=9  id=1  name=3",
+            "line=10  id=1  name=3",
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_020(self):
         """Check break completion on overloaded functions"""
         cmd = [
@@ -658,8 +642,8 @@ class Gdb(ClewnTestCase):
         expected = (
             '--- Signs ---',
             'Signs for testsuite/foobar.c:',
-            '    line=9  id=1  name=5',
-            '    line=9  id=2  name=1',
+            '    line=10  id=1  name=5',
+            '    line=10  id=2  name=1',
             'Signs for ${cwd}testsuite/foo.c:',
             '    line=30  id=4  name=3',
             'sign 1 text=1  texthl=NB_2',
@@ -708,7 +692,7 @@ class Gdb(ClewnTestCase):
             'cd ${cwd}',
             debuggee,
             'set args foo "1 2 3" bar',
-            'break ${cwd}testsuite/foobar.c:9',
+            'break ${cwd}testsuite/foobar.c:10',
             'break ${cwd}testsuite/foo.c:30',
             )
         self.cltest_redir(cmd, expected)
@@ -729,7 +713,7 @@ class Gdb(ClewnTestCase):
         expected = (
             debuggee,
             'break ${cwd}testsuite/foo.c:30',
-            'break ${cwd}testsuite/foobar.c:9',
+            'break ${cwd}testsuite/foobar.c:10',
             )
         self.cltest_redir(cmd, expected)
 
@@ -747,7 +731,7 @@ class Gdb(ClewnTestCase):
         expected = (
             '--- Signs ---',
             'Signs for testsuite/foobar.c:',
-            '    line=9  id=2  name=1',
+            '    line=10  id=2  name=1',
             'Signs for ${cwd}testsuite/foo.c:',
             '    line=30  id=4  name=3',
             )
@@ -775,7 +759,7 @@ class Gdb(ClewnTestCase):
             'cd ${cwd}',
             debuggee,
             'set args foo "1 2 3" bar',
-            'break ${cwd}testsuite/foobar.c:9',
+            'break ${cwd}testsuite/foobar.c:10',
             'break ${cwd}testsuite/foo.c:30',
             )
         self.cltest_redir(cmd, expected)
@@ -793,7 +777,7 @@ class Gdb(ClewnTestCase):
         expected = (
             'cd ${cwd}',
             debuggee,
-            'break ${cwd}testsuite/foobar.c:9',
+            'break ${cwd}testsuite/foobar.c:10',
             )
         self.cltest_redir(cmd, expected)
 
@@ -854,7 +838,6 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_039(self):
         """Check number 2, adding breakpoints after a quit"""
         cmd = [
@@ -896,8 +879,8 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "line=9  id=6  name=3",
-            "line=9  id=2  name=1",
+            "line=10  id=6  name=3",
+            "line=10  id=2  name=1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -923,7 +906,7 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             "Signs for testsuite/foobar.c:",
-            "line=9  id=2  name=1",
+            "line=10  id=2  name=1",
             "Signs for ${cwd}testsuite/foo.c:",
             "line=30  id=4  name=3",
             )

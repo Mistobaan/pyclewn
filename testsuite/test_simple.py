@@ -28,8 +28,6 @@ from unittest import skipIf
 
 from .test_support import ClewnTestCase
 
-use_select_emulation = ('CLEWN_PIPES' in os.environ or os.name == 'nt')
-
 class Simple(ClewnTestCase):
     """Test the Simple commands."""
 
@@ -290,7 +288,6 @@ class Simple(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected, 'line 1\n')
 
-    @skipIf(use_select_emulation, 'when using select emulation')
     def test_014(self):
         """Maximum number of lines in the console buffer"""
         sys.argv.extend(['--maxlines=70'])

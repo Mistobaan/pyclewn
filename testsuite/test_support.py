@@ -158,17 +158,8 @@ class ClewnTestCase(TestCase):
         """
         cwd = os.getcwd() + os.sep
 
-        use_select_emulation = ('CLEWN_PIPES' in os.environ or os.name == 'nt')
-        if use_select_emulation:
-            # handle interrupt in a pdb test
-            if commands[0] == 'Cinterrupt':
-                commands[0:0] = ['sleep %dm' % (3 * TESTRUN_SLEEP_TIME)]
-            commands = append_command(('Cinterrupt', ), commands,
-                                                        'call Wait_eop()')
-            command_list = ()
-        else:
-            command_list = ('Cquit', 'Cinterrupt', 'Ccontinue', 'Cstep',
-                            'Cnext', 'Pyclewn pdb', 'Csigint', 'Crun')
+        command_list = ('Cquit', 'Cinterrupt', 'Ccontinue', 'Cstep',
+                        'Cnext', 'Pyclewn pdb', 'Csigint', 'Crun')
         commands = append_command(command_list, commands)
         commands = append_command(('Cdetach', ), commands,
                         'sleep %dm' % (5 * TESTRUN_SLEEP_TIME))
@@ -205,17 +196,10 @@ class ClewnTestCase(TestCase):
         fp.close()
 
         expected = '\n'.join(expected)
-        if os.name == 'nt':
-            expected = expected.replace('/', '\\')
         expected = string.Template(expected).substitute(
                                             cwd=cwd, test_file=TESTFN_FILE)
 
         checked = ' '.join(expected.split()) in ' '.join(output.split())
-        # project files on Windows do have forward slashes, and gdb may output
-        # a mix of backward and forward slashes: convert also output
-        if os.name == 'nt' and not checked:
-            output = output.replace('/', '\\')
-            checked = ' '.join(expected.split()) in ' '.join(output.split())
         self.assertTrue(checked,
                 "\n\n...Expected:\n%s \n\n...Got:\n%s" % (expected, output))
 

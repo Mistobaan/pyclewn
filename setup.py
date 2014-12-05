@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import sys
 if sys.version_info < (3, 0):
     sys.stderr.write("This version of pyclewn does not support Python 2.\n")
@@ -17,10 +15,10 @@ from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_scripts import build_scripts as _build_scripts
 from unittest import defaultTestLoader
 
-import pyclewn_install
-import clewn.misc as misc
+import clewn.vim as vim
 import testsuite.test_support as test_support
 from clewn import *
+
 
 DESCRIPTION = """Pyclewn allows using Vim as a front end to a debugger.
 The debugger output is redirected to a Vim window, the pyclewn console.
@@ -31,21 +29,19 @@ program to debug is the terminal used to launch pyclewn, or any other
 terminal when the debugger allows it.
 """
 
-WINDOWS_INSTALL = """BEFORE INSTALLING:
-Please make sure that Vim is in the PATH, otherwise the installation
-will fail (see installation notes at
-http://pyclewn.sourceforge.net/install.html).
-"""
-
 DEBUGGERS = ('simple', 'gdb', 'pdb')
-if os.name == 'nt':
-    SCRIPTS = ['pdb-clone', 'pyclewn', 'pyclewn_install.py']
-    vimdir = 'pyclewn'
-    LONG_DESCRIPTION = WINDOWS_INSTALL
-else:
-    SCRIPTS = ['pdb-clone', 'pyclewn', 'runtime/bin/inferior_tty.py']
-    vimdir = pyclewn_install.vimdir()
-    LONG_DESCRIPTION = DESCRIPTION
+SCRIPTS = ['pdb-clone', 'pyclewn', 'runtime/bin/inferior_tty.py']
+LONG_DESCRIPTION = DESCRIPTION
+
+vimdir = os.environ.get('vimdir')
+if not vimdir:
+    path = vim.exec_vimcmd(['echon $VIM'])
+    path = path.strip(' \t\r\n')
+    if not os.path.isdir(path):
+        nodir = ('Invalid data files path. $VIM="%s" is returned'
+            ' by Vim, but this is not an existing directory.' % path)
+        raise DistutilsExecError(nodir)
+    vimdir = pathjoin(path, 'vimfiles')
 
 DATA_FILES = [
     (pathjoin(vimdir, 'plugin'), ['runtime/plugin/pyclewn.vim']),
@@ -55,11 +51,33 @@ DATA_FILES = [
         [('runtime/.pyclewn_keys.%s' % d) for d in DEBUGGERS]),
     (pathjoin(vimdir, 'syntax'), ['runtime/syntax/dbgvar.vim']),
     ]
-if os.name == 'nt':
-    DATA_FILES.append(pyclewn_install.icon(vimdir))
 
 # installation path of pyclewn lib
 pythonpath = None
+
+def vim_features():
+    """Abort if missing required Vim feature."""
+    output = vim.exec_vimcmd(['version'])
+
+    print('checking netbeans support in vim:', end=' ', file=sys.stderr)
+    try:
+        output.index('+netbeans_intg')
+    except ValueError:
+        raise DistutilsExecError('netbeans support in vim is required')
+    print('yes', file=sys.stderr)
+
+    print('checking auto commands support in vim:', end=' ', file=sys.stderr)
+    try:
+        output.index('+autocmd')
+    except ValueError:
+        raise DistutilsExecError('auto commands support in vim is required')
+    print('yes', file=sys.stderr)
+
+def build_vimhelp():
+    """Add pyclewn help to Vim help."""
+    helpdir = pathjoin(vimdir, 'doc')
+    print('running Vim help tags file generation in %s' % helpdir, file=sys.stderr)
+    vim.exec_vimcmd(['helptags ' + helpdir, 'echo v:version'])
 
 class install(_install):
     """Specialized installer, check required Vim features support and
@@ -75,48 +93,42 @@ class install(_install):
             sys.stderr.write('renaming the debugger directory\n')
             os.rename(debugger_dir, debugger_dir + '.orig')
 
-        # substitute templates in the autoload plugin
-        # this is done in the post-install script in Windows
-        if os.name != 'nt':
-            mapping = {'pgm': '"pyclewn"', 'start': ''}
-            pyclewn_install.substitute_autoload('runtime', mapping)
-
         print('Vim user data files location: "%s"' % vimdir)
-        pyclewn_install.vim_features()
+        vim_features()
         _install.run(self)
-        pyclewn_install.build_vimhelp()
+        build_vimhelp()
 
 def update_version(filename):
     """Update the version number in the content of filename."""
     content = []
-    f = open(filename, 'r+')
-    for line in f:
-        line = line.replace('pyclewn-__tag__' , 'pyclewn-' + __tag__)
-        content.append(line)
-    f.seek(0)
-    f.writelines(content)
-    f.close()
+    with open(filename, 'r+') as f:
+        for line in f:
+            line = line.replace('pyclewn-__tag__' , 'pyclewn-' + __tag__)
+            content.append(line)
+        f.seek(0)
+        f.writelines(content)
 
 def keymap_files():
     """Build key map files for each debugger."""
-    template = open('runtime/.pyclewn_keys.template').read()
-    for d in DEBUGGERS:
-        f = open('runtime/.pyclewn_keys.%s' % d, 'w')
-        f.write(string.Template(template).substitute(clazz=d))
-        # cannot use absolute imports with python 2.4, so we are stuck with pydb.py
-        if d == 'pdb':
-            d = 'pydb'
-        module = __import__('clewn.%s' % d,  globals(), locals(), ['MAPKEYS'])
-        mapkeys = getattr(module, 'MAPKEYS')
-        for k in sorted(mapkeys):
-            if len(mapkeys[k]) == 2:
-                comment = ' # ' + mapkeys[k][1]
-                f.write('# %s%s\n' %
-                    (('%s : %s' % (k, mapkeys[k][0])).ljust(30), comment))
-            else:
-                f.write('# %s : %s\n' % (k, mapkeys[k][0]))
-
-        f.close()
+    with open('runtime/.pyclewn_keys.template') as tf:
+        template = tf.read()
+        for d in DEBUGGERS:
+            with open('runtime/.pyclewn_keys.%s' % d, 'w') as f:
+                f.write(string.Template(template).substitute(clazz=d))
+                # cannot use absolute imports with python 2.4, so we are stuck
+                # with pydb.py
+                if d == 'pdb':
+                    d = 'pydb'
+                module = __import__('clewn.%s' % d,
+                                    globals(), locals(), ['MAPKEYS'])
+                mapkeys = getattr(module, 'MAPKEYS')
+                for k in sorted(mapkeys):
+                    if len(mapkeys[k]) == 2:
+                        comment = ' # ' + mapkeys[k][1]
+                        f.write('# %s%s\n' % (('%s : %s' %
+                                (k, mapkeys[k][0])).ljust(30), comment))
+                    else:
+                        f.write('# %s : %s\n' % (k, mapkeys[k][0]))
 
 class build_scripts(_build_scripts):
     """Specialized scripts builder.
@@ -134,11 +146,10 @@ def hg_revert(pathnames):
     """Revert files in a mercurial repository."""
     # silently ignore all errors
     try:
-        fnull = open(os.devnull, 'r+')
-        for fname in pathnames:
-            subprocess.call(['hg', 'revert', '--no-backup', fname],
-                                                        stderr=fnull)
-        fnull.close()
+        with open(os.devnull, 'r+') as fnull:
+            for fname in pathnames:
+                subprocess.call(['hg', 'revert', '--no-backup', fname],
+                                stderr=fnull)
     except (IOError, OSError):
         pass
 

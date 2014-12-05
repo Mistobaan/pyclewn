@@ -230,7 +230,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     def __init__(self, *args):
         """Constructor."""
         debugger.Debugger.__init__(self, *args)
-        nosigint = True if os.name == 'nt' else False
+        nosigint = False
         pdb.Pdb.__init__(self, nosigint=nosigint)
 
         # avoid pychecker warnings (not initialized in base class)
@@ -268,8 +268,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.poll = evtloop.Poll(self.socket_map)
 
         self.cmds.update(PDB_CMDS)
-        if os.name != 'nt':
-            self.pyclewn_cmds['inferiortty'] = ()
+        self.pyclewn_cmds['inferiortty'] = ()
         self.cmds['help'] = list(self.cmds.keys())
         self.mapkeys.update(MAPKEYS)
 
@@ -405,11 +404,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def set_continue(self):
         """Override set_continue."""
-        if os.name == 'nt':
-            # Do not remove the trace function.
-            self._set_stopinfo(None, -1)
-        else:
-            pdb.Pdb.set_continue(self)
+        pdb.Pdb.set_continue(self)
 
     def set_break(self, filename, lineno, temporary=False, cond=None,
                   funcname=None):
@@ -930,11 +925,10 @@ def main(pdb, options):
         critical('usage: Pyclewn pdb scriptfile [arg] ...')
         sys.exit(1)
 
-    if os.name != 'nt':
-        tty = tty_fobj(options.tty)
-        if tty:
-            info('set inferior tty to %s', tty.name)
-            sys.stdin = sys.stdout = sys.stderr = tty
+    tty = tty_fobj(options.tty)
+    if tty:
+        info('set inferior tty to %s', tty.name)
+        sys.stdin = sys.stdout = sys.stderr = tty
     mainpyfile = argv[0]
     sys.path[0] = os.path.dirname(mainpyfile)
     sys.argv = argv

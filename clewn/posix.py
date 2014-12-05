@@ -216,10 +216,7 @@ class ProcessChannel(asyncproc.ProcessChannel):
         self.sig_handler = signal.signal(signal.SIGCHLD, sigchld_handler)
 
         try:
-            if 'CLEWN_PIPES' in os.environ or 'CLEWN_POPEN' in os.environ:
-                self.popen()
-            else:
-                self.ptyopen()
+            self.ptyopen()
         except OSError:
             critical('cannot start process "%s"', self.pgm_name); raise
         info('program argv list: %s', str(self.argv))
@@ -270,29 +267,4 @@ class ProcessChannel(asyncproc.ProcessChannel):
         """Send a SIGINT interrupt to the program."""
         if self.ttyname is not None:
             self.fileasync[1].send(self.INTERRUPT_CHAR)
-
-class PipePeek(asyncproc.PipePeek):
-    """The pipe peek thread."""
-
-    def __init__(self, fd, asyncobj, select_event):
-        """Constructor."""
-        asyncproc.PipePeek.__init__(self, fd, asyncobj, select_event)
-
-    def peek(self):
-        """Peek the pipe."""
-        try:
-            iwtd, owtd, ewtd = select.select([self.fd], [], [], 0)
-        except select.error as err:
-            if err.args[0] != errno.EINTR:
-                # this may occur on exit
-                # closing the debugger is handled in ProcessChannel.waitpid
-                error('ignoring failed select syscall: %s', err)
-            return False
-        unused = owtd
-        unused = ewtd
-        # debug('pipe select return: %s)', iwtd)
-        if iwtd and iwtd[0] == self.fd:
-            self.read_event = True
-            return True
-        return False
 

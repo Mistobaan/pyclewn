@@ -171,17 +171,10 @@ re_sources = re.compile(RE_SOURCES, re.VERBOSE)
 re_varupdate = re.compile(RE_VARUPDATE, re.VERBOSE)
 re_type = re.compile(RE_TYPE, re.VERBOSE)
 
-def compare_filename(a, b):
-    """Compare two filenames."""
-    if os.name == 'nt':
-        return a.lower() == b.lower()
-    else:
-        return a == b
-
 def fullname(name, source_dict):
     """Return 'fullname' value, matching name in the source_dict dictionary."""
     try:
-        if source_dict and compare_filename(source_dict['file'], name):
+        if source_dict and source_dict['file'] == name:
             return source_dict['fullname']
     except KeyError:
         pass
@@ -403,7 +396,7 @@ class Info:
         # an absolute path name
         if os.path.isabs(name):
             if os.path.exists(name):
-                return misc.norm_unixpath(name, True)
+                return name
             else:
                 # strip off the directory part and continue
                 name = os.path.split(name)[1]
@@ -428,7 +421,7 @@ class Info:
                 pathname = os.path.normpath(name)
 
             if os.path.exists(pathname):
-                return misc.norm_unixpath(pathname, True)
+                return pathname
 
         return None
 
@@ -728,7 +721,6 @@ class CliCommand(Command):
             return False
 
         self.gdb.gdb_busy = True
-        cmd = misc.norm_unixpath(cmd)
         self.stream_record = ''
         return self.send('-interpreter-exec console %s\n', misc.quote(cmd))
 
@@ -1473,11 +1465,9 @@ class Project(OobCommand):
                         cwd = gdb_info.cwd[0]
                         if not cwd.endswith(os.sep):
                             cwd += os.sep
-                        project.write('cd %s\n'
-                            % misc.norm_unixpath(misc.unquote(cwd), True))
+                        project.write('cd %s\n' % misc.unquote(cwd))
 
-                    project.write('file %s\n'
-                            % misc.norm_unixpath(gdb_info.debuggee[0], True))
+                    project.write('file %s\n' % gdb_info.debuggee[0])
 
                     if gdb_info.args:
                         project.write('set args %s\n' % gdb_info.args[0])

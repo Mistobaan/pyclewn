@@ -15,7 +15,7 @@ let s:start_err .= "run the 'pyclewn' program to get the cause of the problem."
 " the ':Pyclewn' vim command is run.
 " They may be changed to match your preferences.
 
-let s:pgm = ${pgm}
+let s:pgm = "pyclewn"
 
 if exists("pyclewn_args")
   let s:args = pyclewn_args
@@ -115,7 +115,7 @@ function s:start(args)
 
     " start pyclewn and netbeans
     call s:info("Starting pyclewn.\n")
-    exe "silent !${start}" . s:pgm . " " . a:args . " " . s:fixed . l:tmpfile . " &"
+    exe "silent !" . s:pgm . " " . a:args . " " . s:fixed . l:tmpfile . " &"
     call s:info("Running nbstart, <C-C> to interrupt.\n")
     call s:pyclewn_ready(l:tmpfile)
     exe "nbstart :" . s:connection

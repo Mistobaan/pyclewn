@@ -21,9 +21,6 @@
 """Low level module providing async_chat process communication and the use of
 pipes for communicating with the forked process.
 
-This module is used by the 'posix' and 'nt' module to provide the asyncore
-event loop functionality for process communication.
-
 """
 
 import os
@@ -45,9 +42,6 @@ from . import misc
 (critical, error, warning, info, debug) = misc.logmethods('proc')
 Unused = warning
 Unused = debug
-
-# Peek thread states
-STS_STARTED, STS_STOPPED = list(range(2))
 
 class FileWrapper:
     """Emulate a socket with a file descriptor or file object.
@@ -125,10 +119,7 @@ class FileAsynchat(asynchat.async_chat):
         self.reader = reader
         self.connected = True
         self.ibuff = []
-        if os.name == 'nt':
-            self.set_terminator(b'\r\n')
-        else:
-            self.set_terminator(b'\n')
+        self.set_terminator(b'\n')
 
         if isinstance(f, int):
             self._fileno = f
@@ -254,7 +245,7 @@ class ProcessChannel:
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT,
-                            close_fds=(os.name != 'nt'))
+                            close_fds=True)
         self.fileasync = (FileAsynchat(
                                 proc.stdout, self, True, self.socket_map),
                           FileAsynchat(
@@ -293,167 +284,4 @@ class ProcessChannel:
             if not data.endswith('\n'):
                 data += '\n'
             self.fileasync[1].push(data)
-
-class Peek(threading.Thread):
-    """A generic peek thread as an abstract class.
-
-    """
-
-    def __init__(self, name, select_event):
-        """Constructor."""
-        threading.Thread.__init__(self, name=name)
-        self.select_event = select_event
-        self.state = STS_STOPPED
-        self.start_peeking = threading.Event()
-        self.stop_peeking = threading.Event()
-        self.have_started = threading.Event()
-        self.have_stopped = threading.Event()
-        self.setDaemon(True)
-
-    def run(self):
-        """The thread peeks the file object(s).
-
-        The thread is notified by an event of the transition to perform:
-            start_peeking
-            stop_peeking
-        The thread sends a select_event to clewn_select when a read,
-        write or except event is available.
-        The thread reports its state with a have_started or have_stopped event.
-
-        """
-        info('thread started: %s', self)
-        while self.isRunning():
-            self.wait_event('start_peeking')
-            self.have_started.set()
-
-            while self.isRunning():
-                if self.peek():
-                    self.select_event.set()
-                    self.wait_event('stop_peeking')
-                    break
-                else:
-                    if self.stop_peeking.isSet():
-                        self.stop_peeking.clear()
-                        break
-                time.sleep(.001) # allow a thread context switch
-            self.have_stopped.set()
-
-    def peek(self):
-        """Peek the file object for one or more events.
-
-        Return True when an event is available, False otherwise.
-
-        """
-        unused = self
-        assert False, 'missing implementation of the peek method'
-
-    def isRunning(self):
-        """Return the thread status."""
-        unused = self
-        assert False, 'missing implementation of the isRunning method'
-
-    def wait_event(self, event_name):
-        """Block forever waiting on 'event_name'."""
-        event = getattr(self, event_name)
-        while self.isRunning() and not event.isSet():
-            event.wait(.010)
-        event.clear()
-
-    def start_thread(self):
-        """Called by clewn_select to start the thread."""
-        if self.isAlive():
-            # debug('ask the thread to start: %s', self)
-            self.start_peeking.set()
-
-            # debug('wait until thread have_started: %s', self)
-            self.wait_event('have_started')
-
-            # debug('the thread is now started: %s', self)
-            self.state = STS_STARTED
-
-    def stop_thread(self):
-        """Called by clewn_select to stop the thread."""
-        if self.state != STS_STARTED:
-            return
-        if self.isAlive():
-            # debug('ask the thread to stop: %s', self)
-            self.stop_peeking.set()
-
-            # debug('wait until thread have_stopped: %s', self)
-            self.wait_event('have_stopped')
-
-            # debug('the thread is now stopped: %s', self)
-            self.state = STS_STOPPED
-
-class SelectPeek(Peek):
-    """The select peek thread.
-
-    The thread peeks on all waitable sockets set in clewn_select.
-
-    """
-    def __init__(self, fdmap, select_event):
-        """Constructor."""
-        Peek.__init__(self, 'socketThread', select_event)
-        self.fdmap = fdmap
-        self.iwtd = []
-        self.owtd = []
-        self.ewtd = []
-        self.iwtd_out = []
-        self.owtd_out = []
-        self.ewtd_out = []
-
-    def set_waitable(self, iwtd, owtd, ewtd):
-        """Set each waitable file descriptor list."""
-        self.iwtd = iwtd
-        self.owtd = owtd
-        self.ewtd = ewtd
-        self.iwtd_out = []
-        self.owtd_out = []
-        self.ewtd_out = []
-
-    def peek(self):
-        """Run select on all sockets."""
-        assert self.iwtd or self.owtd or self.ewtd
-        # debug('%s, %s, %s', self.iwtd, self.owtd, self.ewtd)
-        try:
-            iwtd, owtd, ewtd = select.select(self.iwtd, self.owtd, self.ewtd, 0)
-        except select.error as err:
-            if err.args[0] != errno.EINTR:
-                error('failed select call: ', err); raise
-            else:
-                return False
-        if iwtd or owtd or ewtd:
-            (self.iwtd_out, self.owtd_out, self.ewtd_out) = (iwtd, owtd, ewtd)
-            return True
-        return False
-
-    def isRunning(self):
-        """Return the thread status."""
-        return len(self.fdmap)
-
-    def stop_thread(self):
-        """Called by clewn_select to stop the select thread."""
-        Peek.stop_thread(self)
-        # debug('select return: %s, %s, %s',
-        #           self.iwtd_out, self.owtd_out, self.ewtd_out)
-        return self.iwtd_out, self.owtd_out, self.ewtd_out
-
-class PipePeek(Peek):
-    """The abstract pipe peek class."""
-
-    def __init__(self, fd, asyncobj, select_event):
-        """Constructor."""
-        Peek.__init__(self, 'pipeThread', select_event)
-        self.fd = fd
-        self.asyncobj = asyncobj
-        self.read_event = False
-
-    def isRunning(self):
-        """Return the thread status."""
-        return self.asyncobj.socket.connected
-
-    def start_thread(self):
-        """Called by clewn_select to start the thread."""
-        self.read_event = False
-        Peek.start_thread(self)
 

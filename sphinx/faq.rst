@@ -16,22 +16,6 @@ Konsole and rxvt both use -e in the same way that xterm does, to specify the
 program (and its command  line  arguments) to be run in the terminal window,
 but gnome-terminal uses -x instead.
 
-Installation process on Windows could not find gvim
----------------------------------------------------
-
-*Installation setup program couldn't find gvim. This is the error at the end
-of installation process*::
-
-    Failed to run '"C:\Program Files\Vim\vim73\gvim.exe"' as Vim.
-    Please set the EDITOR environment variable or run 'pyclewn --editor=/path/to/(g)vim'.
-
-    [Error 3] The system cannot find the path specified
-
-*Also, I've set the EDITOR environment variable but it didn't work.*
-
-The error message shows that the gvim pathname incorrectly includes double
-quotes.  Do not enclose the EDITOR environment variable in double quotes.
-
 Pyclewn never executes gdb
 --------------------------
 

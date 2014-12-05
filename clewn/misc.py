@@ -124,45 +124,6 @@ def unquote(msg):
     """Remove escapes from escaped characters in a quoted string."""
     return '%s' % re_unescape.sub(unescape_char, msg)
 
-def norm_unixpath(line, ispath=False):
-    """Convert backward slashes to forward slashes on Windows.
-
-    If 'ispath' is True, then convert the whole line.
-    Otherwise, this is done for all existing paths in line
-    and handles quoted paths.
-    """
-    if os.name != 'nt':
-        return line
-    if ispath:
-        return line.replace('\\', '/')
-
-    # match is a list of tuples
-    # first element of tuple is '' when it is a keyword
-    # second element of tuple is '' when it is a quoted string
-    match = re_token_split.findall(line)
-    if not match:
-        return line
-    result = []
-    changed = False
-    for elem in match:
-        quoted = False
-        if not elem[0]:
-            token = elem[1]
-        elif not elem[1]:
-            quoted = True
-            token = elem[0]
-        else:
-            assert False
-        if os.path.exists(token) and '\\' in token:
-            token = token.replace('\\', '/')
-            changed = True
-        if quoted:
-            token = '"' + token + '"'
-        result.append(token)
-    if not changed:
-        return line
-    return ' '.join(result)
-
 def parse_keyval(regexp, line):
     """Return a dictionary built from a string of 'key="value"' pairs.
 

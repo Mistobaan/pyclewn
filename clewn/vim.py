@@ -41,13 +41,8 @@ import atexit
 from .__init__ import *
 from . import (misc, gdb, simple, netbeans, evtloop)
 from . import pydb
-if os.name == 'nt':
-    from .nt import hide_console as daemonize
-    from .nt import platform_data
-    tty = None
-else:
-    from .posix import daemonize, platform_data
-    from . import tty
+from .posix import daemonize, platform_data
+from . import tty
 
 
 WINDOW_LOCATION = ('top', 'bottom', 'left', 'right', 'none')
@@ -211,7 +206,7 @@ def main(testrun=False):
     except_str = ''
     try:
         gdb_pty = None
-        if os.name != 'nt' and not testrun:
+        if not testrun:
             gdb_pty = tty.GdbInferiorPty(vim.stderr_hdlr, vim.socket_map)
         if (vim.clazz == gdb.Gdb
                     and gdb_pty
@@ -253,8 +248,6 @@ def main(testrun=False):
             gdb_pty.close()
         debug('Vim instance: ' + str(vim))
         vim.shutdown()
-        if os.name == 'nt' and except_str:
-            time.sleep(5)
 
     return vim
 
@@ -308,7 +301,7 @@ class Vim:
         self.clazz = None
         self.f_script = None
         self.nbserver = netbeans.Server(self.socket_map)
-        # instantiate 'poll' after addition of 'nbserver' sot the asyncore
+        # instantiate 'poll' after addition of 'nbserver' to the asyncore
         # 'socket_map'
         self.poll = evtloop.Poll(self.socket_map)
         self.vim = None
@@ -398,8 +391,7 @@ class Vim:
 
         info('Vim argv list: %s', str(args))
         try:
-            self.vim = subprocess.Popen(args,
-                                close_fds=(os.name != 'nt'))
+            self.vim = subprocess.Popen(args, close_fds=True)
         except OSError:
             critical('cannot start Vim'); raise
 
@@ -473,13 +465,6 @@ class Vim:
         elif self.clazz != gdb.Gdb and logging_shutdown:
             logging.shutdown()
 
-        # terminate daemon peeker threads
-        if 'CLEWN_PIPES' in os.environ or os.name == 'nt':
-            for asyncobj in self.socket_map.values():
-                asyncobj.socket.close()
-                if hasattr(asyncobj, 'peeker'):
-                    asyncobj.peeker.join()
-
         for asyncobj in list(self.socket_map.values()):
             asyncobj.close()
         self.poll.close()
@@ -545,12 +530,11 @@ class Vim:
         parser.add_option('-a', '--args',
                 type='string', action='callback', callback=args_callback,
                 help='set the debugger arguments to ARGS')
-        if os.name != 'nt':
-            parser.add_option('--terminal',
-                    type='string', default='xterm,-e',
-                    help=('set the terminal to use with the inferiortty'
-                    ' command for running gdb or pdb inferior'
-                    ' (default \'%default\')'))
+        parser.add_option('--terminal',
+                type='string', default='xterm,-e',
+                help=('set the terminal to use with the inferiortty'
+                ' command for running gdb or pdb inferior'
+                ' (default \'%default\')'))
         parser.add_option('--tty',
                 type='string', metavar='TTY', default=os.devnull,
                 help=('use TTY for input/output by the python script being'

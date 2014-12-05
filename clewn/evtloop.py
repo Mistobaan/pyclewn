@@ -26,10 +26,6 @@ import select
 import errno
 import asyncore
 import threading
-if os.name == 'nt':
-    from .nt import PipePeek
-else:
-    from .posix import PipePeek
 
 from . import (misc, asyncproc)
 
@@ -40,8 +36,6 @@ Unused = error
 Unused = warning
 Unused = info
 Unused = debug
-
-use_select_emulation = ('CLEWN_PIPES' in os.environ or os.name == 'nt')
 
 def get_asyncobj(fd, file_type, socket_map):
     """Return an asyncore instance from 'socket_map' if matching 'file_type'."""
@@ -58,86 +52,22 @@ def strip_asyncobj(wtd, file_type, socket_map):
         if asyncobj is not None:
             wtd.remove(fd)
 
-def clewn_select(iwtd, owtd, ewtd, timeout, poll):
-    """Windows select emulation on pipes and sockets.
-
-    The select_peeker thread, once created, is never destroyed.
-
-    """
-    select_peeker = None
-    pipe_objects = []
-
-    # pipes send only read events
-    strip_asyncobj(owtd, asyncproc.FileWrapper, poll.socket_map)
-    strip_asyncobj(ewtd, asyncproc.FileWrapper, poll.socket_map)
-
-    # start the peek threads
-    for fd in iwtd:
-        asyncobj = get_asyncobj(fd, asyncproc.FileWrapper, poll.socket_map)
-        if asyncobj is not None:
-            assert hasattr(asyncobj, 'reader') and asyncobj.reader
-            if not hasattr(asyncobj, 'peeker'):
-                asyncobj.peeker = PipePeek(asyncobj.socket.fileno(),
-                                            asyncobj, poll.select_event)
-                asyncobj.peeker.start()
-            pipe_objects.append(asyncobj)
-            iwtd.remove(fd)
-            asyncobj.peeker.start_thread()
-    if iwtd or owtd or ewtd:
-        select_peeker = poll.select_thread
-
-        select_peeker.set_waitable(iwtd, owtd, ewtd)
-        select_peeker.start_thread()
-
-    # wait for events
-    iwtd = []
-    owtd = []
-    ewtd = []
-    if select_peeker is None and not pipe_objects:
-        time.sleep(timeout)
-    else:
-        try:
-            poll.select_event.wait(timeout)
-        finally:
-            # stop the select threads
-            if select_peeker is not None:
-                iwtd, owtd, ewtd = select_peeker.stop_thread()
-            for asyncobj in pipe_objects:
-                asyncobj.peeker.stop_thread()
-                if asyncobj.peeker.read_event:
-                    iwtd.append(asyncobj.socket.fileno())
-            poll.select_event.clear()
-
-    return iwtd, owtd, ewtd
-
 class Poll:
     """A Poll instance manages a select thread.
 
     Instance attributes:
         socket_map: dict
             the asyncore map
-        select_thread: Thread
-            the thread running the select call
-        select_event: Event
-            the Event object that the clewn_select emulation is waiting on
 
     """
 
     def __init__(self, socket_map):
         """Constructor."""
         self.socket_map = socket_map
-        if use_select_emulation:
-            self.select_event = threading.Event()
-            self.select_thread = asyncproc.SelectPeek(
-                                        self.socket_map, self.select_event)
-            # note that the socket_map MUST NOT be empty
-            self.select_thread.start()
 
     def close(self):
         """Terminate the select thread."""
-        if use_select_emulation and not self.socket_map:
-            if self.select_thread and self.select_thread.isAlive():
-                self.select_thread.join()
+        # This is a noop: Windows support has been removed => no select thread.
 
     def run(self, timeout=0.0):
         """Run the asyncore poll function."""
@@ -156,10 +86,7 @@ class Poll:
                 time.sleep(timeout)
             else:
                 try:
-                    if use_select_emulation:
-                        r, w, e = clewn_select(r, w, e, timeout, self)
-                    else:
-                        r, w, e = select.select(r, w, e, timeout)
+                    r, w, e = select.select(r, w, e, timeout)
                 except select.error as err:
                     if err.args[0] != errno.EINTR:
                         raise

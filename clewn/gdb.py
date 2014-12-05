@@ -37,12 +37,8 @@ if os.name == 'posix':
 else:
     from .asyncproc import ProcessChannel
 
-if os.name == 'nt':
-    # On Windows, the best timer is time.clock()
-    _timer = time.clock
-else:
-    # On most other platforms the best timer is time.time()
-    _timer = time.time
+# On most other platforms the best timer is time.time()
+_timer = time.time
 
 # minimum gdb version
 GDB_VERSION = [6, 2, 1]
@@ -55,8 +51,6 @@ set height 0
 set width 0
 set annotate 1
 """
-if os.name == 'nt':
-    GDB_INIT += 'set new-console on\n'
 SYMBOL_COMPLETION_TIMEOUT = 20 # seconds
 SETFMTVAR_FORMATS = ('binary', 'decimal', 'hexadecimal', 'octal', 'natural')
 
@@ -646,8 +640,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
                 'document': (),
                 'commands': (),
             })
-        if os.name != 'nt':
-            self.pyclewn_cmds['inferiortty'] = ()
+        self.pyclewn_cmds['inferiortty'] = ()
         self.vim_implementation.extend(
             [
                 'cwindow',
@@ -728,8 +721,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
     def getargv(self):
         """Return the gdb argv list."""
         argv = [self.pgm]
-        if os.name != 'nt':
-            argv += ['-tty=%s' % self.options.tty]
+        argv += ['-tty=%s' % self.options.tty]
 
         # build the gdb init temporary file
         with misc.TmpFile('gdbscript') as self.f_init:
