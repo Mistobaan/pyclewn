@@ -1,22 +1,5 @@
 #! /usr/bin/env python
-#
-# Copyright (C) 2011 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
+# vi:set ts=8 sts=4 sw=4 et tw=80:
 """
 Create a pseudo terminal to be used as the controlling terminal of a process
 debugged by gdb.
@@ -25,6 +8,13 @@ When the name of this module is 'gdb_wrapper.py', spawn an xterm with a gdb
 instance that is setup to use the current terminal as its inferior tty. The
 command line arguments of 'gdb_wrapper' are passed unchanged to gdb.
 """
+
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
 
 import os
 import sys
@@ -42,9 +32,6 @@ import clewn.debugger as debugger
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('pty')
-Unused = critical
-Unused = error
-Unused = warning
 
 debug = False
 this_pgm = os.path.basename(sys.argv[0]).rsplit('.py', 1)[0]
@@ -126,7 +113,6 @@ got_sigchld = False
 
 def sigchld_handler(*args):
     """Handle SIGCHLD."""
-    unused = args
     global got_sigchld
     got_sigchld = True
 

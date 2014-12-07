@@ -1,40 +1,31 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
-#
-# Copyright (C) 2007 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
-"""The netbeans protocol implementation."""
+"""
+The netbeans protocol implementation.
+"""
+
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+try:
+    from _thread import get_ident as get_thread_ident
+except ImportError:
+    from thread import get_ident as get_thread_ident
 
 import sys
 import time
 import os.path
 import logging
-import _thread
 import re
 import socket
 import asyncore
 import asynchat
-if os.name == 'posix':
-    import fcntl
+import fcntl
 import difflib
 from abc import ABCMeta, abstractmethod
 
-from .__init__ import *
-from . import misc
+from . import ClewnError, misc
 from . import buffer as vimbuffer
 
 NETBEANS_VERSION = '2.3'
@@ -141,13 +132,13 @@ def full_pathname(name):
 
 def set_close_on_exec(socket):
     """Set the FD_CLOEXEC flag."""
-    if os.name == 'posix' and hasattr(fcntl, 'F_SETFD'):
+    if hasattr(fcntl, 'F_SETFD'):
         fd = socket.fileno()
         flags = fcntl.fcntl(fd, fcntl.F_GETFD, 0)
         flags = flags | fcntl.FD_CLOEXEC
         fcntl.fcntl(fd, fcntl.F_SETFD, flags)
 
-class LineCluster:
+class LineCluster(object):
     """Group lines in a bounded list of elements of a maximum size.
 
     Instance attributes:
@@ -164,7 +155,6 @@ class LineCluster:
     """
 
     def __init__(self, nb_element, nb_lines):
-        """Constructor."""
         self.nb_element = nb_element
         self.nb_lines = nb_lines
         self.last_element = [0, 0]
@@ -192,7 +182,7 @@ class LineCluster:
                 return self.cluster.pop(0)[1]
         return 0
 
-class ClewnBuffer:
+class ClewnBuffer(object):
     """A ClewnBuffer instance is an edit port in Vim.
 
     Instance attributes:
@@ -217,7 +207,6 @@ class ClewnBuffer:
     """
 
     def __init__(self, name, nbsock):
-        """Constructor."""
         assert vimbuffer.is_clewnbuf(name)
         self.buf = nbsock._bset[name]
         self.buf.registered = False
@@ -290,7 +279,6 @@ class ClewnBuffer:
 
     def update(self, content):
         """Update the buffer content in Vim."""
-        unused = content
         self.dirty = False
 
     def remove(self, offset, count):
@@ -352,7 +340,6 @@ class Console(ClewnBuffer):
     """
 
     def __init__(self, nbsock):
-        """Constructor."""
         ClewnBuffer.__init__(self, CONSOLE, nbsock)
         self.visible = True
         self.line_cluster = LineCluster(10, self.nbsock.max_lines // 10)
@@ -411,7 +398,6 @@ class DebuggerVarBuffer(ClewnBuffer):
     """
 
     def __init__(self, nbsock):
-        """Constructor."""
         ClewnBuffer.__init__(self, VARIABLES_BUFFER, nbsock)
         self.linelist = []
 
@@ -493,7 +479,7 @@ class DebuggerVarBuffer(ClewnBuffer):
 
         self.linelist = newlist
 
-class Reply:
+class Reply(object):
     """Abstract class. A Reply instance is a callable used to process
     the result of a  function call in the reply received from netbeans.
 
@@ -509,7 +495,6 @@ class Reply:
     __metaclass__ = ABCMeta
 
     def __init__(self, buf, seqno, nbsock):
-        """Constructor."""
         self.buf = buf
         self.seqno = seqno
         self.nbsock = nbsock
@@ -534,7 +519,6 @@ class insertReply(Reply):
 
     def __call__(self, seqno, nbstring, arg_list):
         """Check the reply to an insert or remove netbeans function."""
-        unused = nbstring
         if seqno != self.seqno:
              error('%s: invalid sequence number on edit', self.buf.name)
              return
@@ -551,7 +535,6 @@ class getLengthReply(Reply):
     """Check the reply to a getLength function."""
 
     def __init__(self, buf, seqno, nbsock):
-        """Constructor."""
         Reply.__init__(self, buf, seqno, nbsock)
         clewnbuffer = buf.editport
         assert clewnbuffer is not None
@@ -559,7 +542,6 @@ class getLengthReply(Reply):
 
     def __call__(self, seqno, nbstring, arg_list):
         """Check the length of the Vim buffer."""
-        unused = nbstring
         if seqno != self.seqno:
             error('%s: invalid sequence number on getLength', self.buf.name)
             return
@@ -577,7 +559,7 @@ class getLengthReply(Reply):
             else:
                 debug('ignoring: %s', err)
 
-class Server(asyncore.dispatcher):
+class Server(asyncore.dispatcher, object):
     """Accept a connection on the netbeans port
 
     Instance attributes:
@@ -590,7 +572,6 @@ class Server(asyncore.dispatcher):
     """
 
     def __init__(self, socket_map):
-        """Constructor."""
         asyncore.dispatcher.__init__(self, map=socket_map)
         self.oneshot = False
         self.netbeans = None
@@ -599,27 +580,22 @@ class Server(asyncore.dispatcher):
 
     def handle_error(self):
         """Raise the exception."""
-        unused = self
         raise
 
     def handle_expt(self):
         """We are not listening on exceptional conditions."""
-        unused = self
         assert False, 'unhandled exceptional condition'
 
     def handle_read(self):
         """Not implemented."""
-        unused = self
         assert False, 'unhandled read event in server'
 
     def handle_write(self):
         """Not implemented."""
-        unused = self
         assert False, 'unhandled write event in server'
 
     def handle_connect(self):
         """Not implemented."""
-        unused = self
         assert False, 'unhandled connect event in server'
 
     def bind_listen(self, oneshot, host, port, passwd):
@@ -661,14 +637,12 @@ class Server(asyncore.dispatcher):
 
     def handle_close(self):
         """Handle an asyncore close event."""
-        unused = self
         assert False, 'unhandled close event in server'
 
-class Sernum:
+class Sernum(object):
     """Netbeans sernum counter."""
 
     def __init__(self):
-        """Constructor."""
         self._last = 0
 
     # readonly property
@@ -679,7 +653,7 @@ class Sernum:
 
     last = property(get_sernum, None, None, 'last sernum')
 
-class Netbeans(asynchat.async_chat):
+class Netbeans(asynchat.async_chat, object):
     """A Netbeans instance exchanges netbeans messages on a socket.
 
     Instance attributes:
@@ -744,7 +718,6 @@ class Netbeans(asynchat.async_chat):
     bg_colors = ('Cyan', 'Green', 'Magenta')
 
     def __init__(self, socket_map, addr, passwd):
-        """Constructor."""
         asynchat.async_chat.__init__(self, map=socket_map)
         self._fileno = None
         self.addr = addr
@@ -784,13 +757,13 @@ class Netbeans(asynchat.async_chat):
         """Return True when enabled to receive read select events."""
         return (asynchat.async_chat.readable(self)
                     and (self.owner_thread == 0
-                        or self.owner_thread == _thread.get_ident()))
+                        or self.owner_thread == get_thread_ident()))
 
     def writable (self):
         """Return True when enabled to receive write select events."""
         return (asynchat.async_chat.writable(self)
                     and (self.owner_thread == 0
-                        or self.owner_thread == _thread.get_ident()))
+                        or self.owner_thread == get_thread_ident()))
 
     def close(self):
         """Close netbeans and the debugger."""
@@ -813,21 +786,17 @@ class Netbeans(asynchat.async_chat):
 
     def handle_error(self):
         """Raise the exception."""
-        unused = self
         raise
 
     def handle_expt(self):
         """We are not listening on exceptional conditions."""
-        unused = self
         assert False, 'unhandled exceptional condition'
 
     def handle_connect(self):
         """Not implemented."""
-        unused = self
 
     def handle_accept(self):
         """Not implemented."""
-        unused = self
         assert False, 'unhandled accept event'
 
     def handle_close(self):
@@ -876,7 +845,6 @@ class Netbeans(asynchat.async_chat):
                 raise ClewnError(
                         'got a reply with no matching function request')
             n, reply = self.reply_fifo.pop()
-            unused = n
             reply(seqno, nbstring, arg_list)
             self.last_seqno = seqno
 
@@ -913,9 +881,6 @@ class Netbeans(asynchat.async_chat):
             is_event, buf_id, event, seqno, nbstring, arg_list =        \
                     (lambda a, b=None, c=None, d=None, e=None, f=None:
                                 (a, b, c, d, e, f))(*parse_msg(msg))
-            unused = arg_list
-            unused = buf_id
-            unused = seqno
 
             if is_event:
                 if event == "version":
@@ -943,8 +908,6 @@ class Netbeans(asynchat.async_chat):
     #-----------------------------------------------------------------------
     def evt_balloonText(self, buf_id, nbstring, arg_list):
         """Process a balloonText netbeans event."""
-        unused = arg_list
-        unused = buf_id
         if not nbstring:
             error('empty string in balloonText')
         else:
@@ -952,14 +915,10 @@ class Netbeans(asynchat.async_chat):
 
     def evt_disconnect(self, buf_id, nbstring, arg_list):
         """Process a disconnect netbeans event."""
-        unused = arg_list
-        unused = nbstring
-        unused = buf_id
         self.close()
 
     def evt_fileOpened(self, buf_id, pathname, arg_list):
         """A file was opened by the user."""
-        unused = arg_list
         if pathname:
             clewnbuf = vimbuffer.is_clewnbuf(pathname)
             if os.path.isabs(pathname) or clewnbuf:
@@ -1056,8 +1015,6 @@ class Netbeans(asynchat.async_chat):
 
     def evt_killed(self, buf_id, nbstring, arg_list):
         """A file was closed by the user."""
-        unused = nbstring
-        unused = arg_list
         # buffer killed by netbeans, signs are already removed by Vim
         buf = self._bset.getbuf(buf_id)
         if buf is None:

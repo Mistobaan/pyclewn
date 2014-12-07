@@ -1,28 +1,16 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
-#
-# Copyright (C) 2007 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
+"""
+Pyclewn posix miscellaneous classes and functions.
+"""
 
-"""Pyclewn posix miscellaneous classes and functions."""
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
 
 import os
-assert os.name == 'posix'
-
 import sys
 import logging
 import signal
@@ -32,17 +20,15 @@ import fcntl
 import termios
 import platform
 
-from . import (misc, asyncproc)
+from . import misc, asyncproc
 
 try:
-    MAXFD = os.sysconf("SC_OPEN_MAX")
+    MAXFD = os.sysconf(str("SC_OPEN_MAX"))
 except ValueError:
     MAXFD = 256
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('psix')
-Unused = warning
-Unused = debug
 
 def platform_data():
     """Return platform information."""
@@ -59,47 +45,45 @@ def close_fds():
 def daemonize():
     """Run as a daemon."""
     CHILD = 0
-    if os.name == 'posix':
-        # setup a pipe between the child and the parent,
-        # so that the parent knows when the child has done
-        # the setsid() call and is allowed to exit
-        pipe_r, pipe_w = os.pipe()
+    # setup a pipe between the child and the parent,
+    # so that the parent knows when the child has done
+    # the setsid() call and is allowed to exit
+    pipe_r, pipe_w = os.pipe()
 
-        pid = os.fork()
-        if pid != CHILD:
-            # the read returns when the child closes the pipe
-            os.close(pipe_w)
-            os.read(pipe_r, 1)
-            os.close(pipe_r)
-            os._exit(os.EX_OK)
-
-        # close stdin, stdout and stderr
-        try:
-            devnull = os.devnull
-        except AttributeError:
-            devnull = '/dev/null'
-        fd = os.open(devnull, os.O_RDWR)
-        os.close(0)
-        os.close(1)
-        os.close(2)
-        os.dup(fd)      # replace stdin  (file descriptor 0)
-        os.dup(fd)      # replace stdout (file descriptor 1)
-        os.dup(fd)      # replace stderr (file descriptor 2)
-        os.close(fd)    # don't need this now that we've duplicated it
-
-        # change our process group in the child
-        try:
-            os.setsid()
-        except OSError:
-            critical('cannot run as a daemon'); raise
-        os.close(pipe_r)
+    pid = os.fork()
+    if pid != CHILD:
+        # the read returns when the child closes the pipe
         os.close(pipe_w)
+        os.read(pipe_r, 1)
+        os.close(pipe_r)
+        os._exit(os.EX_OK)
+
+    # close stdin, stdout and stderr
+    try:
+        devnull = os.devnull
+    except AttributeError:
+        devnull = '/dev/null'
+    fd = os.open(devnull, os.O_RDWR)
+    os.close(0)
+    os.close(1)
+    os.close(2)
+    os.dup(fd)      # replace stdin  (file descriptor 0)
+    os.dup(fd)      # replace stdout (file descriptor 1)
+    os.dup(fd)      # replace stderr (file descriptor 2)
+    os.close(fd)    # don't need this now that we've duplicated it
+
+    # change our process group in the child
+    try:
+        os.setsid()
+    except OSError:
+        critical('cannot run as a daemon'); raise
+    os.close(pipe_r)
+    os.close(pipe_w)
 
 def sigchld_handler(signum=signal.SIGCHLD, frame=None, process=None, l=[]):
     """The SIGCHLD handler is also used to register the ProcessChannel."""
     # takes advantage of the fact that the 'l' default value
     # is evaluated only once
-    unused = frame
     if process is not None and isinstance(process, asyncproc.ProcessChannel):
         l[0:len(l)] = [process]
         return
@@ -126,7 +110,6 @@ class ProcessChannel(asyncproc.ProcessChannel):
     INTERRUPT_CHAR = b'\x03'    # <Ctl-C>
 
     def __init__(self, socket_map, argv):
-        """Constructor."""
         asyncproc.ProcessChannel.__init__(self, socket_map, argv)
         self.sig_handler = None
         self.debug = (logging.getLogger().getEffectiveLevel() <= logging.INFO)
@@ -193,7 +176,7 @@ class ProcessChannel(asyncproc.ProcessChannel):
         try:
             master = self.forkexec()
         except (ImportError, OSError, os.error, termios.error):
-            t, v, filename, lnum, unused = misc.last_traceback()
+            t, v, filename, lnum, _ = misc.last_traceback()
             error("failed to setup a pseudo tty, falling back to pipes:")
             error("    %s: %s", str(t), str(v))
             error("    at %s:%s", filename, lnum)

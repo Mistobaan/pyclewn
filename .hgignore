@@ -1,4 +1,5 @@
 syntax: glob
+*.pyc
 *.swp
 clewn/__version__.py
 testsuite/foobar

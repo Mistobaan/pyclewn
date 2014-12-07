@@ -1,24 +1,14 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
-#
-# Copyright (C) 2007 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
+"""
+Pyclewn miscellaneous classes and functions.
+"""
 
-"""Pyclewn miscellaneous classes and functions."""
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
 
 import sys
 import os
@@ -32,7 +22,7 @@ import pprint
 import itertools
 import io
 
-from .__init__ import *
+from . import text_type, ClewnError
 
 DOUBLEQUOTE = '"'
 QUOTED_STRING = r'"((?:\\"|[^"])+)"'
@@ -47,8 +37,6 @@ RE_ESCAPE = r'["\n\t\r\\]'                                      \
             r'# RE: escaped characters in a string'
 RE_UNESCAPE = r'\\["ntr\\]'                                     \
               r'# RE: escaped characters in a quoted string'
-Unused = NBDEBUG
-Unused = LOG_LEVELS
 MISSING = object()
 
 # compile regexps
@@ -56,7 +44,6 @@ re_quoted = re.compile(QUOTED_STRING, re.VERBOSE)
 re_token_split = re.compile(RE_TOKEN_SPLIT, re.VERBOSE)
 re_escape = re.compile(RE_ESCAPE, re.VERBOSE)
 re_unescape = re.compile(RE_UNESCAPE, re.VERBOSE)
-Unused = re_quoted
 
 def logmethods(name):
     """Return the set of logging methods for the 'name' logger."""
@@ -71,9 +58,6 @@ def logmethods(name):
 
 # set the logging methods
 (critical, error, warning, info, debug) = logmethods('misc')
-Unused = error
-Unused = warning
-Unused = info
 
 def previous_evaluation(f, previous={}):
     """Decorator for functions returning previous result when args are unchanged."""
@@ -210,8 +194,7 @@ class PrettyPrinterString(pprint.PrettyPrinter):
 
     def format(self, object, context, maxlevels, level):
         """Format un object."""
-        unused = self
-        if isinstance(object, str):
+        if isinstance(object, text_type):
             return "'" + str(object) + "'", True, False
         return pprint._safe_repr(object, context, maxlevels, level)
 
@@ -220,14 +203,13 @@ def pformat(object, indent=1, width=80, depth=None):
     return PrettyPrinterString(
                     indent=indent, width=width, depth=depth).pformat(object)
 
-class TmpFile:
+class TmpFile(object):
     """A container for a temporary writtable file object.
 
     Support the context management protocol.
 
     """
     def __init__(self, prefix):
-        """Constructor."""
         self.f = None
         self.name = None
         try:
@@ -241,27 +223,22 @@ class TmpFile:
             atexit.register(unlink, self.name)
 
     def write(self, data):
-        """Write data to the file."""
         self.f.write(data)
 
     def close(self):
-        """Close the file."""
         if self.f:
             self.f.close()
 
     def __enter__(self):
-        """The context manager __enter__ method."""
         return self
 
     def __exit__(self, type, value, tb):
-        """The context manager __exit__ method."""
         self.close()
 
     def __del__(self):
-        """Unlink the file."""
         unlink(self.name)
 
-class Singleton:
+class Singleton(object):
     """A singleton, there is only one instance of this class."""
 
     def __new__(cls, *args, **kwds):
@@ -277,124 +254,10 @@ class Singleton:
         """Override in subclass."""
         pass
 
-class OrderedDict(dict):
-    """An ordered dictionary.
-
-    Ordered dictionaries are just like regular dictionaries but they
-    remember the order that items were inserted. When iterating over an
-    ordered dictionary, the items are returned in the order their keys were
-    first added.
-    """
-
-    def __init__(self, *args, **kwds):
-        """Constructor."""
-        if len(args) > 1:
-            raise TypeError('expected at most 1 arguments, got %d' % len(args))
-        if not hasattr(self, '_keys'):
-            self._keys = []
-        self.update(*args, **kwds)
-
-    def clear(self):
-        """Remove all items."""
-        del self._keys[:]
-        dict.clear(self)
-
-    def update(self, other=None, **kwargs):
-        """Update and overwrite key/value pairs."""
-        # make progressively weaker assumptions about "other"
-        if other is None:
-            pass
-        elif hasattr(other, 'iteritems'):
-            for k, v in other.items():
-                self[k] = v
-        elif hasattr(other, 'keys'):
-            for k in other.keys():
-                self[k] = other[k]
-        else:
-            for k, v in other:
-                self[k] = v
-        if kwargs:
-            self.update(kwargs)
-
-    def copy(self):
-        """A  shallow copy."""
-        return self.__class__(self)
-
-    def keys(self):
-        """An ordered copy of the list of keys."""
-        return self._keys[:]
-
-    def values(self):
-        """An ordered of the list of values by keys."""
-        return list(map(self.get, self._keys))
-
-    def items(self):
-        """Return an ordered iterator over (key, value) pairs."""
-        return zip(self._keys, iter(self.values()))
-
-    def pop(self, key, default=MISSING):
-        """self[key] if key in self, else default (and remove key)."""
-        if key in self:
-            self._keys.remove(key)
-            return dict.pop(self, key)
-        elif default is MISSING:
-            return dict.pop(self, key)
-        return default
-
-    def popitem(self):
-        """Remove the (key, value) pair of the last added key."""
-        if not self:
-            raise KeyError('dictionary is empty')
-        key = self._keys.pop()
-        value = dict.pop(self, key)
-        return key, value
-
-    def setdefault(self, key, failobj=None):
-        """self[key] if key in self, else failobj (also setting it)."""
-        value = dict.setdefault(self, key, failobj)
-        if key not in self._keys:
-            self._keys.append(key)
-        return value
-
-    def itervalues(self):
-        """Return an ordered iterator over the values."""
-        return map(self.get, self._keys)
-
-    def __setitem__(self, key, value):
-        """Called to implement assignment to self[key]."""
-        if key not in self:
-            self._keys.append(key)
-        dict.__setitem__(self, key, value)
-
-    @classmethod
-    def fromkeys(cls, iterable, value=None):
-        """Create a new dictionary with keys from seq and values set to value."""
-        d = cls()
-        for key in iterable:
-            d[key] = value
-        return d
-
-    def __delitem__(self, key):
-        """Called to implement deletion of self[key]."""
-        dict.__delitem__(self, key)
-        self._keys.remove(key)
-
-    def __iter__(self):
-        """Return an ordered iterator over the keys."""
-        return iter(self._keys)
-    iterkeys = __iter__
-
-    def __repr__(self):
-        """Return the string representation."""
-        if not self:
-            return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, list(self.items()))
-
 class StderrHandler(logging.StreamHandler):
     """Stderr logging handler."""
 
     def __init__(self):
-        """Constructor."""
         self.strbuf = io.StringIO()
         self.doflush = True
         logging.StreamHandler.__init__(self, self.strbuf)

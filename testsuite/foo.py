@@ -1,13 +1,21 @@
 """Debugged module used by the test suite."""
+
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
+
 import sys
 import os
 import time
 
-class C:
+class C(object):
     """Test class."""
     def __init__(self, value):
-        """Constructor."""
         self.value = value
+
     def get_value(self):
         """Getter."""
         return self.value
@@ -32,7 +40,6 @@ def bar(prefix, i):
 def foo(run, do_sleep, *args):
     """Main function."""
     c = C(1)
-    unused = args
     while run:
         if do_sleep:
             time.sleep(.200)

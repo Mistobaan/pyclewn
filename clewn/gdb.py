@@ -1,25 +1,14 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
-#
-# Copyright (C) 2007 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
-
-"""The Gdb debugger is a frontend to GDB/MI.
 """
+The Gdb debugger is a frontend to GDB/MI.
+"""
+
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
 
 import os
 import os.path
@@ -30,19 +19,14 @@ import time
 import collections
 from itertools import takewhile
 
-from .__init__ import *
-from . import (asyncproc, gdbmi, misc, debugger)
-if os.name == 'posix':
-    from .posix import ProcessChannel
-else:
-    from .asyncproc import ProcessChannel
+from . import ClewnError, gdbmi, misc, debugger
+from .posix import ProcessChannel
 
 # On most other platforms the best timer is time.time()
 _timer = time.time
 
 # minimum gdb version
 GDB_VERSION = [6, 2, 1]
-Unused = GDB_VERSION
 
 # gdb initial settings
 GDB_INIT = """
@@ -390,15 +374,6 @@ class GlobalSetup(misc.Singleton):
 
     """
 
-    # defeating pychecker check on non-initialized data members
-    _cmds = None
-    _illegal_cmds_prefix = None
-    _run_cmds_prefix = None
-    _illegal_setargs_prefix = None
-    _f_bps = None
-    _f_ack = None
-    _f_clist = None
-
     filename_complt = [
         'cd',
         'directory',
@@ -450,35 +425,20 @@ class GlobalSetup(misc.Singleton):
         self.pyclewn_cmds = pyclewn_cmds
         self.vim_implementation = vim_implementation
 
-        self.cmds = self._cmds = {}
+        self.cmds = {}
         self.illegal_cmds_prefix = []
         self.run_cmds_prefix = []
         self.illegal_setargs_prefix = []
-
         self.gdb_cmds()
 
-        self._illegal_cmds_prefix = self.illegal_cmds_prefix
-        self._run_cmds_prefix = self.run_cmds_prefix
-        self._illegal_setargs_prefix = self.illegal_setargs_prefix
-
-        self._f_bps = misc.tmpfile('gdb')
-        self._f_ack = misc.tmpfile('gdb')
-        self._f_clist = misc.tmpfile('gdb')
+        self.f_bps = misc.tmpfile('gdb')
+        self.f_ack = misc.tmpfile('gdb')
+        self.f_clist = misc.tmpfile('gdb')
 
     def __init__(self, gdbname, pyclewn_cmds, vim_implementation):
-        """Constructor."""
         self.gdbname = gdbname
         self.pyclewn_cmds = pyclewn_cmds
         self.vim_implementation = vim_implementation
-
-        # tricking pychecker
-        self.cmds = self._cmds
-        self.illegal_cmds_prefix = self._illegal_cmds_prefix
-        self.run_cmds_prefix = self._run_cmds_prefix
-        self.illegal_setargs_prefix = self._illegal_setargs_prefix
-        self.f_bps = self._f_bps
-        self.f_ack = self._f_ack
-        self.f_clist = self._f_clist
 
     def gdb_cmds(self):
         """Get the completion lists from gdb and build the GlobalSetup lists.
@@ -624,7 +584,6 @@ class Gdb(debugger.Debugger, ProcessChannel):
     STATE_INIT, STATE_RUNNING, STATE_QUITTING, STATE_CLOSING = list(range(4))
 
     def __init__(self, *args):
-        """Constructor."""
         debugger.Debugger.__init__(self, *args)
         self.pyclewn_cmds.update(
             {
@@ -1070,7 +1029,6 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
     def cmd_inferiortty(self, *args):
         """Spawn gdb inferior terminal and setup gdb with this terminal."""
-        unused = args
 
         def set_inferior_tty(line):
             cmd, args = line.split(' ', 1)
@@ -1093,43 +1051,32 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
     def cmd_cwindow(self, cmd, *args):
         """List the breakpoints in a quickfix window."""
-        unused = self
-        unused = args
         self.not_a_pyclewn_method(cmd)
 
     def cmd_symcompletion(self, *args):
         """Populate the break and clear commands with symbols completion."""
-        unused = args
         gdbmi.CompleteBreakCommand(self).sendcmd()
 
     def cmd_define(self, cmd, *args):
         """Define a new command name.  Command name is argument."""
-        unused = self
-        unused = args
         self.not_a_pyclewn_method(cmd)
 
     def cmd_commands(self, cmd, *args):
         """Set commands to be executed when a breakpoint is hit."""
-        unused = self
-        unused = args
         self.not_a_pyclewn_method(cmd)
 
     def cmd_document(self, cmd, *args):
         """Document a user-defined command."""
-        unused = self
-        unused = args
         self.not_a_pyclewn_method(cmd)
 
     def cmd_dbgvar(self, cmd, args):
         """Add a variable to the debugger variable buffer."""
-        unused = cmd
         varobj = gdbmi.VarObj({'exp': args})
         if gdbmi.VarCreateCommand(self, varobj).sendcmd():
             self.oob_list.push(gdbmi.VarObjCmdEvaluate(self, varobj))
 
     def cmd_delvar(self, cmd, args):
         """Delete a variable from the debugger variable buffer."""
-        unused = cmd
         args = args.split()
         # one argument is required
         if len(args) != 1:
@@ -1137,7 +1084,6 @@ class Gdb(debugger.Debugger, ProcessChannel):
         else:
             name = args[0]
             (varobj, varlist) = self.info.varobj.leaf(name)
-            unused = varlist
             if varobj is not None:
                 gdbmi.VarDeleteCommand(self, varobj).sendcmd()
                 return
@@ -1146,7 +1092,6 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
     def cmd_foldvar(self, cmd, args):
         """Collapse/expand a variable from the debugger variable buffer."""
-        unused = cmd
         args = args.split()
         errmsg = ''
         # one argument is required
@@ -1182,7 +1127,6 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
     def cmd_setfmtvar(self, cmd, args):
         """Set the output format of the value of the watched variable."""
-        unused = cmd
         args = args.split()
         # two arguments are required
         if len(args) != 2:
@@ -1196,7 +1140,6 @@ class Gdb(debugger.Debugger, ProcessChannel):
                                             % (format, SETFMTVAR_FORMATS))
             else:
                 (varobj, varlist) = self.info.varobj.leaf(name)
-                unused = varlist
                 if varobj is not None:
                     if gdbmi.VarSetFormatCommand(self, varobj).sendcmd(format):
                         self.oob_list.push(gdbmi.VarObjCmdEvaluate(self, varobj))
@@ -1215,7 +1158,6 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
     def cmd_quit(self, *args):
         """Quit gdb."""
-        unused = args
         if self.state == self.STATE_INIT:
             self.console_print("Ignoring 'quit' command on startup.\n")
             return
@@ -1255,7 +1197,6 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
     def cmd_sigint(self, *args):
         """Send a <C-C> character to the debugger."""
-        unused = args
         if self.state == self.STATE_INIT:
             self.console_print("Ignoring 'sigint' command on startup.\n")
             return
@@ -1265,12 +1206,11 @@ class Gdb(debugger.Debugger, ProcessChannel):
             self.cmd_sigint.__func__.__doc__ = \
                 'Command ignored: gdb does not handle interrupts over pipes.'
             self.console_print('\n%s\n', self.cmd_sigint.__doc__)
-            if os.name == 'posix':
-                self.console_print('To interrupt the program being debugged, '
-                    'send a SIGINT signal\n'
-                    'from the shell. For example, type from the vim command'
-                    ' line:\n'
-                    '    :!kill -SIGINT $(pgrep program_name)\n'
+            self.console_print('To interrupt the program being debugged, '
+                'send a SIGINT signal\n'
+                'from the shell. For example, type from the vim command'
+                ' line:\n'
+                '    :!kill -SIGINT $(pgrep program_name)\n'
                 )
         self.console_print("Quit\n")
 

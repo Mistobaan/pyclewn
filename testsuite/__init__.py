@@ -1,4 +1,4 @@
-"""The testsuite package.
-
+"""
+The testsuite package.
 """
 

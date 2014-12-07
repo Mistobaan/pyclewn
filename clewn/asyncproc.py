@@ -1,27 +1,14 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
-#
-# Copyright (C) 2007 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
-
-"""Low level module providing async_chat process communication and the use of
-pipes for communicating with the forked process.
-
 """
+Low level module providing async_chat process communication and the use of pipes
+for communicating with the forked process.
+"""
+
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import os
 import os.path
@@ -32,18 +19,15 @@ import select
 import errno
 import asynchat
 import subprocess
+import fcntl
 from abc import ABCMeta, abstractmethod
-if os.name == 'posix':
-    import fcntl
 
 from . import misc
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('proc')
-Unused = warning
-Unused = debug
 
-class FileWrapper:
+class FileWrapper(object):
     """Emulate a socket with a file descriptor or file object.
 
     Here we override just enough to make a file look like a socket for the
@@ -58,7 +42,6 @@ class FileWrapper:
     """
 
     def __init__(self, f):
-        """Constructor."""
         self.fobj = None
         if isinstance(f, int):
             self.fd = f
@@ -91,7 +74,7 @@ class FileWrapper:
         """Return the file descriptor."""
         return self.fd
 
-class FileAsynchat(asynchat.async_chat):
+class FileAsynchat(asynchat.async_chat, object):
     """Instances of FileAsynchat are added to the asyncore socket_map.
 
     A FileAsynchat instance is a ProcessChannel helper, and a wrapper
@@ -113,7 +96,6 @@ class FileAsynchat(asynchat.async_chat):
     """
 
     def __init__(self, f, channel, reader=None, map=None):
-        """Constructor."""
         asynchat.async_chat.__init__(self, map=map)
         self.channel = channel
         self.reader = reader
@@ -128,10 +110,9 @@ class FileAsynchat(asynchat.async_chat):
         self.set_file(f)
 
         # set it to non-blocking mode
-        if os.name == 'posix':
-            flags = fcntl.fcntl(self._fileno, fcntl.F_GETFL, 0)
-            flags = flags | os.O_NONBLOCK
-            fcntl.fcntl(self._fileno, fcntl.F_SETFL, flags)
+        flags = fcntl.fcntl(self._fileno, fcntl.F_GETFL, 0)
+        flags = flags | os.O_NONBLOCK
+        fcntl.fcntl(self._fileno, fcntl.F_SETFL, flags)
 
     def set_file(self, f):
         """Set the file descriptor."""
@@ -156,22 +137,18 @@ class FileAsynchat(asynchat.async_chat):
 
     def handle_error(self):
         """Process an error."""
-        unused = self
         raise
 
     def handle_expt(self):
         """Process a select exception."""
-        unused = self
         assert False, 'unhandled exception'
 
     def handle_connect(self):
         """Process a connect event."""
-        unused = self
         assert False, 'unhandled connect event'
 
     def handle_accept(self):
         """Process an accept event."""
-        unused = self
         assert False, 'unhandled accept event'
 
     def handle_close(self):
@@ -204,7 +181,7 @@ class FileAsynchat(asynchat.async_chat):
         """Push the data to be sent."""
         asynchat.async_chat.push(self, data.encode())
 
-class ProcessChannel:
+class ProcessChannel(object):
     """An abstract class to run a command with a process through async_chat.
 
     To implement a concrete subclass of ProcessChannel, one must implement
@@ -230,7 +207,6 @@ class ProcessChannel:
     __metaclass__ = ABCMeta
 
     def __init__(self, socket_map, argv):
-        """Constructor."""
         assert argv
         self.socket_map = socket_map
         self.argv = argv

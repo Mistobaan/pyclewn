@@ -1,10 +1,16 @@
 News
 ====
 
-Pyclewn 1.12
-------------
+Pyclewn 2.0
+-----------
 
-.. March 13, 2014
+.. December 7, 2014
+
+Change
+^^^^^^
+
+* Windows support has been removed. Pyclewn requires now Python 2.7 or Python
+  3.1 or newer and the same source code is used for all the Python versions.
 
 Bug fix
 ^^^^^^^

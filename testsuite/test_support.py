@@ -1,24 +1,14 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
-#
-# Copyright (C) 2007 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
+"""
+Supporting definitions for the pyclewn regression tests.
+"""
 
-"""Supporting definitions for the pyclewn regression tests."""
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
 
 import sys
 import os
@@ -33,7 +23,7 @@ import clewn.vim as vim
 
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
-TESTRUN_SLEEP_TIME = 400
+TESTRUN_SLEEP_TIME = 800
 
 # filenames used for testing
 TESTFN = '@test'
@@ -92,7 +82,6 @@ class ClewnTestCase(TestCase):
     _debug = False
 
     def __init__(self, method='runTest'):
-        """Constructor."""
         TestCase.__init__(self, method)
         self.method = method
         self.pdb_script = None
@@ -118,7 +107,6 @@ class ClewnTestCase(TestCase):
 
     def setup_vim_arg(self, newarg):
         """Add a new Vim argument to the existing arguments."""
-        unused = self
         argv = sys.argv
         i = argv.index('--cargs')
         argv.pop(i)
@@ -170,30 +158,27 @@ class ClewnTestCase(TestCase):
             timeout = -1
         else:
             timeout = 5
-        fp = open(TESTFN, 'w')
-        fp.write(string.Template(commands).substitute(
+        with open(TESTFN, 'w') as fp:
+            fp.write(string.Template(commands).substitute(
                                     test_file=TESTFN_FILE,
                                     test_out=TESTFN_OUT,
                                     key=random.randint(0, 1000000000),
                                     timeout=timeout,
                                     cwd=cwd))
-        fp.close()
 
         # write the test files
         for i, t in enumerate(test):
-            fp = open(TESTFN_FILE + str(i+1), 'w')
-            fp.write(t)
-            fp.close()
+            with open(TESTFN_FILE + str(i+1), 'w') as fp:
+                fp.write(t)
 
         # process the commands
         if self._debug:
             vim.pdb(netbeans='localhost:3220:foo')
-        unused = vim.main(True)
+        vim.main(True)
 
         # check the result
-        fp = open(outfile, 'r')
-        output = fp.read()
-        fp.close()
+        with open(outfile, 'r') as fp:
+            output = fp.read()
 
         expected = '\n'.join(expected)
         expected = string.Template(expected).substitute(
@@ -218,7 +203,6 @@ class TextTestResult(TestResult):
     separator2 = '-' * 70
 
     def __init__(self, stream, verbose, stop_on_error):
-        """"Constructor."""
         TestResult.__init__(self)
         self.stream = stream
         self.verbose = verbose
@@ -253,8 +237,7 @@ class TextTestResult(TestResult):
     @failfast
     def addFailure(self, test, err):
         """Called when an error has occurred."""
-        exctype, value, tb = err
-        unused = tb
+        exctype, value, _ = err
         # do not print the traceback on failure
         self.failures.append((test,
                 ''.join(traceback.format_exception(exctype, value, None))))
@@ -290,7 +273,6 @@ class TextTestResult(TestResult):
 class TextTestRunner(object):
     """A test runner class that prints results as they are run and a summary."""
     def __init__(self, verbose, stop_on_error, stream=sys.stderr):
-        """"Constructor."""
         self.verbose = verbose
         self.stop_on_error = stop_on_error
         self.stream = stream

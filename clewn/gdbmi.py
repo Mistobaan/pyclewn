@@ -1,24 +1,6 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
-#
-# Copyright (C) 2007 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
-
-"""Contain classes that implement the gdb commands.
+"""
+Contain classes that implement the gdb commands.
 
 A Gdb command may be an:
     * instance of CliCommand
@@ -39,8 +21,14 @@ The instance of the Info class contains all this data.
 
 The oob commands also perform actions such as: source the project file, update
 the breakpoints and frame sign, create/delete/update the varobj objects.
-
 """
+
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
 
 import os
 import os.path
@@ -48,16 +36,12 @@ import re
 import io
 import collections
 from abc import ABCMeta, abstractmethod
+from collections import OrderedDict
 
-from . import misc
-try:
-    from collections import OrderedDict
-except ImportError:
-    from .misc import OrderedDict
+from . import PY3, text_type, misc
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('mi')
-Unused = critical
 
 VAROBJ_FMT = '%%(name)-%ds: (%%(type)-%ds) %%(exp)-%ds %%(chged)s %%(value)s\n'
 
@@ -92,7 +76,6 @@ VAREVALUATE_ATTRIBUTES = {'value'}
 
 def keyval_pattern(attributes, comment=''):
     """Build and return a keyval pattern string."""
-    unused = comment
     return '(' + '|'.join(attributes) + ')=' + misc.QUOTED_STRING
 
 # regexp
@@ -207,7 +190,7 @@ class VarObjList(OrderedDict):
                 dirty = True
         return dirty
 
-class RootVarObj:
+class RootVarObj(object):
     """The root of the tree of varobj objects.
 
     Instance attributes:
@@ -223,7 +206,6 @@ class RootVarObj:
     """
 
     def __init__(self):
-        """Constructor."""
         self.root = VarObjList()
         self.parents = {}
         self.dirty = False
@@ -285,7 +267,6 @@ class VarObj(dict):
     """A gdb/mi varobj object."""
 
     def __init__(self, vardict={}):
-        """Constructor."""
         self['name'] = ''
         self['exp'] = ''
         self['type'] = ''
@@ -328,7 +309,7 @@ class VarObj(dict):
 
         return dirty
 
-class Info:
+class Info(object):
     """Container for the debuggee state information.
 
     It includes the breakpoints table, the varobj data, etc.
@@ -367,7 +348,6 @@ class Info:
     """
 
     def __init__(self, gdb):
-        """Constructor."""
         self.gdb = gdb
         self.args = []
         self.breakpoints = []
@@ -427,7 +407,6 @@ class Info:
 
     def update_breakpoints(self, cmd):
         """Update the breakpoints."""
-        unused = cmd
         is_changed = False
 
         # build the breakpoints dictionary
@@ -483,19 +462,18 @@ class Info:
         if (oldset - nset) or (nset - oldset):
             is_changed = True
         if is_changed:
-            f_bps = open(self.gdb.globaal.f_bps.name, 'w')
-            for num in sorted(bp_dictionary.keys()):
-                pathname = self.get_fullpath(bp_dictionary[num]['file'])
-                if pathname is not None:
-                    lnum = bp_dictionary[num]['line']
-                    state = bp_dictionary[num]['enabled']
-                    if state == 'y':
-                        state = 'enabled'
-                    else:
-                        state = 'disabled'
-                    f_bps.write('%s:%s:breakpoint %s %s\n'
-                                        % (pathname, lnum, num, state))
-            f_bps.close()
+            with open(self.gdb.globaal.f_bps.name, 'w') as f_bps:
+                for num in sorted(bp_dictionary.keys()):
+                    pathname = self.get_fullpath(bp_dictionary[num]['file'])
+                    if pathname is not None:
+                        lnum = bp_dictionary[num]['line']
+                        state = bp_dictionary[num]['enabled']
+                        if state == 'y':
+                            state = 'enabled'
+                        else:
+                            state = 'disabled'
+                        f_bps.write('%s:%s:breakpoint %s %s\n'
+                                            % (pathname, lnum, num, state))
 
     def update_frame(self, cmd='', hide=False):
         """Update the frame sign."""
@@ -533,10 +511,8 @@ class Info:
 
     def update_changelist(self, cmd):
         """Process a varobj changelist event."""
-        unused = cmd
         for vardict in self.changelist:
             (varobj, varlist) = self.varobj.leaf(vardict['name'])
-            unused = varlist
             if varobj is not None:
                 varobj['in_scope'] = vardict['in_scope']
                 self.gdb.oob_list.push(VarObjCmdEvaluate(self.gdb, varobj))
@@ -560,7 +536,6 @@ class Result(dict):
     """
 
     def __init__(self):
-        """Constructor."""
         self.token = 100
 
     def add(self, command):
@@ -589,7 +564,7 @@ class Result(dict):
         del self[token]
         return command
 
-class OobList:
+class OobList(object):
     """List of instances of OobCommand subclasses.
 
     An instance of OobList return two different types of iterator:
@@ -611,7 +586,6 @@ class OobList:
     """
 
     def __init__(self, gdb):
-        """Constructor."""
         self.running_list = []
         self.fifo = None
 
@@ -659,6 +633,7 @@ class OobList:
         else:
             self.fifo = None
             raise StopIteration
+    next = __next__
 
     def push(self, obj):
         """Push a Command object.
@@ -672,7 +647,7 @@ class OobList:
         else:
             self.running_list.append(obj)
 
-class Command:
+class Command(object):
     """Abstract class to send gdb command and process the result.
 
     Instance attributes:
@@ -686,7 +661,6 @@ class Command:
     __metaclass__ = ABCMeta
 
     def __init__(self, gdb):
-        """Constructor."""
         self.gdb = gdb
         self.stream_record = ''
 
@@ -752,7 +726,6 @@ class CompleteBreakCommand(CliCommand):
 
     def sendcmd(self, cmd=''):
         """Send the gdb command."""
-        unused = cmd
         if not CliCommand.sendcmd(self, 'complete break '):
             self.handle_strrecord('')
             return False
@@ -808,7 +781,6 @@ class MiCommand(Command):
     """
 
     def __init__(self, gdb, varobj):
-        """Constructor."""
         self.gdb = gdb
         self.varobj = varobj
         self.result = ''
@@ -868,7 +840,6 @@ class VarDeleteCommand(MiCommand):
                 name = self.varobj['name']
                 rootvarobj = self.gdb.info.varobj
                 (varobj, varlist) = rootvarobj.leaf(name)
-                unused = varobj
                 if varlist is not None:
                     del varlist[name]
                     rootvarobj.dirty = True
@@ -936,7 +907,6 @@ class WhatIs(Command):
     """
 
     def __init__(self, gdb, text):
-        """Constructor."""
         self.gdb = gdb
         self.text = text
 
@@ -977,7 +947,6 @@ class ShowBalloon(Command):
     """
 
     def __init__(self, gdb, text):
-        """Constructor."""
         self.gdb = gdb
         self.text = text
         self.result = ''
@@ -1027,7 +996,6 @@ class VarObjCmd(Command):
     __metaclass__ = ABCMeta
 
     def __init__(self, gdb, varobj):
-        """Constructor."""
         self.gdb = gdb
         self.varobj = varobj
         self.result = ''
@@ -1104,12 +1072,11 @@ class VarObjCmdDelete(VarObjCmd):
                 name = self.varobj['name']
                 rootvarobj = self.gdb.info.varobj
                 (varobj, varlist) = rootvarobj.leaf(name)
-                unused = varobj
                 if varlist is not None:
                     del varlist[name]
                     rootvarobj.dirty = True
 
-class OobCommand:
+class OobCommand(object):
     """Abstract class for all static OobCommands.
 
     An OobCommand can either send a gdb command, or process the result of other
@@ -1120,7 +1087,6 @@ class OobCommand:
     __metaclass__ = ABCMeta
 
     def __init__(self, gdb):
-        """Constructor."""
         self.gdb = gdb
 
     @abstractmethod
@@ -1170,16 +1136,15 @@ class OobGdbCommand(OobCommand, Command):
     """
 
     def __init__(self, gdb):
-        """Constructor."""
         OobCommand.__init__(self, gdb)
         assert self.__class__ is not OobGdbCommand
-        assert hasattr(self, 'gdb_cmd') and isinstance(self.gdb_cmd, str)
+        assert hasattr(self, 'gdb_cmd') and isinstance(self.gdb_cmd, text_type)
         self.mi = not self.gdb_cmd.startswith('-interpreter-exec console')
         assert hasattr(self, 'info_attribute')              \
-                and isinstance(self.info_attribute, str)    \
+                and isinstance(self.info_attribute, text_type)\
                 and hasattr(self.gdb.info, self.info_attribute)
         assert hasattr(self, 'prefix')                      \
-                and isinstance(self.prefix, str)
+                and isinstance(self.prefix, text_type)
         assert hasattr(self, 'regexp')                      \
                 and hasattr(self.regexp, 'findall')
         assert hasattr(self, 'gdblist')                     \
@@ -1262,7 +1227,6 @@ class OobGdbCommand(OobCommand, Command):
                     getattr(self.gdb.info, self.action)(self.cmd)
                 except (KeyError, ValueError) as err:
                     t, v, filename, lnum, last_tb = misc.last_traceback()
-                    unused = (t, v, last_tb)
                     error('Exception %s: "%s" at %s:%d', type(err), err,
                                                             filename, lnum)
                     info_attribute = getattr(self.gdb.info,
@@ -1277,7 +1241,7 @@ class OobGdbCommand(OobCommand, Command):
 
 # instantiate the OobGdbCommand subclasses
 Args =          \
-    type('Args', (OobGdbCommand,),
+    type(str('Args'), (OobGdbCommand,),
             {
                 '__doc__': """Get the program arguments.""",
                 'gdb_cmd': '-interpreter-exec console "show args"\n',
@@ -1291,7 +1255,7 @@ Args =          \
             })
 
 Breakpoints =   \
-    type('Breakpoints', (OobGdbCommand,),
+    type(str('Breakpoints'), (OobGdbCommand,),
             {
                 '__doc__': """Get the breakpoints list.""",
                 'gdb_cmd': '-break-list\n',
@@ -1305,7 +1269,7 @@ Breakpoints =   \
             })
 
 Directories =   \
-    type('Directories', (OobGdbCommand,),
+    type(str('Directories'), (OobGdbCommand,),
             {
                 '__doc__': """Get the directory list.""",
                 'gdb_cmd': '-interpreter-exec console "show directories"\n',
@@ -1318,7 +1282,7 @@ Directories =   \
             })
 
 File =          \
-    type('File', (OobGdbCommand,),
+    type(str('File'), (OobGdbCommand,),
             {
                 '__doc__': """Get the source file.""",
                 'gdb_cmd': '-file-list-exec-source-file\n',
@@ -1331,7 +1295,7 @@ File =          \
             })
 
 FrameCli =      \
-    type('FrameCli', (OobGdbCommand,),
+    type(str('FrameCli'), (OobGdbCommand,),
             {
                 '__doc__': """Get the frame information.""",
                 'version_max': [6, 3],
@@ -1346,7 +1310,7 @@ FrameCli =      \
             })
 
 Frame=          \
-    type('Frame', (OobGdbCommand,),
+    type(str('Frame'), (OobGdbCommand,),
             {
                 '__doc__': """Get the frame information.""",
                 'version_min': [6, 4],
@@ -1361,7 +1325,7 @@ Frame=          \
             })
 
 PgmFile =       \
-    type('PgmFile', (OobGdbCommand,),
+    type(str('PgmFile'), (OobGdbCommand,),
             {
                 '__doc__': """Get the program file.""",
                 'gdb_cmd': '-interpreter-exec console "info files"\n',
@@ -1374,7 +1338,7 @@ PgmFile =       \
             })
 
 Pwd =           \
-    type('Pwd', (OobGdbCommand,),
+    type(str('Pwd'), (OobGdbCommand,),
             {
                 '__doc__': """Get the current working directory.""",
                 'gdb_cmd': '-environment-pwd\n',
@@ -1387,7 +1351,7 @@ Pwd =           \
             })
 
 Sources =       \
-    type('Sources', (OobGdbCommand,),
+    type(str('Sources'), (OobGdbCommand,),
             {
                 '__doc__': """Get the list of source files.""",
                 'gdb_cmd': '-file-list-exec-source-files\n',
@@ -1400,7 +1364,7 @@ Sources =       \
             })
 
 VarUpdate =     \
-    type('VarUpdate', (OobGdbCommand,),
+    type(str('VarUpdate'), (OobGdbCommand,),
             {
                 '__doc__': """Update the variable and its children.""",
                 'gdb_cmd': '-var-update *\n',
@@ -1423,7 +1387,6 @@ class Project(OobCommand):
     """
 
     def __init__(self, gdb):
-        """Constructor."""
         OobCommand.__init__(self, gdb)
         self.project_name = ''
 
@@ -1500,8 +1463,6 @@ class Quit(OobCommand):
 
     def notify(self, cmd):
         """Ignore the notification."""
-        unused = self
-        unused = cmd
 
     def __call__(self):
         """Quit gdb."""

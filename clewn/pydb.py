@@ -1,44 +1,32 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
-#
-# Copyright (C) 2010 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
-
-"""The Pdb debugger.
 """
+The Pdb debugger.
+"""
+
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+try:
+    import reprlib   # Python 3
+except ImportError:
+    import repr as reprlib   # Python 2
 
 import sys
 import os
 import threading
 import time
-import reprlib as _repr
 import io
 import signal
-from pdb_clone import pdb, bdb, __version__
+from collections import OrderedDict
 
-from . import misc, debugger, asyncproc, evtloop
-try:
-    from collections import OrderedDict
-except ImportError:
-    from .misc import OrderedDict
+#from pdb_clone import pdb, bdb, __version__
+
+from . import text_type, misc, debugger, asyncproc, evtloop
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('pdb')
-Unused = warning
 
 HELP_EMPTY_CMD = (
 """The empty command executes the (one-line) statement in the context of the
@@ -135,50 +123,49 @@ def user_method_redirect(f):
         f(self, *args, **kwds)
     return newf
 
-class ShortRepr(_repr.Repr):
-    """Minimum length object representation."""
+#class ShortRepr(_repr.Repr):
+#    """Minimum length object representation."""
+#
+#    def __init__(self):
+#        _repr.Repr.__init__(self)
+#        self.maxlevel = 2
+#        self.maxtuple = 2
+#        self.maxlist = 2
+#        self.maxarray = 2
+#        self.maxdict = 1
+#        self.maxset = 2
+#        self.maxfrozenset = 2
+#        self.maxdeque = 2
+#        self.maxstring = 20
+#        self.maxlong = 20
+#        self.maxother = 20
 
-    def __init__(self):
-        """Constructor."""
-        _repr.Repr.__init__(self)
-        self.maxlevel = 2
-        self.maxtuple = 2
-        self.maxlist = 2
-        self.maxarray = 2
-        self.maxdict = 1
-        self.maxset = 2
-        self.maxfrozenset = 2
-        self.maxdeque = 2
-        self.maxstring = 20
-        self.maxlong = 20
-        self.maxother = 20
+#_saferepr = ShortRepr().repr
+_saferepr = reprlib.repr
 
-_saferepr = ShortRepr().repr
+#class BalloonRepr(_repr.Repr):
+#    """Balloon object representation."""
+#
+#    def __init__(self):
+#        _repr.Repr.__init__(self)
+#        self.maxlevel = 4
+#        self.maxtuple = 4
+#        self.maxlist = 4
+#        self.maxarray = 2
+#        self.maxdict = 2
+#        self.maxset = 4
+#        self.maxfrozenset = 4
+#        self.maxdeque = 4
+#        self.maxstring = 40
+#        self.maxlong = 40
+#        self.maxother = 40
 
-class BalloonRepr(_repr.Repr):
-    """Balloon object representation."""
-
-    def __init__(self):
-        """Constructor."""
-        _repr.Repr.__init__(self)
-        self.maxlevel = 4
-        self.maxtuple = 4
-        self.maxlist = 4
-        self.maxarray = 2
-        self.maxdict = 2
-        self.maxset = 4
-        self.maxfrozenset = 4
-        self.maxdeque = 4
-        self.maxstring = 40
-        self.maxlong = 40
-        self.maxother = 40
-
-_balloonrepr = BalloonRepr().repr
+#_balloonrepr = BalloonRepr().repr
+_balloonrepr = reprlib.repr
 
 class Ping(asyncproc.FileAsynchat):
     """Terminate the select call in the asyncore loop."""
     def __init__(self, f, reader, map=None):
-        """Constructor."""
         asyncproc.FileAsynchat.__init__(self, f, None, reader, map)
 
     def writable(self):
@@ -189,7 +176,8 @@ class Ping(asyncproc.FileAsynchat):
         """Ignore received data."""
         self.ibuff = []
 
-class Pdb(debugger.Debugger, pdb.Pdb):
+#class Pdb(debugger.Debugger, pdb.Pdb):
+class Pdb(debugger.Debugger):
     """The Pdb debugger.
 
     Instance attributes:
@@ -228,10 +216,9 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     """
 
     def __init__(self, *args):
-        """Constructor."""
         debugger.Debugger.__init__(self, *args)
         nosigint = False
-        pdb.Pdb.__init__(self, nosigint=nosigint)
+        #pdb.Pdb.__init__(self, nosigint=nosigint)
 
         # avoid pychecker warnings (not initialized in base class)
         self.curindex = 0
@@ -280,15 +267,15 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     def start(self):
         """Start the debugger."""
         info('starting a new netbeans session')
-        mode = 'with' if bdb._bdb else 'without'
-        self.console_print('pdb-clone {} ({} the _bdb extension module).\n\n'
-                                                .format(__version__, mode))
+        #mode = 'with' if bdb._bdb else 'without'
+        #self.console_print('pdb-clone {} ({} the _bdb extension module).\n\n'
+        #                                        .format(__version__, mode))
         # restore the breakpoint signs
-        for bp in bdb.Breakpoint.bpbynumber:
-            if bp:
-                self.add_bp(bp.number, bp.file, bp.line)
-                if not bp.enabled:
-                    self.update_bp(bp.number, True)
+        #for bp in bdb.Breakpoint.bpbynumber:
+        #    if bp:
+        #        self.add_bp(bp.number, bp.file, bp.line)
+        #        if not bp.enabled:
+        #            self.update_bp(bp.number, True)
 
         self.print_prompt()
 
@@ -381,7 +368,6 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def format_stack_entry(self, frame_lineno, lprefix=': '):
         """Override format_stack_entry: no line, add args, gdb format."""
-        unused = lprefix
         frame, lineno = frame_lineno
         if frame.f_code.co_name:
             s = frame.f_code.co_name
@@ -404,13 +390,14 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def set_continue(self):
         """Override set_continue."""
-        pdb.Pdb.set_continue(self)
+        #pdb.Pdb.set_continue(self)
 
     def set_break(self, filename, lineno, temporary=False, cond=None,
                   funcname=None):
         """Override set_break to install a netbeans hook."""
-        bp = pdb.Pdb.set_break(self, filename, lineno, temporary, cond,
-                                                               funcname)
+        #bp = pdb.Pdb.set_break(self, filename, lineno, temporary, cond,
+        #                                                       funcname)
+        bp = None # XXX
         if bp:
             self.add_bp(bp.number, bp.file, bp.line)
             return bp
@@ -436,7 +423,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     def user_call(self, frame, argument_list):
         """This method is called when there is the remote possibility
         that we ever need to stop in this function."""
-        pdb.Pdb.user_call(self, frame, argument_list)
+        #pdb.Pdb.user_call(self, frame, argument_list)
 
     @user_method_redirect
     def user_line(self, frame, breakpoint_hits=None):
@@ -458,12 +445,12 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     @user_method_redirect
     def user_return(self, frame, return_value):
         """This function is called when a return trap is set here."""
-        pdb.Pdb.user_return(self, frame, return_value)
+        #pdb.Pdb.user_return(self, frame, return_value)
 
     @user_method_redirect
     def user_exception(self, frame, exc_info):
         """This function is called if an exception occurs."""
-        pdb.Pdb.user_exception(self, frame, exc_info)
+        #pdb.Pdb.user_exception(self, frame, exc_info)
 
     def cmdloop(self):
         """Command loop used in pyclewn, only to define breakpoint commands."""
@@ -475,9 +462,10 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                 self.poll.run(debugger.LOOP_TIMEOUT)
         self.stop_interaction = False
 
-    def print_stack_entry(self, frame_lineno, prompt_prefix=pdb.line_prefix):
+    #def print_stack_entry(self, frame_lineno, prompt_prefix=pdb.line_prefix):
+    def print_stack_entry(self, frame_lineno, prompt_prefix=None):
         """Override print_stack_entry."""
-        frame, unused = frame_lineno
+        frame, _ = frame_lineno
         if frame is self.curframe:
             prefix = '> '
         else:
@@ -577,7 +565,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
         if not self.attached and not self.started:
             info('terminate the debuggee started from Vim')
-            raise bdb.BdbQuit
+            #raise bdb.BdbQuit
 
         if self.state != STATE_RUN:
             self.detach()
@@ -640,7 +628,6 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def _do_cmd(self, method, cmd, args):
         """Override to handle alias substitution."""
-        unused = method
         if args:
             cmd = '%s %s' % (cmd, args)
         self.console_print('%s\n', cmd)
@@ -655,7 +642,6 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def cmd_inferiortty(self, cmd, args):
         """Spawn pdb inferior terminal and setup pdb with this terminal."""
-        unused = cmd
         ttyname = args
         if not ttyname:
             lines = self.inferiortty()
@@ -675,7 +661,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def cmd_help(self, *args):
         """Print help on the pdb commands."""
-        unused, cmd = args
+        _, cmd = args
         cmd = cmd.strip()
         allowed = list(PDB_CMDS.keys()) + ['mapkeys', 'unmapkeys', 'dumprepr',
                                                                     'loglevel']
@@ -722,27 +708,24 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def cmd_break(self, cmd, args):
         """Set a breakpoint."""
-        unused = cmd
         self.do_break(remove_quotes(args))
 
     def cmd_tbreak(self, cmd, args):
         """Set a temporary breakpoint."""
-        unused = cmd
         self.do_break(remove_quotes(args), True)
 
     def done_breakpoint_state(self, bp, state):
         """Override done_breakpoint_state to update breakpoint sign."""
-        pdb.Pdb.done_breakpoint_state(self, bp, state)
+        #pdb.Pdb.done_breakpoint_state(self, bp, state)
         self.update_bp(bp.number, not state)
 
     def done_delete_breakpoint(self, bp):
         """Override done_delete_breakpoint to clear the breakpoint sign."""
-        pdb.Pdb.done_delete_breakpoint(self, bp)
+        #pdb.Pdb.done_delete_breakpoint(self, bp)
         self.delete_bp(bp.number)
 
     def cmd_clear(self, cmd, args):
         """Clear breakpoints."""
-        unused = cmd
         if not args:
             self.message(
                 'An argument is required:\n'
@@ -753,19 +736,16 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def cmd_up(self, cmd, args):
         """Move the current frame one level up in the stack trace."""
-        unused = cmd
         self.do_up(args)
         self.hilite_frame()
 
     def cmd_down(self, cmd, args):
         """Move the current frame one level down in the stack trace."""
-        unused = cmd
         self.do_down(args)
         self.hilite_frame()
 
     def cmd_step(self, cmd, args):
         """Execute the current line, stop at the first possible occasion."""
-        unused = cmd
         self.do_step(args)
         self.stop_interaction = True
 
@@ -790,25 +770,21 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def cmd_next(self, cmd, args):
         """Continue execution until the next line in the current function."""
-        unused = cmd
         self.do_next(args)
         self.stop_interaction = True
 
     def cmd_return(self, cmd, args):
         """Continue execution until the current function returns."""
-        unused = cmd
         self.do_return(args)
         self.stop_interaction = True
 
     def cmd_continue(self, *args):
         """Continue execution."""
-        unused = args
         self.set_continue()
         self.stop_interaction = True
 
     def cmd_quit(self, *args):
         """Remove the python trace function and close the netbeans session."""
-        unused = args
         self.console_print('Python trace function removed.\n')
         if self.attached:
             self.clear_all_breaks()
@@ -825,13 +801,11 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def cmd_jump(self, cmd, args):
         """Set the next line that will be executed."""
-        unused = cmd
         self.do_jump(args)
         self.hilite_frame()
 
     def cmd_detach(self, *args):
         """Close the netbeans session."""
-        unused = args
         if not self.attached:
             self.console_print('Cannot detach, the debuggee is not attached.\n')
             return
@@ -847,7 +821,6 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def cmd_threadstack(self, *args):
         """Print a stack of the frames of all the threads."""
-        unused = args
         if not hasattr(sys, '_current_frames'):
             self.console_print('Command not supported,'
                                ' upgrade to Python 2.5 at least.\n')
@@ -861,7 +834,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                 else:
                     thread = thread_id
                 self.console_print('Thread: %s\n', thread)
-                stack, unused = self.get_stack(frame, None)
+                stack, _ = self.get_stack(frame, None)
                 for frame_lineno in stack:
                     self.print_stack_entry(frame_lineno)
             except KeyboardInterrupt:
@@ -869,7 +842,6 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def cmd_commands(self, cmd, args):
         """Enter breakpoint commands."""
-        unused = cmd
         self.console_print(
             'Type the commands to be executed when this breakpoint is hit:\n'
             'In Vim command line, type the "C" prefix, followed by a space'
@@ -895,7 +867,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                             self.get_locals(self.curframe))
         except:
             t, v = sys.exc_info()[:2]
-            if isinstance(t, str):
+            if isinstance(t, text_type):
                 exc_name = t
             else:
                 exc_name = t.__name__
@@ -918,7 +890,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
         self.show_balloon('%s = %s' % (arg, _balloonrepr(value)))
 
-def main(pdb, options):
+#def main(pdb, options):
+def main(options):
     """Invoke the debuggee as a script."""
     argv = options.args
     if not argv:
@@ -933,18 +906,20 @@ def main(pdb, options):
     sys.path[0] = os.path.dirname(mainpyfile)
     sys.argv = argv
     try:
-        pdb.attached = False
-        pdb._runscript(mainpyfile)
+        #pdb.attached = False
+        #pdb._runscript(mainpyfile)
+        pass
     except SystemExit:
         raise
     except Exception as e:
         trace_type = 'Uncaught exception:\n    %r\n' %e
         trace_type += 'Entering post mortem debugging.'
-        pdb.trace_type = trace_type
+        #pdb.trace_type = trace_type
         t = sys.exc_info()[2]
-        pdb.interaction(None, t, True)
+        #pdb.interaction(None, t, True)
     finally:
-        pdb.console_print('Script "%s" terminated.\n' % mainpyfile)
-        pdb.console_print('---\n\n')
-        pdb.console_flush()
+        #pdb.console_print('Script "%s" terminated.\n' % mainpyfile)
+        #pdb.console_print('---\n\n')
+        #pdb.console_flush()
+        pass
 

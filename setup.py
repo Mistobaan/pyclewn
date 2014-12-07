@@ -1,7 +1,12 @@
+# vi:set ts=8 sts=4 sw=4 et tw=80:
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
+
 import sys
-if sys.version_info < (3, 0):
-    sys.stderr.write("This version of pyclewn does not support Python 2.\n")
-    sys.exit(1)
 import os
 import os.path
 import string
@@ -17,10 +22,10 @@ from unittest import defaultTestLoader
 
 import clewn.vim as vim
 import testsuite.test_support as test_support
-from clewn import *
+from clewn import __tag__
 
-
-DESCRIPTION = """Pyclewn allows using Vim as a front end to a debugger.
+DESCRIPTION = 'A Vim front-end to debuggers.'
+LONG_DESCRIPTION = """Pyclewn allows using Vim as a front-end to a debugger.
 The debugger output is redirected to a Vim window, the pyclewn console.
 The debugger commands are mapped to Vim user-defined commands
 with a common letter prefix, and with completion available on the
@@ -28,10 +33,8 @@ commands and their first argument. The controlling terminal of the
 program to debug is the terminal used to launch pyclewn, or any other
 terminal when the debugger allows it.
 """
-
 DEBUGGERS = ('simple', 'gdb', 'pdb')
-SCRIPTS = ['pdb-clone', 'pyclewn', 'runtime/bin/inferior_tty.py']
-LONG_DESCRIPTION = DESCRIPTION
+SCRIPTS = ['pyclewn', 'runtime/bin/inferior_tty.py']
 
 vimdir = os.environ.get('vimdir')
 if not vimdir:
@@ -87,12 +90,6 @@ class install(_install):
     def run(self):
         global pythonpath
         pythonpath = self.install_platlib
-        # rename the 'debugger' directory present in old versions
-        debugger_dir = os.path.join(pythonpath, 'clewn', 'debugger')
-        if os.path.isdir(debugger_dir):
-            sys.stderr.write('renaming the debugger directory\n')
-            os.rename(debugger_dir, debugger_dir + '.orig')
-
         print('Vim user data files location: "%s"' % vimdir)
         vim_features()
         _install.run(self)
@@ -130,17 +127,40 @@ def keymap_files():
                     else:
                         f.write('# %s : %s\n' % (k, mapkeys[k][0]))
 
+def insert_syspath(fname, after_future=True):
+    sys_path = string.Template("sys.path.append('${pythonpath}')\n")
+    sys_path = 'import sys; ' + sys_path.substitute(pythonpath=pythonpath)
+    content = []
+    past_future = False
+    done = False
+    with open(fname, 'r+') as f:
+        for line in f:
+            if line.find('from __future__ import') == 0:
+                past_future = True
+            elif not done and past_future:
+                done = True
+                content.append(sys_path)
+            content.append(line)
+            if not after_future and not done:
+                done = True
+                content.append(sys_path)
+        if done:
+            f.seek(0)
+            f.writelines(content)
+    return done
+
 class build_scripts(_build_scripts):
     """Specialized scripts builder.
 
     """
     def run(self):
         """Add pythonpath to pyclewn script in a 'home scheme' installation."""
-        if pythonpath is not None and pythonpath not in sys.path:
-            path_append = string.Template("sys.path.append('${pythonpath}')\n")
-            self.executable += '\n\nimport sys\n'   \
-                                + path_append.substitute(pythonpath=pythonpath)
         _build_scripts.run(self)
+        if pythonpath is not None and pythonpath not in sys.path:
+            for script in self.scripts:
+                fname = os.path.join(self.build_dir, os.path.basename(script))
+                if not insert_syspath(fname):
+                    insert_syspath(fname, after_future=False)
 
 def hg_revert(pathnames):
     """Revert files in a mercurial repository."""
@@ -182,8 +202,8 @@ class Test(core.Command):
     """Run the test suite.
     """
 
-    user_options = [
-        ('test=', 't',
+    user_options = [(str(x), str(y), str(z)) for (x, y, z) in
+        (('test=', 't',
             'run a comma separated list of tests, for example             '
             '"--test=simple,gdb", all the tests are run when this option'
             ' is not present'),
@@ -195,7 +215,7 @@ class Test(core.Command):
                      ' test_021\''
                      ' then start a Vim instance and run'
                      ' \':let g:pyclewn_connection="localhost:3220:foo" |'
-                     ' Pyclewn pdb\''),
+                     ' Pyclewn pdb\''),)
     ]
 
     def initialize_options(self):
@@ -237,10 +257,6 @@ class Test(core.Command):
             sys.stdout.flush()
             test_support.run_suite(suite, self.detail, self.stop, self.pdb)
 
-_bdb = core.Extension('_bdb',
-                sources=['pdb_clone/_bdbmodule.c'],
-                optional=True)
-
 core.setup(
     cmdclass={'sdist': sdist,
               'build_scripts': build_scripts,
@@ -248,8 +264,7 @@ core.setup(
               'test': Test},
     requires=['subprocess'],
     scripts=SCRIPTS,
-    ext_modules = [_bdb],
-    packages=['pdb_clone', 'clewn'],
+    packages=[str('clewn')],
     data_files=DATA_FILES,
 
     # meta-data
@@ -263,8 +278,13 @@ core.setup(
     author_email='xdegaye at users dot sourceforge dot net',
     url='http://pyclewn.sourceforge.net/',
     classifiers=[
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3'
+        'Topic :: Software Development :: Debuggers',
+        'Intended Audience :: Developers',
+        'Operating System :: Unix',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Development Status :: 6 - Mature',
+        'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
     ],
 )
 

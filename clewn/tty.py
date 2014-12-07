@@ -1,25 +1,13 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
-#
-# Copyright (C) 2011 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
-"""Gdb inferior terminal.
-
 """
+Gdb inferior terminal.
+"""
+
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import os
 import sys
@@ -40,9 +28,6 @@ from . import misc
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('tty')
-Unused = critical
-Unused = warning
-Unused = debug
 
 # the command character: 'C-a'
 CMD_CHAR = chr(1)
@@ -59,11 +44,10 @@ pty_instance = None
 
 def sigwinch_handler(*args):
     """Handle SIGWINCH."""
-    unused = args
     if pty_instance and pty_instance.master_dsptch:
         pty_instance.master_dsptch.update_size()
 
-class FileDispatcher(asyncore.file_dispatcher):
+class FileDispatcher(asyncore.file_dispatcher, object):
     """The FileDispatcher does input/output on a file descriptor.
 
     Read data into 'buf'.
@@ -73,7 +57,6 @@ class FileDispatcher(asyncore.file_dispatcher):
 
     def __init__(self, fd, source=None, reader=True,
                             enable_cmds=False, map=None):
-        """Constructor."""
         asyncore.file_dispatcher.__init__(self, fd, map)
         self.source = source
         self.reader = reader
@@ -137,7 +120,7 @@ class FileDispatcher(asyncore.file_dispatcher):
 
     def update_size(self):
         """Set the window size to match the size of its 'source'."""
-        buf = array.array('h', [0, 0, 0, 0])
+        buf = array.array(str('h'), [0, 0, 0, 0])
         try:
             ret = fcntl.ioctl(self.source.socket.fd, TIOCGWINSZ, buf, 1)
             if ret == 0:
@@ -147,11 +130,10 @@ class FileDispatcher(asyncore.file_dispatcher):
         except IOError as err:
             error('failed ioctl: %s', err)
 
-class GdbInferiorPty:
+class GdbInferiorPty(object):
     """Gdb inferior terminal."""
 
     def __init__(self, stderr_hdlr=None, map=None):
-        """Constructor."""
         self.stderr_hdlr = stderr_hdlr
         self.map = map
         self.master_fd = -1

@@ -1,9 +1,15 @@
 """Debugged script used by the test suite."""
+
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import sys
 import testsuite.foo as foo
 
 def main():
-    """Main."""
     run = sys.argv[1:] and sys.argv[1:][0]
     do_sleep = sys.argv[2:] and sys.argv[2:][0]
     foo.foo(run, do_sleep, 'unused')

@@ -1,28 +1,18 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
-#
-# Copyright (C) 2007 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
-"""The Vim buffers module."""
+"""
+The Vim buffers module.
+"""
+
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import os.path
 import re
 
-from . import misc
+from . import text_type, misc
 
 FRAME_ANNO_ID = 'frame'
 
@@ -34,10 +24,6 @@ re_clewname = re.compile(RE_CLEWNAME, re.VERBOSE)
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('buf')
-Unused = critical
-Unused = warning
-Unused = info
-Unused = debug
 
 def is_clewnbuf(bufname):
     """Return True if bufname is the name of a clewn buffer."""
@@ -74,7 +60,6 @@ class Buffer(dict):
     """
 
     def __init__(self, name, buf_id, nbsock):
-        """Constructor."""
         self.__name = name
         self.buf_id = buf_id
         self.nbsock = nbsock
@@ -153,7 +138,7 @@ class Buffer(dict):
         return self.__name
     name = property(getname, None, None, getname.__doc__)
 
-class Annotation:
+class Annotation(object):
     """A netbeans annotation.
 
     Instance attributes:
@@ -178,7 +163,6 @@ class Annotation:
     """
 
     def __init__(self, buf, bp, lnum, nbsock, disabled=False):
-        """Constructor."""
         self.buf = buf
         self.bp = bp
         self.lnum = lnum
@@ -244,7 +228,6 @@ class FrameAnnotation(Annotation):
     """The frame annotation is the sign set in the current frame."""
 
     def __init__(self, nbsock):
-        """Constructor."""
         self.nbsock = nbsock
         self.buf = None
         self.lnum = 0
@@ -260,7 +243,6 @@ class FrameAnnotation(Annotation):
 
     def update(self, disabled=False):
         """Update the annotation."""
-        unused = disabled
         if not self.is_set:
             self.buf.define_frameanno()
             self.nbsock.send_cmd(self.buf, 'addAnno', '%d %d %d/0 -1'
@@ -292,7 +274,6 @@ class BufferSet(dict):
     """
 
     def __init__(self, nbsock):
-        """Constructor."""
         self.nbsock = nbsock
         self.buf_list = []
         self.anno_dict = {}
@@ -397,7 +378,7 @@ class BufferSet(dict):
         The pathname parameter must be an absolute path name.
 
         """
-        if not isinstance(pathname, str)          \
+        if not isinstance(pathname, text_type)    \
                 or (not os.path.isabs(pathname)   \
                     and not is_clewnbuf(pathname)):
             raise ValueError(
@@ -411,12 +392,10 @@ class BufferSet(dict):
 
     def __setitem__(self, pathname, item):
         """Mapped to __getitem__."""
-        unused = item
         self.__getitem__(pathname)
 
     def setdefault(self, pathname, failobj=None):
         """Mapped to __getitem__."""
-        unused = failobj
         return self.__getitem__(pathname)
 
     def __delitem__(self, key):
@@ -437,13 +416,9 @@ class BufferSet(dict):
 
     def update(self, dict=None, **kwargs):
         """Not implemented."""
-        unused = self
-        unused = dict
-        unused = kwargs
         assert False, 'not implemented'
 
     def copy(self):
         """Not implemented."""
-        unused = self
         assert False, 'not implemented'
 

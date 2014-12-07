@@ -1,5 +1,4 @@
 include NEWS
-include ChangeLog
 include COPYING
 include INSTALL
 include MANIFEST.in

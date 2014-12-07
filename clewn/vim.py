@@ -1,29 +1,21 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
-#
-# Copyright (C) 2007 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
-
 """
 A Vim instance starts a Debugger instance and dispatches the netbeans messages
 exchanged by vim and the debugger. A new Debugger instance is restarted whenever
 the current one dies.
 
 """
+
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+try:
+    from _thread import get_ident as get_thread_ident
+except ImportError:
+    from thread import get_ident as get_thread_ident
+
 import os
 import sys
 import time
@@ -34,15 +26,12 @@ import inspect
 import optparse
 import logging
 import errno
-import _thread
 import threading
 import atexit
 
-from .__init__ import *
-from . import (misc, gdb, simple, netbeans, evtloop)
-from . import pydb
+from . import (__tag__, __changeset__, ClewnError, misc, gdb, simple,
+               netbeans, evtloop, tty, pydb)
 from .posix import daemonize, platform_data
-from . import tty
 
 
 WINDOW_LOCATION = ('top', 'bottom', 'left', 'right', 'none')
@@ -61,8 +50,6 @@ BG_COLORS =( 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 'DarkRed',
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('vim')
-Unused = error
-Unused = warning
 
 def exec_vimcmd(commands, pathname='', error_stream=None):
     """Run a list of Vim 'commands' and return the commands output."""
@@ -134,7 +121,7 @@ def _pdb(vim, attach=False, testrun=False):
     """Start the python debugger thread."""
     Vim.pdb_running = True
     pdb = vim.create_debugger(testrun)
-    pdb.target_thread_ident = _thread.get_ident()
+    pdb.target_thread_ident = get_thread_ident()
 
     # use a daemon thread
     class ClewnThread(threading.Thread):
@@ -251,7 +238,7 @@ def main(testrun=False):
 
     return vim
 
-class Vim:
+class Vim(object):
     """The Vim instance dispatches netbeans messages.
 
     Class attributes:
@@ -292,7 +279,6 @@ class Vim:
     pdb_running = False
 
     def __init__(self, testrun, argv):
-        """Constructor"""
         self.testrun = testrun
         self.file_hdlr = None
         self.stderr_hdlr = None
@@ -472,7 +458,6 @@ class Vim:
     def parse_options(self, argv):
         """Parse the command line options."""
         def args_callback(option, opt_str, value, parser):
-            unused = opt_str
             try:
                 args = misc.dequote(value)
             except ClewnError as e:
@@ -483,8 +468,6 @@ class Vim:
                 parser.values.args = args
 
         def bpcolor_callback(option, opt_str, value, parser):
-            unused = option
-            unused = opt_str
             colors = value.split(',')
             if len(colors) != 3:
                 raise optparse.OptionValueError('Three colors are required for'
@@ -702,7 +685,7 @@ class Vim:
         self.options.editor = ''
         self.setup(False)
         pdb.thread = threading.currentThread()
-        pdb.clewn_thread_ident = _thread.get_ident()
+        pdb.clewn_thread_ident = get_thread_ident()
 
         pdb.synchronisation_evt.set()
         last_nbsock = None

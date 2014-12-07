@@ -1,24 +1,13 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
-#
-# Copyright (C) 2007 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
+"""
+Pyclewn event loop.
+"""
 
-"""Pyclewn event loop."""
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import os
 import time
@@ -27,15 +16,10 @@ import errno
 import asyncore
 import threading
 
-from . import (misc, asyncproc)
+from . import misc
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('loop')
-Unused = critical
-Unused = error
-Unused = warning
-Unused = info
-Unused = debug
 
 def get_asyncobj(fd, file_type, socket_map):
     """Return an asyncore instance from 'socket_map' if matching 'file_type'."""
@@ -52,7 +36,7 @@ def strip_asyncobj(wtd, file_type, socket_map):
         if asyncobj is not None:
             wtd.remove(fd)
 
-class Poll:
+class Poll(object):
     """A Poll instance manages a select thread.
 
     Instance attributes:
@@ -62,7 +46,6 @@ class Poll:
     """
 
     def __init__(self, socket_map):
-        """Constructor."""
         self.socket_map = socket_map
 
     def close(self):

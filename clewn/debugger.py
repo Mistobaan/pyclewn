@@ -1,23 +1,6 @@
 # vi:set ts=8 sts=4 sw=4 et tw=72:
-#
-# Copyright (C) 2007 Xavier de Gaye.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
-# any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program (see the file COPYING); if not, write to the
-# Free Software Foundation, Inc.,
-# 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA
-#
-"""This module provides the basic infrastructure for using Vim as a
+"""
+This module provides the basic infrastructure for using Vim as a
 front-end to a debugger.
 
 The basic idea behind this infrastructure is to subclass the 'Debugger'
@@ -35,9 +18,14 @@ option to the 'parse_options' method in the 'Vim' class, see vim.py.
 
 The 'Simple' class in simple.py provides a simple example of a fake
 debugger front-end.
-
 """
 
+# Python 2-3 compatibility.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+from io import open
 
 import os
 import os.path
@@ -50,8 +38,7 @@ import copy
 import subprocess
 from abc import ABCMeta, abstractmethod
 
-from .__init__ import *
-from . import (misc, netbeans)
+from . import __tag__, ClewnError, misc, netbeans
 
 __all__ = ['LOOP_TIMEOUT', 'restart_timer', 'Debugger']
 LOOP_TIMEOUT = .040
@@ -289,9 +276,6 @@ SPLIT_DBGVAR_BUF = """
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('dbg')
-Unused = error
-Unused = warning
-Unused = debug
 
 def name_lnum(name_lnum):
     """Parse name_lnum as the string 'name:lnum'.
@@ -323,11 +307,10 @@ def restart_timer(timeout):
         return _newf
     return decorator
 
-class Job:
+class Job(object):
     """Job instances are pushed in an ordered heapq queue."""
 
     def __init__(self, time, job):
-        """Constructor."""
         self.time = time
         self.job = job
 
@@ -338,7 +321,7 @@ class Job:
     def __gt__(self, o): """Comparison method."""; return self.time > o.time
     def __ge__(self, o): """Comparison method."""; return self.time <= o.time
 
-class Debugger:
+class Debugger(object):
     """Abstract base class for pyclewn debuggers.
 
     The debugger commands received through netbeans 'keyAtPos' events
@@ -991,28 +974,27 @@ class Debugger:
 
         info('reading %s', path)
         try:
-            f = open(path)
-            for line in f:
-                matchobj = re_key.match(line)
-                if matchobj:
-                    k = matchobj.group('key').upper()
-                    v = matchobj.group('value')
-                    # delete key when empty value
-                    if not v:
-                        if k in self.mapkeys:
-                            del self.mapkeys[k]
-                    else:
-                        self.mapkeys[k] = (v.strip(),)
-                elif not re_comment.match(line):
-                    raise ClewnError('invalid line in %s: %s' % (path, line))
-            f.close()
+            with open(path) as f:
+                for line in f:
+                    matchobj = re_key.match(line)
+                    if matchobj:
+                        k = matchobj.group('key').upper()
+                        v = matchobj.group('value')
+                        # delete key when empty value
+                        if not v:
+                            if k in self.mapkeys:
+                                del self.mapkeys[k]
+                        else:
+                            self.mapkeys[k] = (v.strip(),)
+                    elif not re_comment.match(line):
+                        raise ClewnError('invalid line in %s: %s' %
+                                         (path, line))
         except IOError:
             critical('reading %s', path); raise
 
     def cmd_help(self, *args):
         """Print help on all pyclewn commands in the Vim debugger
         console."""
-        unused = args
         for cmd in sorted(self.pyclewn_cmds):
             if cmd:
                 method = getattr(self, 'cmd_%s' % cmd, None)
@@ -1024,7 +1006,6 @@ class Debugger:
 
     def cmd_dumprepr(self, cmd, args):
         """Print debugging information on netbeans and the debugger."""
-        unused = cmd
         # dumprepr is used by the testsuite to detect the end of
         # processing by pyclewn of all commands, so as to parse the
         # results and check the test
@@ -1036,7 +1017,6 @@ class Debugger:
 
     def cmd_loglevel(self, cmd, level):
         """Get or set the pyclewn log level."""
-        unused = cmd
         if not level:
             level = logging.getLevelName(logging.getLogger().level).lower()
             self.console_print("The pyclewn log level is currently '%s'.\n"
@@ -1053,7 +1033,6 @@ class Debugger:
 
     def cmd_mapkeys(self, *args):
         """Map the pyclewn keys."""
-        unused = args
         for k in sorted(self.mapkeys):
             self.__nbsock.special_keys(k)
 
@@ -1083,8 +1062,6 @@ class Debugger:
         This is actually a Vim command and it does not involve pyclewn.
 
         """
-        unused = self
-        unused = args
         self.not_a_pyclewn_method(cmd)
 
     def __str__(self):
