@@ -16,25 +16,11 @@ The following command will clone pyclewn repository in a local directory named
 
         $ hg clone http://hg.code.sf.net/p/pyclewn/pyclewn
 
-A version hook must be setup to update the ``clewn/__version__.py`` file after
-each commit or update. To setup the hook, add the following lines to the
-repository ``.hg/hgrc`` file, and run the ``hg update`` command::
-
-    [hooks]
-    commit.version = /bin/sh -c "`hg root`/version-hook.py commit clewn/__version__.py"
-    update.version = /bin/sh -c "`hg root`/version-hook.py update clewn/__version__.py"
-
 Check the pyclewn mailing list for patches or releases announcements, and
 update your repository and work area by running the following commands in the
 pyclewn directory::
 
         $ hg pull --update
-
-The development of the Python 3 version of pyclewn is on the default branch.
-To get the source of the Python 2 version of pyclewn, switch to the
-``python2`` branch with the command::
-
-        $ hg update python2
 
 Building from source
 --------------------
@@ -42,12 +28,6 @@ Building from source
 Run the following command to build a distribution, the tarball is created in
 the ``dist`` directory::
 
-        $ hg update default
-        $ python3 setup.py sdist
-
-Run the following commands to build a Python 2 distribution::
-
-        $ hg update python2
         $ python setup.py sdist
 
 Documentation

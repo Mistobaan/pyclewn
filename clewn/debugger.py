@@ -28,7 +28,6 @@ from __future__ import unicode_literals
 from io import open
 
 import os
-import os.path
 import re
 import time
 import logging
@@ -38,7 +37,7 @@ import copy
 import subprocess
 from abc import ABCMeta, abstractmethod
 
-from . import __tag__, ClewnError, misc, netbeans
+from . import __version__, ClewnError, misc, netbeans
 
 __all__ = ['LOOP_TIMEOUT', 'restart_timer', 'Debugger']
 LOOP_TIMEOUT = .040
@@ -411,6 +410,7 @@ class Debugger(object):
         self.prompt = '(%s) ' % self.__class__.__name__.lower()
         self._consbuffered = False
         self.__nbsock = None
+        self._read_keysfile()
 
         # schedule the first 'debugger_background_jobs' method
         self.timer(self.debugger_background_jobs, LOOP_TIMEOUT)
@@ -754,7 +754,7 @@ class Debugger(object):
             if not self.closed:
                 self.console_print(
                     'Pyclewn version %s starting a new instance of %s.\n',
-                            __tag__, self.__class__.__name__.lower())
+                            __version__, self.__class__.__name__.lower())
             else:
                 self.console_print(
                     'Pyclewn restarting the %s debugger.\n',
@@ -784,7 +784,7 @@ class Debugger(object):
 
         return self.cmds
 
-    def _vim_script(self, options):
+    def vim_script(self):
         """Build the vim script.
 
         Each clewn vim command can be invoked as 'prefix' + 'cmd' with optional
@@ -794,12 +794,14 @@ class Debugger(object):
         Return the file object of the vim script.
 
         """
-        # create the vim script in a temporary file
+        # Create the vim script in a temporary file.
+        options = self.options
         prefix = options.prefix.capitalize()
         f = None
         try:
-            # pyclewn is started from within vim
             if not options.editor:
+                # pyclewn is started from within vim and the vim
+                # argument is the name of the temporary file.
                 if options.cargs:
                     f = open(options.cargs[0], 'w')
                 else:

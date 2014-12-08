@@ -19,6 +19,7 @@ import errno
 import fcntl
 import termios
 import platform
+import traceback
 
 from . import misc, asyncproc
 
@@ -176,10 +177,8 @@ class ProcessChannel(asyncproc.ProcessChannel):
         try:
             master = self.forkexec()
         except (ImportError, OSError, os.error, termios.error):
-            t, v, filename, lnum, _ = misc.last_traceback()
             error("failed to setup a pseudo tty, falling back to pipes:")
-            error("    %s: %s", str(t), str(v))
-            error("    at %s:%s", filename, lnum)
+            error(traceback.format_tb(sys.exc_info()[2])[-1])
             self.popen()
         else:
             pty = asyncproc.FileAsynchat(master, self, map=self.socket_map)

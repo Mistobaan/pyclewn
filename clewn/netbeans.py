@@ -15,7 +15,7 @@ except ImportError:
 
 import sys
 import time
-import os.path
+import os
 import logging
 import re
 import socket

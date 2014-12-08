@@ -12,7 +12,6 @@ from io import open
 
 import sys
 import os
-import os.path
 import re
 import tempfile
 import logging
@@ -159,19 +158,6 @@ def unlink(filename):
             os.unlink(filename)
         except OSError:
             pass
-
-def last_traceback():
-    """Return the last trace back."""
-    t, v, tb = sys.exc_info()
-    assert tb
-    while tb:
-        filename = tb.tb_frame.f_code.co_filename
-        lnum = tb.tb_lineno
-        last_tb = tb
-        tb = tb.tb_next
-    del tb
-
-    return t, v, filename, lnum, last_tb
 
 def offset_gen(lines):
     """Return an iterator over the offsets of the beginning of lines.

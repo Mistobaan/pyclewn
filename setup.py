@@ -8,10 +8,10 @@ from io import open
 
 import sys
 import os
-import os.path
 import string
 import re
 import subprocess
+import importlib
 import distutils.core as core
 
 from os.path import join as pathjoin
@@ -20,9 +20,8 @@ from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_scripts import build_scripts as _build_scripts
 from unittest import defaultTestLoader
 
-import clewn.vim as vim
+from clewn import __version__, vim
 import testsuite.test_support as test_support
-from clewn import __tag__
 
 DESCRIPTION = 'A Vim front-end to debuggers.'
 LONG_DESCRIPTION = """Pyclewn allows using Vim as a front-end to a debugger.
@@ -95,16 +94,6 @@ class install(_install):
         _install.run(self)
         build_vimhelp()
 
-def update_version(filename):
-    """Update the version number in the content of filename."""
-    content = []
-    with open(filename, 'r+') as f:
-        for line in f:
-            line = line.replace('pyclewn-__tag__' , 'pyclewn-' + __tag__)
-            content.append(line)
-        f.seek(0)
-        f.writelines(content)
-
 def keymap_files():
     """Build key map files for each debugger."""
     with open('runtime/.pyclewn_keys.template') as tf:
@@ -112,12 +101,7 @@ def keymap_files():
         for d in DEBUGGERS:
             with open('runtime/.pyclewn_keys.%s' % d, 'w') as f:
                 f.write(string.Template(template).substitute(clazz=d))
-                # cannot use absolute imports with python 2.4, so we are stuck
-                # with pydb.py
-                if d == 'pdb':
-                    d = 'pydb'
-                module = __import__('clewn.%s' % d,
-                                    globals(), locals(), ['MAPKEYS'])
+                module = importlib.import_module('.%s' % d, 'clewn')
                 mapkeys = getattr(module, 'MAPKEYS')
                 for k in sorted(mapkeys):
                     if len(mapkeys[k]) == 2:
@@ -162,20 +146,7 @@ class build_scripts(_build_scripts):
                 if not insert_syspath(fname):
                     insert_syspath(fname, after_future=False)
 
-def hg_revert(pathnames):
-    """Revert files in a mercurial repository."""
-    # silently ignore all errors
-    try:
-        with open(os.devnull, 'r+') as fnull:
-            for fname in pathnames:
-                subprocess.call(['hg', 'revert', '--no-backup', fname],
-                                stderr=fnull)
-    except (IOError, OSError):
-        pass
-
-NOTTESTS = [
-    'test_support',
-    ]
+NOTTESTS = ('test_support',)
 
 def findtests(testdir, nottests=NOTTESTS):
     """Return a list of all applicable test modules."""
@@ -192,11 +163,8 @@ def findtests(testdir, nottests=NOTTESTS):
 class sdist(_sdist):
     """Specialized sdister."""
     def run(self):
-        update_version('runtime/plugin/pyclewn.vim')
-        update_version('INSTALL')
         keymap_files()
         _sdist.run(self)
-        hg_revert(('runtime/plugin/pyclewn.vim', 'INSTALL'))
 
 class Test(core.Command):
     """Run the test suite.
@@ -235,15 +203,12 @@ class Test(core.Command):
             print('One can only debug a gdb test case for now.')
             return
 
-        testdir = 'testsuite'
-        tests = self.test or findtests(testdir)
-        test_prefix = testdir + '.'
+        testsuite = 'testsuite'
+        tests = self.test or findtests(testsuite)
         if self.prefix:
             defaultTestLoader.testMethodPrefix = self.prefix
         for test in tests:
-            abstest = test_prefix + test
-            the_package = __import__(abstest, globals(), locals(), [])
-            the_module = getattr(the_package, test)
+            the_module = importlib.import_module('.%s' % test, testsuite)
             suite = defaultTestLoader.loadTestsFromModule(the_module)
             if self.pdb and (len(tests) > 1 or suite.countTestCases() > 1):
                 print('Only one test at a time can be debugged, use the'
@@ -251,9 +216,9 @@ class Test(core.Command):
                       ' this test.')
                 return
             if test == 'test_gdb':
-                subprocess.check_call(['make', '-C', 'testsuite'])
+                subprocess.check_call(['make', '-C', testsuite])
             # run the test
-            print(abstest)
+            print(the_module.__name__)
             sys.stdout.flush()
             test_support.run_suite(suite, self.detail, self.stop, self.pdb)
 
@@ -262,14 +227,13 @@ core.setup(
               'build_scripts': build_scripts,
               'install': install,
               'test': Test},
-    requires=['subprocess'],
     scripts=SCRIPTS,
     packages=[str('clewn')],
     data_files=DATA_FILES,
 
     # meta-data
     name='pyclewn',
-    version=__tag__,
+    version=__version__,
     description='Pyclewn allows using Vim as a front end to a debugger.',
     long_description=LONG_DESCRIPTION,
     platforms='all',

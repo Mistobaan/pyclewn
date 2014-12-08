@@ -9,7 +9,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import os.path
+import os
 import re
 
 from . import text_type, misc

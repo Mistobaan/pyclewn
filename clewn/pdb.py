@@ -865,7 +865,7 @@ class Pdb(debugger.Debugger):
         try:
             value = eval(arg, self.curframe.f_globals,
                             self.get_locals(self.curframe))
-        except:
+        except Exception:
             t, v = sys.exc_info()[:2]
             if isinstance(t, text_type):
                 exc_name = t
@@ -878,14 +878,14 @@ class Pdb(debugger.Debugger):
             code = value.__code__
             self.show_balloon('(%s) Function: %s' % (arg, code.co_name))
             return
-        except:
+        except Exception:
             pass
 
         try:
             code = value.__func__.__code__
             self.show_balloon('(%s) Method: %s' % (arg, code.co_name))
             return
-        except:
+        except Exception:
             pass
 
         self.show_balloon('%s = %s' % (arg, _balloonrepr(value)))

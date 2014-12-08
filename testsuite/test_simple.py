@@ -11,7 +11,6 @@ from __future__ import unicode_literals
 
 import os
 import sys
-import os.path
 from unittest import skipIf
 
 from .test_support import ClewnTestCase

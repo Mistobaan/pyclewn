@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2014 December 5
+*pyclewn.txt*                                   Last change: 2014 December 8
 
 
                             PYCLEWN USER MANUAL
@@ -24,9 +24,9 @@ Pyclewn is a python program that allows the use of vim as a front end to a
 debugger. Pyclewn supports the gdb and the pdb debuggers. Pyclewn uses the
 netbeans protocol to control vim.
 
-The debugger output is redirected to a vim window, the|pyclewn-console|. The
+The debugger output is redirected to a vim window, the |pyclewn-console| . The
 debugger commands are mapped to vim user-defined commands with a common letter
-prefix (the default is the|C|letter), and with vim command completion
+prefix (the default is the |C| letter), and with vim command completion
 available on the commands and their first argument.
 
 On unix when running gvim, the controlling terminal of the program to debug is
@@ -54,7 +54,7 @@ Pyclewn provides the following features:
   key.
 
 * A sequence of gdb commands can be run from a vim script when the
- |async-option|is set. This may be useful in a key mapping.
+  |async-option| is set. This may be useful in a key mapping.
 
 * Breakpoints and the line in the current frame are highlighted in the source
   code. Disabled breakpoints are noted with a different highlighting color.
@@ -77,12 +77,12 @@ Pyclewn provides the following features:
   (resp. hide) its members and their values. This feature is only available
   with gdb.
 
-* The|project-command|saves the current gdb settings to a project file that
+* The |project-command| saves the current gdb settings to a project file that
   may be sourced later by the gdb "source" command. These settings are the
   working directory, the debuggee program file name, the program arguments and
   the breakpoints. The sourcing and saving of the project file can be
   automated to occur on each gdb startup and termination, whith the
- |project-file|command line option. The ``project`` command is currently only
+  |project-file| command line option. The ``project`` command is currently only
   available with gdb.
 
 * Vim command completion on the commands and their first argument.
@@ -91,25 +91,25 @@ Pyclewn provides the following features:
 The remaining sections of this manual are:
 -----------------------------------------
 
-    2.|:Pyclewn|explains how to start pyclewn.
+    2. |:Pyclewn| explains how to start pyclewn.
 
-    3.|pyclewn-options|lists pyclewn options and their usage.
+    3. |pyclewn-options| lists pyclewn options and their usage.
 
-    4.|pyclewn-using|explains how to use the pyclewn features common to all
+    4. |pyclewn-using| explains how to use the pyclewn features common to all
        supported debuggers
 
-    5.|pyclewn-gdb|details the topics relevant to pyclewn and the gdb
+    5. |pyclewn-gdb| details the topics relevant to pyclewn and the gdb
        debugger.
 
-    6.|pyclewn-pdb|details the topics relevant to pyclewn and the pdb
+    6. |pyclewn-pdb| details the topics relevant to pyclewn and the pdb
        debugger.
 
-    7.|pyclewn-mappings|lists the pyclewn key mappings and how to use them.
+    7. |pyclewn-mappings| lists the pyclewn key mappings and how to use them.
 
-    8.|pyclewn-variable|explains how to use the variable debugger window with
+    8. |pyclewn-variable| explains how to use the variable debugger window with
     gdb.
 
-    9.|pyclewn-extending|explains how to implement a new debugger in pyclewn
+    9. |pyclewn-extending| explains how to implement a new debugger in pyclewn
 
 ==============================================================================
 2. Starting pyclewn                                 *:Pyclewn*
@@ -117,7 +117,7 @@ The remaining sections of this manual are:
 
 Start pyclewn from vim:
 -----------------------
-The|:Pyclewn|vim command requires at least vim 7.3. To start pyclewn with the
+The |:Pyclewn| vim command requires at least vim 7.3. To start pyclewn with the
 gdb debugger: >
 
     :Pyclewn
@@ -145,13 +145,13 @@ To know if the netbeans interface is connected, run the following command: >
 
     :echo has("netbeans_enabled")
 
-The|:Pyclewn|command is provided by the vim plugin installed as the
+The |:Pyclewn| command is provided by the vim plugin installed as the
 "pyclewn.vim" file in vim plugin directory. Pyclewn command line arguments and
 connection details may be set with the "pyclewn_args" and the
 "pyclewn_connection" vim global variables. For further customization you can
 edit the "pyclewn.vim" file in vim autoload directory.
 
-The|:Pyclewn|command does the following:
+The |:Pyclewn| command does the following:
 
     * spawn pyclewn
     * start the vim netbeans interface and connect it to pyclewn
@@ -175,7 +175,7 @@ The pyclewn options can be set:
     * on pyclewn command line
 
     * in the "pyclewn_args" and the "pyclewn_connection" vim global
-      variables when starting pyclewn with the|:Pyclewn|command
+      variables when starting pyclewn with the |:Pyclewn| command
 
     * as the keyword parameters of the pdb function
 
@@ -208,7 +208,7 @@ options:
                               right), the default is top
   -m LNUM, --maxlines=LNUM    set the maximum number of lines of the debugger
                               console window to LNUM (default 10000 lines)
-  -x PREFIX, --prefix=PREFIX  set the commands prefix to PREFIX (default|C|)
+  -x PREFIX, --prefix=PREFIX  set the commands prefix to PREFIX (default |C|)
   -b COLORS, --background=COLORS
                               COLORS is a comma separated list of the three
                               colors of the breakpoint enabled, breakpoint
@@ -260,9 +260,9 @@ The full description of pyclewn options follows:
 .
                     There are three optional parameters:
 
-                        * the "async" keyword sets the|async-option|
-                        * the "nodereference" keyword, see|gdb-balloon|.
-                        * the project file name sets the|project-file|
+                        * the "async" keyword sets the |async-option|
+                        * the "nodereference" keyword, see |gdb-balloon|.
+                        * the project file name sets the |project-file|
 
                     The project file name can be an absolute pathname, a
                     relative pathname starting with '.' or a home relative
@@ -328,7 +328,7 @@ The full description of pyclewn options follows:
 
 -x {PREFIX}
 --prefix={PREFIX}   Set the user defined vim commands prefix to PREFIX
-                    (default|C|). The prefix may be more than one letter
+                    (default |C|). The prefix may be more than one letter
                     long. The first letter must be upper case.
 
 -b {COLORS}
@@ -337,7 +337,7 @@ The full description of pyclewn options follows:
                     the breakpoint enabled, breakpoint disabled and frame sign
                     background colors, in this order (default
                     'Cyan,Green,Magenta'). The color names are case sensitive.
-                    See|highlight-ctermbg|for the list of the valid color
+                    See |highlight-ctermbg| for the list of the valid color
                     names.
 
                     This option has no effect when vim version is vim72 or
@@ -373,9 +373,9 @@ Console:
 --------
 The debugger output is redirected to a vim window: the console.
 
-The console window pops up whenever a|Ccommand|is entered on vim command line
+The console window pops up whenever a |Ccommand| is entered on vim command line
 or a key mapped by pyclewn is hit. This behavior may be disabled by setting to
-`none` the `window`|pyclewn-options|and may be useful when using Vim tabs and
+`none` the `window` |pyclewn-options| and may be useful when using Vim tabs and
 wanting to keep the console in a tab of its own. In this case, the cursor
 position in the console is not updated by pyclewn, so you need to set manually
 the cursor at the bottom of the console, the first time you open
@@ -387,12 +387,12 @@ that defaults to 12 lines.
 
 Commands:                                           *Ccommand* *C*
 ---------
-The prefix letter|C|is the default vim command prefix used to map debugger
-commands to vim user-defined commands. These commands are called|Ccommand|in
+The prefix letter |C| is the default vim command prefix used to map debugger
+commands to vim user-defined commands. These commands are called |Ccommand| in
 this manual. The prefix can be changed with a command line option.
 
-A debugger command can be entered on vim command line with the|C|prefix. It is
-also possible to enter the command as the first argument of the|C|command. In
+A debugger command can be entered on vim command line with the |C| prefix. It is
+also possible to enter the command as the first argument of the |C| command. In
 the following example with gdb, both methods are equivalent: >
 
     :Cfile /path/to/foobar
@@ -414,7 +414,7 @@ menu.
 
 Note:
 The gdb debugger cannot handle requests asynchronously, so the
-|async-option|must be set, when mapping a key to a sequence of commands.
+|async-option| must be set, when mapping a key to a sequence of commands.
 With this option set, one can build for example the following mapping: >
 
     :map <F8> :Cfile /path/to/foobar <Bar> Cbreak main <Bar> Crun <CR>
@@ -435,22 +435,22 @@ Completion:
 Command line completion in vim is usually done using the <Tab> key (set by the
 'wildchar' option). To get the list of all valid completion matches, type
 CTRL-D. For example, to list all the debugger commands (assuming the
-default|C|prefix is being used): >
+default |C| prefix is being used): >
 
     :C<C-D>
 
 See also the 'wildmenu' option. With this option, the possible matches are
 shown just above the command line and can be selected with the arrow keys.
 
-The first argument completion of a|Ccommand|may be done on a file name or on a
+The first argument completion of a |Ccommand| may be done on a file name or on a
 list. For example with gdb, the following command lists all the gdb help
 items: >
 
     :Chelp <C-D>
 
-The first argument completion of the|C|command is the list of all the debugger
+The first argument completion of the |C| command is the list of all the debugger
 commands. For example, to list all the debugger commands (note the space after
-the|C|): >
+the |C|): >
 
     :C <C-D>
 
@@ -511,8 +511,8 @@ debug. Programs debugged by gdb, including those based on curses and termios
 such as vim, run in this terminal. A <Ctl-C> typed in the terminal interrupts
 the debuggee.
 
-When pyclewn is started from vim with the|:Pyclewn|command, there is no
-terminal associated with pyclewn. The|inferiortty|command provides the same
+When pyclewn is started from vim with the |:Pyclewn| command, there is no
+terminal associated with pyclewn. The |inferiortty| command provides the same
 functionality as above and spawns the controlling terminal (using the
 --terminal option, default xterm) of the debuggee and sets accordingly gdb
 'inferior-tty' variable and the TERM environment variable. The gdb
@@ -551,16 +551,16 @@ Async option:
 The gdb event loop is not asynchronous in most configurations, which means
 that gdb cannot handle a command while the previous one is being processed and
 discards it.
-When gdb is run with the|async-option|set, pyclewn queues the commands in a
+When gdb is run with the |async-option| set, pyclewn queues the commands in a
 fifo and send a command to gdb, only when gdb is ready to process the command.
 This allows the key mappings of a sequence of gdb commands. To set the
-|async-option|, see|pyclewn-options|.
+|async-option| , see |pyclewn-options|.
 
 
                                                     *gdb-keys*
 List of the gdb default key mappings:
 -------------------------------------
-These keys are mapped after the|Cmapkeys|vim command is run.
+These keys are mapped after the |Cmapkeys| vim command is run.
 
         CTRL-Z  send an interrupt to gdb and the program it is running (unix
                 only)
@@ -604,7 +604,7 @@ Symbols completion:
 -------------------
 The gdb <break> and <clear> commands are set initially with file name
 completion. This can be changed to completion matching the symbols of the
-program being debugged, after running the|Csymcompletion|command. This is a
+program being debugged, after running the |Csymcompletion| command. This is a
 pyclewn command.
 
 To minimize the number of loaded symbols and to avoid fetching the shared
@@ -630,7 +630,7 @@ value.
                                             *project-command* *project-file*
 Project file:
 -------------
-The pyclewn|project-command|name is "project". This command saves the current
+The pyclewn |project-command| name is "project". This command saves the current
 gdb settings to a project file that may be sourced later by the gdb "source"
 command.
 
@@ -640,12 +640,12 @@ These settings are:
     * program arguments
     * all the breakpoints (at most one breakpoint per source line is saved)
 
-The argument of the|project-command|is the pathname of the project file.
+The argument of the |project-command| is the pathname of the project file.
 For example: >
 
     :Cproject /path/to/project
 
-When the "--gdb" option is set with a project filename (see|pyclewn-options|),
+When the "--gdb" option is set with a project filename (see |pyclewn-options|),
 the project file is automatically sourced when a a gdb session is started, and
 the project file is automatically saved when the gdb session or vim session,
 is terminated.
@@ -681,30 +681,30 @@ gdb/mi considers the frame as still valid.
 When answering "Abort" to a dialog after pyclewn attempts to edit a buffer and
 set a breakpoint in a file already opened within another Vim session, the
 breakpoint is set in gdb, but not highlighted in the corresponding buffer.
-However, it is possible to|bwipeout|a buffer at any time, and load it again in
+However, it is possible to |bwipeout| a buffer at any time, and load it again in
 order to restore the correct highlighting of all the breakpoints in the
 buffer.
 
 
 Pyclewn commands:
 -----------------
-The|Ccommand|list includes all the gdb commands and some pyclewn specific
+The |Ccommand| list includes all the gdb commands and some pyclewn specific
 commands that are listed here:
 
-    *|Ccwindow|       opens a vim quickfix window holding the list of the
+    * |Ccwindow|       opens a vim quickfix window holding the list of the
                       breakpoints with their current state; the quickfix
                       window allows moving directly to any breakpoint
-                      (requires the vim|+quickfix|feature)
+                      (requires the vim |+quickfix| feature)
 
-    *|Cdbgvar|       add a watched variable or expression to the
+    * |Cdbgvar|       add a watched variable or expression to the
                     (clewn)_dbgvar buffer
 
-    *|Cdelvar|       delete a watched variable from the (clewn)_dbgvar buffer
+    * |Cdelvar|       delete a watched variable from the (clewn)_dbgvar buffer
 
     * Cdumprepr      print on the console pyclewn internal structures that
                      may be used for debugging pyclewn
 
-    *|Cfoldvar|      collapse/expand the members of a watched structure or
+    * |Cfoldvar|      collapse/expand the members of a watched structure or
                      class instance
 
     * Chelp          print on the console, help on the pyclewn specific
@@ -718,18 +718,18 @@ commands that are listed here:
 
     * Cloglevel      print or set the log level dynamically from inside Vim
 
-    *|Cmapkeys|      map pyclewn keys
+    * |Cmapkeys|      map pyclewn keys
 
-    *|Cproject|      save the current gdb settings to a project file
+    * |Cproject|      save the current gdb settings to a project file
 
-    *|Csetfmtvar|    set the output format of the value of a watched variable
+    * |Csetfmtvar|    set the output format of the value of a watched variable
 
     * Csigint        send a <C-C> character to the debugger to interrupt the
                      running program that is being debugged; only with gdb,
                      and when pyclewn and gdb communicate over a pseudo
                      terminal
 
-    *|Csymcompletion|populate the break and clear commands with symbols
+    * |Csymcompletion| populate the break and clear commands with symbols
                      completion (only with gdb)
 
     * Cunmapkeys     unmap the pyclewn keys, this vim command does not invoke
@@ -770,7 +770,7 @@ current buffer with: >
     :Pyclewn pdb %:p
 
 On unix, the script is started without a controlling terminal unless the "tty"
-option has been set (see below). The|Cinferiortty|command spawns a controlling
+option has been set (see below). The |Cinferiortty| command spawns a controlling
 terminal (using the --terminal option that defaults to xterm) connected to a
 pseudo tty, and redirects all three standard streams of the script to this
 pseudo tty.
@@ -926,7 +926,7 @@ So that the debuggee may be killed with the command: >
                                                     *pdb-keys*
 List of the pdb default key mappings:
 -------------------------------------
-These keys are mapped after the|Cmapkeys|vim command is run.
+These keys are mapped after the |Cmapkeys| vim command is run.
 
         CTRL-Z  interrupt the pdb process
         B       list all breaks, including for each breakpoint, the number of
@@ -952,7 +952,7 @@ mouse pointer position: ~
 
 Pyclewn commands:
 -----------------
-The|Ccommand|list includes pdb commands and some pyclewn specific commands
+The |Ccommand| list includes pdb commands and some pyclewn specific commands
 that are listed here:
 
     * Cdumprepr      print on the console pyclewn internal structures that
@@ -960,7 +960,7 @@ that are listed here:
 
     * Cloglevel      print or set the log level dynamically from inside Vim
 
-    *|Cmapkeys|      map pyclewn keys
+    * |Cmapkeys|      map pyclewn keys
 
     * Cunmapkeys     unmap the pyclewn keys, this vim command does not invoke
                      pyclewn
@@ -992,7 +992,7 @@ And change the corresponding keyword argument: >
 
 Limitations:
 ------------
-The|Cinterrupt|command does not properly interrupt the input() Python
+The |Cinterrupt| command does not properly interrupt the input() Python
 function. Workaround: after the Cinterrupt command has been issued while at
 the prompt displayed by input(), enter some data to allow the input() function
 to complete execution of its C code implementation, this allows pdb to gain
@@ -1002,7 +1002,7 @@ control when back in python code and to stop.
 7. Key mappings                                     *pyclewn-mappings*
 
 
-All|Ccommand|can be mapped to vim keys using the vim|:map-commands|.
+All |Ccommand| can be mapped to vim keys using the vim |:map-commands|.
 For example, to set a breakpoint at the current cursor position: >
 
     :map <F8> :exe "Cbreak " . expand("%:p") . ":" . line(".")<CR>
@@ -1016,13 +1016,13 @@ Or to print the value of the variable under the cursor: >
 Pyclewn key mappings:
 ---------------------
 This section describes another mapping mechanism where pyclewn maps vim keys
-by reading a configuration file. This is done when the|Cmapkeys|vim command is
+by reading a configuration file. This is done when the |Cmapkeys| vim command is
 run. The pyclewn keys mapping is mostly useful for the pyclewn casual user.
 When the configuration file cannot be found, pyclewn sets the default key
-mappings. See|gdb-keys|for the list of default key mappings for gdb
-and|pdb-keys|for the list of default key mappings for pdb.
+mappings. See |gdb-keys| for the list of default key mappings for gdb
+and |pdb-keys| for the list of default key mappings for pdb.
 
-Please note that pyclewn relies on the vim|balloon-eval|feature to get the
+Please note that pyclewn relies on the vim |balloon-eval| feature to get the
 text under the mouse position when expanding the ${text} macro. This feature
 is not available with vim console. So in this case you must build your own
 key mapping as in the above example.
@@ -1054,10 +1054,10 @@ The Watched Variables feature is available with the gdb debugger. The vim
 watched variables buffer is named "(clewn)_dbgvar".
 
                                                     *Cdbgvar*
-The|Cdbgvar|command is used to create a gdb watched variable in the variables
+The |Cdbgvar| command is used to create a gdb watched variable in the variables
 buffer from any valid expression. A valid expression is an expression that is
 valid in the current frame.
-The argument of the|Cdbgvar|pyclewn command is the expression to be watched.
+The argument of the |Cdbgvar| pyclewn command is the expression to be watched.
 For example, to create a watched variable for the expression "len - max":
 >
     :Cdbgvar len - max
@@ -1086,25 +1086,25 @@ To split the current window and display "(clewn)_dbgvar": >
 
                                                     *Cfoldvar*
 When the watched variable is a structure or class instance, it can be expanded
-with the|Cfoldvar|pyclewn command to display all its members and their values
+with the |Cfoldvar| pyclewn command to display all its members and their values
 as children watched variables.
-The argument of the|Cfoldvar|command is the line number of the watched
+The argument of the |Cfoldvar| command is the line number of the watched
 variable to expand, in the watched variable window.
 For example: >
 
     :Cfoldvar 1
 
-The|Cfoldvar|command is meant to be used in a key mapping. This is the 'X' key
+The |Cfoldvar| command is meant to be used in a key mapping. This is the 'X' key
 when using pyclewn key mappings, or one can use the following mapping:
 >
     :map <F8> :exe "Cfoldvar " . line(".")<CR>
 
-The watched variable can also be collapsed with the|Cfoldvar|command.
+The watched variable can also be collapsed with the |Cfoldvar| command.
 
 
                                                     *Cdelvar*
-A gdb watched variable can be deleted with the|Cdelvar|pyclewn command.
-The argument of the|Cdelvar|command is the name of the variable as given by
+A gdb watched variable can be deleted with the |Cdelvar| pyclewn command.
+The argument of the |Cdelvar| command is the name of the variable as given by
 gdb upon creation.
 For example: >
 
@@ -1145,7 +1145,7 @@ When a watched variable becomes out of scope, it is highlighted with the
 "Comment" highlight group.
 
 The foreground and background colors used by these highlight groups are setup
-by the|:colorscheme|currently in use.
+by the |:colorscheme| currently in use.
 
 ==============================================================================
 9. Extending pyclewn                                *pyclewn-extending*

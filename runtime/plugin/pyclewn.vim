@@ -1,13 +1,7 @@
-" pyclewn run time file
+" Pyclewn run time file.
 " Maintainer:   <xdegaye at users dot sourceforge dot net>
-"
-" Configure VIM to be used with pyclewn and netbeans
-"
 
-" pyclewn version
-let g:pyclewn_version = "pyclewn-__tag__"
-
-" enable balloon_eval
+" Enable balloon_eval.
 if has("balloon_eval")
     set ballooneval
     set balloondelay=100

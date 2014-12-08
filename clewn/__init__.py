@@ -12,9 +12,9 @@ from __future__ import unicode_literals
 import sys
 
 __all__ = [str(x) for x in
-           ('PY3', 'PY26', 'text_type', 'ClewnError',
-           '__tag__', '__changeset__',
-           )]
+               ('__version__', 'PY3', 'PY26', 'text_type', 'ClewnError',)]
+
+__version__ = '2.0'
 
 # Python 2.6 or older
 PY26 = (sys.version_info < (2, 7))
@@ -26,14 +26,6 @@ PY3 = (sys.version_info >= (3,))
 PY31 = (sys.version_info >= (3, 1))
 
 text_type = str if PY3 else unicode
-
-try:
-    from . import __version__
-    __tag__ = __version__.tag
-    __changeset__ = __version__.changeset
-except ImportError:
-    __tag__ = 'unknown'
-    __changeset__ = ''
 
 class ClewnError(Exception):
     """Base class for pyclewn exceptions."""

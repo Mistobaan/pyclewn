@@ -1,9 +1,6 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
 """
-A Vim instance starts a Debugger instance and dispatches the netbeans messages
-exchanged by vim and the debugger. A new Debugger instance is restarted whenever
-the current one dies.
-
+A Vim instance instantiates a Debugger and controls the netbeans socket.
 """
 
 # Python 2-3 compatibility.
@@ -11,26 +8,20 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-try:
-    from _thread import get_ident as get_thread_ident
-except ImportError:
-    from thread import get_ident as get_thread_ident
 
 import os
 import sys
 import time
-import os.path
 import tempfile
 import subprocess
-import inspect
+import traceback
 import optparse
 import logging
 import errno
-import threading
-import atexit
 
-from . import (__tag__, __changeset__, ClewnError, misc, gdb, simple,
-               netbeans, evtloop, tty, pydb)
+from . import (__version__, ClewnError, misc, netbeans, evtloop, tty,
+               simple, gdb, pdb,
+               )
 from .posix import daemonize, platform_data
 
 
@@ -101,96 +92,9 @@ def pformat(name, obj):
         return '%s:\n%s\n' % (name, misc.pformat(obj.__dict__))
     else: return ''
 
-def close_clewnthread(vim):
-    """Terminate the clewn thread and stop the debugger."""
-    try:
-        info('enter close_clewnthread')
-        sys.settrace(None)
-
-        # notify 'Clewn-thread' of pending termination
-        pdb = vim.debugger
-        pdb.exit()
-        if pdb.thread:
-            pdb.thread.join()
-        debug('Vim instance: ' + str(vim))
-        logging.shutdown()
-    except KeyboardInterrupt:
-        close_clewnthread(vim)
-
-def _pdb(vim, attach=False, testrun=False):
-    """Start the python debugger thread."""
-    Vim.pdb_running = True
-    pdb = vim.create_debugger(testrun)
-    pdb.target_thread_ident = get_thread_ident()
-
-    # use a daemon thread
-    class ClewnThread(threading.Thread):
-        def __init__(self):
-            threading.Thread.__init__(self, name='Clewn-thread')
-            self.setDaemon(True)
-        def run(self):
-            vim.run_pdb()
-
-    ClewnThread().start()
-    pdb.synchronisation_evt.wait(1)
-    if not pdb.synchronisation_evt.isSet():
-        print('Aborting, failed to start the clewn thread.', file=sys.stderr)
-        sys.exit(1)
-    atexit.register(close_clewnthread, vim)
-
-    if attach:
-        if vim.options.run:
-            pdb.let_target_run = True
-        pdb.set_trace(sys._getframe(2))
-    else:
-        pydb.main(pdb, vim.options)
-
-def pdb(run=False, **kwds):
-    """Start pdb from within a python process.
-
-    The 'kwds' keyword arguments may be any of the pyclewn options that set a
-    value (no boolean option allowed).
-    """
-    if Vim.pdb_running:
-        return
-
-    argv = ['pyclewn', '--pdb']
-    if run:
-        argv.append('--run')
-    argv.extend(['--' + k + '=' + str(v)
-                 for k, v in kwds.items()
-                 if k != 'testrun'
-                ])
-    testrun = 'testrun' in kwds
-    _pdb(Vim(False, argv), attach=True, testrun=testrun)
-
 def main(testrun=False):
-    """Main.
-
-    Return the vim instance to avoid its 'f_script' member to be garbage
-    collected and the corresponding 'TmpFile' to be unlinked before Vim has a
-    chance to start and source the file (only needed for the pdb test suite).
-
-    """
     vim = Vim(testrun, sys.argv[1:])
     options = vim.options
-    if options.pdb:
-        if testrun:
-            vim.create_debugger()
-            vim.spawn_vim()
-            vim.shutdown()
-        elif options.args:
-            # run pdb to debug the 'args' python script
-            _pdb(vim)
-        else:
-            # vim is running the command: 'Pyclewn pdb'
-            # vim is attaching to a python process,
-            # just write the vim script
-            vim.vim_version()
-            vim.create_debugger()._vim_script(options)
-        return vim
-
-    except_str = ''
     try:
         gdb_pty = None
         if not testrun:
@@ -206,28 +110,16 @@ def main(testrun=False):
                 gdb_pty.start()
                 options.tty = gdb_pty.ptyname
 
-        vim.create_debugger(testrun)
         vim.setup(True)
         vim.loop()
     except (KeyboardInterrupt, SystemExit):
         pass
-    except:
-        t, v, filename, lnum, last_tb = misc.last_traceback()
-
-        # get the line where exception occured
-        try:
-            lines, top = inspect.getsourcelines(last_tb)
-            location = 'source line: "%s"\nat %s:%d' \
-                    % (lines[lnum - top].strip(), filename, lnum)
-        except IOError:
-            sys.exc_clear()
-            location = ''
-
-        except_str = '\nException in pyclewn:\n\n'  \
-                        '%s\n"%s"\n%s\n\n'          \
-                        'pyclewn aborting...\n'     \
-                                % (str(t), str(v), location)
-        critical(except_str)
+    except Exception as e:
+        except_str = 'Exception in pyclewn: "%s"\n' \
+                     '%s\n'                         \
+                     'pyclewn aborting...\n'        \
+                            % (e, traceback.format_tb(sys.exc_info()[2])[-1])
+        critical('\n' + except_str)
         if vim.nbserver.netbeans:
             vim.nbserver.netbeans.show_balloon(except_str)
     finally:
@@ -239,11 +131,7 @@ def main(testrun=False):
     return vim
 
 class Vim(object):
-    """The Vim instance dispatches netbeans messages.
-
-    Class attributes:
-        pdb_running: boolean
-            True when pdb is running
+    """The Vim class.
 
     Instance attributes:
         testrun: boolean
@@ -276,8 +164,6 @@ class Vim(object):
 
     """
 
-    pdb_running = False
-
     def __init__(self, testrun, argv):
         self.testrun = testrun
         self.file_hdlr = None
@@ -286,22 +172,11 @@ class Vim(object):
         self.debugger = None
         self.clazz = None
         self.f_script = None
-        self.nbserver = netbeans.Server(self.socket_map)
-        # instantiate 'poll' after addition of 'nbserver' to the asyncore
-        # 'socket_map'
-        self.poll = evtloop.Poll(self.socket_map)
         self.vim = None
         self.options = None
+        self.closed = False
         self.parse_options(argv)
         self.setlogger()
-        self.closed = False
-
-    def create_debugger(self, testrun=None):
-        """Instantiate the debugger."""
-        if testrun is None:
-            testrun = self.testrun
-        self.debugger = self.clazz(self.options, self.socket_map, testrun)
-        return self.debugger
 
     def vim_version(self):
         """Check Vim version."""
@@ -310,10 +185,7 @@ class Vim(object):
         # test if Vim contains the netbeans 'cmd on NoName buffer ignored' fix
 
         # pyclewn is started from within vim
-        # This is supported since vim73. When using 'pdb', pyclewn has no way
-        # to know which vim it is connected to, unless using the netbeans
-        # version, but this does not change consistently with vim netbeans
-        # patches.
+        # This is supported since vim73.
         if not self.options.editor:
             netbeans.Netbeans.remove_fix = '1'
             netbeans.Netbeans.getLength_fix = '1'
@@ -324,22 +196,12 @@ class Vim(object):
                 'echo v:version > 702 || v:version == 702 && has("patch253")',
                 'echo v:version > 702 || v:version == 702 && has("patch334")',
                 'echo v:version',
-                'runtime plugin/pyclewn.vim',
-                'if exists("g:pyclewn_version")'
-                    ' | echo g:pyclewn_version'
-                    ' | endif',
                 ]
         output = exec_vimcmd(cmds, self.options.editor,
                                    self.stderr_hdlr).strip().split('\n')
         output = [x.strip('\r') for x in output]
         length = len(output)
-        version = ''
-        if length == 5:
-            (netbeans.Netbeans.remove_fix,
-             netbeans.Netbeans.getLength_fix,
-             self.options.noname_fix,
-             vimver, version) = output
-        elif length == 4:
+        if length == 4:
             (netbeans.Netbeans.remove_fix,
              netbeans.Netbeans.getLength_fix,
              self.options.noname_fix,
@@ -348,20 +210,10 @@ class Vim(object):
             raise ClewnError('output of %s: %s' % (cmds, output))
         info('Vim version: %s', vimver)
 
-        # check pyclewn version
-        pyclewn_version = 'pyclewn-' + __tag__
-        if version != pyclewn_version:
-            raise ClewnError('pyclewn.vim version does not match pyclewn\'s:\n'\
-                        '\t\tpyclewn version: "%s"\n'\
-                        '\t\tpyclewn.vim version: "%s"'
-                        % (pyclewn_version, version))
-        info('pyclewn.vim version: %s', version)
-
     def spawn_vim(self):
         """Spawn vim."""
-        self.vim_version()
         args = self.options.cargs or []
-        self.f_script = self.debugger._vim_script(self.options)
+        self.f_script = self.debugger.vim_script()
         info('sourcing the Vim script file: %s', self.f_script.name)
         args[:0] = [self.f_script.name]
         args[:0] = ['-S']
@@ -388,11 +240,13 @@ class Vim(object):
             oneshot: boolean
                 when True, 'nbserver' accepts only a single connection
         """
+        self.nbserver = netbeans.Server(self.socket_map)
+        # instantiate 'poll' after addition of 'nbserver' to the asyncore
+        # 'socket_map'
+        self.poll = evtloop.Poll(self.socket_map)
+
         # log platform information for debugging
         info(platform_data())
-
-        # read keys mappings
-        self.debugger._read_keysfile()
 
         # listen on netbeans port
         conn = list(CONNECTION_DEFAULTs)
@@ -404,22 +258,22 @@ class Vim(object):
         conn[1] = conn[1] or CONNECTION_DEFAULTs[1]
         self.nbserver.bind_listen(oneshot, *conn)
 
+        self.vim_version()
+        self.debugger = self.clazz(self.options, self.socket_map, self.testrun)
         if self.options.editor:
             self.spawn_vim()
-        # pyclewn is started from within vim
         else:
-            self.vim_version()
-            script = self.debugger._vim_script(self.options)
+            # pyclewn is started from within vim.
+            script = self.debugger.vim_script()
             info('building the Vim script file: %s', script)
 
     def shutdown(self, logging_shutdown=True):
-        """Shutdown the asyncore dispatcher."""
         if self.closed:
             return
         self.closed = True
 
-        # remove the Vim script file in case the script failed to remove it
-        if self.f_script and not (self.options.pdb and self.testrun):
+        # Remove the Vim script file in case the script failed to remove itself.
+        if hasattr(self, 'f_script') and self.f_script:
             del self.f_script
 
         if self.nbserver.netbeans:
@@ -480,7 +334,7 @@ class Vim(object):
         editor = os.environ.get('EDITOR', 'gvim')
         formatter = optparse.IndentedHelpFormatter(max_help_position=30)
         parser = optparse.OptionParser(
-                        version='%prog ' + __tag__,
+                        version='%prog ' + __version__,
                         usage='usage: python %prog [options]',
                         formatter=formatter)
 
@@ -556,7 +410,7 @@ class Vim(object):
         if self.options.simple:
             self.clazz = simple.Simple
         elif self.options.pdb:
-            self.clazz = pydb.Pdb
+            self.clazz = pdb.Pdb
         else:
             self.clazz = gdb.Gdb
 
@@ -638,12 +492,11 @@ class Vim(object):
             root.setLevel(level)
 
     def loop(self):
-        """The dispatch loop."""
+        """The event loop."""
 
         start = time.time()
-        nbsock = None
         while True:
-            # start the debugger
+            # Accept the netbeans connection.
             if start is not False:
                 if time.time() - start > CONNECTION_TIMEOUT:
                     raise IOError(CONNECTION_ERROR % str(CONNECTION_TIMEOUT))
@@ -653,19 +506,17 @@ class Vim(object):
                     info(nbsock)
                     nbsock.set_debugger(self.debugger)
 
-                    # can daemonize now, no more critical startup errors to
-                    # print on the console
+                    # Daemonize now, no more critical startup errors to
+                    # print on the console.
                     if self.options.daemon:
                         daemonize()
-                    version = __tag__
-                    if __changeset__:
-                        version += '.' + __changeset__
                     info('pyclewn version %s and the %s debugger',
-                                        version, self.clazz.__name__)
+                                        __version__, self.clazz.__name__)
             elif nbsock.connected:
-                # instantiate a new debugger
+                # Instantiate a new debugger.
                 if self.debugger.closed:
-                    self.create_debugger()._read_keysfile()
+                    self.debugger = self.clazz(self.options, self.socket_map,
+                                               self.testrun)
                     nbsock.set_debugger(self.debugger)
                     info('new "%s" instance', self.clazz.__name__.lower())
             else:
@@ -676,39 +527,6 @@ class Vim(object):
             self.poll.run(timeout=timeout)
 
         self.debugger.close()
-
-    def run_pdb(self):
-        """Run the clewn pdb thread."""
-        pdb = self.debugger
-
-        # do not start vim
-        self.options.editor = ''
-        self.setup(False)
-        pdb.thread = threading.currentThread()
-        pdb.clewn_thread_ident = get_thread_ident()
-
-        pdb.synchronisation_evt.set()
-        last_nbsock = None
-        while not pdb.closing:
-            nbsock = self.nbserver.netbeans
-            # a new netbeans connection, the server has closed last_nbsock
-            if nbsock != last_nbsock and nbsock.ready:
-                info(nbsock)
-                last_nbsock = nbsock
-                nbsock.set_debugger(pdb)
-                if last_nbsock is None:
-                    version = __tag__
-                    if __changeset__:
-                        version += '.' + __changeset__
-                    info('pyclewn version %s and the %s debugger',
-                                        version, self.clazz.__name__)
-
-            timeout = pdb._call_jobs()
-            self.poll.run(timeout=timeout)
-            pdb.synchronisation_evt.set()
-
-        info('clewn thread terminating')
-        self.shutdown(logging_shutdown=False)
 
     def __str__(self):
         """Return a representation of the whole stuff."""

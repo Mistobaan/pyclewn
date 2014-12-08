@@ -31,9 +31,9 @@ from __future__ import unicode_literals
 from io import open
 
 import os
-import os.path
 import re
 import io
+import traceback
 import collections
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
@@ -1225,10 +1225,8 @@ class OobGdbCommand(OobCommand, Command):
             if hasattr(self, 'action'):
                 try:
                     getattr(self.gdb.info, self.action)(self.cmd)
-                except (KeyError, ValueError) as err:
-                    t, v, filename, lnum, last_tb = misc.last_traceback()
-                    error('Exception %s: "%s" at %s:%d', type(err), err,
-                                                            filename, lnum)
+                except (KeyError, ValueError):
+                    error(traceback.format_tb(sys.exc_info()[2])[-1])
                     info_attribute = getattr(self.gdb.info,
                                             self.info_attribute)
                     if info_attribute:
