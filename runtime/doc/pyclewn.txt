@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2014 December 8
+*pyclewn.txt*                                   Last change: 2014 December 9
 
 
                             PYCLEWN USER MANUAL
@@ -162,7 +162,13 @@ The |:Pyclewn| command does the following:
 Start the pyclewn process:
 --------------------------
 
-Pyclewn with the gdb debugger is simply started as: >
+Start pyclewn with: >
+
+    pyclewn [options] [debugger]
+
+"debugger" defaults to "gdb".
+
+So pyclewn with the gdb debugger is simply started as: >
 
     pyclewn
 
@@ -177,38 +183,30 @@ The pyclewn options can be set:
     * in the "pyclewn_args" and the "pyclewn_connection" vim global
       variables when starting pyclewn with the |:Pyclewn| command
 
-    * as the keyword parameters of the pdb function
 
-
-options:
+Options:
   --version                   show program's version number and exit
   -h, --help                  show this help message and exit
-  -s, --simple                select the simple debugger
-  --pdb                       select 'pdb', the python debugger
-  --run                       allow the debuggee to run after the pdb() call
-                              (default 'False')
+  -g PARAM_LIST, --gdb=PARAM_LIST
+                              set gdb PARAM_LIST
+  -d, --daemon                run as a daemon (default 'False')
+  -e VIM, --editor=VIM        set Vim pathname to VIM (default 'gvim-
+                              fork.sh'); Vim is not spawned by pyclewn when
+                              this parameter is set to an empty string
+  -c ARGS, --cargs=ARGS       set Vim arguments to ARGS
+  -p PGM, --pgm=PGM           set the debugger pathname to PGM
+  -a ARGS, --args=ARGS        set the debugger arguments to ARGS
+  --terminal=TERMINAL         set the terminal to use with the inferiortty
+                              command (default 'xterm,-e')
   --tty=TTY                   use TTY for input/output by the python script
                               being debugged (default '/dev/null')
-  -g PARAM_LIST, --gdb=PARAM_LIST
-                              select the gdb application (the default), with a
-                              mandatory, possibly empty, PARAM_LIST
-  --terminal=TERMINAL         set the terminal to use with the inferiortty
-                              command for running gdb or pdb inferior (default
-                              'xterm,-e')
-  -d, --daemon                run as a daemon (default 'False')
-  -p PGM, --pgm=PGM           set the debugger program to PGM
-  -a ARGS, --args=ARGS        set the debugger program arguments to ARGS
-  -e EDITOR, --editor=EDITOR  set the Vim program to EDITOR;
-                              Vim is not spawned by pyclewn when this
-                              parameter is set to an empty string
-  -c ARGS, --cargs=ARGS       set the Vim program arguments to ARGS
   -w LOCATION, --window=LOCATION
                               open the debugger console window at LOCATION
                               which may be one of (top, bottom, left,
-                              right), the default is top
+                              right, none), the default is top
   -m LNUM, --maxlines=LNUM    set the maximum number of lines of the debugger
                               console window to LNUM (default 10000 lines)
-  -x PREFIX, --prefix=PREFIX  set the commands prefix to PREFIX (default |C|)
+  -x PREFIX, --prefix=PREFIX  set the commands prefix to PREFIX (default 'C')
   -b COLORS, --background=COLORS
                               COLORS is a comma separated list of the three
                               colors of the breakpoint enabled, breakpoint
@@ -219,7 +217,7 @@ options:
                               ':3219:changeme' where the empty host represents
                               INADDR_ANY)
   -l LEVEL, --level=LEVEL     set the log level to LEVEL: critical, error,
-                              warning, info, debug or nbdebug (default error)
+                              warning, info, debug, nbdebug (default error)
   -f FILE, --file=FILE        set the log file name to FILE
 
 
@@ -231,28 +229,11 @@ The full description of pyclewn options follows:
 -h
 --help              Show this help message and exit.
 
--s
---simple            Select the simple debugger. In that case, the --pgm and
-                    --args options are meaningless. The simple debugger is
-                    documented in debugger/simple.py, in the source
-                    distribution.
-
---pdb               Select 'pdb', the python debugger.
-
---run               By default the python debuggee is stopped at the first
-                    statement after the call to pdb(). Enabling this option
-                    allows the debuggee to run after the call to pdb().
-
---tty={TTY}         Use TTY for input/output by the python script being
-                    debugged. The default is "/dev/null".
-
 -g {PARAM_LIST}
---gdb={PARAM_LIST}  Select the gdb debugger (the default). The default value
-                    of the "pgm" option is "gdb". The PARAM_LIST option
-                    parameter is a comma separated list of parameters and is
-                    mandatory when the option is present. So, to run gdb with
-                    no specific parameter, the following commands are
-                    equivalent: >
+--gdb={PARAM_LIST}  The PARAM_LIST option parameter is a comma separated list
+                    of parameters and is mandatory when the option is present.
+                    So, to run gdb with no specific parameter, the following
+                    commands are equivalent: >
 
                         pyclewn
                         pyclewn -g ""
@@ -272,30 +253,12 @@ The full description of pyclewn options follows:
 
                         pyclewn --gdb=async,./project_name
 
---terminal=TERMINAL Set the terminal to use with the inferiortty command for
-                    running gdb or pdb inferior (default 'xterm,-e'). The
-                    option is a comma separated list of the arguments needed
-                    to start the terminal and a program running in this
-                    terminal.
-
 -d
 --daemon            Run as a daemon (default 'False'): on unix, pyclewn is
                     detached from the terminal from where it has been
                     launched, which means that this terminal cannot be used as
                     a controlling terminal for the program to debug, and
                     cannot be used for printing the pyclewn logs as well.
-
--p {PGM}
---pgm={PGM}         Set the debugger program to PGM. PGM must be in one of the
-                    directories listed in the PATH environment variable.
-
--a {ARGS}
---args={ARGS}       Set the debugger program arguments to ARGS. These
-                    arguments may be double quoted. For example, start gdb
-                    with the program foobar and "this is foobar argument" as
-                    foobar's argument: >
-
-                    pyclewn -a '--args foobar "this is foobar argument"'
 
 -e {EDITOR}
 --editor={EDITOR}   Set the editor program to EDITOR. EDITOR must be in one
@@ -310,6 +273,27 @@ The full description of pyclewn options follows:
 -c {ARGS}
 --cargs={ARGS}      Set the editor program arguments to ARGS, possibly double
                     quoted (same as option --args).
+
+-p {PGM}
+--pgm={PGM}         Set the debugger program to PGM. PGM must be in one of the
+                    directories listed in the PATH environment variable.
+
+-a {ARGS}
+--args={ARGS}       Set the debugger program arguments to ARGS. These
+                    arguments may be double quoted. For example, start gdb
+                    with the program foobar and "this is foobar argument" as
+                    foobar's argument: >
+
+                    pyclewn -a '--args foobar "this is foobar argument"'
+
+--terminal=TERMINAL Set the terminal to use with the inferiortty command for
+                    running gdb or pdb inferior (default 'xterm,-e'). The
+                    option is a comma separated list of the arguments needed
+                    to start the terminal and a program running in this
+                    terminal.
+
+--tty={TTY}         Use TTY for input/output by the python script being
+                    debugged. The default is "/dev/null".
 
 -w {LOCATION}
 --window={LOCATION} The debugger console window pops up at LOCATION, which may

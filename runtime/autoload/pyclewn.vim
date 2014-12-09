@@ -36,42 +36,6 @@ endif
 " The 'Pyclewn' command starts pyclewn and vim netbeans interface.
 let s:fixed = "--daemon --editor= --netbeans=" . s:connection . " --cargs="
 
-" Run the 'Cinterrupt' command to open the console
-function s:start_pdb(args)
-    let argl = split(a:args)
-    if index(argl, "--pdb") != -1
-        " find the prefix
-        let prefix = "C"
-        let idx = index(argl, "-x")
-        if idx == -1
-            let idx = index(argl, "--prefix")
-            if idx == -1
-                for item in argl
-                    if stridx(item, "--prefix") == 0
-                        let pos = stridx(item, "=")
-                        if pos != -1
-                            let prefix = strpart(item, pos + 1)
-                        endif
-                    endif
-                endfor
-            endif
-        endif
-
-        if idx != -1 && len(argl) > idx + 1
-            let prefix = argl[idx + 1]
-        endif
-
-        " hack to prevent Vim being stuck in the command line with '--More--'
-        echohl WarningMsg
-        echo "About to run the 'interrupt' command."
-        call inputsave()
-        call input("Press the <Enter> key to continue.")
-        call inputrestore()
-        echohl None
-        exe prefix . "interrupt"
-    endif
-endfunction
-
 " Check wether pyclewn successfully wrote the script file
 function s:pyclewn_ready(filename)
     let l:cnt = 1
@@ -115,7 +79,7 @@ function s:start(args)
 
     " start pyclewn and netbeans
     call s:info("Starting pyclewn.\n")
-    exe "silent !" . s:pgm . " " . a:args . " " . s:fixed . l:tmpfile . " &"
+    exe "silent !" . s:pgm . " " . s:fixed . l:tmpfile . " " . a:args . " &"
     call s:info("Running nbstart, <C-C> to interrupt.\n")
     call s:pyclewn_ready(l:tmpfile)
     exe "nbstart :" . s:connection
@@ -132,7 +96,6 @@ function s:start(args)
             exe "source " . l:tmpfile
         endif
         call s:info("The netbeans socket is connected.\n")
-        call s:start_pdb(a:args)
     else
         throw "Error: the netbeans socket could not be connected."
     endif
@@ -147,10 +110,10 @@ function pyclewn#StartClewn(...)
                 call s:error("File '" . a:2 . "' is not readable.")
                 return
             endif
-            let l:args .= " --pdb"
             if a:0 > 1
                 let l:args .= " --args \"" . join(a:000[1:], ' ') . "\""
             endif
+            let l:args .= " pdb"
         else
             call s:error("Invalid optional first argument: must be 'pdb'.")
             return

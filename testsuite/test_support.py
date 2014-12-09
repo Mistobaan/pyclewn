@@ -79,7 +79,6 @@ class ClewnTestCase(TestCase):
 
     """
     _verbose = False
-    _debug = False
 
     def __init__(self, method='runTest'):
         TestCase.__init__(self, method)
@@ -154,10 +153,7 @@ class ClewnTestCase(TestCase):
         commands = '%s:%s\n' % (WAIT_EOP, '\n:'.join(commands))
 
         # write the commands
-        if self._debug:
-            timeout = -1
-        else:
-            timeout = 5
+        timeout = 5
         with open(TESTFN, 'w') as fp:
             fp.write(string.Template(commands).substitute(
                                     test_file=TESTFN_FILE,
@@ -172,8 +168,6 @@ class ClewnTestCase(TestCase):
                 fp.write(t)
 
         # process the commands
-        if self._debug:
-            vim.pdb(netbeans='localhost:3220:foo')
         vim.main(True)
 
         # check the result
@@ -312,9 +306,8 @@ class TextTestRunner(object):
             self.stream.write('\n')
         return result
 
-def run_suite(suite, verbose, stop_on_error, debug):
+def run_suite(suite, verbose, stop_on_error):
     """Run the suite."""
     ClewnTestCase._verbose = verbose
-    ClewnTestCase._debug = debug
     TextTestRunner(verbose, stop_on_error).run(suite)
 

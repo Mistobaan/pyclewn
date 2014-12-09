@@ -22,7 +22,7 @@ class Pdb(ClewnTestCase):
 
     def setUp(self):
         ClewnTestCase.setUp(self)
-        sys.argv.append('--pdb')
+        sys.argv.append('pdb')
 
         # start the python script being debugged
         self.fnull = open(os.devnull, 'w')

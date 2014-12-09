@@ -20,7 +20,7 @@ class Pyclewn(ClewnTestCase):
 
     def setUp(self):
         ClewnTestCase.setUp(self)
-        sys.argv.append('--simple')
+        sys.argv.append('simple')
 
     @skipIf(True, 'test cancelled')
     def test_001(self):

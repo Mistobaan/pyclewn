@@ -13,15 +13,14 @@ import os
 import sys
 import time
 import tempfile
+import importlib
 import subprocess
 import traceback
 import optparse
 import logging
 import errno
 
-from . import (__version__, ClewnError, misc, netbeans, evtloop, tty,
-               simple, gdb, pdb,
-               )
+from . import (__version__, ClewnError, misc, netbeans, evtloop, tty)
 from .posix import daemonize, platform_data
 
 
@@ -96,19 +95,17 @@ def main(testrun=False):
     vim = Vim(testrun, sys.argv[1:])
     options = vim.options
     try:
-        gdb_pty = None
-        if not testrun:
-            gdb_pty = tty.GdbInferiorPty(vim.stderr_hdlr, vim.socket_map)
-        if (vim.clazz == gdb.Gdb
-                    and gdb_pty
-                    and not options.daemon
-                    and os.isatty(sys.stdin.fileno())):
-            # Use pyclewn pty as the debuggee standard input and output, but
-            # not when vim is run as 'vim' or 'vi'.
-            vim_pgm = os.path.basename(options.editor)
-            if vim_pgm != 'vim' and vim_pgm != 'vi':
-                gdb_pty.start()
-                options.tty = gdb_pty.ptyname
+        # Use pyclewn terminal as the inferior standard input/output when vim is
+        # run as 'gvim'.
+        pty = None
+        if vim.options.editor:
+            out = exec_vimcmd(['echo has("gui_running")'],
+                                 vim.options.editor, vim.stderr_hdlr).strip()
+            if (out == '1' and vim.clazz.__name__ == 'Gdb' and not testrun and
+                    os.isatty(sys.stdin.fileno()) and not options.daemon):
+                pty = tty.GdbInferiorPty(vim.stderr_hdlr, vim.socket_map)
+                pty.start()
+                options.tty = pty.ptyname
 
         vim.setup(True)
         vim.loop()
@@ -123,8 +120,8 @@ def main(testrun=False):
         if vim.nbserver.netbeans:
             vim.nbserver.netbeans.show_balloon(except_str)
     finally:
-        if gdb_pty:
-            gdb_pty.close()
+        if pty:
+            pty.close()
         debug('Vim instance: ' + str(vim))
         vim.shutdown()
 
@@ -302,7 +299,7 @@ class Vim(object):
 
         # do not shutdown logging with gdb as the SIGCHLD handler may overwrite
         # all the traces after the shutdown
-        elif self.clazz != gdb.Gdb and logging_shutdown:
+        elif self.clazz.__name__ != 'Gdb' and logging_shutdown:
             logging.shutdown()
 
         for asyncobj in list(self.socket_map.values()):
@@ -335,27 +332,16 @@ class Vim(object):
         formatter = optparse.IndentedHelpFormatter(max_help_position=30)
         parser = optparse.OptionParser(
                         version='%prog ' + __version__,
-                        usage='usage: python %prog [options]',
+                        usage='%prog [options] [debugger]',
                         formatter=formatter)
 
-        parser.add_option('-s', '--simple',
-                action="store_true", default=False,
-                help='select the simple debugger')
-        parser.add_option('--pdb',
-                action="store_true", default=False,
-                help='select \'pdb\', the python debugger')
         parser.add_option('-g', '--gdb',
                 type='string', metavar='PARAM_LIST', default='',
-                help='select the gdb debugger (the default)'
-                     ', with a mandatory, possibly empty, PARAM_LIST')
+                help='set gdb PARAM_LIST')
         parser.add_option('-d', '--daemon',
                 action="store_true", default=False,
                 help='run as a daemon (default \'%default\')')
-        parser.add_option('--run',
-                action="store_true", default=False,
-                help=('allow the debuggee to run after the pdb() call'
-                ' (default \'%default\')'))
-        parser.add_option('-e', '--editor', default=editor,
+        parser.add_option('-e', '--editor', default=editor, metavar='VIM',
                 help='set Vim pathname to VIM (default \'%default\');'
                 + ' Vim is not spawned by pyclewn when this parameter is'
                 + ' set to an empty string')
@@ -370,8 +356,7 @@ class Vim(object):
         parser.add_option('--terminal',
                 type='string', default='xterm,-e',
                 help=('set the terminal to use with the inferiortty'
-                ' command for running gdb or pdb inferior'
-                ' (default \'%default\')'))
+                ' command (default \'%default\')'))
         parser.add_option('--tty',
                 type='string', metavar='TTY', default=os.devnull,
                 help=('use TTY for input/output by the python script being'
@@ -407,12 +392,20 @@ class Vim(object):
                 help='set the log file name to FILE')
         (self.options, args) = parser.parse_args(args=argv)
 
-        if self.options.simple:
-            self.clazz = simple.Simple
-        elif self.options.pdb:
-            self.clazz = pdb.Pdb
-        else:
-            self.clazz = gdb.Gdb
+        mname = 'gdb'
+        if args:
+            if len(args) != 1:
+                parser.error('only one argument is allowed')
+            mname = args[0]
+        try:
+            module = importlib.import_module('clewn.%s' % mname)
+        except ImportError:
+            parser.error('cannot import module "clewn.%s"' % mname)
+        class_name = mname[0].upper() + mname[1:]
+        self.clazz = getattr(module, class_name, None)
+        if not self.clazz:
+            parser.error('module %s does not define class %s' %
+                         (mname, class_name))
 
         location = self.options.window.lower()
         if location in WINDOW_LOCATION:

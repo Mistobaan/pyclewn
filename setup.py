@@ -177,13 +177,7 @@ class Test(core.Command):
             ' is not present'),
         ('prefix=', 'p', 'run only tests whose name starts with this prefix'),
         ('stop', 's', 'stop at the first test failure or error'),
-        ('detail', 'd', 'detailed test output, each test case is printed'),
-        ('pdb', 'b', 'debug a single test with pyclewn and pdb: start the'
-                     ' test with \'python setup.py test --test=gdb --pdb -p'
-                     ' test_021\''
-                     ' then start a Vim instance and run'
-                     ' \':let g:pyclewn_connection="localhost:3220:foo" |'
-                     ' Pyclewn pdb\''),)
+        ('detail', 'd', 'detailed test output, each test case is printed'),)
     ]
 
     def initialize_options(self):
@@ -191,7 +185,6 @@ class Test(core.Command):
         self.prefix = None
         self.stop = False
         self.detail = False
-        self.pdb = False
 
     def finalize_options(self):
         if self.test is not None:
@@ -199,10 +192,6 @@ class Test(core.Command):
 
     def run (self):
         """Run the test suite."""
-        if self.pdb and self.test != ['test_gdb']:
-            print('One can only debug a gdb test case for now.')
-            return
-
         testsuite = 'testsuite'
         tests = self.test or findtests(testsuite)
         if self.prefix:
@@ -210,17 +199,12 @@ class Test(core.Command):
         for test in tests:
             the_module = importlib.import_module('.%s' % test, testsuite)
             suite = defaultTestLoader.loadTestsFromModule(the_module)
-            if self.pdb and (len(tests) > 1 or suite.countTestCases() > 1):
-                print('Only one test at a time can be debugged, use the'
-                      ' \'--test=\' and \'--prefix=\' options to set'
-                      ' this test.')
-                return
             if test == 'test_gdb':
                 subprocess.check_call(['make', '-C', testsuite])
             # run the test
             print(the_module.__name__)
             sys.stdout.flush()
-            test_support.run_suite(suite, self.detail, self.stop, self.pdb)
+            test_support.run_suite(suite, self.detail, self.stop)
 
 core.setup(
     cmdclass={'sdist': sdist,
