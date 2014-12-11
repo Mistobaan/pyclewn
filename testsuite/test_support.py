@@ -23,20 +23,25 @@ import clewn.vim as vim
 
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
-TESTRUN_SLEEP_TIME = 800
+TESTRUN_SLEEP_TIME = '800m'
+SLOW_DOWN_TESTS = '40m'
 
 # filenames used for testing
 TESTFN = '@test'
 TESTFN_FILE = TESTFN + '_file_'
 TESTFN_OUT = TESTFN + '_out'
 
-# wait for pyclewn to process all previous commands
+# Wait for pyclewn to process all the previous commands.
+# Wait for the expected string passed as the argument to the function, or run
+# the 'dumprepr' command and wait for the command.
 WAIT_EOP = """
 :let g:testrun_key = ${key}
-:function Wait_eop()
+:function Wait_eop(...)
 :   let g:testrun_key += 1
 :   let l:marker = "dumprepr " . g:testrun_key
-:   exe "C" . l:marker
+:   if a:0 == 0
+:       exe "C" . l:marker
+:   endif
 :   let l:start = localtime()
 :   while 1
 :       " allow vim to process netbeans events and messages
@@ -45,26 +50,87 @@ WAIT_EOP = """
 :           break
 :       endif
 :       let l:lines = getbufline("(clewn)_console", "$$")
-:       if len(lines) && l:lines[0] =~# l:marker
+:       if a:0 != 0
+:           if len(l:lines) && l:lines[0] == a:1
+:               break
+:           endif
+:       elseif len(l:lines) && l:lines[0] =~# l:marker
 :           break
 :       endif
 :   endwhile
 :endfunction
 """
 
-def append_command(command_list, commands, append=None):
-    """Append a command after each command found in 'command_list'.
-
-    When 'command_list' is empty, append the command after each pyclewn command.
+def cmd_append(commands, append, wait_for=None, cmd_list=None, exclude=None, do_all=False):
     """
-    if not append:
-        append = 'sleep %dm' % TESTRUN_SLEEP_TIME
-    for cmd in commands:
+    >>> commands = ['Cfoo', 'Cbar', 'Cquit', 'Cfoo', 'Cfoobar']
+    >>> wait_for = {}
+    >>> wait_for['Cquit'] = '=== End of gdb session ==='
+    >>> exclude = ['Cfoobar']
+    >>> commands = cmd_append(iter(commands), 'call Wait_eop()',
+    ...                       wait_for=wait_for, exclude=exclude)
+    >>> print('\\n'.join(commands))
+    Cfoo
+    Cbar
+    call Wait_eop()
+    Cquit
+    call Wait_eop("=== End of gdb session ===")
+    Cfoo
+    call Wait_eop()
+    Cfoobar
+
+    >>> commands = cmd_append(iter(['Cfoo', 'Cbar']), 'sleep 100m',
+    ...                            cmd_list=('Cfoo',))
+    >>> print('\\n'.join(commands))
+    Cfoo
+    sleep 100m
+    Cbar
+
+    >>> commands = ['Cfoo', 'Cbar', 'Cfoobar']
+    >>> exclude = ['Cbar']
+    >>> commands = cmd_append(iter(commands), 'sleep 100m', exclude=exclude,
+    ...                       do_all=True)
+    >>> print('\\n'.join(commands))
+    Cfoo
+    sleep 100m
+    Cbar
+    Cfoobar
+    sleep 100m
+    """
+
+    try:
+        next_cmd = next(commands)
+    except StopIteration:
+        assert False
+
+    while True:
+        cmd = next_cmd
         yield cmd
-        if not command_list and cmd.startswith('C'):
+        try:
+            next_cmd = next(commands)
+        except StopIteration:
+            next_cmd = None
+
+        if cmd_list:
+            if cmd in cmd_list:
+                yield append
+        elif do_all:
+            if cmd.startswith('C') and (not exclude or cmd not in exclude):
+                yield append
+        elif wait_for and cmd in wait_for:
+            yield 'call Wait_eop("%s")' % wait_for[cmd]
+        elif (cmd.startswith('C') and
+                (not exclude or cmd not in exclude) and
+                (not next_cmd or next_cmd in exclude or
+                    next_cmd == 'Cquit' or
+                    (not next_cmd.startswith('C') and
+                        not next_cmd.startswith('call Wait_eop') and
+                        not next_cmd.startswith('sleep')
+                        ))):
             yield append
-        elif cmd in command_list:
-            yield append
+
+        if next_cmd is None:
+            return
 
 def get_description(test):
     """"Return a ClewnTestCase description."""
@@ -85,6 +151,7 @@ class ClewnTestCase(TestCase):
         self.method = method
         self.pdb_script = None
         self.fnull = None
+        self.debugger = None
 
     def setUp(self):
         """Setup pyclewn arguments."""
@@ -143,23 +210,35 @@ class ClewnTestCase(TestCase):
         (including new lines).
 
         """
-        cwd = os.getcwd() + os.sep
 
-        command_list = ('Cquit', 'Cinterrupt', 'Ccontinue', 'Cstep',
-                        'Cnext', 'Pyclewn pdb', 'Csigint', 'Crun')
-        commands = append_command(command_list, commands)
-        commands = append_command(('Cdetach', ), commands,
-                        'sleep %dm' % (5 * TESTRUN_SLEEP_TIME))
+        not_a_pyclewn_method = ['Cunmapkeys', 'Ccwindow', 'Cdefine',
+                                'Ccommands', 'Cdocument']
+        exclude = not_a_pyclewn_method + ['Csymcompletion']
+        wait_for = {}
+        if self.debugger == 'gdb':
+            wait_for['Cquit'] = '=== End of gdb session ==='
+ 
+        commands = cmd_append(iter(commands), 'call Wait_eop()',
+                              wait_for=wait_for, exclude=exclude)
+
+        commands = cmd_append(commands, 'sleep ' + TESTRUN_SLEEP_TIME,
+                              cmd_list=('Pyclewn pdb',))
+
+        # Slow down the tests.
+        commands = cmd_append(commands, 'sleep ' + SLOW_DOWN_TESTS,
+                              exclude=exclude, do_all=True)
         commands = '%s:%s\n' % (WAIT_EOP, '\n:'.join(commands))
 
-        # write the commands
-        timeout = 5
+        # Write the commands.
+        timeout = 5     # Wait_eop timeout.
+        cwd = os.getcwd() + os.sep
         with open(TESTFN, 'w') as fp:
             fp.write(string.Template(commands).substitute(
                                     test_file=TESTFN_FILE,
                                     test_out=TESTFN_OUT,
                                     key=random.randint(0, 1000000000),
                                     timeout=timeout,
+                                    sleep_time=TESTRUN_SLEEP_TIME,
                                     cwd=cwd))
 
         # write the test files
@@ -310,4 +389,12 @@ def run_suite(suite, verbose, stop_on_error):
     """Run the suite."""
     ClewnTestCase._verbose = verbose
     TextTestRunner(verbose, stop_on_error).run(suite)
+
+def _test():
+    """Run the doctests."""
+    import doctest
+    doctest.testmod()
+
+if __name__ == "__main__":
+    _test()
 

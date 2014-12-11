@@ -22,13 +22,10 @@ class Simple(ClewnTestCase):
         ClewnTestCase.setUp(self)
         sys.argv.append('simple')
 
-
     def test_001(self):
         """The break command"""
         cmd = [
-            'edit ${test_file}1',
             'Cbreak ${test_file}1:1',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -41,11 +38,9 @@ class Simple(ClewnTestCase):
     def test_002(self):
         """The continue command"""
         cmd = [
-            'edit ${test_file}1',
             'Cbreak ${test_file}1:1',
             'Ccontinue',
             'Cdumprepr',
-            'call Wait_eop()',
             'edit (clewn)_console | $$ | ?\'inferior\': Target:?w! ${test_out}',
             'qa!',
             ]
@@ -57,7 +52,6 @@ class Simple(ClewnTestCase):
     def test_003(self):
         """The dbgvar command"""
         cmd = [
-            'edit ${test_file}1',
             'Cbreak ${test_file}1:1',
             'Cdbgvar testvar value',
             'Cdbgvar second value',
@@ -67,7 +61,6 @@ class Simple(ClewnTestCase):
             'Cstep',
             'Cstep',
             'Cstep',
-            'call Wait_eop()',
             'edit (clewn)_dbgvar | w! ${test_out}',
             'qa!',
             ]
@@ -86,7 +79,6 @@ class Simple(ClewnTestCase):
             'Cdelvar',
             'Cdelvar unknown',
             'Cdelvar testvar',
-            'call Wait_eop()',
             'edit (clewn)_console | $$-7,$$-1w! ${test_out}',
             'edit (clewn)_dbgvar',
             'redir! >> ${test_out}',
@@ -109,7 +101,6 @@ class Simple(ClewnTestCase):
             'edit ${test_file}1',
             'Cbreak ${test_file}1:1',
             'Cdisable 1',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -124,7 +115,6 @@ class Simple(ClewnTestCase):
         cmd = [
             'edit ${test_file}1',
             'Cdumprepr',
-            'call Wait_eop()',
             'edit (clewn)_console | $$ | ?\'_bset\'?,?\'lnum\'?w!  ${test_out}',
             'qa!',
             ]
@@ -145,7 +135,6 @@ class Simple(ClewnTestCase):
             'Cdisable 1',
             'Cdisable 2',
             'Cenable 2',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -161,7 +150,6 @@ class Simple(ClewnTestCase):
         cmd = [
             'edit ${test_file}1',
             'Chelp',
-            'call Wait_eop()',
             'edit (clewn)_console | $$ | ?(simple) help?+1,$$-1w!  ${test_out}',
             'qa!',
             ]
@@ -189,15 +177,12 @@ class Simple(ClewnTestCase):
     def test_009(self):
         """The interrupt command"""
         cmd = [
-            'edit ${test_file}1',
             'Cbreak ${test_file}1:1',
             'Ccontinue',
             'Cdumprepr',
-            'call Wait_eop()',
             'edit (clewn)_console | $$ | ?\'inferior\': Target:?w! ${test_out}',
             'Cinterrupt',
             'Cdumprepr',
-            'call Wait_eop()',
             'edit (clewn)_console | $$ | ?\'inferior\': Target:?w! >> ${test_out}',
             'qa!',
             ]
@@ -212,7 +197,6 @@ class Simple(ClewnTestCase):
         cmd = [
             'edit ${test_file}1',
             'Cmapkeys',
-            'call Wait_eop()',
             'edit (clewn)_console | $$ | ?mapkeys?,$$-1w!  ${test_out}',
             'qa!',
             ]
@@ -232,7 +216,6 @@ class Simple(ClewnTestCase):
         cmd = [
             'edit ${test_file}1',
             'Cprint foobar',
-            'call Wait_eop()',
             'edit (clewn)_console | $$-2w! ${test_out}',
             'qa!',
             ]
@@ -244,10 +227,8 @@ class Simple(ClewnTestCase):
     def test_012(self):
         """The step command"""
         cmd = [
-            'edit ${test_file}1',
             'Cbreak ${test_file}1:2',
             'Cstep',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -263,7 +244,6 @@ class Simple(ClewnTestCase):
         cmd = [
             'edit ${test_file}1',
             'Cmapkeys',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'Cunmapkeys',
             'map <C-B>',
@@ -301,7 +281,6 @@ class Simple(ClewnTestCase):
         self.setup_vim_arg("testsuite/foobar.c")
         cmd = [
             'Chelp',
-            'call Wait_eop()',
             'edit (clewn)_console | $$',
             'w! ${test_out}',
             'qa!',

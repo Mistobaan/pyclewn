@@ -29,6 +29,10 @@ gdb_v = gdb.gdb_version('gdb')
 class Gdb(ClewnTestCase):
     """Test the gdb debugger."""
 
+    def __init__(self, *args, **kwds):
+        ClewnTestCase.__init__(self, *args, **kwds)
+        self.debugger = 'gdb'
+
     def setUp(self):
         ClewnTestCase.setUp(self)
         sys.argv.append('--gdb=async')
@@ -93,7 +97,6 @@ class Gdb(ClewnTestCase):
             'Cshow height',
             'Cshow width',
             'Cshow confirm',
-            'call Wait_eop()',
             'edit (clewn)_console | $$ | ?show height?,$$w!  ${test_out}',
             'qa!',
             ]
@@ -114,7 +117,6 @@ class Gdb(ClewnTestCase):
             'Cshow height',
             'Cquit',
             'Cshow height',
-            'call Wait_eop()',
             'qa!',
             ]
         expected = (
@@ -129,8 +131,8 @@ class Gdb(ClewnTestCase):
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Crun',
+            'sleep ${sleep_time}',
             'Csigint',
-            'call Wait_eop()',
             'edit (clewn)_console | $$ | ?SIGINT?,?SIGINT?w!  ${test_out}',
             'qa!',
             ]
@@ -143,11 +145,9 @@ class Gdb(ClewnTestCase):
         """The gdb program can be run with --args argument list"""
         self.setup_gdb_args('--args testsuite/foobar 55')
         cmd = [
-            'edit testsuite/foobar.c',
             'Cbreak foo',
             'Crun',
             'Cprint max',
-            'call Wait_eop()',
             'edit (clewn)_console | $$ | $$-1w!  ${test_out}',
             'qa!',
             ]
@@ -162,7 +162,6 @@ class Gdb(ClewnTestCase):
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cset con',       # set confirm command
-            'call Wait_eop()',
             'edit (clewn)_console | $$ | ?con?,$$-1w!  ${test_out}',
             'qa!',
             ]
@@ -175,12 +174,11 @@ class Gdb(ClewnTestCase):
     def test_009(self):
         """The break and clear commands symbols completion"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'Csymcompletion',
             '\n',
+            'call Wait_eop()',
             'qa!',
             ]
         expected = (
@@ -198,7 +196,6 @@ class Gdb(ClewnTestCase):
             'Cbreak main',
             'Crun',
             'Cdumprepr',
-            'call Wait_eop()',
             "edit (clewn)_console | $$ | ?'info'?,/'version'/w!  ${test_out}",
             'qa!',
             ]
@@ -220,7 +217,6 @@ class Gdb(ClewnTestCase):
             'Cbreak main',
             'Crun',
             'Cdumprepr',
-            'call Wait_eop()',
             "edit (clewn)_console | $$ | ?'info'?,/'version'/w!  ${test_out}",
             'qa!',
             ]
@@ -243,12 +239,10 @@ class Gdb(ClewnTestCase):
     def test_012(self):
         """Checking result of oob commands"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak main',
             'Crun',
             'Cdumprepr',
-            'call Wait_eop()',
             "edit (clewn)_console | $$ | ?'info'?,/'version'/w!  ${test_out}",
             'qa!',
             ]
@@ -273,7 +267,6 @@ class Gdb(ClewnTestCase):
             'Cfile testsuite/foobar',
             'Cbreak main',
             'Crun',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -288,13 +281,11 @@ class Gdb(ClewnTestCase):
     def test_014(self):
         """Check annotations level 1 are removed"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak main',
             'Crun',
             'Cstep',
             'Cstep',
-            'call Wait_eop()',
             "edit (clewn)_console | $$ | /(gdb) step/,$$w!  ${test_out}",
             'qa!',
             ]
@@ -311,7 +302,6 @@ class Gdb(ClewnTestCase):
             'Cfile testsuite/foobar',
             'Cbreak main',
             'Cdisable 1',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -331,7 +321,6 @@ class Gdb(ClewnTestCase):
             'Cenable delete 1',
             'Crun',
             'Cstep',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -345,10 +334,8 @@ class Gdb(ClewnTestCase):
     def test_017(self):
         """Check setting a breakpoint open the source file"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak foo',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -367,7 +354,6 @@ class Gdb(ClewnTestCase):
             'Cbreak main',
             'Cbreak main',
             'Cdelete 1',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -386,7 +372,6 @@ class Gdb(ClewnTestCase):
             'Cbreak main',
             'Crun',
             'Cclear',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -400,7 +385,6 @@ class Gdb(ClewnTestCase):
     def test_020(self):
         """Check break completion on overloaded functions"""
         cmd = [
-            'edit testsuite/overloaded.cc',
             'Cfile testsuite/overloaded',
             'Csymcompletion',
             '\n',
@@ -417,7 +401,6 @@ class Gdb(ClewnTestCase):
     def test_021(self):
         """Check varobj creation, folding and deletion"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Crun',
@@ -427,7 +410,6 @@ class Gdb(ClewnTestCase):
             'Cdbgvar map',
             'Cfoldvar 1',
             'Cdelvar var1.value',
-            'call Wait_eop()',
             'buffer (clewn)_dbgvar | 1,$$w!  ${test_out}',
             'qa!',
             ]
@@ -440,7 +422,6 @@ class Gdb(ClewnTestCase):
     def test_022(self):
         """Check varobj folding"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Crun',
@@ -452,7 +433,6 @@ class Gdb(ClewnTestCase):
             'Cfoldvar 2',
             'Cfoldvar 1',
             'Cfoldvar 1',
-            'call Wait_eop()',
             'buffer (clewn)_dbgvar | 1,3w!  ${test_out}',
             'qa!',
             ]
@@ -466,7 +446,6 @@ class Gdb(ClewnTestCase):
     def test_023(self):
         """Check deleting the last varobj"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Crun',
@@ -478,7 +457,6 @@ class Gdb(ClewnTestCase):
             'Cstep',
             'Cstep',
             'Cdelvar var3',
-            'call Wait_eop()',
             'buffer (clewn)_dbgvar | 1,3w!  ${test_out}',
             'qa!',
             ]
@@ -492,7 +470,6 @@ class Gdb(ClewnTestCase):
     def test_024(self):
         """Check deleting the first varobj"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Crun',
@@ -504,7 +481,6 @@ class Gdb(ClewnTestCase):
             'Cstep',
             'Cstep',
             'Cdelvar var1',
-            'call Wait_eop()',
             'buffer (clewn)_dbgvar | 1,2w!  ${test_out}',
             'qa!',
             ]
@@ -517,7 +493,6 @@ class Gdb(ClewnTestCase):
     def test_025(self):
         """Check deleting a middle varobj"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Crun',
@@ -529,7 +504,6 @@ class Gdb(ClewnTestCase):
             'Cstep',
             'Cstep',
             'Cdelvar var2',
-            'call Wait_eop()',
             'buffer (clewn)_dbgvar | 1,2w!  ${test_out}',
             'qa!',
             ]
@@ -548,17 +522,14 @@ class Gdb(ClewnTestCase):
             'Crun',
             'Cstep',
             'Cdbgvar i',
-            'call Wait_eop()',
             'edit (clewn)_dbgvar | 1,$$w!  ${test_out}',
             'Cstep',
             'Cstep',
             'Cstep',
             'Cstep',
             'Cstep',
-            'call Wait_eop()',
             'edit (clewn)_dbgvar | 1,$$w! >> ${test_out}',
             'Cfinish',
-            'call Wait_eop()',
             'edit (clewn)_dbgvar | 1,$$w! >> ${test_out}',
             'qa!',
             ]
@@ -569,11 +540,9 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipIf(True, 'test cancelled')
     def test_027(self):
         """Check robustness against vim 'tabedit (clewn)_dbgvar' bug"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Crun',
@@ -581,7 +550,6 @@ class Gdb(ClewnTestCase):
             'edit (clewn)_dbgvar',
             'tabedit (clewn)_dbgvar',
             'Cshow annotate',
-            'call Wait_eop()',
             '1,$$w! >> ${test_out}',
             'qa!',
             ]
@@ -599,7 +567,6 @@ class Gdb(ClewnTestCase):
             'Crun',
             'Cdbgvar len',
             'Cprint len=555',
-            'call Wait_eop()',
             'edit (clewn)_dbgvar | 1,$$w! >> ${test_out}',
             'qa!',
             ]
@@ -618,7 +585,6 @@ class Gdb(ClewnTestCase):
             'Crun',
             'Cprint foo(\\"toto\\", 1)',
             'Ccontinue',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'sign list',
@@ -647,7 +613,6 @@ class Gdb(ClewnTestCase):
             'edit testsuite/overloaded.cc',
             'Cfile testsuite/overloaded',
             'Cbreak A::test',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -664,13 +629,11 @@ class Gdb(ClewnTestCase):
     def test_031(self):
         """Check the project command"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak main',
             'Cbreak foo',
             'Cset args foo \\"1 2 3\\" bar',
             'Cproject ${test_out}',
-            'call Wait_eop()',
             'qa!',
             ]
         expected = (
@@ -685,14 +648,12 @@ class Gdb(ClewnTestCase):
     def test_032(self):
         """Check the project command saves at most one breakpoint per line"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Cbreak foo',
             'Cbreak foo',
             'Cbreak main',
             'Cproject ${test_out}',
-            'call Wait_eop()',
             'qa!',
             ]
         expected = (
@@ -708,7 +669,6 @@ class Gdb(ClewnTestCase):
         cmd = [
             'edit testsuite/foobar.c',
             'Cecho',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -731,13 +691,11 @@ class Gdb(ClewnTestCase):
         """Project option saves a project file"""
         self.setup_project_tests(TESTFN_OUT)
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak main',
             'Cbreak foo',
             'Cset args foo \\"1 2 3\\" bar',
             'Cquit',
-            'call Wait_eop()',
             'qa!',
             ]
         expected = (
@@ -753,10 +711,8 @@ class Gdb(ClewnTestCase):
         """Project option saves a project file on quitting from Vim"""
         self.setup_project_tests(TESTFN_OUT)
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak main',
-            'call Wait_eop()',
             'qa!',
             ]
         expected = (
@@ -772,26 +728,23 @@ class Gdb(ClewnTestCase):
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cquit',
-            'call Wait_eop()',
             'edit (clewn)_console | $$ | w!  ${test_out}',
             'qa!',
             ]
         expected = (
-            '===========\n',
+            '=== End of gdb session ===\n',
             )
         self.cltest_redir(cmd, expected)
 
     def test_037(self):
         """The cwindow command opens the quickfix window of breakpoints"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Cbreak bar',
             'Cbreak bar',
             'Cdisable 1',
             'Cdelete 2',
-            'call Wait_eop()',
             'Ccwindow',
             '5buffer',
             '1,$$w! >> ${test_out}',
@@ -812,7 +765,6 @@ class Gdb(ClewnTestCase):
             'Cquit',
             'Cfile testsuite/foobar',
             'Cbreak ${cwd}testsuite/foobar.c:16',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -826,7 +778,6 @@ class Gdb(ClewnTestCase):
     def test_039(self):
         """Check number 2, adding breakpoints after a quit"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak main',
             'Cbreak foo',
@@ -834,15 +785,14 @@ class Gdb(ClewnTestCase):
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Cbreak foo',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
             ]
         expected = (
             "Signs for ${cwd}testsuite/foo.c:",
-            "line=30  id=6  name=1",
             "line=30  id=4  name=3",
+            "line=30  id=6  name=1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -857,7 +807,6 @@ class Gdb(ClewnTestCase):
             'Cfile testsuite/foobar',
             'Cbreak main',
             'Cbreak main',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -884,7 +833,6 @@ class Gdb(ClewnTestCase):
             'Cfile testsuite/foobar',
             'Cbreak main',
             'Cbreak foo',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -900,10 +848,8 @@ class Gdb(ClewnTestCase):
     def test_042(self):
         """Set a breakpoint in a template function"""
         cmd = [
-            'edit testsuite/function_template.cpp',
             'Cfile testsuite/function_template',
             'Cbreak ${cwd}testsuite/function_template_sub/localmax.cpp:7',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -917,11 +863,9 @@ class Gdb(ClewnTestCase):
     def test_043(self):
         """Check starting the session with the 'sigint' command"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Csigint',
             'Cfile testsuite/foobar',
             'Cbreak foo',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -935,15 +879,13 @@ class Gdb(ClewnTestCase):
     def test_044(self):
         """Check the frame command moves the cursor to the frame location"""
         cmd = [
-            'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Crun',
-            'call Wait_eop()',
             'edit testsuite/foobar.c',
             'echo bufname("%")',
             'Cframe',
-            'call Wait_eop()',
+            'sleep ${sleep_time}',
             'redir! > ${test_out}',
             'echo bufname("%")',
             'qa!',
@@ -961,7 +903,6 @@ class Gdb(ClewnTestCase):
             'Cstart',
             'Ccatch throw',
             'Cbreak main',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -977,7 +918,6 @@ class Gdb(ClewnTestCase):
             'Ccatch throw',
             'Cdelete 2',
             'Cbreak main',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',

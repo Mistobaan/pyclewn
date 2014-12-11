@@ -28,7 +28,6 @@ class Pyclewn(ClewnTestCase):
         cmd = [
             'edit ${test_file}1',
             'Cbreak ${test_file}2:1',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'echo bufname("%")',
@@ -43,11 +42,9 @@ class Pyclewn(ClewnTestCase):
     def test_002(self):
         """The buffer is automatically loaded on a step command"""
         cmd = [
-            'edit ${test_file}1',
             'Cbreak ${test_file}1:2',
             'edit ${test_file}2',
             'Cstep',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -66,7 +63,6 @@ class Pyclewn(ClewnTestCase):
             'edit ${test_file}2',
             '1bwipeout',
             'Cstep',
-            'call Wait_eop()',
             'redir! > ${test_out}',
             'sign place',
             'echo bufname("%")',
@@ -86,7 +82,6 @@ class Pyclewn(ClewnTestCase):
             'Cbreak ${test_file}1:1',
             'Cquit',
             'Cbreak ${test_file}1:2',
-            'call Wait_eop()',
             'edit (clewn)_console | $$-1w! ${test_out}',
             'redir! >> ${test_out}',
             'sign place',
@@ -135,7 +130,6 @@ class Pyclewn(ClewnTestCase):
         cmd = [
             'edit ${test_file}1',
             'Cmapkeys',
-            'call Wait_eop()',
             'redir! >> ${test_out}',
             'map <C-B> ',
             'map <C-E> ',
@@ -157,7 +151,6 @@ class Pyclewn(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected, 'line 1\n')
 
-    @skipIf(True, 'test cancelled')
     def test_007(self):
         """The bdelete Vim command on the clewn console"""
         cmd = [
@@ -166,7 +159,6 @@ class Pyclewn(ClewnTestCase):
             'bdelete (clewn)_console',
             'Cquit',
             'Cbreak ${test_file}1:2',
-            'call Wait_eop()',
             'edit (clewn)_console | $$-2,$$-1w! ${test_out}',
             'qa!',
             ]
@@ -181,13 +173,11 @@ class Pyclewn(ClewnTestCase):
         cmd = [
             'edit ${test_file}1',
             'Cbreak ${test_file}1:1',
-            'call Wait_eop()',
             'wincmd k',
             'quit',
             'cd testsuite',
             'Cstep',
             'cd ..',
-            'call Wait_eop()',
             'edit ${test_file}2',
             'redir! > ${test_out}',
             'ls',

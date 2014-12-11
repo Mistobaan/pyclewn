@@ -12,6 +12,7 @@ from io import open
 
 import os
 import sys
+import time
 import logging
 import signal
 import select
@@ -237,13 +238,36 @@ class ProcessChannel(asyncproc.ProcessChannel):
         """Close the channel and wait on the process."""
         if self.fileasync is not None:
             asyncproc.ProcessChannel.close(self)
-            if self.pid != 0:
+
+            # Gdb issues:
+            # * gdb 7.6.1 sometimes get stuck in a futex call on terminating.
+            #   So we need to kill it with SIGKILL.
+            # * gdb 7.8.1 segfaults (in PyObject_Call()) when the SIGTERM is
+            #   received within the processing of Py_Finalize() which is done on
+            #   processing the 'quit' command. So we must not send the SIGTERM
+            #   aggressively but wait for gdb to terminate nicely.
+            start = time.time()
+            do_kill = False
+            killsig = None
+            while self.pid != 0:
                 try:
-                    os.kill(self.pid, signal.SIGTERM)
+                    if do_kill:
+                        do_kill = False
+                        os.kill(self.pid, killsig)
                 except OSError:
-                    pass
+                    break
                 else:
-                    self.waitpid(0)
+                    time.sleep(.040)
+                    self.waitpid()
+                if time.time() - start > 1:
+                    do_kill = True
+                    start = time.time()
+                    if killsig == signal.SIGTERM:
+                        killsig = signal.SIGKILL
+                    elif killsig == signal.SIGKILL:
+                        break
+                    else:
+                        killsig = signal.SIGTERM
 
     def sendintr(self):
         """Send a SIGINT interrupt to the program."""

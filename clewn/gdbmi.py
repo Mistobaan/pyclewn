@@ -1470,7 +1470,7 @@ class Quit(OobCommand):
             # the Debugger instance is closing, its dispatch loop timer is
             # closing as well and we cannot rely on this timer anymore to handle
             # buffering on the console, so switch to no buffering
-            self.gdb.console_print('\n===========\n')
+            self.gdb.console_print('\n=== End of gdb session ===\n')
             self.gdb.console_flush()
 
             self.gdb.state = self.gdb.STATE_CLOSING
