@@ -8,6 +8,7 @@ testsuite/function_template
 testsuite/function_template_sub/*.o
 MANIFEST
 logfile
+.coverage
 
 syntax: regexp
 ^dist\/.*$

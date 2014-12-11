@@ -21,21 +21,6 @@ from . import misc
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('loop')
 
-def get_asyncobj(fd, file_type, socket_map):
-    """Return an asyncore instance from 'socket_map' if matching 'file_type'."""
-    asyncobj = socket_map.get(fd)
-    if asyncobj and isinstance(asyncobj.socket, file_type):
-        return asyncobj
-    return None
-
-def strip_asyncobj(wtd, file_type, socket_map):
-    """Remove all 'file_type' file descriptors in 'wtd'."""
-    tmp_list = wtd[:]
-    for fd in tmp_list:
-        asyncobj = get_asyncobj(fd, file_type, socket_map)
-        if asyncobj is not None:
-            wtd.remove(fd)
-
 class Poll(object):
     """A Poll instance manages a select thread.
 
