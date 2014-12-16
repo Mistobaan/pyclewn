@@ -21,9 +21,11 @@ import io
 import signal
 from collections import OrderedDict
 
-#from pdb_clone import pdb, bdb, __version__
-
-from . import text_type, misc, debugger, asyncproc, evtloop
+from . import PY3, text_type, misc, debugger, asyncproc, evtloop
+from pdb_clone import __version__
+if ('py3' in __version__ and not PY3) or ('py2' in __version__ and PY3):
+    raise ImportError('Invalid pdb-clone version %s' % __version__)
+from pdb_clone import pdb, bdb
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('pdb')
@@ -91,7 +93,7 @@ MAPKEYS = {
                 'print value of selection at mouse position'),
 }
 
-CLEWN_CMDS = ('interrupt', 'detach', 'threadstack')
+CLEWN_CMDS = ('interrupt', 'detach', 'threadstack', 'dumprepr')
 STATE_INIT, STATE_RUN, STATE_DETACH, STATE_EXIT = range(4)
 
 def remove_quotes(args):
@@ -106,13 +108,19 @@ def tty_fobj(ttyname):
     if not os.path.exists(ttyname):
         critical('terminal "%s" does not exist', ttyname)
         return
+
+    fileio = io.FileIO(ttyname, 'w+')
     try:
-        tty = io.TextIOWrapper(io.FileIO(ttyname, 'w+'), line_buffering=True)
+        if PY3:
+            tty = io.TextIOWrapper(fileio, line_buffering=True)
+        else:
+            tty = io.BufferedWriter(fileio, buffer_size=1)
     except IOError as err:
         critical('%s: %s', ttyname, err)
+        raise
     else:
-        if not os.isatty(tty.fileno()):
-            info('"%s" is not a tty.', tty.name)
+        if not os.isatty(fileio.fileno()):
+            info('"%s" is not a tty.', fileio.name)
         return tty
 
 def user_method_redirect(f):
@@ -123,45 +131,43 @@ def user_method_redirect(f):
         f(self, *args, **kwds)
     return newf
 
-#class ShortRepr(_repr.Repr):
-#    """Minimum length object representation."""
-#
-#    def __init__(self):
-#        _repr.Repr.__init__(self)
-#        self.maxlevel = 2
-#        self.maxtuple = 2
-#        self.maxlist = 2
-#        self.maxarray = 2
-#        self.maxdict = 1
-#        self.maxset = 2
-#        self.maxfrozenset = 2
-#        self.maxdeque = 2
-#        self.maxstring = 20
-#        self.maxlong = 20
-#        self.maxother = 20
+class ShortRepr(reprlib.Repr):
+    """Minimum length object representation."""
 
-#_saferepr = ShortRepr().repr
-_saferepr = reprlib.repr
+    def __init__(self):
+        reprlib.Repr.__init__(self)
+        self.maxlevel = 2
+        self.maxtuple = 2
+        self.maxlist = 2
+        self.maxarray = 2
+        self.maxdict = 1
+        self.maxset = 2
+        self.maxfrozenset = 2
+        self.maxdeque = 2
+        self.maxstring = 20
+        self.maxlong = 20
+        self.maxother = 20
 
-#class BalloonRepr(_repr.Repr):
-#    """Balloon object representation."""
-#
-#    def __init__(self):
-#        _repr.Repr.__init__(self)
-#        self.maxlevel = 4
-#        self.maxtuple = 4
-#        self.maxlist = 4
-#        self.maxarray = 2
-#        self.maxdict = 2
-#        self.maxset = 4
-#        self.maxfrozenset = 4
-#        self.maxdeque = 4
-#        self.maxstring = 40
-#        self.maxlong = 40
-#        self.maxother = 40
+_saferepr = ShortRepr().repr
 
-#_balloonrepr = BalloonRepr().repr
-_balloonrepr = reprlib.repr
+class BalloonRepr(reprlib.Repr):
+    """Balloon object representation."""
+
+    def __init__(self):
+        reprlib.Repr.__init__(self)
+        self.maxlevel = 4
+        self.maxtuple = 4
+        self.maxlist = 4
+        self.maxarray = 2
+        self.maxdict = 2
+        self.maxset = 4
+        self.maxfrozenset = 4
+        self.maxdeque = 4
+        self.maxstring = 40
+        self.maxlong = 40
+        self.maxother = 40
+
+_balloonrepr = BalloonRepr().repr
 
 class Ping(asyncproc.FileAsynchat):
     """Terminate the select call in the asyncore loop."""
@@ -176,8 +182,7 @@ class Ping(asyncproc.FileAsynchat):
         """Ignore received data."""
         self.ibuff = []
 
-#class Pdb(debugger.Debugger, pdb.Pdb):
-class Pdb(debugger.Debugger):
+class Pdb(debugger.Debugger, pdb.Pdb):
     """The Pdb debugger.
 
     Instance attributes:
@@ -217,8 +222,7 @@ class Pdb(debugger.Debugger):
 
     def __init__(self, *args):
         debugger.Debugger.__init__(self, *args)
-        nosigint = False
-        #pdb.Pdb.__init__(self, nosigint=nosigint)
+        pdb.Pdb.__init__(self, nosigint=False)
 
         # avoid pychecker warnings (not initialized in base class)
         self.curindex = 0
@@ -227,10 +231,11 @@ class Pdb(debugger.Debugger):
         self.stack = []
         self.interrupted = False
         self.attached = True
+        self.tty = None
 
         self.thread = None
         self.socket_map = {}
-        self.stdout = io.StringIO()
+        self.stdout = io.StringIO() if PY3 else io.BytesIO()
         self.stop_interaction = False
         self.let_target_run = False
         self.trace_type = ''
@@ -267,15 +272,15 @@ class Pdb(debugger.Debugger):
     def start(self):
         """Start the debugger."""
         info('starting a new netbeans session')
-        #mode = 'with' if bdb._bdb else 'without'
-        #self.console_print('pdb-clone {} ({} the _bdb extension module).\n\n'
-        #                                        .format(__version__, mode))
+        mode = 'with' if bdb._bdb else 'without'
+        self.console_print('pdb-clone {} ({} the _bdb extension module).\n\n'
+                                                .format(__version__, mode))
         # restore the breakpoint signs
-        #for bp in bdb.Breakpoint.bpbynumber:
-        #    if bp:
-        #        self.add_bp(bp.number, bp.file, bp.line)
-        #        if not bp.enabled:
-        #            self.update_bp(bp.number, True)
+        for bp in bdb.Breakpoint.bpbynumber:
+            if bp:
+                self.add_bp(bp.number, bp.file, bp.line)
+                if not bp.enabled:
+                    self.update_bp(bp.number, True)
 
         self.print_prompt()
 
@@ -306,6 +311,8 @@ class Pdb(debugger.Debugger):
         """Highlite the frame sign."""
         frame, lineno = self.stack[self.curindex]
         filename = self.canonic(frame.f_code.co_filename)
+        if not PY3:
+            filename = unicode(filename)
         if filename == "<" + filename[1:-1] + ">":
             filename = None
         self.show_frame(filename, lineno)
@@ -357,6 +364,9 @@ class Pdb(debugger.Debugger):
             signal.signal(signal.SIGINT, self._previous_sigint_handler)
             self._previous_sigint_handler = None
 
+        if self.tty:
+            self.tty.close()
+
         # clear the 'socket_map' to terminate the 'select_thread'
         self.socket_map.clear()
         self.poll.close()
@@ -388,18 +398,14 @@ class Pdb(debugger.Debugger):
         s = s + ' at %s:%r' % (filename, lineno)
         return s
 
-    def set_continue(self):
-        """Override set_continue."""
-        #pdb.Pdb.set_continue(self)
-
     def set_break(self, filename, lineno, temporary=False, cond=None,
                   funcname=None):
         """Override set_break to install a netbeans hook."""
-        #bp = pdb.Pdb.set_break(self, filename, lineno, temporary, cond,
-        #                                                       funcname)
-        bp = None # XXX
+        bp = pdb.Pdb.set_break(self, filename, lineno, temporary, cond,
+                                                               funcname)
         if bp:
-            self.add_bp(bp.number, bp.file, bp.line)
+            filename = bp.file if PY3 else unicode(bp.file)
+            self.add_bp(bp.number, filename, bp.line)
             return bp
 
     #-----------------------------------------------------------------------
@@ -408,7 +414,11 @@ class Pdb(debugger.Debugger):
 
     def message(self, *args, **kwds):
         """Allow 'end' keyword in message method."""
+        args = tuple(str(x) for x in args)
         print(*args, file=self.stdout, **kwds)
+
+    def error(self, msg):
+        print(str('***'), str(msg), file=self.stdout)
 
     # Use 'console_print' for all messages printed outside the 'onecmd' method,
     # (onecmd executes pdb commands, as opposed to pyclewn commands).  Otherwise
@@ -423,7 +433,7 @@ class Pdb(debugger.Debugger):
     def user_call(self, frame, argument_list):
         """This method is called when there is the remote possibility
         that we ever need to stop in this function."""
-        #pdb.Pdb.user_call(self, frame, argument_list)
+        pdb.Pdb.user_call(self, frame, argument_list)
 
     @user_method_redirect
     def user_line(self, frame, breakpoint_hits=None):
@@ -445,12 +455,12 @@ class Pdb(debugger.Debugger):
     @user_method_redirect
     def user_return(self, frame, return_value):
         """This function is called when a return trap is set here."""
-        #pdb.Pdb.user_return(self, frame, return_value)
+        pdb.Pdb.user_return(self, frame, return_value)
 
     @user_method_redirect
     def user_exception(self, frame, exc_info):
         """This function is called if an exception occurs."""
-        #pdb.Pdb.user_exception(self, frame, exc_info)
+        pdb.Pdb.user_exception(self, frame, exc_info)
 
     def cmdloop(self):
         """Command loop used in pyclewn, only to define breakpoint commands."""
@@ -462,8 +472,7 @@ class Pdb(debugger.Debugger):
                 self.poll.run(debugger.LOOP_TIMEOUT)
         self.stop_interaction = False
 
-    #def print_stack_entry(self, frame_lineno, prompt_prefix=pdb.line_prefix):
-    def print_stack_entry(self, frame_lineno, prompt_prefix=None):
+    def print_stack_entry(self, frame_lineno, prompt_prefix=pdb.line_prefix):
         """Override print_stack_entry."""
         frame, _ = frame_lineno
         if frame is self.curframe:
@@ -565,7 +574,7 @@ class Pdb(debugger.Debugger):
 
         if not self.attached and not self.started:
             info('terminate the debuggee started from Vim')
-            #raise bdb.BdbQuit
+            raise bdb.BdbQuit
 
         if self.state != STATE_RUN:
             self.detach()
@@ -608,14 +617,16 @@ class Pdb(debugger.Debugger):
         # restricted set of commands allowed in clewn thread
         if threading.currentThread() == self.thread and cmd not in CLEWN_CMDS:
             self.console_print('Target running, allowed commands'
-                                        ' are: %s\n', str(CLEWN_CMDS))
+                           ' are: %s\n', tuple(str(cmd) for cmd in CLEWN_CMDS))
         else:
             self.message = self.onecmd_message
             method(cmd, args.strip())
             r = self.stdout.getvalue()
             if r:
+                if not PY3:
+                    r = unicode(r)
                 self.console_print(r)
-                self.stdout = io.StringIO()
+                self.stdout = io.StringIO() if PY3 else io.BytesIO()
 
         if cmd not in ('mapkeys', 'dumprepr', 'loglevel'):
             # A timed printout, printed  by the background task when it flushes
@@ -649,11 +660,11 @@ class Pdb(debugger.Debugger):
                 ttyname = lines[0].split()[2]
             else:
                 ttyname = os.devnull
-        tty = tty_fobj(ttyname)
-        if tty:
-            sys.stdin = sys.stdout = sys.stderr = tty
-            info('set inferior tty to %s', tty.name)
-            self.console_print('inferiortty %s\n' % tty.name)
+        self.tty = tty_fobj(ttyname)
+        if self.tty:
+            sys.stdin = sys.stdout = sys.stderr = self.tty
+            info('set inferior tty to %s', ttyname)
+            self.console_print('inferiortty %s\n' % ttyname)
 
     for n in ('enable', 'disable', 'condition', 'ignore', 'where',
                                 'bt', 'p', 'pp', 'alias', 'unalias'):
@@ -716,12 +727,12 @@ class Pdb(debugger.Debugger):
 
     def done_breakpoint_state(self, bp, state):
         """Override done_breakpoint_state to update breakpoint sign."""
-        #pdb.Pdb.done_breakpoint_state(self, bp, state)
+        pdb.Pdb.done_breakpoint_state(self, bp, state)
         self.update_bp(bp.number, not state)
 
     def done_delete_breakpoint(self, bp):
         """Override done_delete_breakpoint to clear the breakpoint sign."""
-        #pdb.Pdb.done_delete_breakpoint(self, bp)
+        pdb.Pdb.done_delete_breakpoint(self, bp)
         self.delete_bp(bp.number)
 
     def cmd_clear(self, cmd, args):
@@ -890,8 +901,7 @@ class Pdb(debugger.Debugger):
 
         self.show_balloon('%s = %s' % (arg, _balloonrepr(value)))
 
-#def main(pdb, options):
-def main(options):
+def main(pdbinst, options):
     """Invoke the debuggee as a script."""
     argv = options.args
     if not argv:
@@ -906,20 +916,21 @@ def main(options):
     sys.path[0] = os.path.dirname(mainpyfile)
     sys.argv = argv
     try:
-        #pdb.attached = False
-        #pdb._runscript(mainpyfile)
+        pdbinst.attached = False
+        pdbinst._runscript(mainpyfile)
         pass
     except SystemExit:
         raise
     except Exception as e:
         trace_type = 'Uncaught exception:\n    %r\n' %e
         trace_type += 'Entering post mortem debugging.'
-        #pdb.trace_type = trace_type
+        pdbinst.trace_type = trace_type
         t = sys.exc_info()[2]
-        #pdb.interaction(None, t, True)
+        pdbinst.interaction(None, t, True)
     finally:
-        #pdb.console_print('Script "%s" terminated.\n' % mainpyfile)
-        #pdb.console_print('---\n\n')
-        #pdb.console_flush()
-        pass
+        if tty:
+            tty.close()
+        pdbinst.console_print('Script "%s" terminated.\n' % mainpyfile)
+        pdbinst.console_print('---\n\n')
+        pdbinst.console_flush()
 

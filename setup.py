@@ -16,7 +16,6 @@ import distutils.core as core
 
 from os.path import join as pathjoin
 from distutils.command.install import install as _install
-from distutils.command.sdist import sdist as _sdist
 from distutils.command.build_scripts import build_scripts as _build_scripts
 from unittest import defaultTestLoader
 
@@ -97,9 +96,11 @@ class install(_install):
 def keymap_files():
     """Build key map files for each debugger."""
     with open('runtime/.pyclewn_keys.template') as tf:
+        print('Updating:')
         template = tf.read()
         for d in DEBUGGERS:
-            with open('runtime/.pyclewn_keys.%s' % d, 'w') as f:
+            filename = 'runtime/.pyclewn_keys.%s' % d
+            with open(filename, 'w') as f:
                 f.write(string.Template(template).substitute(clazz=d))
                 module = importlib.import_module('.%s' % d, 'clewn')
                 mapkeys = getattr(module, 'MAPKEYS')
@@ -110,6 +111,7 @@ def keymap_files():
                                 (k, mapkeys[k][0])).ljust(30), comment))
                     else:
                         f.write('# %s : %s\n' % (k, mapkeys[k][0]))
+            print('  %s' % filename)
 
 def insert_syspath(fname, after_future=True):
     sys_path = string.Template("sys.path.append('${pythonpath}')\n")
@@ -160,12 +162,6 @@ def findtests(testdir, nottests=NOTTESTS):
     tests.sort()
     return tests
 
-class sdist(_sdist):
-    """Specialized sdister."""
-    def run(self):
-        keymap_files()
-        _sdist.run(self)
-
 class Test(core.Command):
     """Run the test suite.
     """
@@ -177,7 +173,13 @@ class Test(core.Command):
             ' is not present'),
         ('prefix=', 'p', 'run only tests whose name starts with this prefix'),
         ('stop', 's', 'stop at the first test failure or error'),
-        ('detail', 'd', 'detailed test output, each test case is printed'),)
+        ('detail', 'd', 'detailed test output, each test case is printed'),
+        ('pdb', 'b', 'debug a single test with pyclewn and pdb: start the'
+                     ' test with \'python setup.py test --test=gdb --pdb -p'
+                     ' test_021\''
+                     ' then start a Vim instance and run'
+                     ' \':let g:pyclewn_connection="localhost:3220:foo" |'
+                     ' Pyclewn pdb\''),)
     ]
 
     def initialize_options(self):
@@ -185,6 +187,7 @@ class Test(core.Command):
         self.prefix = None
         self.stop = False
         self.detail = False
+        self.pdb = False
 
     def finalize_options(self):
         if self.test is not None:
@@ -192,6 +195,10 @@ class Test(core.Command):
 
     def run (self):
         """Run the test suite."""
+        if self.pdb and self.test != ['test_gdb']:
+            print('One can only debug a gdb test case for now.')
+            return
+
         testsuite = 'testsuite'
         tests = self.test or findtests(testsuite)
         if self.prefix:
@@ -199,40 +206,51 @@ class Test(core.Command):
         for test in tests:
             the_module = importlib.import_module('.%s' % test, testsuite)
             suite = defaultTestLoader.loadTestsFromModule(the_module)
+            if self.pdb and (len(tests) > 1 or suite.countTestCases() > 1):
+                print('Only one test at a time can be debugged, use the'
+                      ' \'--test=\' and \'--prefix=\' options to set'
+                      ' this test.')
+                return
             if test == 'test_gdb':
                 subprocess.check_call(['make', '-C', testsuite])
             # run the test
             print(the_module.__name__)
             sys.stdout.flush()
-            test_support.run_suite(suite, self.detail, self.stop)
+            test_support.run_suite(suite, self.detail, self.stop, self.pdb)
 
-core.setup(
-    cmdclass={'sdist': sdist,
-              'build_scripts': build_scripts,
-              'install': install,
-              'test': Test},
-    scripts=SCRIPTS,
-    packages=[str('clewn')],
-    data_files=DATA_FILES,
+def main():
+    core.setup(
+        cmdclass={'build_scripts': build_scripts,
+                  'install': install,
+                  'test': Test},
+        scripts=SCRIPTS,
+        packages=[str('clewn')],
+        data_files=DATA_FILES,
 
-    # meta-data
-    name='pyclewn',
-    version=__version__,
-    description='Pyclewn allows using Vim as a front end to a debugger.',
-    long_description=LONG_DESCRIPTION,
-    platforms='all',
-    license='GNU GENERAL PUBLIC LICENSE Version 2',
-    author='Xavier de Gaye',
-    author_email='xdegaye at users dot sourceforge dot net',
-    url='http://pyclewn.sourceforge.net/',
-    classifiers=[
-        'Topic :: Software Development :: Debuggers',
-        'Intended Audience :: Developers',
-        'Operating System :: Unix',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Development Status :: 6 - Mature',
-        'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
-    ],
-)
+        # meta-data
+        name='pyclewn',
+        version=__version__,
+        description='Pyclewn allows using Vim as a front end to a debugger.',
+        long_description=LONG_DESCRIPTION,
+        platforms='all',
+        license='GNU GENERAL PUBLIC LICENSE Version 2',
+        author='Xavier de Gaye',
+        author_email='xdegaye at users dot sourceforge dot net',
+        url='http://pyclewn.sourceforge.net/',
+        classifiers=[
+            'Topic :: Software Development :: Debuggers',
+            'Intended Audience :: Developers',
+            'Operating System :: Unix',
+            'Programming Language :: Python :: 2.7',
+            'Programming Language :: Python :: 3',
+            'Development Status :: 6 - Mature',
+            'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
+        ],
+    )
 
+if __name__ == '__main__':
+    argv = sys.argv
+    if len(argv) == 2 and argv[1] == 'keymap_files':
+        keymap_files()
+    else:
+        main()

@@ -4,8 +4,8 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from __future__ import unicode_literals
 from io import open
+
 
 import sys
 import os
@@ -20,9 +20,9 @@ class C(object):
         """Getter."""
         return self.value
 
-def loop():
+def loop(i):
     """Infinite loop."""
-    while True:
+    while i:
         time.sleep(.200)
     return
 
@@ -32,7 +32,7 @@ def bar(prefix, i):
         sys.stderr = open(os.devnull, 'w')
         i = 1/i
     elif i == -1:
-        loop()
+        loop(1)
 
     print(prefix, i)
     return i + 1

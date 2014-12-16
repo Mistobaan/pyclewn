@@ -13,12 +13,17 @@ from io import open
 import sys
 import os
 import subprocess
+import time
 from unittest import skipIf
 
-from .test_support import ClewnTestCase
+from .test_support import TESTRUN_SLEEP_TIME, ClewnTestCase
 
 class Pdb(ClewnTestCase):
     """Test pyclewn."""
+
+    def __init__(self, *args, **kwds):
+        ClewnTestCase.__init__(self, *args, **kwds)
+        self.debugger = 'pdb'
 
     def setUp(self):
         ClewnTestCase.setUp(self)
@@ -26,10 +31,13 @@ class Pdb(ClewnTestCase):
 
         # start the python script being debugged
         self.fnull = open(os.devnull, 'w')
-        python_name = 'python3'
-        self.pdb_script = subprocess.Popen(
-                                    [python_name, './foobar.py'],
-                                     stdout=self.fnull)
+        self.pdb_script = subprocess.Popen([sys.executable, './foobar.py'],
+                                           stdout=self.fnull,
+                                           stderr=subprocess.PIPE,
+                                           universal_newlines=True)
+        # Wait for the clewn thread to be started.
+        started = self.pdb_script.stderr.readline()
+        time.sleep(TESTRUN_SLEEP_TIME / 1000)
 
     def tearDown(self):
         """Cleanup stuff after the test."""
@@ -37,12 +45,15 @@ class Pdb(ClewnTestCase):
 
         # wait for the python script being debugged to terminate
         if self.pdb_script:
-            self.pdb_script.wait()
+            self.pdb_script.communicate()
+            self.pdb_script.stderr.close()
+            self.fnull.close()
 
     def test_001(self):
         """The buffer is automatically loaded on the interrupt command"""
         cmd = [
             'Cinterrupt',
+            'sleep ${sleep_time}',
             'redir! > ${test_out}',
             'sign place',
             'echo bufname("%")',
@@ -51,7 +62,7 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=15  id=1  name=1',
+            'line=21  id=1  name=1',
             '${cwd}foobar.py',
             )
         self.cltest_redir(cmd, expected)
@@ -69,8 +80,8 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=5  id=2  name=2',
-            'line=15  id=1  name=1',
+            'line=12  id=2  name=2',
+            'line=21  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -78,7 +89,7 @@ class Pdb(ClewnTestCase):
         """The disable command"""
         cmd = [
             'Cinterrupt',
-            'Cbreak ${cwd}foobar.py:5',
+            'Cbreak ${cwd}foobar.py:13',
             'Cdisable 1',
             'redir! > ${test_out}',
             'sign place',
@@ -88,8 +99,8 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=5  id=3  name=3',
-            'line=15  id=1  name=1',
+            'line=13  id=3  name=3',
+            'line=21  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -97,8 +108,8 @@ class Pdb(ClewnTestCase):
         """The enable command"""
         cmd = [
             'Cinterrupt',
-            'Cbreak ${cwd}foobar.py:5',
-            'Cbreak ${cwd}foobar.py:7',
+            'Cbreak ${cwd}foobar.py:13',
+            'Cbreak ${cwd}foobar.py:14',
             'Cdisable 1 2',
             'Cenable 2',
             'redir! > ${test_out}',
@@ -109,9 +120,9 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=5  id=3  name=3',
-            'line=7  id=4  name=4',
-            'line=15  id=1  name=1',
+            'line=13  id=3  name=3',
+            'line=14  id=4  name=4',
+            'line=21  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -119,10 +130,10 @@ class Pdb(ClewnTestCase):
         """The clear command"""
         cmd = [
             'Cinterrupt',
-            'Cbreak ${cwd}foobar.py:5',
-            'Cbreak ${cwd}foobar.py:7',
-            'Cbreak ${cwd}foobar.py:7',
-            'Cclear ${cwd}foobar.py:5',
+            'Cbreak ${cwd}foobar.py:13',
+            'Cbreak ${cwd}foobar.py:14',
+            'Cbreak ${cwd}foobar.py:14',
+            'Cclear ${cwd}foobar.py:13',
             'redir! > ${test_out}',
             'sign place',
             'redir! > ${test_file}1',
@@ -131,9 +142,9 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=7  id=6  name=6',
-            'line=7  id=4  name=4',
-            'line=15  id=1  name=1',
+            'line=14  id=6  name=6',
+            'line=14  id=4  name=4',
+            'line=21  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -144,6 +155,7 @@ class Pdb(ClewnTestCase):
             'Cbreak foo.foo',
             'Ccontinue',
             'Cnext',
+            'sleep ${sleep_time}',
             'Cp c.value',
             'edit (clewn)_console | $$-4,$$w! ${test_out}',
             'Ccontinue',
@@ -169,7 +181,7 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            "line=7  id=1  name=1",
+            "line=13  id=1  name=1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -188,8 +200,8 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=5  id=2  name=2',
-            'line=15  id=1  name=1',
+            'line=12  id=2  name=2',
+            'line=21  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -209,10 +221,10 @@ class Pdb(ClewnTestCase):
             ]
         expected = (
             'Signs for ${cwd}foobar.py:',
-            'line=5  id=2  name=2',
-            'line=7  id=1  name=1',
+            'line=12  id=2  name=2',
+            'line=13  id=1  name=1',
             'Signs for ${cwd}testsuite/foo.py:',
-            'line=32  id=4  name=4',
+            'line=40  id=4  name=4',
             )
         self.cltest_redir(cmd, expected)
 
@@ -220,10 +232,16 @@ class Pdb(ClewnTestCase):
         """Stepping opens the source file"""
         cmd = [
             'Cinterrupt',
-            'Cbreak main',
-            'Ccontinue',
             'Cstep',
+            'sleep ${sleep_time}',
             'Cstep',
+            'sleep ${sleep_time}',
+            'Cstep',
+            'sleep ${sleep_time}',
+            'Cstep',
+            'sleep ${sleep_time}',
+            'Cstep',
+            'sleep ${sleep_time}',
             'Cstep',
             'redir! > ${test_out}',
             'sign place',
@@ -232,10 +250,8 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'Signs for ${cwd}foobar.py:',
-            'line=5  id=2  name=2',
             'Signs for ${cwd}testsuite/foo.py:',
-            'line=32  id=1  name=1',
+            'line=42  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -263,13 +279,15 @@ class Pdb(ClewnTestCase):
         """Interrupting an infinite loop"""
         cmd = [
             'Cinterrupt',
-            'Cbreak testsuite/foo.py:35',
+            'Cbreak testsuite/foo.py:43',
             'Ccontinue',
             'C run = True',
             'C c.value = -1',
             'Ccontinue',
             'Cinterrupt',
-            'Cjump 19',
+            'C i = 0',
+            'Ctbreak 27',
+            'Ccontinue',
             'redir! > ${test_out}',
             'sign place',
             'redir! > ${test_file}1',
@@ -278,8 +296,8 @@ class Pdb(ClewnTestCase):
             ]
         expected = (
             'Signs for ${cwd}testsuite/foo.py:',
-            'line=19  id=1  name=1',
-            'line=35  id=2  name=2',
+            'line=27  id=1  name=1',
+            'line=43  id=2  name=2',
             )
         self.cltest_redir(cmd, expected)
 
@@ -288,7 +306,7 @@ class Pdb(ClewnTestCase):
         """A ZeroDivisionError exception"""
         cmd = [
             'Cinterrupt',
-            'Cbreak testsuite/foo.py:35',
+            'Cbreak testsuite/foo.py:43',
             'Ccontinue',
             'C run = True',
             'C c.value = 0',
@@ -313,12 +331,12 @@ class Pdb(ClewnTestCase):
             'Cbreak foo.foo',
             'Ccontinue',
             'C run = True',
-            'Cbreak testsuite/foo.py:39',
+            'Cbreak testsuite/foo.py:47',
             'Cclear 1',
             'Cdetach',
             'Pyclewn pdb',
             'Cinterrupt',
-            'Ccontinue',
+            'Cinterrupt',
             'Ccontinue',
             'redir! > ${test_out}',
             'sign place',
@@ -329,8 +347,8 @@ class Pdb(ClewnTestCase):
             ]
         expected = (
             'Signs for ${cwd}testsuite/foo.py:',
-            'line=39  id=1  name=1',
-            'line=39  id=2  name=4',
+            'line=47  id=1  name=1',
+            'line=47  id=2  name=4',
             )
         self.cltest_redir(cmd, expected)
         os.environ['PATH'] = '.:' + os.environ['PATH']
@@ -340,13 +358,14 @@ class Pdb(ClewnTestCase):
         cmd = [
             'Cinterrupt',
             'Cnext',
+            'sleep ${sleep_time}',
             'Cwhere',
             'edit (clewn)_console | $$-1w! ${test_out}',
             'Ccontinue',
             'qa!',
             ]
         expected = (
-            '> <module>() at ${cwd}foobar.py:16',
+            '> <module>() at ${cwd}foobar.py:22',
             )
         self.cltest_redir(cmd, expected)
 
@@ -354,14 +373,14 @@ class Pdb(ClewnTestCase):
         """Stop at breakpoint set in caller after interrupt"""
         cmd = [
             'Cinterrupt',
-            'Cbreak testsuite/foo.py:35',
+            'Cbreak testsuite/foo.py:43',
             'Ccontinue',
             'C run = True',
             'C c.value = -1',
             'Ccontinue',
             'Cinterrupt',
-            'Cjump 19',
-            'Cbreak testsuite/foo.py:40',
+            'C i = 0',
+            'Cbreak testsuite/foo.py:48',
             'Ccontinue',
             'redir! > ${test_out}',
             'sign place',
@@ -371,9 +390,9 @@ class Pdb(ClewnTestCase):
             ]
         expected = (
             'Signs for ${cwd}testsuite/foo.py:',
-            'line=35  id=2  name=2',
-            'line=40  id=1  name=1',
-            'line=40  id=4  name=4',
+            'line=43  id=2  name=2',
+            'line=48  id=1  name=1',
+            'line=48  id=4  name=4',
             )
         self.cltest_redir(cmd, expected)
 
@@ -390,9 +409,10 @@ class Pdb(ClewnTestCase):
             'C end',
             'C run = True',
             'Ccontinue',
-            'edit (clewn)_console | $$-1,$$w! ${test_out}',
+            'edit (clewn)_console | $$-2,$$w! ${test_out}',
             'Creturn',
             'Cnext',
+            'sleep ${sleep_time}',
             'C run = False',
             'Ccontinue',
             'qa!',

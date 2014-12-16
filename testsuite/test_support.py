@@ -19,12 +19,12 @@ import random
 from unittest import TestCase, TestResult
 from unittest.result import failfast
 
-import clewn.vim as vim
+import clewn.vim
 
 NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
-TESTRUN_SLEEP_TIME = '800m'
-SLOW_DOWN_TESTS = '40m'
+TESTRUN_SLEEP_TIME = 800
+SLOW_DOWN_TESTS = 40
 
 # filenames used for testing
 TESTFN = '@test'
@@ -145,6 +145,7 @@ class ClewnTestCase(TestCase):
 
     """
     _verbose = False
+    _debug = False
 
     def __init__(self, method='runTest'):
         TestCase.__init__(self, method)
@@ -159,17 +160,17 @@ class ClewnTestCase(TestCase):
         sys.argv = [
             '-c',                       # argv[0], a script
             '--netbeans=:%d' % port,    # netbeans port
-            '--file=' + LOGFILE,
             '--cargs',                  # vim args
             '-nb:127.0.0.1:%d:changeme '
                 '-u NORC '
                 '-U NONE '
                 '-s %s' % (port, TESTFN),
         ]
-        if 'EDITOR' in os.environ:
-            sys.argv.append('--editor=%s' % os.environ['EDITOR'])
-        if self._verbose:
-            sys.argv.append('--level=nbdebug')
+        sys.argv.append('--editor=%s' % os.environ.get('EDITOR', 'gvim'))
+        if self.debugger != 'pdb':
+            sys.argv.append('--file=logfile')
+            if self._verbose:
+                sys.argv.append('--level=nbdebug')
 
     def setup_vim_arg(self, newarg):
         """Add a new Vim argument to the existing arguments."""
@@ -214,42 +215,58 @@ class ClewnTestCase(TestCase):
         not_a_pyclewn_method = ['Cunmapkeys', 'Ccwindow', 'Cdefine',
                                 'Ccommands', 'Cdocument']
         exclude = not_a_pyclewn_method + ['Csymcompletion']
+        if self.debugger == 'pdb':
+            exclude.extend(('Ccontinue', 'Cdetach'))
         wait_for = {}
         if self.debugger == 'gdb':
             wait_for['Cquit'] = '=== End of gdb session ==='
- 
         commands = cmd_append(iter(commands), 'call Wait_eop()',
                               wait_for=wait_for, exclude=exclude)
 
-        commands = cmd_append(commands, 'sleep ' + TESTRUN_SLEEP_TIME,
-                              cmd_list=('Pyclewn pdb',))
+        if self.debugger == 'pdb':
+            commands = cmd_append(commands, 'sleep %dm' % TESTRUN_SLEEP_TIME,
+                          cmd_list=('Pyclewn pdb', 'Cinterrupt', 'Ccontinue',
+                                    'Cdetach'))
 
         # Slow down the tests.
-        commands = cmd_append(commands, 'sleep ' + SLOW_DOWN_TESTS,
+        commands = cmd_append(commands, 'sleep %dm' % SLOW_DOWN_TESTS,
                               exclude=exclude, do_all=True)
         commands = '%s:%s\n' % (WAIT_EOP, '\n:'.join(commands))
 
-        # Write the commands.
-        timeout = 5     # Wait_eop timeout.
         cwd = os.getcwd() + os.sep
-        with open(TESTFN, 'w') as fp:
-            fp.write(string.Template(commands).substitute(
+        # Wait_eop timeout.
+        if self._debug:
+            timeout = -1
+        else:
+            timeout = 5
+        commands = string.Template(commands).substitute(
                                     test_file=TESTFN_FILE,
                                     test_out=TESTFN_OUT,
                                     key=random.randint(0, 1000000000),
                                     timeout=timeout,
-                                    sleep_time=TESTRUN_SLEEP_TIME,
-                                    cwd=cwd))
+                                    sleep_time='%dm' % TESTRUN_SLEEP_TIME,
+                                    cwd=cwd)
+        #print(commands) # XXX
 
-        # write the test files
+        # Write the commands.
+        with open(TESTFN, 'w') as fp:
+            fp.write(commands)
+
+        # Write the test files.
         for i, t in enumerate(test):
             with open(TESTFN_FILE + str(i+1), 'w') as fp:
                 fp.write(t)
 
-        # process the commands
-        vim.main(True)
+        # Enable the debugging of this test case.
+        if self._debug:
+            clewn.vim.pdb(netbeans='localhost:3220:foo')
+        # Process the commands.
+        vim = clewn.vim.main(True)
+        # Remove the Vim script file in case the script failed to remove itself.
+        if hasattr(vim, 'f_script'):
+            del vim.f_script
 
-        # check the result
+        # Check the result.
         with open(outfile, 'r') as fp:
             output = fp.read()
 
@@ -385,9 +402,10 @@ class TextTestRunner(object):
             self.stream.write('\n')
         return result
 
-def run_suite(suite, verbose, stop_on_error):
+def run_suite(suite, verbose, stop_on_error, debug):
     """Run the suite."""
     ClewnTestCase._verbose = verbose
+    ClewnTestCase._debug = debug
     TextTestRunner(verbose, stop_on_error).run(suite)
 
 def _test():

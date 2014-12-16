@@ -8,8 +8,7 @@ if exists("s:did_pyclewn")
 endif
 let s:did_pyclewn = 1
 
-let s:start_err = "Error: pyclewn failed to start, "
-let s:start_err .= "run the 'pyclewn' program to get the cause of the problem."
+let s:start_err = "Error: pyclewn failed to start.\n\n"
 
 " The following variables define how pyclewn is started when
 " the ':Pyclewn' vim command is run.
@@ -35,6 +34,40 @@ endif
 
 " The 'Pyclewn' command starts pyclewn and vim netbeans interface.
 let s:fixed = "--daemon --editor= --netbeans=" . s:connection . " --cargs="
+
+" Run the 'Cinterrupt' command to open the console
+function s:interrupt(args)
+    " find the prefix
+    let argl = split(a:args)
+    let prefix = "C"
+    let idx = index(argl, "-x")
+    if idx == -1
+        let idx = index(argl, "--prefix")
+        if idx == -1
+            for item in argl
+                if stridx(item, "--prefix") == 0
+                    let pos = stridx(item, "=")
+                    if pos != -1
+                        let prefix = strpart(item, pos + 1)
+                    endif
+                endif
+            endfor
+        endif
+    endif
+
+    if idx != -1 && len(argl) > idx + 1
+        let prefix = argl[idx + 1]
+    endif
+
+    " hack to prevent Vim being stuck in the command line with '--More--'
+    echohl WarningMsg
+    echo "About to run the 'interrupt' command."
+    call inputsave()
+    call input("Press the <Enter> key to continue.")
+    call inputrestore()
+    echohl None
+    exe prefix . "interrupt"
+endfunction
 
 " Check wether pyclewn successfully wrote the script file
 function s:pyclewn_ready(filename)
@@ -96,6 +129,10 @@ function s:start(args)
             exe "source " . l:tmpfile
         endif
         call s:info("The netbeans socket is connected.\n")
+        let argl = split(a:args)
+        if index(argl, "pdb") == len(argl) - 1
+            call s:interrupt(a:args)
+        endif
     else
         throw "Error: the netbeans socket could not be connected."
     endif
@@ -124,7 +161,16 @@ function pyclewn#StartClewn(...)
         call s:start(l:args)
     catch /.*/
         call s:info("The 'Pyclewn' command has been aborted.\n")
-        call s:error(v:exception)
+        let l:err = v:exception
+        let l:argl = split(l:args)
+        if index(l:argl, "pdb") == len(l:argl) - 1
+            let l:err .= "Create a python script containing the line:\n"
+            let l:err .= "   import clewn.vim as vim; vim.pdb(level='debug')\n"
+            let l:err .= "and run this script to get the cause of the problem."
+        else
+            let l:err .= "Run 'pyclewn' to get the cause of the problem."
+        endif
+        call s:error(l:err)
         " vim console screen is garbled, redraw the screen
         if !has("gui_running")
             redraw!

@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2014 December 9
+*pyclewn.txt*                                   Last change: 2014 December 14
 
 
                             PYCLEWN USER MANUAL
@@ -183,6 +183,8 @@ The pyclewn options can be set:
     * in the "pyclewn_args" and the "pyclewn_connection" vim global
       variables when starting pyclewn with the |:Pyclewn| command
 
+    * as the keyword parameters of the pdb function
+
 
 Options:
   --version                   show program's version number and exit
@@ -190,14 +192,14 @@ Options:
   -g PARAM_LIST, --gdb=PARAM_LIST
                               set gdb PARAM_LIST
   -d, --daemon                run as a daemon (default 'False')
-  -e VIM, --editor=VIM        set Vim pathname to VIM (default 'gvim-
-                              fork.sh'); Vim is not spawned by pyclewn when
-                              this parameter is set to an empty string
+  -e EDITOR, --editor=EDITOR  set Vim program to EDITOR
   -c ARGS, --cargs=ARGS       set Vim arguments to ARGS
   -p PGM, --pgm=PGM           set the debugger pathname to PGM
   -a ARGS, --args=ARGS        set the debugger arguments to ARGS
   --terminal=TERMINAL         set the terminal to use with the inferiortty
                               command (default 'xterm,-e')
+  --run                       allow the debuggee to run after the pdb() call
+                              (default 'False')
   --tty=TTY                   use TTY for input/output by the python script
                               being debugged (default '/dev/null')
   -w LOCATION, --window=LOCATION
@@ -261,14 +263,15 @@ The full description of pyclewn options follows:
                     cannot be used for printing the pyclewn logs as well.
 
 -e {EDITOR}
---editor={EDITOR}   Set the editor program to EDITOR. EDITOR must be in one
+--editor={EDITOR}   Set Vim program to EDITOR. EDITOR must be in one
                     of the directories listed in the PATH environment
-                    variable, or the full pathname to vim or gvim executable.
+                    variable, or the absolute pathname of the vim executable.
                     When this command line option is not set, pyclewn uses the
                     value of the EDITOR environment variable, and if this
                     environment variable is not set either, then pyclewn
                     defaults to using "gvim" as the name of the program to
-                    spawn.
+                    spawn. Vim is not spawned by pyclewn when this option is
+                    set to an empty string or when the debugger is pdb.
 
 -c {ARGS}
 --cargs={ARGS}      Set the editor program arguments to ARGS, possibly double
@@ -291,6 +294,10 @@ The full description of pyclewn options follows:
                     option is a comma separated list of the arguments needed
                     to start the terminal and a program running in this
                     terminal.
+
+--run               By default the python debuggee is stopped at the first
+                    statement after the call to pdb(). Enabling this option
+                    allows the debuggee to run after the call to pdb().
 
 --tty={TTY}         Use TTY for input/output by the python script being
                     debugged. The default is "/dev/null".

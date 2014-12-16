@@ -8,6 +8,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+try:
+    from _thread import get_ident as get_thread_ident
+except ImportError:
+    from thread import get_ident as get_thread_ident
 
 import os
 import sys
@@ -19,8 +23,10 @@ import traceback
 import optparse
 import logging
 import errno
+import threading
+import atexit
 
-from . import (__version__, ClewnError, misc, netbeans, evtloop, tty)
+from . import __version__, ClewnError, misc, netbeans, evtloop, tty
 from .posix import daemonize, platform_data
 
 
@@ -91,24 +97,116 @@ def pformat(name, obj):
         return '%s:\n%s\n' % (name, misc.pformat(obj.__dict__))
     else: return ''
 
+def close_clewnthread(vim):
+    """Terminate the clewn thread and stop the debugger."""
+    try:
+        info('enter close_clewnthread')
+        sys.settrace(None)
+
+        # notify 'Clewn-thread' of pending termination
+        pdbinst = vim.debugger
+        pdbinst.exit()
+        if pdbinst.thread:
+            pdbinst.thread.join()
+        debug('Vim instance: ' + str(vim))
+        vim.shutdown()
+    except KeyboardInterrupt:
+        close_clewnthread(vim)
+
+def embed_pdb(vim, attach=False):
+    """Start the python debugger thread."""
+    Vim.pdb_running = True
+    module = vim.setup(True, oneshot=False)
+    pdbinst = vim.debugger
+    pdbinst.target_thread_ident = get_thread_ident()
+
+    # use a daemon thread
+    class ClewnThread(threading.Thread):
+        def __init__(self):
+            threading.Thread.__init__(self, name='Clewn-thread')
+            self.setDaemon(True)
+        def run(self):
+            if vim.testrun:
+                # Synchronisation with the test runner.
+                print('Started.', file=sys.stderr)
+                sys.stderr.flush()
+            vim.pdb_loop()
+
+    ClewnThread().start()
+    pdbinst.synchronisation_evt.wait(1)
+    if not pdbinst.synchronisation_evt.isSet():
+        print('Aborting, failed to start the clewn thread.', file=sys.stderr)
+        sys.exit(1)
+    atexit.register(close_clewnthread, vim)
+
+    if attach:
+        if vim.options.run:
+            pdbinst.let_target_run = True
+        pdbinst.set_trace(sys._getframe(2))
+    else:
+        pdb_main = getattr(module, 'main')
+        pdb_main(pdbinst, vim.options)
+
+def pdb(run=False, **kwds):
+    """Start pdb from within a python process.
+
+    The 'kwds' keyword arguments may be any of the pyclewn options that set a
+    value (no boolean option allowed).
+    """
+    if Vim.pdb_running:
+        return
+
+    argv = []
+    if run:
+        argv.append('--run')
+    argv.extend(['--' + k + '=' + str(v)
+                 for k, v in kwds.items()
+                 if k != 'testrun'
+                ])
+    argv.append('pdb')
+    testrun = 'testrun' in kwds
+    embed_pdb(Vim(testrun, argv), attach=True)
+
 def main(testrun=False):
+    """Main.
+
+    Return the vim instance to avoid its 'f_script' member to be garbage
+    collected and the corresponding 'TmpFile' to be unlinked before Vim has a
+    chance to start and source the file (only needed for the pdb test suite).
+
+    """
     vim = Vim(testrun, sys.argv[1:])
     options = vim.options
+    is_pdb = (vim.module == 'pdb')
+
+    pty = None
     try:
+        # Vim is running the command ':Pyclewn pdb script'.
+        if is_pdb and not testrun and options.args:
+            embed_pdb(vim)
+
         # Use pyclewn terminal as the inferior standard input/output when vim is
         # run as 'gvim'.
-        pty = None
         if vim.options.editor:
             out = exec_vimcmd(['echo has("gui_running")'],
                                  vim.options.editor, vim.stderr_hdlr).strip()
-            if (out == '1' and vim.clazz.__name__ == 'Gdb' and not testrun and
+            if (out == '1' and vim.module == 'gdb' and not testrun and
                     os.isatty(sys.stdin.fileno()) and not options.daemon):
                 pty = tty.GdbInferiorPty(vim.stderr_hdlr, vim.socket_map)
                 pty.start()
                 options.tty = pty.ptyname
 
-        vim.setup(True)
-        vim.loop()
+        connect = False if is_pdb else True
+        vim.setup(connect)
+
+        # When is_pdb is True, this is either:
+        #   * Vim is being spawned by the test suite.
+        #   * or the user is running the Vim command ':Pyclewn pdb'
+        if is_pdb:
+            if not testrun and not options.cargs:
+                critical('This command is meant to be run from Vim.')
+        else:
+            vim.loop()
     except (KeyboardInterrupt, SystemExit):
         pass
     except Exception as e:
@@ -130,6 +228,10 @@ def main(testrun=False):
 class Vim(object):
     """The Vim class.
 
+    Class attributes:
+        pdb_running: boolean
+            True when pdb is running
+
     Instance attributes:
         testrun: boolean
             True when run from a test suite
@@ -146,11 +248,13 @@ class Vim(object):
             the debugger instance run by Vim
         clazz: class
             the selected Debugger subclass
+        module: module
+            the Debugger subclass module
         f_script: file
             the Vim script file object
         nbserver: netbeans.Server
             the netbeans listening server instance
-        vim: subprocess.Popen
+        vim_process: subprocess.Popen
             the vim Popen instance
         options: optparse.Values
             the command line options
@@ -161,6 +265,8 @@ class Vim(object):
 
     """
 
+    pdb_running = False
+
     def __init__(self, testrun, argv):
         self.testrun = testrun
         self.file_hdlr = None
@@ -168,8 +274,11 @@ class Vim(object):
         self.socket_map = {}
         self.debugger = None
         self.clazz = None
+        self.module = None
         self.f_script = None
-        self.vim = None
+        self.nbserver = None
+        self.poll = None
+        self.vim_process = None
         self.options = None
         self.closed = False
         self.parse_options(argv)
@@ -182,7 +291,10 @@ class Vim(object):
         # test if Vim contains the netbeans 'cmd on NoName buffer ignored' fix
 
         # pyclewn is started from within vim
-        # This is supported since vim73.
+        # This is supported since vim73. When using 'pdb', pyclewn has no way
+        # to know which vim it is connected to, unless using the netbeans
+        # version, but this does not change consistently with vim netbeans
+        # patches.
         if not self.options.editor:
             netbeans.Netbeans.remove_fix = '1'
             netbeans.Netbeans.getLength_fix = '1'
@@ -226,43 +338,53 @@ class Vim(object):
 
         info('Vim argv list: %s', str(args))
         try:
-            self.vim = subprocess.Popen(args, close_fds=True)
+            self.vim_process = subprocess.Popen(args, close_fds=True)
         except OSError:
             critical('cannot start Vim'); raise
 
-    def setup(self, oneshot):
-        """Listen to netbeans and start vim.
+    def setup(self, connect, oneshot=True):
+        """Setup the debugging session.
 
         Method parameters:
+            connect: boolean
+                when True, starts 'nbserver'
             oneshot: boolean
                 when True, 'nbserver' accepts only a single connection
         """
-        self.nbserver = netbeans.Server(self.socket_map)
-        # instantiate 'poll' after addition of 'nbserver' to the asyncore
-        # 'socket_map'
-        self.poll = evtloop.Poll(self.socket_map)
-
         # log platform information for debugging
         info(platform_data())
 
-        # listen on netbeans port
-        conn = list(CONNECTION_DEFAULTs)
-        if self.options.netbeans:
-            conn = self.options.netbeans.split(':')
-            conn[1:] = conn[1:] or [CONNECTION_DEFAULTs[1]]
-            conn[2:] = conn[2:] or [CONNECTION_DEFAULTs[2]]
-        assert len(conn) == 3, 'too many netbeans connection parameters'
-        conn[1] = conn[1] or CONNECTION_DEFAULTs[1]
-        self.nbserver.bind_listen(oneshot, *conn)
+        # Listen on netbeans port.
+        if connect:
+            self.nbserver = netbeans.Server(self.socket_map)
+            # Instantiate 'poll' after addition of 'nbserver' to the asyncore
+            # 'socket_map'.
+            self.poll = evtloop.Poll(self.socket_map)
+            conn = list(CONNECTION_DEFAULTs)
+            if self.options.netbeans:
+                conn = self.options.netbeans.split(':')
+                conn[1:] = conn[1:] or [CONNECTION_DEFAULTs[1]]
+                conn[2:] = conn[2:] or [CONNECTION_DEFAULTs[2]]
+            assert len(conn) == 3, 'too many netbeans connection parameters'
+            conn[1] = conn[1] or CONNECTION_DEFAULTs[1]
+            self.nbserver.bind_listen(oneshot, *conn)
+
+        try:
+            module = importlib.import_module('clewn.%s' % self.module)
+        except ImportError as e:
+            raise ImportError('cannot import module "clewn.%s":\n%s' % (self.module, e))
+        class_name = self.module[0].upper() + self.module[1:]
+        self.clazz = getattr(module, class_name)
+        self.debugger = self.clazz(self.options, self.socket_map, self.testrun)
 
         self.vim_version()
-        self.debugger = self.clazz(self.options, self.socket_map, self.testrun)
         if self.options.editor:
             self.spawn_vim()
         else:
-            # pyclewn is started from within vim.
             script = self.debugger.vim_script()
             info('building the Vim script file: %s', script)
+
+        return module
 
     def shutdown(self, logging_shutdown=True):
         if self.closed:
@@ -270,20 +392,21 @@ class Vim(object):
         self.closed = True
 
         # Remove the Vim script file in case the script failed to remove itself.
-        if hasattr(self, 'f_script') and self.f_script:
+        if (self.f_script and not (self.module == 'pdb' and self.testrun)):
             del self.f_script
 
-        if self.nbserver.netbeans:
-            self.nbserver.netbeans.close()
-        self.nbserver.close()
+        if self.nbserver:
+            if self.nbserver.netbeans:
+                self.nbserver.netbeans.close()
+            self.nbserver.close()
         info('pyclewn exiting')
 
         if self.testrun:
             # wait for Vim to terminate
-            if self.vim is not None:
+            if self.vim_process is not None:
                 while True:
                     try:
-                        self.vim.wait()
+                        self.vim_process.wait()
                     except OSError as err:
                         errcode = err.errno
                         if errcode == errno.EINTR:
@@ -299,12 +422,15 @@ class Vim(object):
 
         # do not shutdown logging with gdb as the SIGCHLD handler may overwrite
         # all the traces after the shutdown
-        elif self.clazz.__name__ != 'Gdb' and logging_shutdown:
-            logging.shutdown()
+        elif self.module != 'gdb' and logging_shutdown:
+            if self.file_hdlr is not None:
+                logging.getLogger().removeHandler(self.file_hdlr)
+                self.file_hdlr.close()
 
         for asyncobj in list(self.socket_map.values()):
             asyncobj.close()
-        self.poll.close()
+        if self.poll:
+            self.poll.close()
 
     def parse_options(self, argv):
         """Parse the command line options."""
@@ -328,7 +454,6 @@ class Vim(object):
                     % str(tuple(set(colors).difference(BG_COLORS))))
             parser.values.bg_colors = colors
 
-        editor = os.environ.get('EDITOR', 'gvim')
         formatter = optparse.IndentedHelpFormatter(max_help_position=30)
         parser = optparse.OptionParser(
                         version='%prog ' + __version__,
@@ -341,10 +466,12 @@ class Vim(object):
         parser.add_option('-d', '--daemon',
                 action="store_true", default=False,
                 help='run as a daemon (default \'%default\')')
-        parser.add_option('-e', '--editor', default=editor, metavar='VIM',
-                help='set Vim pathname to VIM (default \'%default\');'
-                + ' Vim is not spawned by pyclewn when this parameter is'
-                + ' set to an empty string')
+        parser.add_option('--run',
+                action="store_true", default=False,
+                help=('allow the debuggee to run after the pdb() call'
+                ' (default \'%default\')'))
+        parser.add_option('-e', '--editor', default=None,
+                help='set Vim program to EDITOR')
         parser.add_option('-c', '--cargs', metavar='ARGS',
                 type='string', action='callback', callback=args_callback,
                 help='set Vim arguments to ARGS')
@@ -390,52 +517,54 @@ class Vim(object):
                 % ', '.join(misc.LOG_LEVELS))
         parser.add_option('-f', '--file', metavar='FILE',
                 help='set the log file name to FILE')
-        (self.options, args) = parser.parse_args(args=argv)
+        (options, args) = parser.parse_args(args=argv)
 
-        mname = 'gdb'
+        # The debugger module name.
+        self.module = 'gdb'
         if args:
             if len(args) != 1:
-                parser.error('only one argument is allowed')
-            mname = args[0]
-        try:
-            module = importlib.import_module('clewn.%s' % mname)
-        except ImportError:
-            parser.error('cannot import module "clewn.%s"' % mname)
-        class_name = mname[0].upper() + mname[1:]
-        self.clazz = getattr(module, class_name, None)
-        if not self.clazz:
-            parser.error('module %s does not define class %s' %
-                         (mname, class_name))
+                parser.error('only one argument is allowed: "%s"' %args)
+            self.module = args[0]
+        if self.module == 'pdb':
+            # Only the testsuite may spawn the editor.
+            if not self.testrun:
+                if options.editor not in (None, ''):
+                    parser.error('Invalid option "--editor" in this context.')
+                options.editor = ''
+        elif options.editor is None:
+            options.editor = os.environ.get('EDITOR', 'gvim')
 
-        location = self.options.window.lower()
+        location = options.window.lower()
         if location in WINDOW_LOCATION:
-            self.options.window = location
+            options.window = location
         else:
             parser.error(
                     '"%s" is an invalid window LOCATION, must be one of %s'
-                    % (self.options.window, WINDOW_LOCATION))
+                    % (options.window, WINDOW_LOCATION))
 
         # set Netbeans class members
         if location == 'none':
             netbeans.Netbeans.enable_setdot = False
 
-        if self.options.maxlines <= 0:
+        if options.maxlines <= 0:
             parser.error('invalid number for maxlines option')
-        netbeans.Netbeans.max_lines = self.options.maxlines
+        netbeans.Netbeans.max_lines = options.maxlines
 
-        if self.options.background:
-            netbeans.Netbeans.bg_colors = self.options.background
+        if options.background:
+            netbeans.Netbeans.bg_colors = options.background
 
-        level = self.options.level.upper()
+        level = options.level.upper()
         if level:
             if hasattr(logging, level):
-                 self.options.level = getattr(logging, level)
+                 options.level = getattr(logging, level)
             elif level == misc.NBDEBUG_LEVEL_NAME.upper():
-                self.options.level = misc.NBDEBUG
+                options.level = misc.NBDEBUG
             else:
                 parser.error(
                     '"%s" is an invalid log LEVEL, must be one of: %s'
-                    % (self.options.level, ', '.join(misc.LOG_LEVELS)))
+                    % (options.level, ', '.join(misc.LOG_LEVELS)))
+
+        self.options = options
 
     def setlogger(self):
         """Setup the root logger with handlers: stderr and optionnaly a file."""
@@ -457,7 +586,12 @@ class Vim(object):
 
         if not root.handlers:
             root.manager.emittedNoHandlerWarning = True
-            fmt = logging.Formatter('%(name)-4s %(levelname)-7s %(message)s')
+            if self.options.level == misc.NBDEBUG:
+                fmt = logging.Formatter(
+                        '%(created).3f %(name)-4s %(levelname)-7s %(message)s')
+            else:
+                fmt = logging.Formatter(
+                        '%(name)-4s %(levelname)-7s %(message)s')
 
             if self.options.file:
                 try:
@@ -504,14 +638,14 @@ class Vim(object):
                     if self.options.daemon:
                         daemonize()
                     info('pyclewn version %s and the %s debugger',
-                                        __version__, self.clazz.__name__)
+                                        __version__, self.module)
             elif nbsock.connected:
                 # Instantiate a new debugger.
                 if self.debugger.closed:
                     self.debugger = self.clazz(self.options, self.socket_map,
                                                self.testrun)
                     nbsock.set_debugger(self.debugger)
-                    info('new "%s" instance', self.clazz.__name__.lower())
+                    info('new "%s" instance', self.module)
             else:
                 if not self.debugger.started or self.debugger.closed:
                     break
@@ -521,14 +655,41 @@ class Vim(object):
 
         self.debugger.close()
 
+    def pdb_loop(self):
+        """Run the clewn pdb thread."""
+        pdbinst = self.debugger
+        pdbinst.thread = threading.currentThread()
+        pdbinst.clewn_thread_ident = get_thread_ident()
+        pdbinst.synchronisation_evt.set()
+        last_nbsock = None
+        while not pdbinst.closing:
+            nbsock = self.nbserver.netbeans
+            # a new netbeans connection, the server has closed last_nbsock
+            if nbsock != last_nbsock and nbsock.ready:
+                info(nbsock)
+                last_nbsock = nbsock
+                nbsock.set_debugger(pdbinst)
+                if last_nbsock is None:
+                    version = __tag__
+                    if __changeset__:
+                        version += '.' + __changeset__
+                    info('pyclewn version %s and the %s debugger',
+                                        version, self.module)
+
+            timeout = pdbinst._call_jobs()
+            self.poll.run(timeout=timeout)
+            pdbinst.synchronisation_evt.set()
+
+        info('clewn thread terminating')
+
     def __str__(self):
         """Return a representation of the whole stuff."""
         self_str = ''
-        if self.nbserver.netbeans is not None:
+        if self.nbserver and self.nbserver.netbeans is not None:
             self_str = '\n%s%s' % (pformat('options', self.options),
                             pformat('netbeans', self.nbserver.netbeans))
         if self.debugger is not None:
             self_str += ('debugger %s:\n%s\n'
-                                % (self.clazz.__name__, self.debugger))
+                                % (self.module, self.debugger))
         return self_str
 
