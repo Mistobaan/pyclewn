@@ -12,6 +12,7 @@ from io import open
 
 import sys
 import os
+import fcntl
 import re
 import tempfile
 import logging
@@ -20,6 +21,7 @@ import atexit
 import pprint
 import itertools
 import io
+import asyncio
 
 from . import text_type, ClewnError
 
@@ -159,6 +161,15 @@ def unlink(filename):
         except OSError:
             pass
 
+def set_blocking(fd, blocking):
+    if hasattr(os, 'set_blocking'):
+        os.set_blocking(fd, blocking)
+    else:
+        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+        flags = (flags & ~os.O_NONBLOCK if blocking else
+                 flags | os.O_NONBLOCK)
+        fcntl.fcntl(fd, fcntl.F_SETFL, flags)
+
 def offset_gen(lines):
     """Return an iterator over the offsets of the beginning of lines.
 
@@ -174,6 +185,49 @@ def tmpfile(prefix):
     with TmpFile(prefix) as f:
         f.write('\n')
     return f
+
+def handle_as_lines(data, buff, handle_cb):
+    """Call 'handle_cb' for each line in buff + data."""
+    buff.append(data.decode())
+    data = ''.join(buff)
+    if '\n' in data:
+        del buff[:]
+        lines = data.split('\n')
+        if lines[-1]:
+            buff.append(lines[-1])
+        for line in lines[:-1]:
+            if line:
+                handle_cb(line)
+
+def cancel_after_first_completed(tasks, interrupted_cb, loop):
+    @asyncio.coroutine
+    def _cancel_after_first_completed(tasks, loop):
+        while tasks:
+            done, pending = yield from asyncio.wait(tasks,
+                                return_when=asyncio.FIRST_COMPLETED, loop=loop)
+            for task in done:
+                info(task)
+                assert task in tasks
+                tasks.remove(task)
+            for task in pending:
+                task.cancel()
+
+    assert tasks
+    main_task = asyncio.Task(_cancel_after_first_completed(tasks[:], loop),
+                             loop=loop)
+    while True:
+        try:
+            loop.run_until_complete(main_task)
+            break
+        except (KeyboardInterrupt, SystemExit):
+            interrupted_cb()
+
+    for task in tasks:
+        assert task.done()
+        if task.done() and not task.cancelled():
+            exc = task.exception()
+            if exc is not None:
+                raise exc
 
 class PrettyPrinterString(pprint.PrettyPrinter):
     """Strings are printed with str() to avoid duplicate backslashes."""

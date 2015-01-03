@@ -30,6 +30,7 @@ text_type = str if PY3 else unicode
 class ClewnError(Exception):
     """Base class for pyclewn exceptions."""
 
+# pyclewn uses OrderedDict (added in Python 3.1).
 if PY26 or (PY3 and not PY31):
     raise NotImplementedError('Python 2.7 or Python 3.1 or newer is required.')
 

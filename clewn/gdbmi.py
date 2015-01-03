@@ -667,12 +667,10 @@ class Command(object):
     @abstractmethod
     def handle_result(self, result):
         """Process the result of the gdb command."""
-        pass
 
     @abstractmethod
     def handle_strrecord(self, stream_record):
         """Process the stream records output by the command."""
-        pass
 
     def send(self, fmt, *args):
         """Send the command and add oneself to the expected pending results."""
@@ -1012,7 +1010,6 @@ class VarObjCmd(Command):
         Return True when the command has been sent to gdb, False otherwise.
 
         """
-        pass
 
     def __call__(self):
         """Run the gdb command.
@@ -1092,7 +1089,6 @@ class OobCommand(object):
     @abstractmethod
     def notify(self, cmd):
         """Notify of the cmd being processed."""
-        pass
 
     @abstractmethod
     def __call__(self):
@@ -1101,7 +1097,6 @@ class OobCommand(object):
         Return True when the command has been sent to gdb, False otherwise.
 
         """
-        pass
 
 class OobGdbCommand(OobCommand, Command):
     """Base abstract class for oob commands.

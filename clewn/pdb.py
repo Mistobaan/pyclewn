@@ -16,12 +16,13 @@ except ImportError:
 import sys
 import os
 import threading
+import queue
 import time
 import io
 import signal
 from collections import OrderedDict
 
-from . import PY3, text_type, misc, debugger, asyncproc, evtloop
+from . import PY3, text_type, misc, debugger
 from pdb_clone import __version__
 if ('py3' in __version__ and not PY3) or ('py2' in __version__ and PY3):
     raise ImportError('Invalid pdb-clone version %s' % __version__)
@@ -29,6 +30,8 @@ from pdb_clone import pdb, bdb
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('pdb')
+
+TIMEOUT = .100
 
 HELP_EMPTY_CMD = (
 """The empty command executes the (one-line) statement in the context of the
@@ -169,31 +172,22 @@ class BalloonRepr(reprlib.Repr):
 
 _balloonrepr = BalloonRepr().repr
 
-class Ping(asyncproc.FileAsynchat):
-    """Terminate the select call in the asyncore loop."""
-    def __init__(self, f, reader, map=None):
-        asyncproc.FileAsynchat.__init__(self, f, None, reader, map)
-
-    def writable(self):
-        """Do not monitor 'writable' select events."""
-        return False
-
-    def found_terminator(self):
-        """Ignore received data."""
-        self.ibuff = []
-
 class Pdb(debugger.Debugger, pdb.Pdb):
     """The Pdb debugger.
 
     Instance attributes:
-        thread: threading.Thread
+        target_thread: threading.Thread
+            the thread being debugged
+        clewn_thread: threading.Thread
             the clewn thread
-        socket_map: dict
-            map used in interaction
+        target_queue: Queue
+            queue of commands to be processed by the target thread
+        in_interaction: bool
+            True when the target thread is stopped in interaction()
+        mouse_text: str
+            the text that is being hovered to by the mouse
         stdout: StringIO instance
             stdout redirection
-        ping_r, ping_w: file descriptors
-            ping file descriptors
         stop_interaction: bool
             when True, stop the interaction loop
         let_target_run: bool
@@ -203,16 +197,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             trace type
         doprint_trace: bool
             when True, print the stack entry
-        clewn_thread_ident, target_thread_ident: int
-            thread identifiers
-        synchronisation_evt: Event
-            used to synchronise both threads
-        closing: bool
-            when True, terminate the clewn thread asyncore loop
         state: int
             pdb state
-        poll: evtloop.Poll
-            manage the select thread
         interrupted: bool
             the interrupt command has been issued
         attached: bool
@@ -224,7 +210,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         debugger.Debugger.__init__(self, *args)
         pdb.Pdb.__init__(self, nosigint=False)
 
-        # avoid pychecker warnings (not initialized in base class)
+        # Avoid pychecker warnings (not initialized in base class).
         self.curindex = 0
         self.lineno = None
         self.curframe = None
@@ -233,31 +219,18 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.attached = True
         self.tty = None
 
-        self.thread = None
-        self.socket_map = {}
+        self.target_thread = None
+        self.clewn_thread = None
+        self.target_queue = queue.Queue()
+        self.in_interaction = False
+        self.mouse_text = ''
         self.stdout = io.StringIO() if PY3 else io.BytesIO()
         self.stop_interaction = False
         self.let_target_run = False
         self.trace_type = ''
         self.doprint_trace = False
-        self.clewn_thread_ident = 0
-        self.target_thread_ident = 0
-        self.synchronisation_evt = threading.Event()
-        self.closing = False
         self._previous_sigint_handler = None
         self.state = STATE_INIT
-
-        # the ping pipe is used to ping the clewn thread asyncore loop to enable
-        # switching nbsock to the loop running in the main thread, in the
-        # 'interaction' method
-        ping_r, self.ping_w = os.pipe()
-        Ping(ping_r, True)
-        # a dummy Ping instance to avoid having 'self.socket_map' empty, when
-        # outside the 'interaction' method (when using select emulation on
-        # Windows)
-        Ping(self.ping_w, False, map=self.socket_map)
-        # instantiating 'poll' after addition of Ping to the 'socket_map'
-        self.poll = evtloop.Poll(self.socket_map)
 
         self.cmds.update(PDB_CMDS)
         self.pyclewn_cmds['inferiortty'] = ()
@@ -286,7 +259,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def close(self):
         """Close the netbeans session."""
-        # we do not really close the thread here, just netbeans
+        # We do not really close the thread here, just netbeans.
         info('enter Pdb.close')
         debugger.Debugger.close(self)
         self.let_target_run = True
@@ -299,7 +272,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         else:
             self.prompt = '(Pdb) '
             # Do not flush on timeout when running the test suite.
-            if self.testrun:
+            if self.vim.testrun:
                 debugger.Debugger.print_prompt(self)
                 return
         if timed:
@@ -338,19 +311,6 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                 args[name] = "*** undefined ***"
         return args
 
-    def ping(self):
-        """Ping the clewn thread asyncore loop."""
-        self.synchronisation_evt.clear()
-        try:
-            os.write(self.ping_w, b'ping\n')
-        except OSError as err:
-            error('Cannot ping the clewn thread: %s.', err)
-        else:
-            self.synchronisation_evt.wait(1)
-            if not self.synchronisation_evt.isSet():
-                error('Cannot ping the clewn thread:'
-                                ' \'synchronisation_evt\' not set.')
-
     def detach(self):
         """Detach the netbeans connection."""
         self.console_print('Netbeans connection closed.\n')
@@ -360,6 +320,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def exit(self):
         """Terminate the clewn thread."""
+        info('terminating the clewn thread')
         if self._previous_sigint_handler:
             signal.signal(signal.SIGINT, self._previous_sigint_handler)
             self._previous_sigint_handler = None
@@ -367,10 +328,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         if self.tty:
             self.tty.close()
 
-        # clear the 'socket_map' to terminate the 'select_thread'
-        self.socket_map.clear()
-        self.poll.close()
-        self.closing = True
+        self.vim.loop.call_soon_threadsafe(self.vim.signal, None)
 
     #-----------------------------------------------------------------------
     #   Bdb methods
@@ -465,11 +423,16 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     def cmdloop(self):
         """Command loop used in pyclewn, only to define breakpoint commands."""
         while not self.stop_interaction and self.started:
-            # commands queued after the ';;' separator
+            # Commands queued after the ';;' separator.
             if self.cmdqueue:
                 self.onecmd(self.cmdqueue.pop(0))
             else:
-                self.poll.run(debugger.LOOP_TIMEOUT)
+                try:
+                    line = self.target_queue.get(block=True, timeout=TIMEOUT)
+                except queue.Empty:
+                    pass
+                else:
+                    self.onecmd(line)
         self.stop_interaction = False
 
     def print_stack_entry(self, frame_lineno, prompt_prefix=pdb.line_prefix):
@@ -491,8 +454,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.set_trace(frame)
 
     def interaction(self, frame, traceback, post_mortem=False):
-        """Handle user interaction in the asyncore loop."""
-        # wait for the netbeans session to be established
+        """Handle user interaction in the target thread."""
+        # Wait for the netbeans session to be established.
         while not self.started or self.state == STATE_INIT:
             if self.let_target_run:
                 # After having been detached, the first <Ctl-C> restores the
@@ -504,21 +467,13 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                     signal.signal(signal.SIGINT, self._previous_sigint_handler)
                     self._previous_sigint_handler = None
                 return
-            time.sleep(debugger.LOOP_TIMEOUT)
-
-        fd = self.set_nbsock_owner(self.target_thread_ident, self.socket_map)
-        self.ping()
-        # nbsock may have been closed by vim and the clewn thread
-        # during the ping
-        if fd is None or self.closed:
-            del self.socket_map[fd]
-            return
+            time.sleep(TIMEOUT)
 
         if self.interrupted:
             self.interrupted = False
-            # do not set the trace function in post mortem debugging, as
+            # Do not set the trace function in post mortem debugging, as
             # interaction() is not called from the trace function
-            # trace_dispatch() then
+            # trace_dispatch() then.
             if not post_mortem:
                 self.set_trace(frame)
 
@@ -527,8 +482,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                                                     self.sigint_handler)
 
         if self.setup(frame, traceback):
-            # no interaction desired at this time (happens if .pdbrc contains
-            # a command like "continue")
+            # No interaction desired at this time (happens if .pdbrc contains a
+            # command like "continue").
             self.stop_interaction = False
             self.forget()
             return
@@ -547,6 +502,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.print_prompt()
         assert not self.stop_interaction
         try:
+            self.in_interaction = True
+            self.mouse_text = ''
             while not self.stop_interaction and self.started:
                 if self.state == STATE_DETACH:
                     self.set_continue()
@@ -554,11 +511,20 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
                 try:
                     self.allow_kbdint = True
-                    # commands queued after the ';;' separator
+                    # Commands queued after the ';;' separator.
                     if self.cmdqueue:
                         self.onecmd(self.cmdqueue.pop(0))
+                    elif self.mouse_text:
+                        self.balloon_text(self.mouse_text)
+                        self.mouse_text = ''
                     else:
-                        self.poll.run(debugger.LOOP_TIMEOUT)
+                        try:
+                            line = self.target_queue.get(block=True,
+                                                         timeout=TIMEOUT)
+                        except queue.Empty:
+                            pass
+                        else:
+                            self.onecmd(line)
                 except KeyboardInterrupt:
                     self.console_print('--KeyboardInterrupt--\n')
                     self.print_prompt()
@@ -568,9 +534,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             self.show_frame()
             self.forget()
         finally:
-            self.set_nbsock_owner(0)
-            del self.socket_map[fd]
-            self.ping()
+            self.in_interaction = False
 
         if not self.attached and not self.started:
             info('terminate the debuggee started from Vim')
@@ -589,17 +553,32 @@ class Pdb(debugger.Debugger, pdb.Pdb):
     def onecmd(self, line):
         """Process a line as a command.
 
-        This method is called from the asyncore loop, and also when parsing
-        .pdbrc or executing breakpoint commands.
+        The clewn thread queues the command when it must be run by the target
+        thread. The target thread executes the command. This method may also be
+        called from the target thread when parsing .pdbrc or executing
+        breakpoint commands.
         """
-        debug('onecmd: %s', line)
+        debug('onecmd [%s]: %s', threading.currentThread().name, line)
         if not line:
             return False
 
-        # alias substitution
-        line = self.precmd(line)
+        # Alias substitution.
+        if threading.currentThread() != self.clewn_thread:
+            line = self.precmd(line)
 
-        if self.commands_defining:
+        cmd, args = (lambda a, b='': (a, b))(*line.split(None, 1))
+        try:
+            method = getattr(self, 'cmd_%s' % cmd)
+        except AttributeError:
+            method = self.default_cmd_processing
+
+        if threading.currentThread() == self.clewn_thread:
+            # The debugger.inferiortty() method must be invoked from the clewn
+            # thread.
+            if self.in_interaction and method != self.cmd_inferiortty:
+                self.target_queue.put(line)
+                return
+        elif self.commands_defining:
             if line == 'interrupt':
                 raise KeyboardInterrupt
             if self.handle_command_def(line):
@@ -608,14 +587,10 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                 debugger.Debugger.print_prompt(self)
             return self.stop_interaction
 
-        cmd, args = (lambda a, b='': (a, b))(*line.split(None, 1))
-        try:
-            method = getattr(self, 'cmd_%s' % cmd)
-        except AttributeError:
-            method = self.default_cmd_processing
-
         # restricted set of commands allowed in clewn thread
-        if threading.currentThread() == self.thread and cmd not in CLEWN_CMDS:
+        if (threading.currentThread() == self.clewn_thread and
+                not (cmd in CLEWN_CMDS or
+                    (self.in_interaction and method == self.cmd_inferiortty))):
             self.console_print('Target running, allowed commands'
                            ' are: %s\n', tuple(str(cmd) for cmd in CLEWN_CMDS))
         else:
@@ -653,18 +628,24 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def cmd_inferiortty(self, cmd, args):
         """Spawn pdb inferior terminal and setup pdb with this terminal."""
-        ttyname = args
-        if not ttyname:
-            lines = self.inferiortty()
-            if lines:
-                ttyname = lines[0].split()[2]
-            else:
-                ttyname = os.devnull
-        self.tty = tty_fobj(ttyname)
-        if self.tty:
-            sys.stdin = sys.stdout = sys.stderr = self.tty
-            info('set inferior tty to %s', ttyname)
-            self.console_print('inferiortty %s\n' % ttyname)
+        def set_inferior_tty_cb(line, ttyname=None):
+            if not ttyname:
+                if not line.startswith('set inferior-tty'):
+                    return
+                ttyname = line.split()[2]
+            if self.tty:
+                self.tty.close()
+                self.tty = None
+            self.tty = tty_fobj(ttyname)
+            if self.tty:
+                sys.stdin = sys.stdout = sys.stderr = self.tty
+                info('set inferior tty to %s', ttyname)
+                self.console_print('inferiortty %s\n' % ttyname)
+
+        if not args:
+            self.inferiortty(set_inferior_tty_cb)
+        else:
+            set_inferior_tty_cb('', ttyname=args)
 
     for n in ('enable', 'disable', 'condition', 'ignore', 'where',
                                 'bt', 'p', 'pp', 'alias', 'unalias'):
@@ -821,7 +802,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             self.console_print('Cannot detach, the debuggee is not attached.\n')
             return
         self.state = STATE_DETACH
-        if threading.currentThread() == self.thread:
+        if threading.currentThread() == self.clewn_thread:
             self.cmd_interrupt(*args)
 
     def cmd_args(self, *args):
@@ -838,9 +819,9 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             return
         for thread_id, frame in sys._current_frames().items():
             try:
-                if thread_id == self.clewn_thread_ident:
+                if thread_id == self.clewn_thread.ident:
                     thread = 'Clewn-thread'
-                elif thread_id == self.target_thread_ident:
+                elif thread_id == self.target_thread.ident:
                     thread = 'Debugged-thread'
                 else:
                     thread = thread_id
@@ -869,8 +850,10 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def balloon_text(self, arg):
         """Process a netbeans balloonText event."""
-        debugger.Debugger.balloon_text(self, arg)
-        if threading.currentThread() == self.thread:
+        if threading.currentThread() == self.clewn_thread:
+            debugger.Debugger.balloon_text(self, arg)
+            if self.in_interaction:
+                self.mouse_text = arg
             return
 
         try:
@@ -901,26 +884,27 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
         self.show_balloon('%s = %s' % (arg, _balloonrepr(value)))
 
-def main(pdbinst, options):
+def runscript(pdbinst, options):
     """Invoke the debuggee as a script."""
     argv = options.args
     if not argv:
         critical('usage: Pyclewn pdb scriptfile [arg] ...')
         sys.exit(1)
 
+    mainpyfile = argv[0]
+    if not os.path.exists(mainpyfile):
+        critical('file "%s" does not exist', mainpyfile)
+        sys.exit(1)
+
     tty = tty_fobj(options.tty)
     if tty:
         info('set inferior tty to %s', tty.name)
         sys.stdin = sys.stdout = sys.stderr = tty
-    mainpyfile = argv[0]
     sys.path[0] = os.path.dirname(mainpyfile)
     sys.argv = argv
     try:
         pdbinst.attached = False
         pdbinst._runscript(mainpyfile)
-        pass
-    except SystemExit:
-        raise
     except Exception as e:
         trace_type = 'Uncaught exception:\n    %r\n' %e
         trace_type += 'Entering post mortem debugging.'

@@ -4,7 +4,7 @@ News
 Pyclewn 2.0
 -----------
 
-.. December 16, 2014
+.. January 3, 2015
 
 Changes
 ^^^^^^^
@@ -15,11 +15,20 @@ Changes
 
 * The pyclewn command line optional argument selects which debugger to run.
 
+* The terminal spawned by the ``inferiortty`` command is now automatically
+  closed at the end of each debugging session.
+
+* Use now asyncio (or trollius on Python versions that do not support asyncio)
+  instead of the deprecated asyncore module.
+
 Bug fix
 ^^^^^^^
 
 * On Red Hat and Fedora Core, in the home installation scheme, the
   library is installed at $HOME/lib64/python instead of $HOME/lib/python.
+
+* The controlling terminal of the gdb inferior process is now correctly set to
+  the terminal that is used to start the ``pyclewn`` progam.
 
 Pyclewn 1.11
 ------------

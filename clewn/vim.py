@@ -8,14 +8,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-try:
-    from _thread import get_ident as get_thread_ident
-except ImportError:
-    from thread import get_ident as get_thread_ident
 
 import os
 import sys
-import time
+import asyncio
+import functools
 import tempfile
 import importlib
 import subprocess
@@ -25,13 +22,13 @@ import logging
 import errno
 import threading
 import atexit
+import platform
 
-from . import __version__, ClewnError, misc, netbeans, evtloop, tty
-from .posix import daemonize, platform_data
-
+from . import __version__, ClewnError, misc, netbeans, tty, gdb, debugger
+from .process import daemonize
 
 WINDOW_LOCATION = ('top', 'bottom', 'left', 'right', 'none')
-CONNECTION_DEFAULTs = '', 3219, 'changeme'
+CONNECTION_DEFAULTS = '', 3219, 'changeme'
 CONNECTION_TIMEOUT = 30
 CONNECTION_ERROR = """Connection to Vim timed out after %s seconds.
 Please check that the netbeans_intg feature is compiled
@@ -46,6 +43,9 @@ BG_COLORS =( 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 'DarkRed',
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('vim')
+
+def connection_timeout():
+    raise IOError(CONNECTION_ERROR % str(CONNECTION_TIMEOUT))
 
 def exec_vimcmd(commands, pathname='', error_stream=None):
     """Run a list of Vim 'commands' and return the commands output."""
@@ -103,40 +103,47 @@ def close_clewnthread(vim):
         info('enter close_clewnthread')
         sys.settrace(None)
 
-        # notify 'Clewn-thread' of pending termination
-        pdbinst = vim.debugger
-        pdbinst.exit()
-        if pdbinst.thread:
-            pdbinst.thread.join()
-        debug('Vim instance: ' + str(vim))
-        vim.shutdown()
+        # Notify 'Clewn-thread' of pending termination.
+        if not vim.closed:
+            pdbinst = vim.debugger
+            if threading.currentThread() != pdbinst.clewn_thread:
+                pdbinst.exit()
+                pdbinst.clewn_thread.join()
+            debug('Vim instance: ' + str(vim))
+            vim.shutdown()
     except KeyboardInterrupt:
         close_clewnthread(vim)
 
 def embed_pdb(vim, attach=False):
     """Start the python debugger thread."""
-    Vim.pdb_running = True
-    module = vim.setup(True, oneshot=False)
-    pdbinst = vim.debugger
-    pdbinst.target_thread_ident = get_thread_ident()
-
-    # use a daemon thread
+    # Use a daemon thread.
     class ClewnThread(threading.Thread):
         def __init__(self):
-            threading.Thread.__init__(self, name='Clewn-thread')
+            threading.Thread.__init__(self, name='ClewnThread')
             self.setDaemon(True)
         def run(self):
             if vim.testrun:
                 # Synchronisation with the test runner.
                 print('Started.', file=sys.stderr)
                 sys.stderr.flush()
-            vim.pdb_loop()
+            loop = vim.set_event_loop()
+            loop.run_until_complete(vim.pdb_run(clewn_thread_ready))
+            close_clewnthread(vim)
 
-    ClewnThread().start()
-    pdbinst.synchronisation_evt.wait(1)
-    if not pdbinst.synchronisation_evt.isSet():
+    clewn_thread = ClewnThread()
+    module = vim.setup()
+    pdbinst = vim.debugger
+    pdbinst.target_thread = threading.currentThread()
+    pdbinst.clewn_thread = clewn_thread
+
+    clewn_thread_ready = threading.Event()
+    clewn_thread.start()
+    clewn_thread_ready.wait(1)
+    if not clewn_thread_ready.isSet():
         print('Aborting, failed to start the clewn thread.', file=sys.stderr)
         sys.exit(1)
+
+    Vim.pdb_running = True
     atexit.register(close_clewnthread, vim)
 
     if attach:
@@ -144,8 +151,8 @@ def embed_pdb(vim, attach=False):
             pdbinst.let_target_run = True
         pdbinst.set_trace(sys._getframe(2))
     else:
-        pdb_main = getattr(module, 'main')
-        pdb_main(pdbinst, vim.options)
+        runscript = getattr(module, 'runscript')
+        runscript(pdbinst, vim.options)
 
 def pdb(run=False, **kwds):
     """Start pdb from within a python process.
@@ -179,25 +186,14 @@ def main(testrun=False):
     options = vim.options
     is_pdb = (vim.module == 'pdb')
 
-    pty = None
     try:
         # Vim is running the command ':Pyclewn pdb script'.
         if is_pdb and not testrun and options.args:
             embed_pdb(vim)
+            return vim
 
-        # Use pyclewn terminal as the inferior standard input/output when vim is
-        # run as 'gvim'.
-        if vim.options.editor:
-            out = exec_vimcmd(['echo has("gui_running")'],
-                                 vim.options.editor, vim.stderr_hdlr).strip()
-            if (out == '1' and vim.module == 'gdb' and not testrun and
-                    os.isatty(sys.stdin.fileno()) and not options.daemon):
-                pty = tty.GdbInferiorPty(vim.stderr_hdlr, vim.socket_map)
-                pty.start()
-                options.tty = pty.ptyname
-
-        connect = False if is_pdb else True
-        vim.setup(connect)
+        vim.set_event_loop()
+        vim.setup()
 
         # When is_pdb is True, this is either:
         #   * Vim is being spawned by the test suite.
@@ -205,65 +201,40 @@ def main(testrun=False):
         if is_pdb:
             if not testrun and not options.cargs:
                 critical('This command is meant to be run from Vim.')
-        else:
-            vim.loop()
-    except (KeyboardInterrupt, SystemExit):
-        pass
+            return
+
+        vim_tasks = []
+        # Use pyclewn terminal as the inferior standard input/output when vim is
+        # run as 'gvim'.
+        if (options.editor and vim.module == 'gdb' and not testrun and
+                    os.isatty(sys.stdin.fileno()) and not options.daemon):
+            out = exec_vimcmd(['echo has("gui_running")'],
+                                 options.editor, vim.stderr_hdlr).strip()
+            if out == '1':
+                tasks, ptyname = tty.inferior_tty(vim.stderr_hdlr, vim.loop)
+                options.tty = ptyname
+                vim_tasks.extend(tasks)
+
+        vim_tasks.append(asyncio.Task(vim.run(), loop=vim.loop))
+        misc.cancel_after_first_completed(vim_tasks, lambda: vim.signal(None),
+                                          vim.loop)
+
     except Exception as e:
         except_str = 'Exception in pyclewn: "%s"\n' \
                      '%s\n'                         \
                      'pyclewn aborting...\n'        \
                             % (e, traceback.format_tb(sys.exc_info()[2])[-1])
         critical('\n' + except_str)
-        if vim.nbserver.netbeans:
-            vim.nbserver.netbeans.show_balloon(except_str)
+        if vim.netbeans:
+            vim.netbeans.show_balloon(except_str)
     finally:
-        if pty:
-            pty.close()
         debug('Vim instance: ' + str(vim))
         vim.shutdown()
 
     return vim
 
 class Vim(object):
-    """The Vim class.
-
-    Class attributes:
-        pdb_running: boolean
-            True when pdb is running
-
-    Instance attributes:
-        testrun: boolean
-            True when run from a test suite
-        argv: list
-            pyclewn options as a list
-        file_hdlr: logger.FileHandler
-            log file
-        stderr_hdlr: misc.StderrHandler
-            sdterr stream handler
-        socket_map: asyncore socket dictionary
-            socket and socket-like objects listening on the select
-            event loop
-        debugger: debugger.Debugger
-            the debugger instance run by Vim
-        clazz: class
-            the selected Debugger subclass
-        module: module
-            the Debugger subclass module
-        f_script: file
-            the Vim script file object
-        nbserver: netbeans.Server
-            the netbeans listening server instance
-        vim_process: subprocess.Popen
-            the vim Popen instance
-        options: optparse.Values
-            the command line options
-        closed: boolean
-            True when shutdown has been run
-        poll: evtloop.Poll
-            manage the select thread
-
-    """
+    """The Vim class."""
 
     pdb_running = False
 
@@ -271,18 +242,29 @@ class Vim(object):
         self.testrun = testrun
         self.file_hdlr = None
         self.stderr_hdlr = None
-        self.socket_map = {}
-        self.debugger = None
         self.clazz = None
         self.module = None
         self.f_script = None
-        self.nbserver = None
-        self.poll = None
         self.vim_process = None
         self.options = None
         self.closed = False
         self.parse_options(argv)
+
+        self.debugger = None
+        self.nbserver = None
+        self.netbeans = None
+        self.loglevel = None
+        self.loop = None
         self.setlogger()
+
+    def set_event_loop(self):
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        self.events = asyncio.Queue(loop=self.loop)
+        self.set_exception_handler()
+        if self.loglevel is not None and self.loglevel <= logging.DEBUG:
+            self.loop.set_debug(True)
+        return self.loop
 
     def vim_version(self):
         """Check Vim version."""
@@ -290,7 +272,7 @@ class Vim(object):
         # test if Vim contains the netbeans 'getLength' fix
         # test if Vim contains the netbeans 'cmd on NoName buffer ignored' fix
 
-        # pyclewn is started from within vim
+        # pyclewn is started from within vim.
         # This is supported since vim73. When using 'pdb', pyclewn has no way
         # to know which vim it is connected to, unless using the netbeans
         # version, but this does not change consistently with vim netbeans
@@ -342,40 +324,23 @@ class Vim(object):
         except OSError:
             critical('cannot start Vim'); raise
 
-    def setup(self, connect, oneshot=True):
-        """Setup the debugging session.
+    def setup(self):
+        info('platform: %s' % platform.platform())
 
-        Method parameters:
-            connect: boolean
-                when True, starts 'nbserver'
-            oneshot: boolean
-                when True, 'nbserver' accepts only a single connection
-        """
-        # log platform information for debugging
-        info(platform_data())
+        # Get the connection parameters.
+        conn = list(CONNECTION_DEFAULTS)
+        if self.options.netbeans:
+            conn = self.options.netbeans.split(':')
+            conn[1:] = conn[1:] or [CONNECTION_DEFAULTS[1]]
+            conn[2:] = conn[2:] or [CONNECTION_DEFAULTS[2]]
+        assert len(conn) == 3, 'too many netbeans connection parameters'
+        conn[1] = conn[1] or CONNECTION_DEFAULTS[1]
+        self.connection = conn
 
-        # Listen on netbeans port.
-        if connect:
-            self.nbserver = netbeans.Server(self.socket_map)
-            # Instantiate 'poll' after addition of 'nbserver' to the asyncore
-            # 'socket_map'.
-            self.poll = evtloop.Poll(self.socket_map)
-            conn = list(CONNECTION_DEFAULTs)
-            if self.options.netbeans:
-                conn = self.options.netbeans.split(':')
-                conn[1:] = conn[1:] or [CONNECTION_DEFAULTs[1]]
-                conn[2:] = conn[2:] or [CONNECTION_DEFAULTs[2]]
-            assert len(conn) == 3, 'too many netbeans connection parameters'
-            conn[1] = conn[1] or CONNECTION_DEFAULTs[1]
-            self.nbserver.bind_listen(oneshot, *conn)
-
-        try:
-            module = importlib.import_module('clewn.%s' % self.module)
-        except ImportError as e:
-            raise ImportError('cannot import module "clewn.%s":\n%s' % (self.module, e))
+        module = importlib.import_module('clewn.%s' % self.module)
         class_name = self.module[0].upper() + self.module[1:]
         self.clazz = getattr(module, class_name)
-        self.debugger = self.clazz(self.options, self.socket_map, self.testrun)
+        self.debugger = self.clazz(self)
 
         self.vim_version()
         if self.options.editor:
@@ -386,19 +351,25 @@ class Vim(object):
 
         return module
 
-    def shutdown(self, logging_shutdown=True):
+    def shutdown(self):
         if self.closed:
             return
         self.closed = True
+
+        while not self.events.empty():
+            event = self.events. get_nowait()
+            warning('pending event at shutdown: ', event)
 
         # Remove the Vim script file in case the script failed to remove itself.
         if (self.f_script and not (self.module == 'pdb' and self.testrun)):
             del self.f_script
 
+        if self.debugger:
+            self.debugger.close()
         if self.nbserver:
-            if self.nbserver.netbeans:
-                self.nbserver.netbeans.close()
             self.nbserver.close()
+        if self.netbeans:
+            self.netbeans.close()
         info('pyclewn exiting')
 
         if self.testrun:
@@ -420,17 +391,8 @@ class Vim(object):
                 logging.getLogger().removeHandler(self.file_hdlr)
                 self.file_hdlr.close()
 
-        # do not shutdown logging with gdb as the SIGCHLD handler may overwrite
-        # all the traces after the shutdown
-        elif self.module != 'gdb' and logging_shutdown:
-            if self.file_hdlr is not None:
-                logging.getLogger().removeHandler(self.file_hdlr)
-                self.file_hdlr.close()
-
-        for asyncobj in list(self.socket_map.values()):
-            asyncobj.close()
-        if self.poll:
-            self.poll.close()
+        if self.loop:
+            self.loop.close()
 
     def parse_options(self, argv):
         """Parse the command line options."""
@@ -510,7 +472,7 @@ class Vim(object):
                 help='set netBeans connection parameters to CONN with CONN as'
                 ' \'host[:port[:passwd]]\', (the default is \'%s\''
                 ' where the empty host represents INADDR_ANY)' %
-                ':'.join([str(x) for x in CONNECTION_DEFAULTs]))
+                ':'.join([str(x) for x in CONNECTION_DEFAULTS]))
         parser.add_option('-l', '--level', metavar='LEVEL',
                 type='string', default='',
                 help='set the log level to LEVEL: %s (default \'error\')'
@@ -568,11 +530,17 @@ class Vim(object):
 
     def setlogger(self):
         """Setup the root logger with handlers: stderr and optionnaly a file."""
+        class Formatter(logging.Formatter):
+            def format(self, record):
+                if record.name == 'asyncio':
+                    record.name = 'aio'
+                record.created %= 100
+                return logging.Formatter.format(self, record)
+
         # do not handle exceptions while emit(ing) a logging record
         logging.raiseExceptions = False
         # add nbdebug log level
         logging.addLevelName(misc.NBDEBUG, misc.NBDEBUG_LEVEL_NAME.upper())
-
         # can't use basicConfig with kwargs, only supported with 2.4
         root = logging.getLogger()
 
@@ -587,12 +555,11 @@ class Vim(object):
         if not root.handlers:
             root.manager.emittedNoHandlerWarning = True
             if self.options.level == misc.NBDEBUG:
-                fmt = logging.Formatter(
+                fmt = Formatter(
                         '%(created).3f %(name)-4s %(levelname)-7s %(message)s')
             else:
-                fmt = logging.Formatter(
+                fmt = Formatter(
                         '%(name)-4s %(levelname)-7s %(message)s')
-
             if self.options.file:
                 try:
                     file_hdlr = logging.FileHandler(self.options.file, 'w')
@@ -604,90 +571,151 @@ class Vim(object):
                     self.file_hdlr = file_hdlr
 
             # default level: CRITICAL
-            level = logging.CRITICAL
+            self.loglevel = logging.CRITICAL
             if self.options.level:
-                level = self.options.level
+                self.loglevel = self.options.level
 
             # add an handler to stderr, except when running the testsuite
             # or a log file is used with a level not set to critical
             if (not self.testrun and
-                        not (self.options.file and level != logging.CRITICAL)):
+                        not (self.options.file and
+                            self.loglevel != logging.CRITICAL)):
                 self.stderr_hdlr = misc.StderrHandler()
                 self.stderr_hdlr.setFormatter(fmt)
                 root.addHandler(self.stderr_hdlr)
 
-            root.setLevel(level)
+            root.setLevel(self.loglevel)
 
-    def loop(self):
-        """The event loop."""
+    def set_exception_handler(self):
+        def exception_handler(loop, context):
+            # A read() syscall returns -1 when the slave side of the pty is
+            # closed. Ignore the exception.
+            exc = context.get('exception')
+            if (isinstance(context.get('protocol'), gdb.Gdb) and
+                    isinstance(exc, OSError) and exc.errno == errno.EIO):
+                return
 
-        start = time.time()
+            loop.default_exception_handler(context)
+            # Terminate the vim.run() loop.
+            self.signal(None)
+
+        self.loop.set_exception_handler(exception_handler)
+
+    def signal(self, event):
+        self.events.put_nowait(event)
+
+    @asyncio.coroutine
+    def run(self):
+        protocol_factory = functools.partial(netbeans.Netbeans,
+                                             self.signal, self.connection[2])
+        self.nbserver = yield from self.loop.create_server(protocol_factory,
+                                        self.connection[0], self.connection[1])
+        timeout = self.loop.call_later(CONNECTION_TIMEOUT, connection_timeout)
+
         while True:
-            # Accept the netbeans connection.
-            if start is not False:
-                if time.time() - start > CONNECTION_TIMEOUT:
-                    raise IOError(CONNECTION_ERROR % str(CONNECTION_TIMEOUT))
-                nbsock = self.nbserver.netbeans
-                if nbsock and nbsock.ready:
-                    start = False
-                    info(nbsock)
-                    nbsock.set_debugger(self.debugger)
+            event = yield from self.events.get()
+            if timeout:
+                timeout.cancel()
+                timeout = None
 
-                    # Daemonize now, no more critical startup errors to
-                    # print on the console.
+            if isinstance(event, netbeans.Netbeans):
+                if event is self.netbeans:
+                    if not self.netbeans.connected:
+                        if self.netbeans.debugger is not None:
+                            # Wait until the debugger has signaled it is closed.
+                            continue
+                        else:
+                            info('signaled netbeans is disconnected')
+                            break
+                    # Netbeans signaling it is ready.
+                    info(self.netbeans)
+                    self.netbeans.set_debugger(self.debugger)
+                    # Daemonize now, no more critical startup errors to print on
+                    # the console.
                     if self.options.daemon:
                         daemonize()
-                    info('pyclewn version %s and the %s debugger',
-                                        __version__, self.module)
-            elif nbsock.connected:
-                # Instantiate a new debugger.
-                if self.debugger.closed:
-                    self.debugger = self.clazz(self.options, self.socket_map,
-                                               self.testrun)
-                    nbsock.set_debugger(self.debugger)
+                    info('pyclewn version %s and the %s debugger', __version__,
+                         self.module)
+                elif self.netbeans:
+                    nb = event
+                    if nb.connected:
+                        info('rejecting connection from %s:'
+                             ' netbeans already connected', nb.addr)
+                        nb.close()
+                else:
+                    # Netbeans connection accepted.
+                    self.netbeans = event
+
+            elif self.netbeans and isinstance(event, debugger.Debugger):
+                if self.netbeans.connected:
+                    # The debugger has been closed, instantiate a new one.
+                    self.debugger = self.clazz(self)
+                    self.netbeans.set_debugger(self.debugger)
                     info('new "%s" instance', self.module)
-            else:
-                if not self.debugger.started or self.debugger.closed:
+                else:
+                    info('signaled debugger closed and netbeans disconnected')
                     break
 
-            timeout = self.debugger._call_jobs()
-            self.poll.run(timeout=timeout)
+            else:
+                info('got signal %s', event)
+                break
 
-        self.debugger.close()
+    @asyncio.coroutine
+    def pdb_run(self, clewn_thread_ready):
+        """Run the pdb clewn thread."""
+        protocol_factory = functools.partial(netbeans.Netbeans,
+                                             self.signal, self.connection[2])
+        self.nbserver = yield from self.loop.create_server(protocol_factory,
+                                        self.connection[0], self.connection[1])
+        clewn_thread_ready.set()
 
-    def pdb_loop(self):
-        """Run the clewn pdb thread."""
-        pdbinst = self.debugger
-        pdbinst.thread = threading.currentThread()
-        pdbinst.clewn_thread_ident = get_thread_ident()
-        pdbinst.synchronisation_evt.set()
-        last_nbsock = None
-        while not pdbinst.closing:
-            nbsock = self.nbserver.netbeans
-            # a new netbeans connection, the server has closed last_nbsock
-            if nbsock != last_nbsock and nbsock.ready:
-                info(nbsock)
-                last_nbsock = nbsock
-                nbsock.set_debugger(pdbinst)
-                if last_nbsock is None:
-                    version = __tag__
-                    if __changeset__:
-                        version += '.' + __changeset__
-                    info('pyclewn version %s and the %s debugger',
-                                        version, self.module)
+        while True:
+            event = yield from self.events.get()
+            if isinstance(event, netbeans.Netbeans):
+                if event is self.netbeans:
+                    if not self.netbeans.connected:
+                        if self.netbeans.debugger is not None:
+                            self.netbeans.close()
+                            self.netbeans = None
+                            info('the current netbeans session is closed')
+                            continue
+                        else:
+                            info('signaled netbeans is disconnected')
+                            break
+                    # Netbeans signaling it is ready.
+                    info(self.netbeans)
+                    self.netbeans.set_debugger(self.debugger)
+                    info('pyclewn version %s and the %s debugger', __version__,
+                         self.module)
+                elif self.netbeans:
+                    nb = event
+                    if nb.connected:
+                        info('rejecting connection from %s:'
+                             ' netbeans already connected', nb.addr)
+                        nb.close()
+                else:
+                    info('netbeans connection accepted')
+                    self.netbeans = event
 
-            timeout = pdbinst._call_jobs()
-            self.poll.run(timeout=timeout)
-            pdbinst.synchronisation_evt.set()
+            elif isinstance(event, debugger.Debugger):
+                # Ignore debugger close events since this only indicates here
+                # that the netbeans socket is closed. The target thread is
+                # responsible for terminating the clewn thread by calling
+                # pdb.exit().
+                info('ignoring a debugger close event')
 
-        info('clewn thread terminating')
+            else:
+                info('got signal %s', event)
+                if self.netbeans:
+                    self.netbeans.close()
+                break
 
     def __str__(self):
         """Return a representation of the whole stuff."""
         self_str = ''
-        if self.nbserver and self.nbserver.netbeans is not None:
+        if self.netbeans is not None:
             self_str = '\n%s%s' % (pformat('options', self.options),
-                            pformat('netbeans', self.nbserver.netbeans))
+                            pformat('netbeans', self.netbeans))
         if self.debugger is not None:
             self_str += ('debugger %s:\n%s\n'
                                 % (self.module, self.debugger))

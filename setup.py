@@ -10,6 +10,7 @@ import sys
 import os
 import string
 import re
+import asyncio
 import subprocess
 import importlib
 import distutils.core as core
@@ -217,6 +218,9 @@ class Test(core.Command):
             print(the_module.__name__)
             sys.stdout.flush()
             test_support.run_suite(suite, self.detail, self.stop, self.pdb)
+
+        loop = asyncio.get_event_loop()
+        loop.close()
 
 def main():
     core.setup(

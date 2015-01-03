@@ -31,16 +31,15 @@ import os
 import re
 import time
 import logging
-import heapq
 import string
 import copy
 import subprocess
+import asyncio
 from abc import ABCMeta, abstractmethod
 
 from . import __version__, ClewnError, misc, netbeans
 
-__all__ = ['LOOP_TIMEOUT', 'restart_timer', 'Debugger']
-LOOP_TIMEOUT = .040
+BCKGROUND_JOB_DELAY = .200
 
 RE_KEY =    \
     r'^\s*(?P<key>'                                                     \
@@ -293,33 +292,6 @@ def name_lnum(name_lnum):
         lnum = int(matchobj.group('lnum'))
     return name, lnum
 
-def restart_timer(timeout):
-    """Decorator to re-schedule the method at 'timeout', after it has run."""
-    def decorator(f):
-        """The decorator."""
-        def _newf(self, *args, **kwargs):
-            """The decorated method."""
-            job = getattr(self, f.__name__)
-            ret = f(self, *args, **kwargs)
-            self.timer(job, timeout)
-            return ret
-        return _newf
-    return decorator
-
-class Job(object):
-    """Job instances are pushed in an ordered heapq queue."""
-
-    def __init__(self, time, job):
-        self.time = time
-        self.job = job
-
-    def __lt__(self, o): """Comparison method."""; return self.time < o.time
-    def __le__(self, o): """Comparison method."""; return self.time <= o.time
-    def __eq__(self, o): """Comparison method."""; return self.time == o.time
-    def __ne__(self, o): """Comparison method."""; return self.time != o.time
-    def __gt__(self, o): """Comparison method."""; return self.time > o.time
-    def __ge__(self, o): """Comparison method."""; return self.time <= o.time
-
 class Debugger(object):
     """Abstract base class for pyclewn debuggers.
 
@@ -355,25 +327,20 @@ class Debugger(object):
             One can use template substitution on 'command', see the file
             runtime/.pyclewn_keys.template for a description of this
             feature.
-        options: optparse.Values
-            The pyclewn command line parameters.
-        vim_socket_map: dict
-            The asyncore socket dictionary
-        testrun: boolean
-            True when run from a test suite
         started: boolean
             True when the debugger is started.
         closed: boolean
             True when the debugger is closed.
         pyclewn_cmds: dict
             The subset of 'cmds' that are pyclewn specific commands.
+        bg_jobs: list
+            list of background jobs
+        proc_inftty: asyncio.subprocess
+            the inferiortty subprocess
         __nbsock: netbeans.Netbeans
-            The netbeans asynchat socket.
-        _jobs: list
-            list of pending jobs to run on a timer event in the
-            dispatch loop
-        _jobs_enabled: bool
-            process enqueued jobs when True
+            The netbeans protocol.
+        _delayed_call: delayed call
+            run jobs in the background
         _last_balloon: str
             The last balloonText event received.
         prompt: str
@@ -385,12 +352,9 @@ class Debugger(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, options, vim_socket_map, testrun):
+    def __init__(self, vim):
         """Initialize instance variables and the prompt."""
-        self.options = options
-        self.vim_socket_map = vim_socket_map
-        self.testrun = testrun
-
+        self.vim = vim
         self.cmds = {
             'dumprepr': (),
             'help': (),
@@ -404,30 +368,18 @@ class Debugger(object):
         self.cmds[''] = []
         self.started = False
         self.closed = False
-        self._jobs = []
-        self._jobs_enabled = False
         self._last_balloon = ''
         self.prompt = '(%s) ' % self.__class__.__name__.lower()
         self._consbuffered = False
         self.__nbsock = None
         self._read_keysfile()
-
-        # schedule the first 'debugger_background_jobs' method
-        self.timer(self.debugger_background_jobs, LOOP_TIMEOUT)
+        self.bg_jobs = []
+        self.proc_inftty = None
+        self._delayed_call = None
 
     def set_nbsock(self, nbsock):
         """Set the netbeans socket."""
         self.__nbsock = nbsock
-
-    def set_nbsock_owner(self, thread_ident, socket_map=None):
-        """Add nbsock to 'socket_map' and make 'thread_ident' nbsock owner."""
-        if self.__nbsock:
-            self.__nbsock.set_owner_thread(thread_ident)
-            fd = self.__nbsock._fileno
-            if socket_map is not None:
-                socket_map[fd] = self.__nbsock
-            return fd
-        return None
 
     #-----------------------------------------------------------------------
     #   Overidden methods by the Debugger subclass.
@@ -447,7 +399,6 @@ class Debugger(object):
                 The arguments of the command.
 
         """
-        pass
 
     @abstractmethod
     def default_cmd_processing(self, cmd, args):
@@ -463,7 +414,6 @@ class Debugger(object):
                 The arguments of the command.
 
         """
-        pass
 
     @abstractmethod
     def post_cmd(self, cmd, args):
@@ -479,7 +429,6 @@ class Debugger(object):
                 The arguments of the command.
 
         """
-        pass
 
     def vim_script_custom(self, prefix):
         """Return debugger specific Vim statements as a string.
@@ -591,6 +540,9 @@ class Debugger(object):
                 The line number in the Vim buffer.
 
         """
+        if not self.__nbsock:
+            return
+
         dbgvarbuf = self.__nbsock.dbgvarbuf
         if dbgvarbuf is None:
             return
@@ -680,55 +632,59 @@ class Debugger(object):
         """Flush the console."""
         self.__nbsock.console.flush()
 
-    def timer(self, callme, delta):
-        """Schedule the 'callme' job at 'delta' time from now.
-
-        The timer granularity is LOOP_TIMEOUT, so it does not make sense
-        to request a 'delta' time less than LOOP_TIMEOUT.
-
-        Method parameters:
-            callme: callable
-                the job being scheduled
-            delta: float
-                time interval
-
-        """
-        heapq.heappush(self._jobs, Job(time.time() + delta, callme))
-
-    def inferiortty(self):
+    def inferiortty(self, set_inferior_tty_cb):
         """Spawn the inferior terminal."""
-        args = self.options.terminal.split(',')
+        @asyncio.coroutine
+        def _set_inferior_tty():
+            if self.proc_inftty:
+                if self.proc_inftty.returncode is None:
+                    self.proc_inftty.terminate()
+                self.proc_inftty = None
+            try:
+                self.proc_inftty = proc = yield from \
+                                        asyncio.create_subprocess_exec(*args)
+                info('inferiortty: {}'.format(args))
+            except OSError as e:
+                self.console_print('Cannot spawn terminal: {}\n'.format(e))
+            else:
+                start = time.time()
+                while time.time() - start < 2:
+                    try:
+                        with open(result_file.name) as f:
+                            lines = f.readlines()
+                            # Commands found in the result file.
+                            if len(lines) == 2:
+                                set_inferior_tty_cb(lines[0])
+                                set_inferior_tty_cb(lines[1])
+                                break
+                    except IOError as e:
+                        self.console_print(
+                            'Cannot set the inferior tty: {}\n'.format(e))
+                        proc.terminate()
+                        break
+                    yield from asyncio.sleep(.100, loop=self.vim.loop)
+                else:
+                    self.console_print('Failed to start inferior_tty.py.\n')
+                    proc.terminate()
+
+        args = self.vim.options.terminal.split(',')
         result_file = misc.tmpfile('dbg')
         args.extend(['inferior_tty.py', result_file.name])
-        info('inferiortty: {}'.format(args))
-        try:
-            subprocess.Popen(args)
-        except OSError as e:
-            self.console_print('Cannot spawn terminal: {}\n'.format(e))
-            return
-
-        start = time.time()
-        while time.time() - start < 2:
-            try:
-                with open(result_file.name) as f:
-                    lines = f.readlines()
-                    # commands found in the result file
-                    if len(lines) == 2 and lines[0].startswith('set'):
-                        return lines
-            except IOError as e:
-                self.console_print(
-                        'Cannot set the inferior tty: {}\n'.format(e))
-                return
-            time.sleep(.20)
-
-        self.console_print('Failed to start inferior_tty.py.\n')
+        asyncio.Task(_set_inferior_tty(), loop=self.vim.loop)
 
     def close(self):
         """Close the debugger and remove all signs in Vim."""
         info('enter Debugger.close')
+        if self.proc_inftty:
+            if self.proc_inftty.returncode is None:
+                self.proc_inftty.terminate()
+            self.proc_inftty = None
         if not self.closed:
             self.started = False
             self.closed = True
+            self.vim.signal(self)
+            if self._delayed_call:
+                self._delayed_call.cancel()
             info('in close: remove all annotations')
             self.remove_all()
 
@@ -750,7 +706,13 @@ class Debugger(object):
         """
         if not self.started:
             self.started = True
-            # print the banner only with the first netbeans instance
+
+            # Schedule the first '_background_jobs' method.
+            self.bg_jobs.append([self.flush_console])
+            self._delayed_call = self.vim.loop.call_later(BCKGROUND_JOB_DELAY,
+                                            self._background_jobs)
+
+            # Print the banner only with the first netbeans instance.
             if not self.closed:
                 self.console_print(
                     'Pyclewn version %s starting a new instance of %s.\n',
@@ -765,9 +727,16 @@ class Debugger(object):
     def start(self):
         """This method must be implemented in a subclass."""
 
-    @restart_timer(LOOP_TIMEOUT)
-    def debugger_background_jobs(self):
+    def _background_jobs(self):
         """Flush the console buffer."""
+        self._delayed_call = self.vim.loop.call_later(BCKGROUND_JOB_DELAY,
+                                        self._background_jobs)
+        for job in self.bg_jobs:
+            callback = job[0]
+            args = job[1:]
+            callback(*args)
+
+    def flush_console(self):
         if not self.__nbsock:
             return
         console = self.__nbsock.console
@@ -795,7 +764,7 @@ class Debugger(object):
 
         """
         # Create the vim script in a temporary file.
-        options = self.options
+        options = self.vim.options
         prefix = options.prefix.capitalize()
         f = None
         try:
@@ -903,28 +872,6 @@ class Debugger(object):
 
         return f
 
-    def _call_jobs(self):
-        """Call the scheduled jobs.
-
-        This method is called in Vim dispatch loop.
-        Return the timeout for the next iteration of the event loop.
-
-        """
-        if not self.__nbsock:
-            return LOOP_TIMEOUT
-        timeout = LOOP_TIMEOUT
-        if not self._jobs_enabled and self.__nbsock.ready:
-            self._jobs_enabled = True
-        if self._jobs_enabled:
-            now = time.time()
-            while self._jobs and now >= self._jobs[0].time:
-                callme = heapq.heappop(self._jobs).job
-                callme()
-                now = time.time()
-            if self._jobs:
-                timeout = min(timeout, abs(self._jobs[0].time - now))
-        return timeout
-
     def _do_cmd(self, method, cmd, args):
         """Process 'cmd' and its 'args' with 'method'."""
         self.pre_cmd(cmd, args)
@@ -1011,7 +958,7 @@ class Debugger(object):
         # dumprepr is used by the testsuite to detect the end of
         # processing by pyclewn of all commands, so as to parse the
         # results and check the test
-        if not (self.testrun and args):
+        if not (self.vim.testrun and args):
             self.console_print(
                 'netbeans:\n%s\n' % misc.pformat(self.__nbsock.__dict__)
                 + '%s:\n%s\n' % (self.__class__.__name__.lower(), self))
@@ -1053,7 +1000,7 @@ class Debugger(object):
 
     def not_a_pyclewn_method(self, cmd):
         """"Warn that 'cmd' cannot be used as 'C' parameter."""
-        table = {'cmd': cmd, 'C': self.options.prefix}
+        table = {'cmd': cmd, 'C': self.vim.options.prefix}
         self.console_print("'%(cmd)s' cannot be used as '%(C)s' parameter,"
                 " use '%(C)s%(cmd)s' instead.\n" % table)
         self.print_prompt()

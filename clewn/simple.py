@@ -252,7 +252,7 @@ class Simple(debugger.Debugger):
 
         # start the debuggee
         if self.inferior is None:
-            self.inferior = Target(self.options.daemon)
+            self.inferior = Target(self.vim.options.daemon)
             self.inferior.start()
 
     def close(self):

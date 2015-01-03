@@ -19,7 +19,7 @@ import collections
 from itertools import takewhile
 
 from . import ClewnError, gdbmi, misc, debugger
-from .posix import ProcessChannel
+from .process import Process
 
 # On most other platforms the best timer is time.time()
 _timer = time.time
@@ -519,7 +519,7 @@ class GlobalSetup(misc.Singleton):
             self.illegal_setargs_prefix = {misc.smallpref_inlist(x, setargs)
                                             for x in self.illegal_setargs}
 
-class Gdb(debugger.Debugger, ProcessChannel):
+class Gdb(debugger.Debugger, Process):
     """The Gdb debugger is a frontend to GDB/MI.
 
     Instance attributes:
@@ -609,11 +609,11 @@ class Gdb(debugger.Debugger, ProcessChannel):
         self.mapkeys.update(MAPKEYS)
 
         self.state = self.STATE_INIT
-        self.pgm = self.options.pgm or 'gdb'
-        self.arglist = self.options.args
+        self.pgm = self.vim.options.pgm or 'gdb'
+        self.arglist = self.vim.options.args
         self.version = gdb_version(self.pgm)
         self.f_init = None
-        ProcessChannel.__init__(self, self.vim_socket_map, self.getargv())
+        Process.__init__(self, self.vim.loop)
 
         self.info = gdbmi.Info(self)
         self.globaal = GlobalSetup(self.pgm, self.pyclewn_cmds,
@@ -637,10 +637,8 @@ class Gdb(debugger.Debugger, ProcessChannel):
         self.dereference = True
         self.project = ''
         self.foldlnum = None
-        self.parse_paramlist(self.options.gdb)
-
-        # schedule the first 'gdb_background_jobs' method
-        self.timer(self.gdb_background_jobs, debugger.LOOP_TIMEOUT)
+        self.parse_paramlist(self.vim.options.gdb)
+        self.bg_jobs.append([self.gdb_background_jobs])
 
     def parse_paramlist(self, parameters):
         """Process the class parameter list."""
@@ -679,7 +677,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
     def getargv(self):
         """Return the gdb argv list."""
         argv = [self.pgm]
-        argv += ['-tty=%s' % self.options.tty]
+        argv += ['-tty=%s' % self.vim.options.tty]
 
         # build the gdb init temporary file
         with misc.TmpFile('gdbscript') as self.f_init:
@@ -712,21 +710,14 @@ class Gdb(debugger.Debugger, ProcessChannel):
     def start(self):
         """Start gdb."""
         self.console_print('\n')
-        ProcessChannel.start(self)
+        Process.start(self, self.getargv())
 
     def print_prompt(self):
         """Print the prompt."""
         if not self.gdb_busy:   # print prompt only after gdb has started
             debugger.Debugger.print_prompt(self)
 
-    @debugger.restart_timer(debugger.LOOP_TIMEOUT)
     def gdb_background_jobs(self):
-        """Run a scheduled job on a timer event.
-
-        Set all breakpoints on a multiple choice after a timeout.
-        Pop a command from the fifo and run it.
-
-        """
         if self.multiple_choice:
             if _timer() - self.multiple_choice > 0.500:
                 self.multiple_choice = 0
@@ -780,9 +771,6 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
     def handle_line(self, line):
         """Process the line received from gdb."""
-        if self.fileasync is None:
-            return
-
         debug(line)
         if not line:
             error('handle_line: processing an empty line')
@@ -919,22 +907,18 @@ class Gdb(debugger.Debugger, ProcessChannel):
 
     def write(self, data):
         """Write data to gdb."""
-        ProcessChannel.write(self, data)
+        Process.write(self, data)
         debug(data.rstrip('\n'))
 
     def close(self):
         """Close gdb."""
-        # This method may be called by the SIGCHLD handler and therefore must be
-        # reentrant.
         if self.state == self.STATE_RUNNING:
             self.cmd_quit()
             return
 
-        if (not self.closed and
-                    (self.state == self.STATE_CLOSING
-                     or self.state == self.STATE_QUITTING)):
+        if not self.closed:
             debugger.Debugger.close(self)
-            ProcessChannel.close(self)
+            Process.close(self)
 
             # clear varobj
             rootvarobj = self.info.varobj
@@ -1029,7 +1013,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
     def cmd_inferiortty(self, *args):
         """Spawn gdb inferior terminal and setup gdb with this terminal."""
 
-        def set_inferior_tty(line):
+        def set_inferior_tty_cb(line):
             cmd, args = line.split(' ', 1)
             self.cmd_fifo.append(
                     (self.default_cmd_processing,
@@ -1042,10 +1026,7 @@ class Gdb(debugger.Debugger, ProcessChannel):
             ' starting the inferior.\n'
             )
         else:
-            lines = self.inferiortty()
-            if lines:
-                set_inferior_tty(lines[0])
-                set_inferior_tty(lines[1])
+            self.inferiortty(set_inferior_tty_cb)
         self.print_prompt()
 
     def cmd_cwindow(self, cmd, *args):
@@ -1201,16 +1182,6 @@ class Gdb(debugger.Debugger, ProcessChannel):
             return
 
         self.sendintr()
-        if self.ttyname is None:
-            self.cmd_sigint.__func__.__doc__ = \
-                'Command ignored: gdb does not handle interrupts over pipes.'
-            self.console_print('\n%s\n', self.cmd_sigint.__doc__)
-            self.console_print('To interrupt the program being debugged, '
-                'send a SIGINT signal\n'
-                'from the shell. For example, type from the vim command'
-                ' line:\n'
-                '    :!kill -SIGINT $(pgrep program_name)\n'
-                )
         self.console_print("Quit\n")
 
     #-----------------------------------------------------------------------

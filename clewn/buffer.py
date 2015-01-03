@@ -43,7 +43,7 @@ class Buffer(dict):
         buf_id: int
             netbeans buffer number, starting at one
         nbsock: netbeans.Netbeans
-            the netbeans asynchat socket
+            the netbeans protocol
         registered: boolean
             True: buffer registered to Vim with netbeans
         editport: ClewnBuffer
@@ -149,7 +149,7 @@ class Annotation(object):
         lnum: int
             line number
         nbsock: netbeans.Netbeans
-            the netbeans asynchat socket
+            the netbeans protocol
         disabled: boolean
             True when the breakpoint is disabled
         sernum: LastSernum
@@ -263,7 +263,7 @@ class BufferSet(dict):
 
     Instance attributes:
         nbsock: netbeans.Netbeans
-            the netbeans asynchat socket
+            the netbeans protocol
         buf_list: python list
             the list of Buffer instances indexed by netbeans 'bufID'
         anno_dict: dictionary

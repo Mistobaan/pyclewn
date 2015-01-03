@@ -8,21 +8,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-try:
-    from _thread import get_ident as get_thread_ident
-except ImportError:
-    from thread import get_ident as get_thread_ident
 
 import sys
 import time
 import os
+import asyncio
 import logging
 import re
 import socket
-import asyncore
-import asynchat
-import fcntl
 import difflib
+from collections import deque
 from abc import ABCMeta, abstractmethod
 
 from . import ClewnError, misc
@@ -130,14 +125,6 @@ def full_pathname(name):
         name = os.path.abspath(name)
     return name
 
-def set_close_on_exec(socket):
-    """Set the FD_CLOEXEC flag."""
-    if hasattr(fcntl, 'F_SETFD'):
-        fd = socket.fileno()
-        flags = fcntl.fcntl(fd, fcntl.F_GETFD, 0)
-        flags = flags | fcntl.FD_CLOEXEC
-        fcntl.fcntl(fd, fcntl.F_SETFD, flags)
-
 class LineCluster(object):
     """Group lines in a bounded list of elements of a maximum size.
 
@@ -189,7 +176,7 @@ class ClewnBuffer(object):
         buf: Buffer
             the Buffer instance
         nbsock: netbeans.Netbeans
-            the netbeans asynchat socket
+            the netbeans protocol
         visible: boolean
             when True, the buffer is displayed in a Vim window
         editing: boolean
@@ -489,7 +476,7 @@ class Reply(object):
         seqno: int
             netbeans sequence number
         nbsock: netbeans.Netbeans
-            the netbeans asynchat socket
+            the netbeans protocol
     """
 
     __metaclass__ = ABCMeta
@@ -512,7 +499,6 @@ class Reply(object):
     @abstractmethod
     def __call__(self, seqno, nbstring, arg_list):
         """Process the netbeans reply."""
-        pass
 
 class insertReply(Reply):
     """Check the reply to an insert function."""
@@ -559,86 +545,6 @@ class getLengthReply(Reply):
             else:
                 debug('ignoring: %s', err)
 
-class Server(asyncore.dispatcher, object):
-    """Accept a connection on the netbeans port
-
-    Instance attributes:
-        oneshot: boolean
-            accept a single connection
-        netbeans: Netbeans
-            the netbeans data socket
-        passwd: string
-            the connection password
-    """
-
-    def __init__(self, socket_map):
-        asyncore.dispatcher.__init__(self, map=socket_map)
-        self.oneshot = False
-        self.netbeans = None
-        self.passwd = ''
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    def handle_error(self):
-        """Raise the exception."""
-        raise
-
-    def handle_expt(self):
-        """We are not listening on exceptional conditions."""
-        assert False, 'unhandled exceptional condition'
-
-    def handle_read(self):
-        """Not implemented."""
-        assert False, 'unhandled read event in server'
-
-    def handle_write(self):
-        """Not implemented."""
-        assert False, 'unhandled write event in server'
-
-    def handle_connect(self):
-        """Not implemented."""
-        assert False, 'unhandled connect event in server'
-
-    def bind_listen(self, oneshot, host, port, passwd):
-        """Listen on the netbeans port."""
-        self.oneshot = oneshot
-        self.passwd = passwd
-        try:
-            port = int(port)
-        except ValueError:
-            critical('"%s" is not a port number', port); raise
-        try:
-            set_close_on_exec(self.socket)
-            self.set_reuse_addr()
-            self.bind((host, port))
-            self.listen(1)
-        except socket.error:
-            critical('cannot listen on "(%s, %s)"', host, port); raise
-
-    def handle_accept(self):
-        """Accept the connection from Vim."""
-        try:
-            conn, addr = self.socket.accept()
-            if self.netbeans and self.netbeans.connected:
-                conn.close()
-                info('rejecting connection from %s: netbeans already connected',
-                                                                        addr)
-                return
-
-            set_close_on_exec(conn)
-            conn.setblocking(0)
-            self.netbeans = Netbeans(self._map, addr, self.passwd)
-            self.netbeans.set_socket(conn)
-            self.netbeans.connected = True
-            if self.oneshot:
-                self.close()
-            info('connected to %s', str(addr))
-        except socket.error:
-            critical('error accepting a connection on the server socket'); raise
-
-    def handle_close(self):
-        """Handle an asyncore close event."""
-        assert False, 'unhandled close event in server'
-
 class Sernum(object):
     """Netbeans sernum counter."""
 
@@ -653,14 +559,12 @@ class Sernum(object):
 
     last = property(get_sernum, None, None, 'last sernum')
 
-class Netbeans(asynchat.async_chat, object):
+class Netbeans(asyncio.Protocol, object):
     """A Netbeans instance exchanges netbeans messages on a socket.
 
     Instance attributes:
         _bset: buffer.BufferSet
             the buffer list
-        _fileno: int
-            nbsock file descriptor
         last_buf: Buffer
             the last buffer (non ClewnBuffer) where the cursor was positioned
         console: Console
@@ -687,8 +591,6 @@ class Netbeans(asynchat.async_chat, object):
             netbeans sequence number
         last_seqno: int
             last reply sequence number
-        owner_thread: int
-            the identity of the thread handling select events.
         lock: threading.Lock
             when not None, serialize access to some resources
         sernum: Sernum
@@ -717,18 +619,16 @@ class Netbeans(asynchat.async_chat, object):
     max_lines = CONSOLE_MAXLINES
     bg_colors = ('Cyan', 'Green', 'Magenta')
 
-    def __init__(self, socket_map, addr, passwd):
-        asynchat.async_chat.__init__(self, map=socket_map)
-        self._fileno = None
-        self.addr = addr
+    def __init__(self, signal, passwd):
+        self.addr = None
+        self.signal = signal
         self.passwd = passwd
-
+        self.transport = None
         self._bset = vimbuffer.BufferSet(self)
         self.last_buf = None
         self.console = None
         self.dbgvarbuf = None
-        self.reply_fifo = asynchat.fifo()
-        self.owner_thread = 0
+        self.reply_fifo = deque()
         self.ready = False
         self.detached = False
         self.debugger = None
@@ -736,7 +636,6 @@ class Netbeans(asynchat.async_chat, object):
         self.ibuff = []
         self.seqno = 0
         self.last_seqno = 0
-        self.set_terminator(b'\n')
         self.lock = None
         self.sernum = Sernum()
         self.frame_annotation = vimbuffer.FrameAnnotation(self)
@@ -746,32 +645,32 @@ class Netbeans(asynchat.async_chat, object):
         self.debugger = debugger
         debugger.set_nbsock(self)
 
-    def set_owner_thread(self, thread_ident):
-        """Set the identity of the thread handling select events.
+    def connection_made(self, transport):
+        self.transport = transport
+        self.addr = transport.get_extra_info('peername')
+        info('connected to %s', str(self.addr))
+        self.connected = True
+        self.signal(self)
 
-        When '0', any thread may receive select events.
-        """
-        self.owner_thread = thread_ident
-
-    def readable (self):
-        """Return True when enabled to receive read select events."""
-        return (asynchat.async_chat.readable(self)
-                    and (self.owner_thread == 0
-                        or self.owner_thread == get_thread_ident()))
-
-    def writable (self):
-        """Return True when enabled to receive write select events."""
-        return (asynchat.async_chat.writable(self)
-                    and (self.owner_thread == 0
-                        or self.owner_thread == get_thread_ident()))
+    def connection_lost(self, exc):
+        info('netbeans socket disconnected')
+        self.ready = False
+        self.close()
+        if exc:
+            error('netbeans connection lost: ', exc)
 
     def close(self):
         """Close netbeans and the debugger."""
         if not self.connected:
             return
+        self.connected = False
 
         info('enter Netbeans.close')
-        # close the debugger on a netbeans disconnect
+        if self.transport:
+            self.transport.close()
+        # Signal vim.
+        self.signal(self)
+        # Close the debugger on a netbeans disconnect.
         if self.debugger is not None:
             self.debugger.close()
 
@@ -781,38 +680,11 @@ class Netbeans(asynchat.async_chat, object):
         if self.nbversion <= '2.5':
             time.sleep(0.500)
 
-        asynchat.async_chat.close(self)
-        self.connected = False
+    def data_received(self, data):
+        misc.handle_as_lines(data, self.ibuff, self.found_terminator)
 
-    def handle_error(self):
-        """Raise the exception."""
-        raise
-
-    def handle_expt(self):
-        """We are not listening on exceptional conditions."""
-        assert False, 'unhandled exceptional condition'
-
-    def handle_connect(self):
-        """Not implemented."""
-
-    def handle_accept(self):
-        """Not implemented."""
-        assert False, 'unhandled accept event'
-
-    def handle_close(self):
-        """Handle an async_chat close event."""
-        info('netbeans socket disconnected')
-        self.ready = False
-        self.close()
-
-    def collect_incoming_data(self, data):
-        """Process async_chat received data."""
-        self.ibuff.append(data.decode())
-
-    def found_terminator(self):
-        """Process new line terminated netbeans message."""
-        msg = "".join(self.ibuff)
-        self.ibuff = []
+    def found_terminator(self, msg):
+        """Process a new line terminated netbeans message."""
         debug(msg)
 
         if not self.ready:
@@ -841,10 +713,10 @@ class Netbeans(asynchat.async_chat, object):
             if seqno == self.last_seqno:
                 return
 
-            if self.reply_fifo.is_empty():
+            if not self.reply_fifo:
                 raise ClewnError(
                         'got a reply with no matching function request')
-            n, reply = self.reply_fifo.pop()
+            reply = self.reply_fifo.popleft()
             reply(seqno, nbstring, arg_list)
             self.last_seqno = seqno
 
@@ -862,8 +734,16 @@ class Netbeans(asynchat.async_chat, object):
             # vim73 'crash when DETACH is followed by a netbeans message' bug
             # (fixed at vim 7.3.073)
             debug('netbeans detached, failed to send "%s"', data.strip())
-        else:
-            asynchat.async_chat.push(self, data.encode())
+            return
+
+        if self.ready:
+            # The pdb clewn thread calls delayed jobs (flush the console) and
+            # writing data must be serialized.
+            if self.lock:
+                with self.lock:
+                    self.transport.write(data.encode())
+            else:
+                self.transport.write(data.encode())
 
     def open_session(self, msg):
         """Process initial netbeans messages."""
@@ -894,6 +774,7 @@ class Netbeans(asynchat.async_chat, object):
                                 'invalid netbeans version: "%s"' % nbstring)
                 elif event == "startupDone":
                     self.ready = True
+                    self.signal(self)
                     return
         raise ClewnError('received unexpected message: "%s"' % msg)
 
@@ -1032,26 +913,6 @@ class Netbeans(asynchat.async_chat, object):
     #   Commands - Functions
     #-----------------------------------------------------------------------
 
-    def initiate_send (self):
-        """Keep messages sent to Vim buffered in the fifo, while the netbeans
-        connection is not ready.
-        """
-        if self.ready:
-            try:
-                # the pdb Clewn-thread calls scheduled jobs (flush the console)
-                # even when it does not own 'nbsock', therefore calls to
-                # initiate_send must be serialized
-                if self.lock:
-                    self.lock.acquire()
-                    try:
-                        asynchat.async_chat.initiate_send(self)
-                    finally:
-                        self.lock.release()
-                else:
-                    asynchat.async_chat.initiate_send(self)
-            except socket.error:
-                self.close()
-
     def show_balloon(self, text):
         """Show the Vim balloon."""
         # do not show a balloon when the debugger is not started
@@ -1083,7 +944,7 @@ class Netbeans(asynchat.async_chat, object):
             assert False, 'internal error, no reply class for %s' % function
         assert issubclass(clss, Reply)
         reply = clss(buf, self.seqno + 1, self)
-        self.reply_fifo.push(reply)
+        self.reply_fifo.append(reply)
 
         self.send_request('%d:%s/%d%s%s\n', buf, function, args)
 
@@ -1116,7 +977,6 @@ class Netbeans(asynchat.async_chat, object):
             info('failed to send_request: not connected')
 
     def __repr__(self):
-        """Return the async_chat representation."""
         return self.__str__()
 
     def __str__(self):
