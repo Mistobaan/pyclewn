@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 # vi:set ts=8 sts=4 sw=4 et tw=80:
 """
 Create a pseudo terminal to be used as the controlling terminal of a process.
@@ -14,7 +13,7 @@ from io import open
 import os
 import sys
 
-from clewn import misc, tty
+from . import misc, tty
 
 def main():
     term = os.environ.get('TERM')

@@ -35,7 +35,7 @@ and install the pyclewn help file. ``gvim`` is used when this environment
 variable is not found.
 
 When the python version is 2.7 or older than 3.4, you must also install
-``trollius`` from PyPi at https://pypi.python.org/pypi/trollius.
+``trollius`` from PyPi at trollius_.
 
 
 Local installation from source
@@ -50,22 +50,10 @@ Local installation of pyclewn
 
 Local installation of pyclewn is done using the ``user scheme``::
 
-    python setup.py install --force --user
-
-pyclewn is installed into subdirectories of site.USER_BASE. On unix this is
-the ``.local`` subdirectory of the home directory. Run the following command
-to print its location::
-
-    python -c "import site; print(site.USER_BASE)"
-
-The pyclewn and ``inferior_tty.py`` programs are installed in the ``bin``
-subdirectory of site.USER_BASE. So you must add it to your ``PATH``
-environment variable. For example on unix with a bourne shell::
-
-    export PATH=/home/user/.local/bin:$PATH
+    python setup.py install --user
 
 When the python version is 2.7 or older than 3.4, you must also install
-``trollius`` from PyPi at https://pypi.python.org/pypi/trollius.
+``trollius`` from PyPi at trollius_.
 
 Vim runtime files
 ^^^^^^^^^^^^^^^^^
@@ -75,7 +63,7 @@ environment variable set to your personal vim runtime directory during
 installation. For example, local installation of pyclewn and of vim runtime
 files::
 
-    vimdir=$HOME/.vim python setup.py install --force --user
+    vimdir=$HOME/.vim python setup.py install --user
 
 
 Uninstall
@@ -85,12 +73,13 @@ To uninstall pyclewn on unix, run the same command that you have been using
 for installing pyclewn and record the list of files that are being installed
 into ``files.txt`` with the ``--record`` option. For example::
 
-    python setup.py install --force --user --record files.txt
+    python setup.py install --user --record files.txt
 
 Then remove all the installed files::
 
     rm $(cat files.txt)
 
+.. _trollius: http://pypi.python.org/pypi/trollius
 .. _pdb-clone: http://pypi.python.org/pypi/pdb-clone
 .. vim:filetype=rst:tw=78:ts=8:et:
 

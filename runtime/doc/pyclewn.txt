@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2014 December 14
+*pyclewn.txt*                                   Last change: 2015 January 9
 
 
                             PYCLEWN USER MANUAL
@@ -159,18 +159,18 @@ The |:Pyclewn| command does the following:
       functions and the debugger commands as vim commands
 
 
-Start the pyclewn process:
---------------------------
+Start pyclewn from a shell:
+---------------------------
 
 Start pyclewn with: >
 
-    pyclewn [options] [debugger]
+    python -m clewn [options] [debugger]
 
 "debugger" defaults to "gdb".
 
 So pyclewn with the gdb debugger is simply started as: >
 
-    pyclewn
+    python -m clewn
 
 ==============================================================================
 3. Options                                          *pyclewn-options*
@@ -178,7 +178,7 @@ So pyclewn with the gdb debugger is simply started as: >
 
 The pyclewn options can be set:
 
-    * on pyclewn command line
+    * on the command line
 
     * in the "pyclewn_args" and the "pyclewn_connection" vim global
       variables when starting pyclewn with the |:Pyclewn| command
@@ -237,9 +237,9 @@ The full description of pyclewn options follows:
                     So, to run gdb with no specific parameter, the following
                     commands are equivalent: >
 
-                        pyclewn
-                        pyclewn -g ""
-                        pyclewn --gdb=
+                        python -m clewn
+                        python -m clewn -g ""
+                        python -m clewn --gdb=
 .
                     There are three optional parameters:
 
@@ -253,7 +253,7 @@ The full description of pyclewn options follows:
                     file name must be an existing directory.
                     For example on unix: >
 
-                        pyclewn --gdb=async,./project_name
+                        python -m clewn --gdb=async,./project_name
 
 -d
 --daemon            Run as a daemon (default 'False'): on unix, pyclewn is
@@ -287,7 +287,7 @@ The full description of pyclewn options follows:
                     with the program foobar and "this is foobar argument" as
                     foobar's argument: >
 
-                    pyclewn -a '--args foobar "this is foobar argument"'
+                    python -m clewn -a '--args foobar "this is foobar argument"'
 
 --terminal=TERMINAL Set the terminal to use with the inferiortty command for
                     running gdb or pdb inferior (default 'xterm,-e'). The
@@ -649,14 +649,6 @@ project file was saved, gdb ignores silently the breakpoint (see gdb help on
 
 Limitations:
 ------------
-When pyclewn cannot setup a pseudo tty to communicate with gdb, pyclewn falls
-back to pipes. In this case, the Csigint command does not work as gdb does not
-handle interrupts over a pipe. Instead, one must send a SIGINT signal to the
-debuggee in order to interrupt the debuggee while it is running. This can be
-done from Vim with the command: >
-
-    :!kill -SIGINT $(pgrep debuggee_process_name)
-
 When setting breakpoints on an overloaded method, pyclewn bypasses the gdb
 prompt for the multiple choice and sets automatically all breakpoints.
 
@@ -795,13 +787,6 @@ command: >
     :Pyclewn pdb
 
 Notes:
-When the pyclewn installation has been made following the "home scheme" (see
-INSTALL) and in order to have python find the clewn package, one must set the
-PYTHONPATH environment variable to include the python home library pathname.
-For example with bash, run the script as: >
-
- PYTHONPATH=$HOME/lib/python python script_pathname
-
 The current debugging session may be terminated with the ":Cdetach" or the Vim
 ":quitall" command. Another debugging session with the same process can be
 started later with the ":Pyclewn pdb" command.

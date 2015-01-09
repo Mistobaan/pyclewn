@@ -27,6 +27,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from io import open
 
+import sys
 import os
 import re
 import asyncio
@@ -669,7 +670,8 @@ class Debugger(object):
 
         args = self.vim.options.terminal.split(',')
         result_file = misc.tmpfile('dbg')
-        args.extend(['inferior_tty.py', result_file.name])
+        args.extend([sys.executable, '-m', 'clewn.inferiortty',
+                     result_file.name])
         asyncio.Task(_set_inferior_tty(), loop=self.vim.loop)
 
     def close(self):

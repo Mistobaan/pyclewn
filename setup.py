@@ -30,7 +30,6 @@ program to debug is the terminal used to launch pyclewn, or any other
 terminal when the debugger allows it.
 """
 DEBUGGERS = ('simple', 'gdb', 'pdb')
-SCRIPTS = ['pyclewn', 'runtime/bin/inferior_tty.py']
 
 vimdir = os.environ.get('vimdir')
 if not vimdir:
@@ -113,6 +112,10 @@ class install(_install):
 
     """
     def run(self):
+        # Substitute templates in the autoload plugin.
+        substitute_in_file('runtime/autoload/pyclewn.vim',
+                           {'${pgm}': sys.executable})
+
         print('Vim user data files location: "%s"' % vimdir)
         vim_features()
         _install.run(self)
@@ -219,7 +222,6 @@ def main():
     distutils.core.setup(
         cmdclass={'install': install,
                   'test': Test},
-        scripts=SCRIPTS,
         packages=[str('clewn')],
         data_files=DATA_FILES,
 

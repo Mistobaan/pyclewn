@@ -14,7 +14,7 @@ let s:start_err = "Error: pyclewn failed to start.\n\n"
 " the ':Pyclewn' vim command is run.
 " They may be changed to match your preferences.
 
-let s:pgm = "pyclewn"
+let s:pgm = "${pgm}"
 
 if exists("pyclewn_args")
   let s:args = pyclewn_args
@@ -112,7 +112,7 @@ function s:start(args)
 
     " start pyclewn and netbeans
     call s:info("Starting pyclewn.\n")
-    exe "silent !" . s:pgm . " " . s:fixed . l:tmpfile . " " . a:args . " &"
+    exe "silent !" . s:pgm . " -m clewn " . s:fixed . l:tmpfile . " " . a:args . " &"
     call s:info("Running nbstart, <C-C> to interrupt.\n")
     call s:pyclewn_ready(l:tmpfile)
     exe "nbstart :" . s:connection
@@ -168,7 +168,7 @@ function pyclewn#StartClewn(...)
             let l:err .= "   import clewn.vim as vim; vim.pdb(level='debug')\n"
             let l:err .= "and run this script to get the cause of the problem."
         else
-            let l:err .= "Run 'pyclewn' to get the cause of the problem."
+            let l:err .= "Run '${pgm} -m clewn' to get the cause of the problem."
         endif
         call s:error(l:err)
         " vim console screen is garbled, redraw the screen

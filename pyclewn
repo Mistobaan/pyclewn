@@ -1,4 +1,0 @@
-#! /usr/bin/env python
-
-import clewn.vim as vim
-vim.main()
