@@ -12,13 +12,13 @@ from __future__ import unicode_literals
 import os
 import pty
 import fcntl
-import termios
 import asyncio
+import termios
 import time
 import signal
 import warnings
-from asyncio.streams import FlowControlMixin
 from abc import ABCMeta, abstractmethod
+FlowControlMixin = asyncio.streams.FlowControlMixin
 
 from . import misc
 
@@ -199,7 +199,8 @@ class Process(FlowControlMixin, object):
 
     @asyncio.coroutine
     def connect(self, args):
-        yield from self.loop.create_connection(lambda: self, sock=self.socket)
+        yield from(self.loop.create_connection(lambda: self,
+                                                   sock=self.socket))
         info('program args list: %s', str(args))
 
     def start(self, args):

@@ -12,11 +12,14 @@ try:
     import reprlib   # Python 3
 except ImportError:
     import repr as reprlib   # Python 2
+try:
+    import queue  # Python 3
+except ImportError:
+    import Queue as queue   # Python 2
 
 import sys
 import os
 import threading
-import queue
 import time
 import io
 import signal

@@ -13,7 +13,6 @@ import os
 import sys
 import asyncio
 import functools
-import tempfile
 import importlib
 import subprocess
 import traceback
@@ -24,7 +23,8 @@ import threading
 import atexit
 import platform
 
-from . import __version__, ClewnError, misc, netbeans, tty, gdb, debugger
+from . import (__version__, ClewnError, exec_vimcmd, misc, netbeans, tty,
+               gdb, debugger)
 from .process import daemonize
 
 WINDOW_LOCATION = ('top', 'bottom', 'left', 'right', 'none')
@@ -46,50 +46,6 @@ BG_COLORS =( 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 'DarkRed',
 
 def connection_timeout():
     raise IOError(CONNECTION_ERROR % str(CONNECTION_TIMEOUT))
-
-def exec_vimcmd(commands, pathname='', error_stream=None):
-    """Run a list of Vim 'commands' and return the commands output."""
-    try:
-        perror = error_stream.write
-    except AttributeError:
-        perror = sys.stderr.write
-
-    if not pathname:
-        pathname = os.environ.get('EDITOR', 'gvim')
-
-    args = [pathname, '-u', 'NONE', '-esX', '-c', 'set cpo&vim']
-    fd, tmpname = tempfile.mkstemp(prefix='runvimcmd', suffix='.clewn')
-    commands.insert(0,  'redir! >%s' % tmpname)
-    commands.append('quit')
-    for cmd in commands:
-        args.extend(['-c', cmd])
-
-    output = f = None
-    try:
-        try:
-            subprocess.Popen(args).wait()
-            f = os.fdopen(fd)
-            output = f.read()
-        except (OSError, IOError) as err:
-            if isinstance(err, OSError) and err.errno == errno.ENOENT:
-                perror("Failed to run '%s' as Vim.\n" % args[0])
-                perror("Please set the EDITOR environment variable or run "
-                                "'pyclewn --editor=/path/to/(g)vim'.\n\n")
-            else:
-                perror("Failed to run Vim as:\n'%s'\n\n" % str(args))
-                perror("Error; %s\n", err)
-            raise
-    finally:
-        if f is not None:
-            f.close()
-        misc.unlink(tmpname)
-
-    if not output:
-        raise ClewnError(
-            "Error trying to start Vim with the following command:\n'%s'\n"
-            % ' '.join(args))
-
-    return output
 
 def pformat(name, obj):
     """Pretty format an object __dict__."""
@@ -217,7 +173,7 @@ def main(testrun=False):
 
         vim_tasks.append(asyncio.Task(vim.run(), loop=vim.loop))
         misc.cancel_after_first_completed(vim_tasks, lambda: vim.signal(None),
-                                          vim.loop)
+                                          loop=vim.loop)
 
     except Exception as e:
         except_str = 'Exception in pyclewn: "%s"\n' \
@@ -333,6 +289,8 @@ class Vim(object):
             conn = self.options.netbeans.split(':')
             conn[1:] = conn[1:] or [CONNECTION_DEFAULTS[1]]
             conn[2:] = conn[2:] or [CONNECTION_DEFAULTS[2]]
+            # getaddrinfo() rejects a unicode port number on python 2.7.
+            conn[1] = str(conn[1])
         assert len(conn) == 3, 'too many netbeans connection parameters'
         conn[1] = conn[1] or CONNECTION_DEFAULTS[1]
         self.connection = conn
@@ -534,6 +492,8 @@ class Vim(object):
             def format(self, record):
                 if record.name == 'asyncio':
                     record.name = 'aio'
+                elif record.name == 'trollius':
+                    record.name = 'trol'
                 record.created %= 100
                 return logging.Formatter.format(self, record)
 
@@ -608,12 +568,13 @@ class Vim(object):
     def run(self):
         protocol_factory = functools.partial(netbeans.Netbeans,
                                              self.signal, self.connection[2])
-        self.nbserver = yield from self.loop.create_server(protocol_factory,
-                                        self.connection[0], self.connection[1])
+        self.nbserver = yield from(self.loop.create_server(protocol_factory,
+                                                           self.connection[0],
+                                                           self.connection[1]))
         timeout = self.loop.call_later(CONNECTION_TIMEOUT, connection_timeout)
 
         while True:
-            event = yield from self.events.get()
+            event = yield from(self.events.get())
             if timeout:
                 timeout.cancel()
                 timeout = None
@@ -665,12 +626,13 @@ class Vim(object):
         """Run the pdb clewn thread."""
         protocol_factory = functools.partial(netbeans.Netbeans,
                                              self.signal, self.connection[2])
-        self.nbserver = yield from self.loop.create_server(protocol_factory,
-                                        self.connection[0], self.connection[1])
+        self.nbserver = yield from(self.loop.create_server(protocol_factory,
+                                                           self.connection[0],
+                                                           self.connection[1]))
         clewn_thread_ready.set()
 
         while True:
-            event = yield from self.events.get()
+            event = yield from(self.events.get())
             if isinstance(event, netbeans.Netbeans):
                 if event is self.netbeans:
                     if not self.netbeans.connected:

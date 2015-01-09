@@ -10,18 +10,15 @@ import sys
 import os
 import string
 import re
-import asyncio
 import subprocess
 import importlib
-import distutils.core as core
+import distutils
 
 from os.path import join as pathjoin
 from distutils.command.install import install as _install
-from distutils.command.build_scripts import build_scripts as _build_scripts
 from unittest import defaultTestLoader
 
-from clewn import __version__, vim
-import testsuite.test_support as test_support
+from clewn import __version__, PY34, exec_vimcmd
 
 DESCRIPTION = 'A Vim front-end to debuggers.'
 LONG_DESCRIPTION = """Pyclewn allows using Vim as a front-end to a debugger.
@@ -37,7 +34,7 @@ SCRIPTS = ['pyclewn', 'runtime/bin/inferior_tty.py']
 
 vimdir = os.environ.get('vimdir')
 if not vimdir:
-    path = vim.exec_vimcmd(['echon $VIM'])
+    path = exec_vimcmd(['echon $VIM'])
     path = path.strip(' \t\r\n')
     if not os.path.isdir(path):
         nodir = ('Invalid data files path. $VIM="%s" is returned'
@@ -54,12 +51,41 @@ DATA_FILES = [
     (pathjoin(vimdir, 'syntax'), ['runtime/syntax/dbgvar.vim']),
     ]
 
-# installation path of pyclewn lib
-pythonpath = None
+if not PY34:
+    from distutils.util import byte_compile as _byte_compile
+
+    def byte_compile(files, *args, **kwds):
+        if 'dry_run' not in kwds or not kwds['dry_run']:
+            mapping = {
+                'import asyncio': 'import trollius as asyncio',
+                'yield from': 'yield asyncio.From',
+                }
+            for fname in files:
+                if fname[-3:] != '.py':
+                    continue
+                substitute_in_file(fname, mapping)
+        return _byte_compile(files, *args, **kwds)
+
+    distutils.util.byte_compile = byte_compile
+
+def substitute_in_file(fname, mapping):
+    with open(fname, 'r+') as f:
+        updated = False
+        lines = []
+        for line in f:
+            for s in mapping:
+                idx = line.find(s)
+                if idx != -1:
+                    updated = True
+                    line = ''.join([line[:idx], mapping[s], line[idx+len(s):]])
+            lines.append(line)
+        if updated:
+            f.seek(0)
+            f.write(''.join(lines))
 
 def vim_features():
     """Abort if missing required Vim feature."""
-    output = vim.exec_vimcmd(['version'])
+    output = exec_vimcmd(['version'])
 
     print('checking netbeans support in vim:', end=' ', file=sys.stderr)
     try:
@@ -79,7 +105,7 @@ def build_vimhelp():
     """Add pyclewn help to Vim help."""
     helpdir = pathjoin(vimdir, 'doc')
     print('running Vim help tags file generation in %s' % helpdir, file=sys.stderr)
-    vim.exec_vimcmd(['helptags ' + helpdir, 'echo v:version'])
+    exec_vimcmd(['helptags ' + helpdir, 'echo v:version'])
 
 class install(_install):
     """Specialized installer, check required Vim features support and
@@ -87,8 +113,6 @@ class install(_install):
 
     """
     def run(self):
-        global pythonpath
-        pythonpath = self.install_platlib
         print('Vim user data files location: "%s"' % vimdir)
         vim_features()
         _install.run(self)
@@ -114,41 +138,6 @@ def keymap_files():
                         f.write('# %s : %s\n' % (k, mapkeys[k][0]))
             print('  %s' % filename)
 
-def insert_syspath(fname, after_future=True):
-    sys_path = string.Template("sys.path.append('${pythonpath}')\n")
-    sys_path = 'import sys; ' + sys_path.substitute(pythonpath=pythonpath)
-    content = []
-    past_future = False
-    done = False
-    with open(fname, 'r+') as f:
-        for line in f:
-            if line.find('from __future__ import') == 0:
-                past_future = True
-            elif not done and past_future:
-                done = True
-                content.append(sys_path)
-            content.append(line)
-            if not after_future and not done:
-                done = True
-                content.append(sys_path)
-        if done:
-            f.seek(0)
-            f.writelines(content)
-    return done
-
-class build_scripts(_build_scripts):
-    """Specialized scripts builder.
-
-    """
-    def run(self):
-        """Add pythonpath to pyclewn script in a 'home scheme' installation."""
-        _build_scripts.run(self)
-        if pythonpath is not None and pythonpath not in sys.path:
-            for script in self.scripts:
-                fname = os.path.join(self.build_dir, os.path.basename(script))
-                if not insert_syspath(fname):
-                    insert_syspath(fname, after_future=False)
-
 NOTTESTS = ('test_support',)
 
 def findtests(testdir, nottests=NOTTESTS):
@@ -163,7 +152,7 @@ def findtests(testdir, nottests=NOTTESTS):
     tests.sort()
     return tests
 
-class Test(core.Command):
+class Test(distutils.core.Command):
     """Run the test suite.
     """
 
@@ -196,6 +185,13 @@ class Test(core.Command):
 
     def run (self):
         """Run the test suite."""
+        # Use the installed version of the clewn package for the case where it
+        # has been translated for use with trollius.
+        sys.path.append(sys.path.pop(0))
+        del sys.modules['clewn']
+
+        import testsuite.test_support as test_support
+
         if self.pdb and self.test != ['test_gdb']:
             print('One can only debug a gdb test case for now.')
             return
@@ -219,13 +215,9 @@ class Test(core.Command):
             sys.stdout.flush()
             test_support.run_suite(suite, self.detail, self.stop, self.pdb)
 
-        loop = asyncio.get_event_loop()
-        loop.close()
-
 def main():
-    core.setup(
-        cmdclass={'build_scripts': build_scripts,
-                  'install': install,
+    distutils.core.setup(
+        cmdclass={'install': install,
                   'test': Test},
         scripts=SCRIPTS,
         packages=[str('clewn')],

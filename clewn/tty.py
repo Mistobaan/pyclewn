@@ -13,17 +13,18 @@ import sys
 import errno
 import os
 import pty
+import asyncio
 import termios
 import stat
-import asyncio
 import array
 import signal
 import fcntl
-from asyncio import StreamReader, StreamReaderProtocol
-from asyncio.streams import FlowControlMixin
 from termios import (INLCR, ICRNL, IXON, IXOFF, IXANY, OPOST, ECHO, ECHONL,
                      ICANON, ISIG, IEXTEN, VMIN, VTIME, VINTR, VEOF,
                      TCSADRAIN, TIOCGWINSZ, TIOCSWINSZ)
+FlowControlMixin = asyncio.streams.FlowControlMixin
+StreamReader = asyncio.StreamReader
+StreamReaderProtocol = asyncio.StreamReaderProtocol
 
 from . import ClewnError, misc
 
@@ -52,9 +53,9 @@ class Channel(object):
             self.reader = StreamReader()
             self.reader_proto = StreamReaderProtocol(self.reader)
         self.writer_proto = FlowControlMixin(self.loop)
-        mode = os.stat(fdin).st_mode
+        mode = os.fstat(fdin).st_mode
         self.fdin_istty = stat.S_ISCHR(mode)
-        mode = os.stat(fdout).st_mode
+        mode = os.fstat(fdout).st_mode
         self.fdout_isfifo = stat.S_ISFIFO(mode)
         self.fdout_istty = stat.S_ISCHR(mode)
 
@@ -64,13 +65,12 @@ class Channel(object):
         try:
             f_in = os.fdopen(self.fdin, 'r')
             f_out = os.fdopen(self.fdout, 'w')
-            yield from self.loop.connect_read_pipe(lambda: self.reader_proto,
-                                                   f_in)
+            yield from(self.loop.connect_read_pipe(
+                                            lambda: self.reader_proto, f_in))
 
             if self.fdout_isfifo or self.fdout_istty:
-                transport, protocol = yield from \
-                        self.loop.connect_write_pipe(lambda: self.writer_proto,
-                                                f_out)
+                transport, protocol = yield from(self.loop.connect_write_pipe(
+                                            lambda: self.writer_proto, f_out))
                 writer = asyncio.StreamWriter(
                                 transport, protocol, self.reader, self.loop)
 
@@ -82,7 +82,7 @@ class Channel(object):
 
             while True:
                 try:
-                    chunk = yield from self.reader.read(BUFFER_SIZE)
+                    chunk = yield from(self.reader.read(BUFFER_SIZE))
                 except OSError as e:
                     # The read() syscall returns -1 when the slave side of the
                     # pty is closed.
@@ -95,7 +95,7 @@ class Channel(object):
                     break
                 if self.fdout_isfifo or self.fdout_istty:
                     writer.write(chunk)
-                    yield from writer.drain()
+                    yield from(writer.drain())
                 else:
                     os.write(self.fdout, chunk)
         except asyncio.CancelledError:

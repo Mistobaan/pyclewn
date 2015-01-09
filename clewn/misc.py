@@ -14,14 +14,13 @@ import sys
 import os
 import fcntl
 import re
+import asyncio
 import tempfile
 import logging
-import subprocess
 import atexit
 import pprint
 import itertools
 import io
-import asyncio
 
 from . import text_type, ClewnError
 
@@ -199,12 +198,13 @@ def handle_as_lines(data, buff, handle_cb):
             if line:
                 handle_cb(line)
 
-def cancel_after_first_completed(tasks, interrupted_cb, loop):
+def cancel_after_first_completed(tasks, interrupted_cb, loop=None):
     @asyncio.coroutine
-    def _cancel_after_first_completed(tasks, loop):
+    def _cancel_after_first_completed(tasks):
         while tasks:
-            done, pending = yield from asyncio.wait(tasks,
-                                return_when=asyncio.FIRST_COMPLETED, loop=loop)
+            done, pending = yield from(asyncio.wait(tasks,
+                                return_when=asyncio.FIRST_COMPLETED,
+                                loop=loop))
             for task in done:
                 info(task)
                 assert task in tasks
@@ -213,7 +213,10 @@ def cancel_after_first_completed(tasks, interrupted_cb, loop):
                 task.cancel()
 
     assert tasks
-    main_task = asyncio.Task(_cancel_after_first_completed(tasks[:], loop),
+    if not loop:
+        loop = asyncio.get_event_loop()
+
+    main_task = asyncio.Task(_cancel_after_first_completed(tasks[:]),
                              loop=loop)
     while True:
         try:

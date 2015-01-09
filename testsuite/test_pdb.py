@@ -62,7 +62,7 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=21  id=1  name=1',
+            'line=24  id=1  name=1',
             '${cwd}foobar.py',
             )
         self.cltest_redir(cmd, expected)
@@ -80,8 +80,8 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=12  id=2  name=2',
-            'line=21  id=1  name=1',
+            'line=15  id=2  name=2',
+            'line=24  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -100,7 +100,7 @@ class Pdb(ClewnTestCase):
             ]
         expected = (
             'line=13  id=3  name=3',
-            'line=21  id=1  name=1',
+            'line=24  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -122,7 +122,7 @@ class Pdb(ClewnTestCase):
         expected = (
             'line=13  id=3  name=3',
             'line=14  id=4  name=4',
-            'line=21  id=1  name=1',
+            'line=24  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -144,7 +144,7 @@ class Pdb(ClewnTestCase):
         expected = (
             'line=14  id=6  name=6',
             'line=14  id=4  name=4',
-            'line=21  id=1  name=1',
+            'line=24  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -156,15 +156,13 @@ class Pdb(ClewnTestCase):
             'Ccontinue',
             'Cnext',
             'sleep ${sleep_time}',
-            'Cp c.value',
+            'Cp c.value + 1000',
             'edit (clewn)_console | $$-4,$$w! ${test_out}',
             'Ccontinue',
             'qa!',
             ]
         expected = (
-            '(Pdb) p c.value',
-            '1',
-            '(Pdb)',
+            '1001',
             )
         self.cltest_redir(cmd, expected)
 
@@ -181,7 +179,7 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            "line=13  id=1  name=1",
+            "line=16  id=1  name=1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -200,8 +198,8 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=12  id=2  name=2',
-            'line=21  id=1  name=1',
+            'line=15  id=2  name=2',
+            'line=24  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -221,8 +219,8 @@ class Pdb(ClewnTestCase):
             ]
         expected = (
             'Signs for ${cwd}foobar.py:',
-            'line=12  id=2  name=2',
-            'line=13  id=1  name=1',
+            'line=15  id=2  name=2',
+            'line=16  id=1  name=1',
             'Signs for ${cwd}testsuite/foo.py:',
             'line=40  id=4  name=4',
             )
@@ -262,16 +260,14 @@ class Pdb(ClewnTestCase):
             'Cbreak foo.foo',
             'Ccontinue',
             'C run = 123',
-            'Cp run',
+            'Cp run + 1000',
             'edit (clewn)_console | $$-3,$$w! ${test_out}',
             'C run = False',
             'Ccontinue',
             'qa!',
             ]
         expected = (
-            '(Pdb) p run',
-            '123',
-            '(Pdb)',
+            '1123',
             )
         self.cltest_redir(cmd, expected)
 
@@ -365,7 +361,7 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            '> <module>() at ${cwd}foobar.py:22',
+            '> <module>() at ${cwd}foobar.py:25',
             )
         self.cltest_redir(cmd, expected)
 

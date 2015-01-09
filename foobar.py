@@ -5,9 +5,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 import sys
 import testsuite.foo as foo
+
+# Use the installed version of the clewn package for the case where it has
+# been translated for use with trollius.
+sys.path.append(sys.path.pop(0))
 
 def main():
     run = sys.argv[1:] and sys.argv[1:][0]

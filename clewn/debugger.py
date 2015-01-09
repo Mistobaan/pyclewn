@@ -29,12 +29,12 @@ from io import open
 
 import os
 import re
+import asyncio
 import time
 import logging
 import string
 import copy
 import subprocess
-import asyncio
 from abc import ABCMeta, abstractmethod
 
 from . import __version__, ClewnError, misc, netbeans
@@ -641,8 +641,8 @@ class Debugger(object):
                     self.proc_inftty.terminate()
                 self.proc_inftty = None
             try:
-                self.proc_inftty = proc = yield from \
-                                        asyncio.create_subprocess_exec(*args)
+                self.proc_inftty = proc = yield from(
+                                        asyncio.create_subprocess_exec(*args))
                 info('inferiortty: {}'.format(args))
             except OSError as e:
                 self.console_print('Cannot spawn terminal: {}\n'.format(e))
@@ -662,7 +662,7 @@ class Debugger(object):
                             'Cannot set the inferior tty: {}\n'.format(e))
                         proc.terminate()
                         break
-                    yield from asyncio.sleep(.100, loop=self.vim.loop)
+                    yield from(asyncio.sleep(.100, loop=self.vim.loop))
                 else:
                     self.console_print('Failed to start inferior_tty.py.\n')
                     proc.terminate()

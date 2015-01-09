@@ -4,20 +4,17 @@ Pyclewn installation notes
 Required
 --------
 
-+------------+---------------------------------------+
-| Python     | Vim                                   |
-+============+=======================================+
-| Python 2.4 | Vim 7.0 or above with the             |
-| or above   | **netbeans_intg** feature enabled,    |
-|            | and with the **autocmd** feature      |
-|            | enabled                               |
-|            | (netbeans and autocmd are             |
-|            | enabled on most                       |
-|            | distributions).                       |
-+------------+---------------------------------------+
++---------------------+-----------------------------------------------------+
+| Python              | Vim                                                 |
++=====================+=====================================================+
+| Python 2.7 or above | Vim 7.0 or above with the **netbeans_intg** feature |
+|                     | and the  **autocmd** feature enabled (netbeans and  |
+|                     | autocmd are enabled on most distributions).         |
++---------------------+-----------------------------------------------------+
 
-Install on unix
----------------
+
+Install from source
+-------------------
 
 Unpack the tarball, change directory to the distribution directory and run the
 setup script to install pyclewn::
@@ -30,49 +27,61 @@ You can now use the ``:help pyclewn`` command within vim, to get access to the
 documentation.
 
 The installation process uses the environment variable EDITOR to invoke Vim
-and install the pyclewn help file, ``gvim`` is used when this environment
+and install the pyclewn help file. ``gvim`` is used when this environment
 variable is not found.
 
-Local installation on unix
---------------------------
+When the python version is 2.7 or older than 3.4, you must also install
+``trollius`` from PyPi at https://pypi.python.org/pypi/trollius.
+
+
+Local installation from source
+------------------------------
 
 Use a local installation when you do not have root privileges and those are
 required to install python packages or to install the vim runtime files on your
 system.
 
-Pyclewn binaries
-^^^^^^^^^^^^^^^^
+Local installation of pyclewn
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Local installation of the pyclewn binaries is done using the distutils ``home
-scheme`` as follows (pyclewn is installed in $HOME/bin)::
+Local installation of pyclewn is done using the ``user scheme``::
 
-    python setup.py install --force --home=$HOME
+    python setup.py install --force --user
+
+pyclewn is installed into subdirectories of site.USER_BASE. On unix this is
+the ``.local`` subdirectory of the home directory. Run the following command
+to print its location::
+
+    python -c "import site; print(site.USER_BASE)"
+
+The pyclewn and ``inferior_tty.py`` programs are installed in the ``bin``
+subdirectory of site.USER_BASE. So you must add it to your ``PATH``
+environment variable. For example on unix with a bourne shell::
+
+    export PATH=/home/user/.local/bin:$PATH
+
+When the python version is 2.7 or older than 3.4, you must also install
+``trollius`` from PyPi at https://pypi.python.org/pypi/trollius.
 
 Vim runtime files
 ^^^^^^^^^^^^^^^^^
 
-Local installation of the runtime file is done by setting the ``vimdir``
+Local installation of vim runtime files is done by setting the ``vimdir``
 environment variable set to your personal vim runtime directory during
-installation::
+installation. For example, local installation of pyclewn and of vim runtime
+files::
 
-    vimdir=$HOME/.vim python setup.py install --force
+    vimdir=$HOME/.vim python setup.py install --force --user
 
-Both binaries and runtime
-^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Local installation of the pyclewn binaries and the runtime file is done with
-the command::
-
-    vimdir=$HOME/.vim python setup.py install --force --home=$HOME
-
-Uninstall on unix
-^^^^^^^^^^^^^^^^^
+Uninstall
+---------
 
 To uninstall pyclewn on unix, run the same command that you have been using
-for installing pyclewn and record into ``files.txt`` the list of files that
-are being installed with the ``--record`` option. For example::
+for installing pyclewn and record the list of files that are being installed
+into ``files.txt`` with the ``--record`` option. For example::
 
-    python setup.py install --force --home=$HOME --record files.txt
+    python setup.py install --force --user --record files.txt
 
 Then remove all the installed files::
 

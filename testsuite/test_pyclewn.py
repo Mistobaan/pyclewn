@@ -103,7 +103,6 @@ class Pyclewn(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'Name        Args Range Complete  Definition',
             'C           *          custom    call s:nbcommand("", <f-args>)',
             'Cbreak      *          file      call s:nbcommand("break", <f-args>)',
             'Ccontinue   *                    call s:nbcommand("continue", <f-args>)',

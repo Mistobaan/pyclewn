@@ -13,7 +13,6 @@ from io import open
 
 import os
 import sys
-import asyncio
 
 from clewn import misc, tty
 
@@ -23,8 +22,7 @@ def main():
         print('The TERM environment variable is not defined.', file=sys.stderr)
         sys.exit(1)
 
-    loop = asyncio.get_event_loop()
-    tasks, ptyname = tty.inferior_tty(cmds=True, loop=loop)
+    tasks, ptyname = tty.inferior_tty(cmds=True)
 
     commands = ('set inferior-tty %s\n'
                     'set environment TERM = %s\n' % (ptyname, term))
@@ -35,7 +33,7 @@ def main():
         print('Set the inferior tty with the following gdb commands:')
         print(commands)
 
-    misc.cancel_after_first_completed(tasks, lambda: None, loop)
+    misc.cancel_after_first_completed(tasks, lambda: None)
 
 if __name__ == '__main__':
     main()

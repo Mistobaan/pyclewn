@@ -48,21 +48,38 @@ class Gdb(ClewnTestCase):
         """Setup gdb args and redirect debuggee output to /dev/null."""
         sys.argv.extend(['-a', ('-tty=%s %s' % (os.devnull, args))])
 
-    def test_001(self):
+    def test_001a(self):
         """The gdb commands completion in vim"""
         cmd = [
             'redir! > ${test_out}',
             'command Chelp',
+            'qa!',
+            ]
+        expected = (
+            'Chelp       *          custom    call s:nbcommand("help", <f-args>)',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_001b(self):
+        """The gdb commands completion in vim"""
+        cmd = [
+            'redir! > ${test_out}',
             'command Cfile',
+            'qa!',
+            ]
+        expected = (
+            'Cfile       *          file      call s:nbcommand("file", <f-args>)',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_001c(self):
+        """The gdb commands completion in vim"""
+        cmd = [
+            'redir! > ${test_out}',
             'command Cmapkeys',
             'qa!',
             ]
         expected = (
-            'Name        Args Range Complete  Definition',
-            'Chelp       *          custom    call s:nbcommand("help", <f-args>)',
-            'Name        Args Range Complete  Definition',
-            'Cfile       *          file      call s:nbcommand("file", <f-args>)',
-            'Name        Args Range Complete  Definition',
             'Cmapkeys  0                      call s:mapkeys()',
             )
         self.cltest_redir(cmd, expected)
