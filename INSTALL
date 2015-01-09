@@ -12,6 +12,10 @@ Required
 |                     | autocmd are enabled on most distributions).         |
 +---------------------+-----------------------------------------------------+
 
+To use Vim as a front-end to the pdb debugger, pyclewn requires that
+``pdb-clone`` be installed separately. Install ``pdb-clone`` from PyPi at
+pdb-clone_.
+
 
 Install from source
 -------------------
@@ -87,5 +91,6 @@ Then remove all the installed files::
 
     rm $(cat files.txt)
 
+.. _pdb-clone: http://pypi.python.org/pypi/pdb-clone
 .. vim:filetype=rst:tw=78:ts=8:et:
 
