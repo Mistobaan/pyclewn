@@ -18,7 +18,7 @@ from os.path import join as pathjoin
 from distutils.command.install import install as _install
 from unittest import defaultTestLoader
 
-from clewn import __version__, PY34, exec_vimcmd
+from lib.clewn import __version__, PY34, exec_vimcmd
 
 DESCRIPTION = 'A Vim front-end to debuggers.'
 LONG_DESCRIPTION = """Pyclewn allows using Vim as a front-end to a debugger.
@@ -188,11 +188,6 @@ class Test(distutils.core.Command):
 
     def run (self):
         """Run the test suite."""
-        # Use the installed version of the clewn package for the case where it
-        # has been translated for use with trollius.
-        sys.path.append(sys.path.pop(0))
-        del sys.modules['clewn']
-
         import testsuite.test_support as test_support
 
         if self.pdb and self.test != ['test_gdb']:
@@ -223,6 +218,7 @@ def main():
         cmdclass={'install': install,
                   'test': Test},
         packages=[str('clewn')],
+        package_dir = {'': 'lib'},
         data_files=DATA_FILES,
 
         # meta-data

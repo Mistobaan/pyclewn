@@ -2,6 +2,7 @@ include NEWS
 include COPYING
 include INSTALL
 include MANIFEST.in
+include lib/__init__.py
 include runtime/plugin/pyclewn.vim
 include runtime/autoload/pyclewn.vim
 include runtime/.pyclewn_keys.*
