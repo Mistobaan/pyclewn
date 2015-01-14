@@ -12,13 +12,18 @@ import string
 import re
 import subprocess
 import importlib
-import distutils
-
 from os.path import join as pathjoin
-from distutils.command.install import install as _install
 from unittest import defaultTestLoader
+try:
+    from setuptools import setup, Command
+    from setuptools.command.install import install as _install
+    SETUPTOOLS = True
+except ImportError:
+    SETUPTOOLS = False
+    from distutils import setup, Command
+    from distutils.command.install import install as _install
 
-from lib.clewn import __version__, PY34, exec_vimcmd
+from lib.clewn import __version__, PY3, PY34, exec_vimcmd
 
 DESCRIPTION = 'A Vim front-end to debuggers.'
 LONG_DESCRIPTION = """Pyclewn allows using Vim as a front-end to a debugger.
@@ -51,6 +56,7 @@ DATA_FILES = [
     ]
 
 if not PY34:
+    import distutils
     from distutils.util import byte_compile as _byte_compile
 
     def byte_compile(files, *args, **kwds):
@@ -155,7 +161,7 @@ def findtests(testdir, nottests=NOTTESTS):
     tests.sort()
     return tests
 
-class Test(distutils.core.Command):
+class Test(Command):
     """Run the test suite.
     """
 
@@ -214,24 +220,31 @@ class Test(distutils.core.Command):
             test_support.run_suite(suite, self.detail, self.stop, self.pdb)
 
 def main():
-    distutils.core.setup(
-        cmdclass={'install': install,
-                  'test': Test},
-        packages=[str('clewn')],
-        package_dir = {'': 'lib'},
-        data_files=DATA_FILES,
+    requirements = []
+    if not PY34:
+        requirements.append('trollius')
+    if PY3:
+        requirements.append('pdb-clone==1.9.1.py3')
+    else:
+        requirements.append('pdb-clone==1.9.1.py2.7')
+
+    install_options = {
+        'cmdclass': {'install': install, 'test': Test},
+        'packages': [str('clewn')],
+        'package_dir':  {str(''): str('lib')},
+        'data_files': DATA_FILES,
 
         # meta-data
-        name='pyclewn',
-        version=__version__,
-        description='Pyclewn allows using Vim as a front end to a debugger.',
-        long_description=LONG_DESCRIPTION,
-        platforms='all',
-        license='GNU GENERAL PUBLIC LICENSE Version 2',
-        author='Xavier de Gaye',
-        author_email='xdegaye at users dot sourceforge dot net',
-        url='http://pyclewn.sourceforge.net/',
-        classifiers=[
+        'name': 'pyclewn',
+        'version': __version__,
+        'description': 'Pyclewn allows using Vim as a front end to a debugger.',
+        'long_description': LONG_DESCRIPTION,
+        'platforms': 'all',
+        'license': 'GNU GENERAL PUBLIC LICENSE Version 2',
+        'author': 'Xavier de Gaye',
+        'author_email': 'xdegaye at users dot sourceforge dot net',
+        'url': 'http://pyclewn.sourceforge.net/',
+        'classifiers': [
             'Topic :: Software Development :: Debuggers',
             'Intended Audience :: Developers',
             'Operating System :: Unix',
@@ -240,7 +253,12 @@ def main():
             'Development Status :: 6 - Mature',
             'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
         ],
-    )
+    }
+
+    if SETUPTOOLS:
+        install_options['install_requires'] = requirements
+
+    setup(**install_options)
 
 if __name__ == '__main__':
     argv = sys.argv

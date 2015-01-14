@@ -4,35 +4,34 @@ News
 Pyclewn 2.0
 -----------
 
-.. January 9, 2015
+.. January 14, 2015
 
 Changes
 ^^^^^^^
 
-* Windows support has been removed. Pyclewn requires now Python 2.7 or Python
+* Windows support has been removed. Pyclewn runs now on Python 2.7 or Python
   3.1 or newer and the same source code is used for all those Python versions.
-  pdb-clone must now be installed separately from PyPi.
-
-* When started from a terminal, pyclewn is now started with the command
-  ``python -m clewn`` followed by options if any and an optional argument that
-  selects which debugger to run.
-
-* The terminal spawned by the ``inferiortty`` command is now automatically
-  closed at the end of each debugging session.
-
-* pyclewn uses now asyncio (or trollius on Python versions that do not support
+  pyclewn uses now asyncio (or trollius on Python versions that do not support
   asyncio, i.e. version 2.7 or older than 3.4) instead of the deprecated
   asyncore Python module.
 
-* Local installation is done using the Python user scheme instead of the home
-  scheme.
+* The preferred method to install pyclewn is now pip. Local installation is
+  done using the Python user scheme instead of the home scheme. pdb-clone is
+  now installed separately from PyPI.
 
-Bug fix
-^^^^^^^
+* When started from a terminal, pyclewn is now started with the command
+  ``python -m clewn`` followed by the options and an optional argument that
+  selects which debugger to run.
+
+Bug fixes
+^^^^^^^^^
 
 * When pyclewn is started from a terminal, the controlling terminal of the gdb
   inferior process is now correctly set to the terminal from where pyclewn has
   been started.
+
+* The terminal spawned by the ``inferiortty`` command is now automatically
+  closed at the end of each debugging session.
 
 Pyclewn 1.11
 ------------

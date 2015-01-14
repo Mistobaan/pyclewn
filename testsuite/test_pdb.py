@@ -62,7 +62,7 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=24  id=1  name=1',
+            'line=21  id=1  name=1',
             '${cwd}foobar.py',
             )
         self.cltest_redir(cmd, expected)
@@ -80,8 +80,8 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=15  id=2  name=2',
-            'line=24  id=1  name=1',
+            'line=12  id=2  name=2',
+            'line=21  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -100,7 +100,7 @@ class Pdb(ClewnTestCase):
             ]
         expected = (
             'line=13  id=3  name=3',
-            'line=24  id=1  name=1',
+            'line=21  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -122,7 +122,7 @@ class Pdb(ClewnTestCase):
         expected = (
             'line=13  id=3  name=3',
             'line=14  id=4  name=4',
-            'line=24  id=1  name=1',
+            'line=21  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -144,7 +144,7 @@ class Pdb(ClewnTestCase):
         expected = (
             'line=14  id=6  name=6',
             'line=14  id=4  name=4',
-            'line=24  id=1  name=1',
+            'line=21  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -179,7 +179,7 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            "line=16  id=1  name=1",
+            "line=13  id=1  name=1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -198,8 +198,8 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'line=15  id=2  name=2',
-            'line=24  id=1  name=1',
+            'line=12  id=2  name=2',
+            'line=21  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -219,8 +219,8 @@ class Pdb(ClewnTestCase):
             ]
         expected = (
             'Signs for ${cwd}foobar.py:',
-            'line=15  id=2  name=2',
-            'line=16  id=1  name=1',
+            'line=12  id=2  name=2',
+            'line=13  id=1  name=1',
             'Signs for ${cwd}testsuite/foo.py:',
             'line=40  id=4  name=4',
             )
@@ -361,7 +361,7 @@ class Pdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            '> <module>() at ${cwd}foobar.py:25',
+            '> <module>() at ${cwd}foobar.py:22',
             )
         self.cltest_redir(cmd, expected)
 
