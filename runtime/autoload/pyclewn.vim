@@ -14,7 +14,11 @@ let s:start_err = "Error: pyclewn failed to start.\n\n"
 " the ':Pyclewn' vim command is run.
 " They may be changed to match your preferences.
 
-let s:pgm = "${pgm}"
+if exists("pyclewn_python")
+  let s:pgm = pyclewn_python
+else
+  let s:pgm = "python"
+endif
 
 if exists("pyclewn_args")
   let s:args = pyclewn_args

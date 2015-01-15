@@ -3,11 +3,13 @@ include COPYING
 include INSTALL
 include MANIFEST.in
 include lib/__init__.py
-include runtime/plugin/pyclewn.vim
 include runtime/autoload/pyclewn.vim
-include runtime/.pyclewn_keys.*
 include runtime/doc/pyclewn.txt
+include runtime/macros/.pyclewn_keys.*
+include runtime/plugin/pyclewn.vim
 include runtime/syntax/dbgvar.vim
+include runtime/pyclewn.vmb
+include runtime/pyclewn-*
 include foobar.py
 include .pdbrc
 include testsuite/*.py

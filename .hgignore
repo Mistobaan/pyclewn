@@ -11,9 +11,9 @@ logfile
 .coverage
 
 syntax: regexp
-^dist\/.*$
 ^lib\/pyclewn.egg-info\/.*$
 ^sphinx\/_build\/.*$
 __pycache__\/.*$
 ^runtime/.pyclewn_keys.*$
+^runtime/pyclewn-.*.vmb$
 

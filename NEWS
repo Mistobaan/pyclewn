@@ -4,24 +4,25 @@ News
 Pyclewn 2.0
 -----------
 
-.. January 14, 2015
+.. January 15, 2015
 
 Changes
 ^^^^^^^
 
 * Windows support has been removed. Pyclewn runs now on Python 2.7 or Python
   3.1 or newer and the same source code is used for all those Python versions.
-  pyclewn uses now asyncio (or trollius on Python versions that do not support
+  Pyclewn uses now asyncio (or trollius on Python versions that do not support
   asyncio, i.e. version 2.7 or older than 3.4) instead of the deprecated
   asyncore Python module.
 
-* The preferred method to install pyclewn is now pip. Local installation is
-  done using the Python user scheme instead of the home scheme. pdb-clone is
-  now installed separately from PyPI.
+* The preferred method to install pyclewn is now ``pip``. The Vim run time
+  files are installed with a vimball. Local installation is done using the
+  Python user scheme instead of the home scheme. pdb-clone is now installed
+  separately from PyPI.
 
-* When started from a terminal, pyclewn is now started with the command
-  ``python -m clewn`` followed by the options and an optional argument that
-  selects which debugger to run.
+* Pyclewn is now started from a shell command line with the command ``python
+  -m clewn`` followed by the options and an optional argument that selects
+  which debugger to run.
 
 Bug fixes
 ^^^^^^^^^

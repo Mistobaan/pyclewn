@@ -22,8 +22,9 @@ import errno
 import threading
 import atexit
 import platform
+import tempfile
 
-from . import (__version__, ClewnError, exec_vimcmd, misc, netbeans, tty,
+from . import (__version__, ClewnError, misc, netbeans, tty,
                gdb, debugger)
 from .process import daemonize
 
@@ -46,6 +47,53 @@ BG_COLORS =( 'Black', 'DarkBlue', 'DarkGreen', 'DarkCyan', 'DarkRed',
 
 def connection_timeout():
     raise IOError(CONNECTION_ERROR % str(CONNECTION_TIMEOUT))
+
+def exec_vimcmd(commands, editor='', error_stream=None):
+    """Run a list of Vim 'commands' and return the commands output."""
+    try:
+        perror = error_stream.write
+    except AttributeError:
+        perror = sys.stderr.write
+
+    if not editor:
+        editor = os.environ.get('EDITOR', 'gvim')
+
+    args = [editor, '-u', 'NONE', '-esX', '-c', 'set cpo&vim']
+    fd, tmpname = tempfile.mkstemp(prefix='vimcmd', suffix='.clewn')
+    commands.insert(0,  'redir! >%s' % tmpname)
+    commands.append('quit')
+    for cmd in commands:
+        args.extend(['-c', cmd])
+
+    output = f = None
+    try:
+        try:
+            subprocess.Popen(args).wait()
+            f = os.fdopen(fd)
+            output = f.read()
+        except (OSError, IOError) as err:
+            if isinstance(err, OSError) and err.errno == errno.ENOENT:
+                perror("Failed to run '%s' as Vim.\n" % args[0])
+                perror("Please set the EDITOR environment variable or run "
+                                "'pyclewn --editor=/path/to/(g)vim'.\n\n")
+            else:
+                perror("Failed to run Vim as:\n'%s'\n\n" % str(args))
+                perror("Error; %s\n", err)
+            raise
+    finally:
+        if f is not None:
+            f.close()
+        try:
+            os.unlink(tmpname)
+        except OSError:
+            pass
+
+    if not output:
+        raise ClewnError(
+            "Error trying to start Vim with the following command:\n'%s'\n"
+            % ' '.join(args))
+
+    return output
 
 def pformat(name, obj):
     """Pretty format an object __dict__."""

@@ -8,22 +8,17 @@ from io import open
 
 import sys
 import os
-import string
-import re
 import subprocess
 import importlib
-from os.path import join as pathjoin
 from unittest import defaultTestLoader
 try:
     from setuptools import setup, Command
-    from setuptools.command.install import install as _install
     SETUPTOOLS = True
 except ImportError:
     SETUPTOOLS = False
     from distutils import setup, Command
-    from distutils.command.install import install as _install
 
-from lib.clewn import __version__, PY3, PY34, exec_vimcmd
+from lib.clewn import __version__, PY3, PY34
 
 DESCRIPTION = 'A Vim front-end to debuggers.'
 LONG_DESCRIPTION = """Pyclewn allows using Vim as a front-end to a debugger.
@@ -34,26 +29,6 @@ commands and their first argument. The controlling terminal of the
 program to debug is the terminal used to launch pyclewn, or any other
 terminal when the debugger allows it.
 """
-DEBUGGERS = ('simple', 'gdb', 'pdb')
-
-vimdir = os.environ.get('vimdir')
-if not vimdir:
-    path = exec_vimcmd(['echon $VIM'])
-    path = path.strip(' \t\r\n')
-    if not os.path.isdir(path):
-        nodir = ('Invalid data files path. $VIM="%s" is returned'
-            ' by Vim, but this is not an existing directory.' % path)
-        raise DistutilsExecError(nodir)
-    vimdir = pathjoin(path, 'vimfiles')
-
-DATA_FILES = [
-    (pathjoin(vimdir, 'plugin'), ['runtime/plugin/pyclewn.vim']),
-    (pathjoin(vimdir, 'autoload'), ['runtime/autoload/pyclewn.vim']),
-    (pathjoin(vimdir, 'doc'), ['runtime/doc/pyclewn.txt']),
-    (pathjoin(vimdir, 'macros'),
-        [('runtime/.pyclewn_keys.%s' % d) for d in DEBUGGERS]),
-    (pathjoin(vimdir, 'syntax'), ['runtime/syntax/dbgvar.vim']),
-    ]
 
 if not PY34:
     import distutils
@@ -87,65 +62,6 @@ def substitute_in_file(fname, mapping):
         if updated:
             f.seek(0)
             f.write(''.join(lines))
-
-def vim_features():
-    """Abort if missing required Vim feature."""
-    output = exec_vimcmd(['version'])
-
-    print('checking netbeans support in vim:', end=' ', file=sys.stderr)
-    try:
-        output.index('+netbeans_intg')
-    except ValueError:
-        raise DistutilsExecError('netbeans support in vim is required')
-    print('yes', file=sys.stderr)
-
-    print('checking auto commands support in vim:', end=' ', file=sys.stderr)
-    try:
-        output.index('+autocmd')
-    except ValueError:
-        raise DistutilsExecError('auto commands support in vim is required')
-    print('yes', file=sys.stderr)
-
-def build_vimhelp():
-    """Add pyclewn help to Vim help."""
-    helpdir = pathjoin(vimdir, 'doc')
-    print('running Vim help tags file generation in %s' % helpdir, file=sys.stderr)
-    exec_vimcmd(['helptags ' + helpdir, 'echo v:version'])
-
-class install(_install):
-    """Specialized installer, check required Vim features support and
-    rebuild help tags.
-
-    """
-    def run(self):
-        # Substitute templates in the autoload plugin.
-        substitute_in_file('runtime/autoload/pyclewn.vim',
-                           {'${pgm}': sys.executable})
-
-        print('Vim user data files location: "%s"' % vimdir)
-        vim_features()
-        _install.run(self)
-        build_vimhelp()
-
-def keymap_files():
-    """Build key map files for each debugger."""
-    with open('runtime/.pyclewn_keys.template') as tf:
-        print('Updating:')
-        template = tf.read()
-        for d in DEBUGGERS:
-            filename = 'runtime/.pyclewn_keys.%s' % d
-            with open(filename, 'w') as f:
-                f.write(string.Template(template).substitute(clazz=d))
-                module = importlib.import_module('.%s' % d, 'clewn')
-                mapkeys = getattr(module, 'MAPKEYS')
-                for k in sorted(mapkeys):
-                    if len(mapkeys[k]) == 2:
-                        comment = ' # ' + mapkeys[k][1]
-                        f.write('# %s%s\n' % (('%s : %s' %
-                                (k, mapkeys[k][0])).ljust(30), comment))
-                    else:
-                        f.write('# %s : %s\n' % (k, mapkeys[k][0]))
-            print('  %s' % filename)
 
 NOTTESTS = ('test_support',)
 
@@ -229,10 +145,11 @@ def main():
         requirements.append('pdb-clone==1.9.1.py2.7')
 
     install_options = {
-        'cmdclass': {'install': install, 'test': Test},
+        'cmdclass': {'test': Test},
         'packages': [str('clewn')],
         'package_dir':  {str(''): str('lib')},
-        'data_files': DATA_FILES,
+        'data_files': [(os.getcwd(),
+                            ['runtime/pyclewn-%s.vmb' % __version__])],
 
         # meta-data
         'name': 'pyclewn',
@@ -261,8 +178,4 @@ def main():
     setup(**install_options)
 
 if __name__ == '__main__':
-    argv = sys.argv
-    if len(argv) == 2 and argv[1] == 'keymap_files':
-        keymap_files()
-    else:
-        main()
+    main()
