@@ -269,6 +269,7 @@ def parse_gdb_version(header):
     ... r'~"GNU gdb (GDB) SUSE (7.5.1-2.5.1)\n"',
     ... r'~"GNU gdb (GDB) Fedora (7.6-32.fc19)\n"',
     ... r'~"GNU gdb (GDB) 7.6.1.dummy\n"',
+    ... r'~"GNU gdb (GDB) 7.6.50.20130728-cvs (cygwin-special)\n"',
     ... ]
     >>> for header in DOCTEST_GDB_VERSIONS:
     ...     print(parse_gdb_version(header))
@@ -277,23 +278,27 @@ def parse_gdb_version(header):
     [7, 5, 1]
     [7, 6]
     [7, 6, 1]
+    [7, 6, 50, 20130728]
 
     """
+    def parse_version(txt):
+        # Allow for Suse non conformant implementation that encloses the version
+        # in brackets (issue 119).
+        txt = txt.lstrip('(')
+        return ''.join(takewhile(lambda x: x.isdigit() or x == '.', txt))
+
     lines = (x[2:-3] for x in header.splitlines() if x.startswith('~"') and
                                                         x.endswith(r'\n"'))
     try:
-        version = next(lines).rsplit(' ', 1)
+        vlist = next(lines).rsplit(' ', 1)
     except StopIteration:
         pass
     else:
-        if len(version) == 2:
-            # Strip after first non digit or '.' character. Allow for linux
-            # Suse non conformant implementation that encloses the version in
-            # brackets (issue 119).
-            version = ''.join(takewhile(lambda x: x.isdigit() or x == '.',
-                                                    version[1].lstrip('(')))
+        while len(vlist) == 2:
+            version = parse_version(vlist[1])
             if version:
                 return [int(x) for x in version.split('.') if x]
+            vlist = vlist[0].rsplit(' ', 1)
 
 @misc.previous_evaluation
 def gdb_version(pgm):
