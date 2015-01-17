@@ -1,45 +1,43 @@
-" pyclewn run time file
+" vi:set ts=8 sts=2 sw=2 et tw=80:
+" Pyclewn run time file.
 " Maintainer:   <xdegaye at users dot sourceforge dot net>
 "
-" Configure VIM to be used with pyclewn and netbeans
+" Configure VIM to be used with pyclewn and netbeans.
 "
 if exists("s:did_pyclewn")
     finish
 endif
 let s:did_pyclewn = 1
 
-let s:start_err = "Error: pyclewn failed to start.\n\n"
+" The following global variables define how pyclewn is started. They may be
+" changed to suit your preferences.
+function s:init()
+    if exists("g:pyclewn_python")
+      let s:pgm = g:pyclewn_python
+    else
+      let s:pgm = "python"
+    endif
 
-" The following variables define how pyclewn is started when
-" the ':Pyclewn' vim command is run.
-" They may be changed to match your preferences.
+    if exists("g:pyclewn_args")
+      let s:args = g:pyclewn_args
+    else
+      let s:args = "--window=top --maxlines=10000 --background=Cyan,Green,Magenta"
+    endif
 
-if exists("pyclewn_python")
-  let s:pgm = pyclewn_python
-else
-  let s:pgm = "python"
-endif
+    if exists("g:pyclewn_connection")
+      let s:connection = g:pyclewn_connection
+    else
+      let s:connection = "localhost:3219:changeme"
+    endif
 
-if exists("pyclewn_args")
-  let s:args = pyclewn_args
-else
-  let s:args = "--window=top --maxlines=10000 --background=Cyan,Green,Magenta"
-endif
+    " Uncomment the following line to print full traces in a file named
+    " 'logfile' for debugging purpose (or change g:pyclewn_args).
+    " let s:args .= " --level=nbdebug --file=logfile"
 
-if exists("pyclewn_connection")
-  let s:connection = pyclewn_connection
-else
-  let s:connection = "localhost:3219:changeme"
-endif
+    let s:fixed = "--daemon --editor= --netbeans=" . s:connection . " --cargs="
+endfunction
 
-" Uncomment the following line to print full traces in a file named 'logfile'
-" for debugging purpose.
-" let s:args .= " --level=nbdebug --file=logfile"
-
-" The 'Pyclewn' command starts pyclewn and vim netbeans interface.
-let s:fixed = "--daemon --editor= --netbeans=" . s:connection . " --cargs="
-
-" Run the 'Cinterrupt' command to open the console
+" Run the 'Cinterrupt' command to open the console.
 function s:interrupt(args)
     " find the prefix
     let argl = split(a:args)
@@ -73,12 +71,11 @@ function s:interrupt(args)
     exe prefix . "interrupt"
 endfunction
 
-" Check wether pyclewn successfully wrote the script file
+" Check wether pyclewn successfully wrote the script file.
 function s:pyclewn_ready(filename)
     let l:cnt = 1
-    let l:max = 20
     echohl WarningMsg
-    while l:cnt < l:max
+    while l:cnt < 20
         echon "."
         let l:cnt = l:cnt + 1
         if filereadable(a:filename)
@@ -87,8 +84,8 @@ function s:pyclewn_ready(filename)
         sleep 200m
     endwhile
     echohl None
-    if l:cnt == l:max
-        throw s:start_err
+    if !filereadable(a:filename)
+        throw "Error: pyclewn failed to start.\n\n"
     endif
     call s:info("Creation of vim script file \"" . a:filename . "\": OK.\n")
 endfunction
@@ -123,10 +120,6 @@ function s:start(args)
 
     " source vim script
     if has("netbeans_enabled")
-        if !filereadable(l:tmpfile)
-            nbclose
-            throw s:start_err
-        endif
         " the pyclewn generated vim script is sourced only once
         if ! exists("s:source_once")
             let s:source_once = 1
@@ -143,7 +136,8 @@ function s:start(args)
 endfunction
 
 function pyclewn#StartClewn(...)
-    " command to start pdb: Pyclewn pdb foo.py arg1 arg2 ....
+    " The command to start pdb is: Pyclewn pdb foo.py arg1 arg2 ....
+    call s:init()
     let l:args = s:args
     if a:0 != 0
         if a:1 == "pdb"
@@ -172,7 +166,7 @@ function pyclewn#StartClewn(...)
             let l:err .= "   import clewn.vim as vim; vim.pdb(level='debug')\n"
             let l:err .= "and run this script to get the cause of the problem."
         else
-            let l:err .= "Run '${pgm} -m clewn' to get the cause of the problem."
+            let l:err .= "Run 'python -m clewn' to get the cause of the problem."
         endif
         call s:error(l:err)
         " vim console screen is garbled, redraw the screen

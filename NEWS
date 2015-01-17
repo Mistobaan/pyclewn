@@ -4,7 +4,7 @@ News
 Pyclewn 2.0
 -----------
 
-.. January 16, 2015
+.. January 17, 2015
 
 Changes
 ^^^^^^^
@@ -37,6 +37,9 @@ Bug fixes
 * Fix a gdb version parsing error on the non-conformant Cygwin versions of
   gdb. See the bug report at
   http://cygwin.com/ml/cygwin/2014-06/msg00211.html.
+
+* Fix the problem that changes made to the plugin global variables after the
+  first invocation of ``:Pyclewn`` are ignored.
 
 Pyclewn 1.11
 ------------
