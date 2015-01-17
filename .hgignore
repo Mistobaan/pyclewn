@@ -1,19 +1,15 @@
 syntax: glob
 *.pyc
 *.swp
-clewn/__version__.py
 testsuite/foobar
 testsuite/overloaded
 testsuite/function_template
 testsuite/function_template_sub/*.o
-MANIFEST
 logfile
 .coverage
 
 syntax: regexp
-^lib\/pyclewn.egg-info\/.*$
-^sphinx\/_build\/.*$
-__pycache__\/.*$
-^runtime/.pyclewn_keys.*$
-^runtime/pyclewn-.*.vmb$
+^sphinx/_build/.*$
+^lib/pyclewn.egg-info/.*$
+^lib/clewn/runtime/pyclewn-.*.vmb$
 

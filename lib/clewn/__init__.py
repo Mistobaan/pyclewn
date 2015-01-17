@@ -41,3 +41,12 @@ class ClewnError(Exception):
 if PY26 or (PY3 and not PY31):
     raise NotImplementedError('Python 2.7 or Python 3.1 or newer is required.')
 
+def get_vimball():
+    """Create the vimball in the current directory."""
+    from pkg_resources import resource_string
+    vmb = 'pyclewn-%s.vmb' % __version__
+    vimball = resource_string(__name__, os.path.join('runtime', vmb))
+    with open(vmb, 'wb') as f:
+        f.write(vimball)
+    print('Creation of', os.path.abspath(vmb))
+

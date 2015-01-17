@@ -18,18 +18,20 @@ Quick start
 
 A two steps installation.
 
-First step, install the Python package::
+1) Install the Python package::
 
-    pip install pyclewn
+    sudo pip install pyclewn
 
-This will install the Python ``clewn`` package and its dependencies, and also
-create a vimball named ``pyclewn-2.0.vmb`` in the current directory.
+This command installs the ``clewn`` package and its dependencies.
 
-Second step, install the Vim runtime files. The vimball is sourced to install
-the Vim runtime files::
+2) Install the Vim runtime files with a vimball. First create the
+``pyclewn-2.0.vmb`` vimball in the current directory with the command::
 
-Open ``pyclewn-2.0.vmb`` with Vim and run the ``:so %`` command. See the
-vimball documentation ``:help vimball``.
+    python -c "import clewn; clewn.get_vimball()"
+
+Then source the vimball and install the Vim runtime files with::
+
+    vim -S pyclewn-2.0.vmb
 
 
 Installing with pip
@@ -50,7 +52,12 @@ required to install Python packages::
 
     pip install --user pyclewn
 
-The ``pyclewn-2.0.vmb`` vimball contains the following runtime files::
+The ``pyclewn-2.0.vmb`` vimball is a data file, part of the ``clewn`` package,
+and can be obtained at any time with::
+
+    python -c "import clewn; clewn.get_vimball()"
+
+The vimball contains the following runtime files::
 
     autoload/pyclewn.vim            # The pyclewn plugin.
     plugin/pyclewn.vim
@@ -59,6 +66,8 @@ The ``pyclewn-2.0.vmb`` vimball contains the following runtime files::
     macros/.pyclewn_keys.gdb        # The 'Cmapkeys' files.
     macros/.pyclewn_keys.pdb
     macros/.pyclewn_keys.simple
+
+See the vimball documentation with the vim command ``:help vimball``.
 
 
 Installing from source
@@ -69,13 +78,13 @@ setup script to install pyclewn::
 
     tar xzf pyclewn-2.0.tar.gz
     cd pyclewn-2.0
-    python setup.py install
+    sudo python setup.py install
 
 To use Vim as a front-end to the pdb debugger, pyclewn requires that
-``pdb-clone`` be installed separately. Install ``pdb-clone`` from PyPI at
-pdb-clone_.
+``pdb-clone`` be installed separately. So optionally install ``pdb-clone``
+from PyPI at pdb-clone_.
 
-When the Python version is 2.7 or older than 3.4, you must also install
+When the Python version is 2.7 or older than 3.4, you MUST also install
 ``trollius`` from PyPI at trollius_.
 
 Use a local installation when you do not have root privileges and those are
@@ -84,8 +93,8 @@ required to install Python packages::
     python setup.py install --user
 
 The runtime files must also be installed as described in the first section.
-The ``pyclewn-2.0.vmb`` vimball is created in the current directory as a
-result of running the ``python setup.py install`` command.
+The ``pyclewn-2.0.vmb`` vimball can be found in the ``lib/clewn/runtime``
+directory of the tarball.
 
 
 .. _pip: http://pip.pypa.io/en/latest/

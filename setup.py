@@ -148,8 +148,8 @@ def main():
         'cmdclass': {'test': Test},
         'packages': [str('clewn')],
         'package_dir':  {str(''): str('lib')},
-        'data_files': [(os.getcwd(),
-                            ['runtime/pyclewn-%s.vmb' % __version__])],
+        'package_data': {str('clewn'):
+                            ['runtime/pyclewn-%s.vmb' % __version__]},
 
         # meta-data
         'name': 'pyclewn',

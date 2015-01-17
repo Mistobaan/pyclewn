@@ -51,14 +51,14 @@ def vimball():
             '-c', 'quit',
            ]
 
-    print('Removing the old versioned vimballs.')
-    for dirpath, dirnames, filenames in os.walk('runtime'):
-        if dirpath == 'runtime':
+    data_dir = 'lib/clewn/runtime'
+    for dirpath, dirnames, filenames in os.walk(data_dir):
+        if dirpath == data_dir:
             for fname in filenames:
-                if fname.startswith('pyclewn-'):
+                if fname.startswith('pyclewn-') and fname.endswith('.vmb'):
+                    print('Removing', fname)
                     os.unlink(os.path.join(dirpath, fname))
 
-    print('Creating the vimball.')
     try:
         with os.fdopen(fd, 'w') as f:
             f.write('\n'.join(RUNTIME))
@@ -70,9 +70,9 @@ def vimball():
         except OSError:
             pass
 
-    vimball = 'runtime/pyclewn-%s.vmb' % __version__
-    print('Copying vimball to %s.' % vimball)
-    shutil.copy('runtime/pyclewn.vmb', vimball)
+    vimball = os.path.join(data_dir, 'pyclewn-%s.vmb' % __version__)
+    print('Creation of', vimball)
+    shutil.move('runtime/pyclewn.vmb', vimball)
 
 def main():
     keymap_files()
