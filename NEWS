@@ -4,7 +4,7 @@ News
 Pyclewn 2.0
 -----------
 
-.. January 17, 2015
+.. January 18, 2015
 
 Changes
 ^^^^^^^
@@ -20,9 +20,17 @@ Changes
   Python user scheme instead of the home scheme. pdb-clone is now installed
   separately from PyPI.
 
-* Pyclewn is now started from a shell command line with the command ``python
-  -m clewn`` followed by the options and an optional argument that selects
-  which debugger to run.
+* The pyclewn program is now started with the command ``python -m clewn``
+  followed by the options and an optional argument that selects which debugger
+  to run.
+
+New features
+^^^^^^^^^^^^
+
+* The first optional argument of the ``:Pyclewn`` Vim command selects the
+  debugger and the following arguments are passed to the debugger. For
+  example, to debug ``foobar foobar_arg`` with gdb, run the Vim commmand
+  ``:Pyclewn gdb --args foobar foobar_arg``.
 
 Bug fixes
 ^^^^^^^^^

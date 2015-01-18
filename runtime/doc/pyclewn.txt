@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 January 17
+*pyclewn.txt*                                   Last change: 2015 January 18
 
 
                             PYCLEWN USER MANUAL
@@ -114,18 +114,21 @@ The remaining sections of this manual are:
 
 Start pyclewn from vim:
 -----------------------
-The |:Pyclewn| vim command requires at least vim 7.3. To start pyclewn with the
-gdb debugger: >
+The |:Pyclewn| vim command requires at least vim 7.3. Start pyclewn from vim
+with the command: >
 
-    :Pyclewn
+    :Pyclewn [debugger] [args]
 
-To start pyclewn with the pdb debugger: >
+Where "debugger" is either "gdb" or "pdb" and defaults to "gdb", and "args"
+are the arguments passed to the debugger. Please note that double quotes in
+|:Pyclewn| arguments are not supported. For example, to debug
+"foobar foobar_arg" with gdb, run the commmand: >
 
-    :Pyclewn pdb [script.py]
+    :Pyclewn gdb --args foobar foobar_arg
 
-Next, the gdb debugger is started by running a debugger command from vim
-command line. For example, load foobar with the gdb command "file" and start
-gbd by typing on the vim command line: >
+The gdb debugger is started upon the invocation of the first gdb command. For
+example, load foobar with the gdb command "file" and start gbd by typing on
+vim command line: >
 
     :Cfile foobar
 
@@ -153,7 +156,7 @@ The |:Pyclewn| command does the following:
 Global variables         *pyclewn_python* *pyclewn_args* *pyclewn_connection*
 ----------------
 
-When starting pyclewn with |:Pyclewn|, the pyclewn command line arguments and
+When starting pyclewn from vim, the pyclewn command line arguments and
 connection details may be set with the |pyclewn_python|, |pyclewn_args| and
 |pyclewn_connection| global variables.
 

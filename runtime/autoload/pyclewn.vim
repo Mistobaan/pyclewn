@@ -136,23 +136,17 @@ function s:start(args)
 endfunction
 
 function pyclewn#StartClewn(...)
-    " The command to start pdb is: Pyclewn pdb foo.py arg1 arg2 ....
     call s:init()
     let l:args = s:args
     if a:0 != 0
-        if a:1 == "pdb"
-            if a:0 == 2 && filereadable(a:2) == 0
-                call s:error("File '" . a:2 . "' is not readable.")
-                return
-            endif
-            if a:0 > 1
-                let l:args .= " --args \"" . join(a:000[1:], ' ') . "\""
-            endif
-            let l:args .= " pdb"
-        else
-            call s:error("Invalid optional first argument: must be 'pdb'.")
-            return
-        endif
+      if index(["gdb", "pdb", "simple"], a:1) == -1
+        call s:error("Unknown debugger '" . a:1 . "'.")
+        return
+      endif
+      if a:0 > 1
+          let l:args .= " --args \"" . join(a:000[1:], ' ') . "\""
+      endif
+      let l:args .= " " . a:1
     endif
 
     try
