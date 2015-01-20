@@ -24,8 +24,8 @@ Changes
   followed by the options and an optional argument that selects which debugger
   to run.
 
-* ``CTRL-E`` is a standard Vim command, replace it with ``CTRL-K`` in pyclewn
-  key mappings.
+* ``CTRL-E`` is a standard Vim command, it is replaced now with ``CTRL-K`` in
+  pyclewn key mappings for clearing breakpoints.
 
 New features
 ^^^^^^^^^^^^
@@ -38,6 +38,8 @@ New features
 * The new ``g:pyclewn_terminal`` Vim global variable allows the pyclewn
   program started with ``:Pyclewn`` to run in a terminal instead of as a
   daemon, and helps trouble shooting startup problems.
+
+* The ``Cballooneval`` command has been added.
 
 Bug fixes
 ^^^^^^^^^

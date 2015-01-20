@@ -649,7 +649,7 @@ displayed in the vim balloon. The paramater of the "--gdb" option named
 value.
 
 
-                                            *project-command* *project-file*
+                                      *Cproject* *project-command* *project-file*
 Project file:
 -------------
 The pyclewn |project-command| name is "project". This command saves the current
@@ -705,45 +705,52 @@ Pyclewn commands:
 The |Ccommand| list includes all the gdb commands and some pyclewn specific
 commands that are listed here:
 
-    * |Ccwindow|       opens a vim quickfix window holding the list of the
-                      breakpoints with their current state; the quickfix
-                      window allows moving directly to any breakpoint
-                      (requires the vim |+quickfix| feature)
+                                                            *Cballooneval*
+    * Cballooneval   enable or disable showing text in the Vim balloon; this
+                     can also accomplished with the 'ballooneval' Vim option
+                     but using |Cballooneval| allows also the mappings such as
+                     CTRL-P to be still functioning after showing text in the
+                     balloon has been disabled
 
-    * |Cdbgvar|       add a watched variable or expression to the
-                    (clewn)_dbgvar buffer
+    * Ccwindow       opens a vim quickfix window holding the list of the
+                     breakpoints with their current state; the quickfix
+                     window allows moving directly to any breakpoint
+                     (requires the vim |+quickfix| feature)
 
-    * |Cdelvar|       delete a watched variable from the (clewn)_dbgvar buffer
+    *|Cdbgvar|       add a watched variable or expression to the
+                     (clewn)_dbgvar buffer
+
+    *|Cdelvar|       delete a watched variable from the (clewn)_dbgvar buffer
 
     * Cdumprepr      print on the console pyclewn internal structures that
                      may be used for debugging pyclewn
 
-    * |Cfoldvar|      collapse/expand the members of a watched structure or
+    *|Cfoldvar|      collapse/expand the members of a watched structure or
                      class instance
 
     * Chelp          print on the console, help on the pyclewn specific
                      commands (those on this list) in addition to the help on
                      the debugger commands
                                                     *inferiortty*
-    * Cinferiortty  spawn the controlling terminal (default xterm) of the
-                    debuggee and sets accordingly gdb 'inferior-tty' variable
-                    and the TERM environment variable; this command  MUST be
-                    issued BEFORE starting the inferior.
+    * Cinferiortty   spawn the controlling terminal (default xterm) of the
+                     debuggee and sets accordingly gdb 'inferior-tty' variable
+                     and the TERM environment variable; this command  MUST be
+                     issued BEFORE starting the inferior.
 
     * Cloglevel      print or set the log level dynamically from inside Vim
 
-    * |Cmapkeys|      map pyclewn keys
+    *|Cmapkeys|      map pyclewn keys
 
-    * |Cproject|      save the current gdb settings to a project file
+    *|Cproject|      save the current gdb settings to a project file
 
-    * |Csetfmtvar|    set the output format of the value of a watched variable
+    *|Csetfmtvar|    set the output format of the value of a watched variable
 
     * Csigint        send a <C-C> character to the debugger to interrupt the
                      running program that is being debugged; only with gdb,
                      and when pyclewn and gdb communicate over a pseudo
                      terminal
 
-    * |Csymcompletion| populate the break and clear commands with symbols
+    *|Csymcompletion|populate the break and clear commands with symbols
                      completion (only with gdb)
 
     * Cunmapkeys     unmap the pyclewn keys, this vim command does not invoke
@@ -962,12 +969,14 @@ Pyclewn commands:
 The |Ccommand| list includes pdb commands and some pyclewn specific commands
 that are listed here:
 
+    *|Cballooneval|  enable or disable showing text in the Vim balloon
+
     * Cdumprepr      print on the console pyclewn internal structures that
                      may be used for debugging pyclewn
 
     * Cloglevel      print or set the log level dynamically from inside Vim
 
-    * |Cmapkeys|      map pyclewn keys
+    *|Cmapkeys|      map pyclewn keys
 
     * Cunmapkeys     unmap the pyclewn keys, this vim command does not invoke
                      pyclewn

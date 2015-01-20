@@ -231,7 +231,8 @@ def main(testrun=False):
         critical('\n' + except_str)
         if vim.netbeans:
             vim.netbeans.show_balloon(except_str)
-        sys.exit(1)
+        if not testrun:
+            sys.exit(1)
     finally:
         debug('Vim instance: ' + str(vim))
         vim.shutdown()

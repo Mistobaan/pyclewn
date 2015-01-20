@@ -154,6 +154,7 @@ class Simple(ClewnTestCase):
             'qa!',
             ]
         expected = (
+            'ballooneval -- Enable or disable showing text in Vim balloon.',
             'break -- Set a breakpoint at a specified line.',
             'continue -- Continue the program being debugged, also used to start the program.',
             'dbgvar -- Add a variable to the debugger variable buffer.',
@@ -287,6 +288,7 @@ class Simple(ClewnTestCase):
             ]
         expected = (
             '(simple) help',
+            'ballooneval -- Enable or disable showing text in Vim balloon.',
             'break -- Set a breakpoint at a specified line.',
             'continue -- Continue the program being debugged, also used to start the program.',
             'dbgvar -- Add a variable to the debugger variable buffer.',

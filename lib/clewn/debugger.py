@@ -362,6 +362,7 @@ class Debugger(object):
             'loglevel': misc.LOG_LEVELS,
             'mapkeys': (),
             'unmapkeys': (),
+            'ballooneval': (),
         }
         self.vim_implementation = ['unmapkeys']
         self.pyclewn_cmds = self.cmds
@@ -377,6 +378,7 @@ class Debugger(object):
         self.bg_jobs = []
         self.proc_inftty = None
         self._delayed_call = None
+        self.ballooneval_enabled = True
 
     def set_nbsock(self, nbsock):
         """Set the netbeans socket."""
@@ -595,7 +597,8 @@ class Debugger(object):
                 The text to show in the balloon.
 
         """
-        self.__nbsock.show_balloon(text)
+        if self.ballooneval_enabled:
+            self.__nbsock.show_balloon(text)
 
     def print_prompt(self):
         """Print the prompt in the Vim debugger console."""
@@ -1014,6 +1017,13 @@ class Debugger(object):
 
         """
         self.not_a_pyclewn_method(cmd)
+
+    def cmd_ballooneval(self, *args):
+        """Enable or disable showing text in Vim balloon."""
+        self.ballooneval_enabled = False if self.ballooneval_enabled else True
+        setting = 'en' if self.ballooneval_enabled else 'dis'
+        self.console_print('ballooneval has been %sabled.\n' % setting)
+        self.print_prompt()
 
     def __str__(self):
         """Return the string representation."""
