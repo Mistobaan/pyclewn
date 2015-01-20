@@ -58,7 +58,7 @@ MAPKEYS = {
     'C-D': ('down',),
     'C-B': ('break "${fname}":${lnum}',
                 'set breakpoint at current line'),
-    'C-E': ('clear "${fname}":${lnum}',
+    'C-K': ('clear "${fname}":${lnum}',
                 'clear breakpoint at current line'),
     'C-P': ('print ${text}',
                 'print value of selection at mouse position'),

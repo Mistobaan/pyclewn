@@ -131,7 +131,7 @@ class Pyclewn(ClewnTestCase):
             'Cmapkeys',
             'redir! >> ${test_out}',
             'map <C-B> ',
-            'map <C-E> ',
+            'map <C-K> ',
             'map <C-P>',
             'map <C-Z>',
             'map <S-C>',
@@ -141,7 +141,7 @@ class Pyclewn(ClewnTestCase):
             ]
         expected = (
             'n  <C-B>         :nbkey C-B<CR>',
-            'n  <C-E>         :nbkey C-E<CR>',
+            'n  <C-K>         :nbkey C-K<CR>',
             'n  <C-P>         :nbkey C-P<CR>',
             'n  <C-Z>         :nbkey C-Z<CR>',
             'n  <S-C>         :nbkey S-C<CR>',

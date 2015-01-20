@@ -31,7 +31,7 @@
 #
 # C-B : break "${fname}:${lnum}" # set breakpoint at current line
 # C-D : down
-# C-E : clear "${fname}:${lnum}" # clear breakpoint at current line
+# C-K : clear "${fname}:${lnum}" # clear breakpoint at current line
 # C-N : next
 # C-P : p ${text}                # print value of selection at mouse position
 # C-U : up

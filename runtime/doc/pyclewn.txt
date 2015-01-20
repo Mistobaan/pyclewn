@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 January 19
+*pyclewn.txt*                                   Last change: 2015 January 20
 
 
                             PYCLEWN USER MANUAL
@@ -602,7 +602,7 @@ These keys are mapped after the |Cmapkeys| vim command is run.
 
 cursor position: ~
         CTRL-B  set a breakpoint on the line where the cursor is located
-        CTRL-E  clear all breakpoints on the line where the cursor is located
+        CTRL-K  clear all breakpoints on the line where the cursor is located
 
 mouse pointer position: ~
         CTRL-P  print the value of the variable defined by the mouse pointer
@@ -950,7 +950,7 @@ These keys are mapped after the |Cmapkeys| vim command is run.
 
 cursor position: ~
         CTRL-B  set a breakpoint on the line where the cursor is located
-        CTRL-E  clear all breakpoints on the line where the cursor is located
+        CTRL-K  clear all breakpoints on the line where the cursor is located
 
 mouse pointer position: ~
         CTRL-P  print the value of the selected expression defined by the
