@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 January 18
+*pyclewn.txt*                                   Last change: 2015 January 19
 
 
                             PYCLEWN USER MANUAL
@@ -157,16 +157,37 @@ Global variables         *pyclewn_python* *pyclewn_args* *pyclewn_connection*
 ----------------
 
 When starting pyclewn from vim, the pyclewn command line arguments and
-connection details may be set with the |pyclewn_python|, |pyclewn_args| and
-|pyclewn_connection| global variables.
+connection details may be set with the following global variables:
+
+    * |pyclewn_terminal|: start pyclewn in a terminal (see next section)
+    * |pyclewn_python|: the program used to start python
+    * |pyclewn_args|: pyclewn arguments
+    * |pyclewn_connection|: pyclewn connection parameters
 
 When those global variables are not set, pyclewn is spawned with the
 following values:
 
+    * pyclewn_terminal: ""
     * pyclewn_python: "python"
     * pyclewn_connection: "localhost:3219:changeme"
     * pyclewn_args:
         "--window=top --maxlines=10000 --background=Cyan,Green,Magenta"
+
+
+Trouble shooting ':Pyclewn'                          *pyclewn_terminal*
+---------------------------
+
+Set the |pyclewn_terminal| global variable to have pyclewn started in a
+terminal instead of as a daemon, and visualize the log traces at the "info"
+log level.|pyclewn_terminal| value is a comma separated list of the arguments
+needed to start the terminal and a program running in this terminal. For
+example, with xterm: >
+
+    :let g:pyclewn_terminal = "xterm, -e"
+
+When pyclewn fails (its exit code is not zero), the terminal remains open for
+10 minutes so that the log traces may be examined. Type <Ctl-C> to close the
+terminal.
 
 
 Start pyclewn from a shell:

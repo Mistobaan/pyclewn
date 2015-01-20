@@ -318,7 +318,7 @@ class StderrHandler(logging.StreamHandler):
         if self.doflush:
             value = self.strbuf.getvalue()
             if value:
-                print(value, file=sys.stderr)
+                print(value, end='', file=sys.stderr)
                 self.strbuf.truncate(0)
 
     def close(self):

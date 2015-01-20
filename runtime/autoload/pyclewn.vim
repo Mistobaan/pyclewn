@@ -12,10 +12,16 @@ let s:did_pyclewn = 1
 " The following global variables define how pyclewn is started. They may be
 " changed to suit your preferences.
 function s:init()
-    if exists("g:pyclewn_python")
-      let s:pgm = g:pyclewn_python
+    if exists("g:pyclewn_terminal")
+      let s:terminal = g:pyclewn_terminal
     else
-      let s:pgm = "python"
+      let s:terminal = ""
+    endif
+
+    if exists("g:pyclewn_python")
+      let s:python = g:pyclewn_python
+    else
+      let s:python = "python"
     endif
 
     if exists("g:pyclewn_args")
@@ -33,8 +39,16 @@ function s:init()
     " Uncomment the following line to print full traces in a file named
     " 'logfile' for debugging purpose (or change g:pyclewn_args).
     " let s:args .= " --level=nbdebug --file=logfile"
+    if s:terminal != ""
+      let s:args .= " --level=info"
+    endif
 
-    let s:fixed = "--daemon --editor= --netbeans=" . s:connection . " --cargs="
+    let l:fixed_args = "--editor= --netbeans=" . s:connection . " --cargs="
+    if s:terminal != ""
+      let s:fixed = l:fixed_args
+    else
+      let s:fixed = "--daemon " . l:fixed_args
+    endif
 endfunction
 
 " Run the 'Cinterrupt' command to open the console.
@@ -93,13 +107,16 @@ endfunction
 " Start pyclewn and vim netbeans interface.
 function s:start(args)
     if !exists(":nbstart")
-        throw "Error: the ':nbstart' vim command does not exist."
+        call s:error("Error: the ':nbstart' vim command does not exist.")
+        return
     endif
     if has("netbeans_enabled")
-        throw "Error: netbeans is already enabled and connected."
+        call s:error("Error: netbeans is already enabled and connected.")
+        return
     endif
-    if !executable(s:pgm)
-        throw "Error: '" . s:pgm . "' cannot be found or is not an executable."
+    if !executable(s:python)
+        call s:error("Error: '" . s:python . "' cannot be found or is not an executable.")
+        return
     endif
     let l:tmpfile = tempname()
 
@@ -111,9 +128,16 @@ function s:start(args)
         bwipeout (clewn)_dbgvar
     endif
 
-    " start pyclewn and netbeans
+    " Start pyclewn and netbeans.
     call s:info("Starting pyclewn.\n")
-    exe "silent !" . s:pgm . " -m clewn " . s:fixed . l:tmpfile . " " . a:args . " &"
+    let l:run_pyclewn = s:python . " -m clewn " . s:fixed . l:tmpfile . " " . a:args
+    if s:terminal == ""
+      exe "silent !" . l:run_pyclewn . " &"
+    else
+      let l:run_terminal = join(split(s:terminal, ","), " ")
+      exe "silent !" . l:run_terminal . " sh -c '" . l:run_pyclewn . " || sleep 600' &"
+    endif
+
     call s:info("Running nbstart, <C-C> to interrupt.\n")
     call s:pyclewn_ready(l:tmpfile)
     exe "nbstart :" . s:connection
@@ -151,23 +175,20 @@ function pyclewn#StartClewn(...)
 
     try
         call s:start(l:args)
+    catch /^Vim:Interrupt$/
+      return
     catch /.*/
         call s:info("The 'Pyclewn' command has been aborted.\n")
-        let l:err = v:exception
-        let l:argl = split(l:args)
-        if index(l:argl, "pdb") == len(l:argl) - 1
-            let l:err .= "Create a python script containing the line:\n"
-            let l:err .= "   import clewn.vim as vim; vim.pdb(level='debug')\n"
-            let l:err .= "and run this script to get the cause of the problem."
-        else
-            let l:err .= "Run 'python -m clewn' to get the cause of the problem."
-        endif
+        let l:err = v:exception . "\n"
+        let l:err .= "To get the cause of the problem set the global variable"
+        let l:err .= " 'pyclewn_terminal' to:\n"
+        let l:err .= ":let g:pyclewn_terminal = \"xterm, -e\"\n"
         call s:error(l:err)
-        " vim console screen is garbled, redraw the screen
+        " The vim console screen is garbled, redraw the screen.
         if !has("gui_running")
             redraw!
         endif
-        " clear the command line
+        " Clear the command line.
         echo "\n"
     endtry
 endfunction

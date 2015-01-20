@@ -4,7 +4,7 @@ News
 Pyclewn 2.0
 -----------
 
-.. January 18, 2015
+.. January 19, 2015
 
 Changes
 ^^^^^^^
@@ -31,6 +31,10 @@ New features
   debugger and the following arguments are passed to the debugger. For
   example, to debug ``foobar foobar_arg`` with gdb, run the Vim commmand
   ``:Pyclewn gdb --args foobar foobar_arg``.
+
+* The new ``g:pyclewn_terminal`` Vim global variable allows the pyclewn
+  program started with ``:Pyclewn`` to run in a terminal instead of as a
+  daemon, and helps trouble shooting startup problems.
 
 Bug fixes
 ^^^^^^^^^

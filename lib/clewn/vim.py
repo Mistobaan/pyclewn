@@ -231,6 +231,7 @@ def main(testrun=False):
         critical('\n' + except_str)
         if vim.netbeans:
             vim.netbeans.show_balloon(except_str)
+        sys.exit(1)
     finally:
         debug('Vim instance: ' + str(vim))
         vim.shutdown()
@@ -260,6 +261,7 @@ class Vim(object):
         self.loglevel = None
         self.loop = None
         self.setlogger()
+        self.events = None
 
     def set_event_loop(self):
         self.loop = asyncio.new_event_loop()
@@ -362,7 +364,7 @@ class Vim(object):
             return
         self.closed = True
 
-        while not self.events.empty():
+        while self.events and not self.events.empty():
             event = self.events. get_nowait()
             warning('pending event at shutdown: ', event)
 
