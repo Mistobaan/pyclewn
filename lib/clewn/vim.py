@@ -657,6 +657,8 @@ class Vim(object):
                 else:
                     # Netbeans connection accepted.
                     self.netbeans = event
+                    self.nbserver.close()
+                    self.nbserver = None
 
             elif self.netbeans and isinstance(event, debugger.Debugger):
                 if self.netbeans.connected:
