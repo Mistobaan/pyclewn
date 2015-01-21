@@ -17,7 +17,6 @@ import logging
 import re
 import socket
 import difflib
-from collections import deque
 from abc import ABCMeta, abstractmethod
 
 from . import ClewnError, misc
@@ -628,7 +627,7 @@ class Netbeans(asyncio.Protocol, object):
         self.last_buf = None
         self.console = None
         self.dbgvarbuf = None
-        self.reply_fifo = deque()
+        self.reply_fifo = []
         self.ready = False
         self.detached = False
         self.debugger = None
@@ -709,14 +708,23 @@ class Netbeans(asyncio.Protocol, object):
 
         # a function reply: process the reply
         else:
-            # vim may send multiple replies for one function request
+            # Vim may send multiple replies for one function request.
             if seqno == self.last_seqno:
                 return
 
             if not self.reply_fifo:
                 raise ClewnError(
                         'got a reply with no matching function request')
-            reply = self.reply_fifo.popleft()
+            # Vim does not acknowledge all the sequence numbers.
+            idx = 0
+            for reply in self.reply_fifo:
+                if reply.seqno == seqno:
+                    self.reply_fifo = self.reply_fifo[idx+1:]
+                    break
+                idx += 1
+            else:
+                # No match found, use the first one.
+                reply = self.reply_fifo.pop(0)
             reply(seqno, nbstring, arg_list)
             self.last_seqno = seqno
 
