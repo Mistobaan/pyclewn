@@ -4,7 +4,7 @@ News
 Pyclewn 2.0
 -----------
 
-.. January 20, 2015
+.. January 21, 2015
 
 Changes
 ^^^^^^^
@@ -25,7 +25,8 @@ Changes
   to run.
 
 * ``CTRL-E`` is a standard Vim command, it is replaced now with ``CTRL-K`` in
-  pyclewn key mappings for clearing breakpoints.
+  pyclewn key mappings for clearing breakpoints. The ``(clewn)_console`` is
+  not any more popped up after hitting a pyclewn mapped key.
 
 New features
 ^^^^^^^^^^^^

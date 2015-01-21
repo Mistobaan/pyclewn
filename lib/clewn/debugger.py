@@ -197,7 +197,6 @@ FUNCTION_MAPKEYS = """
 " Popup gdb console on pyclewn mapped keys.
 function s:mapkeys()
     call s:nbcommand("mapkeys")
-    cnoremap nbkey call <SID>winsplit("${console}", "${location}") <Bar> nbkey
 endfunction
 
 """
@@ -803,21 +802,15 @@ class Debugger(object):
             f.write(FUNCTION_CONSOLE)
 
             # mapkeys function
-            f.write(string.Template(FUNCTION_MAPKEYS).substitute(
-                                        console=netbeans.CONSOLE,
-                                        location=options.window))
+            f.write(FUNCTION_MAPKEYS)
 
             # unmapkeys function
             f.write('function s:unmapkeys()\n')
-            f.write('    try\n')
-            f.write('       cunmap nbkey\n')
-            f.write('   catch /.*/\n')
-            f.write('   endtry\n')
             for key in self.mapkeys:
-                f.write('try\n')
-                f.write('   unmap <%s>\n' % key)
-                f.write('catch /.*/\n')
-                f.write('endtry\n')
+                f.write('   try\n')
+                f.write('      unmap <%s>\n' % key)
+                f.write('   catch /.*/\n')
+                f.write('   endtry\n')
             f.write('endfunction\n')
 
             # setup pyclewn vim user defined commands
