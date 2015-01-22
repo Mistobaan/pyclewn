@@ -43,9 +43,12 @@ class Pdb(ClewnTestCase):
         """Cleanup stuff after the test."""
         ClewnTestCase.tearDown(self)
 
-        # wait for the python script being debugged to terminate
+        # Wait for the python script being debugged to terminate.
         if self.pdb_script:
-            self.pdb_script.communicate()
+            try:
+                self.pdb_script.communicate(timeout=2)
+            except subprocess.TimeoutExpired:
+                self.pdb_script.kill()
             self.pdb_script.stderr.close()
             self.fnull.close()
 
@@ -281,6 +284,7 @@ class Pdb(ClewnTestCase):
             'C c.value = -1',
             'Ccontinue',
             'Cinterrupt',
+            'call Wait_eop()',
             'C i = 0',
             'Ctbreak 27',
             'Ccontinue',
@@ -375,6 +379,7 @@ class Pdb(ClewnTestCase):
             'C c.value = -1',
             'Ccontinue',
             'Cinterrupt',
+            'call Wait_eop()',
             'C i = 0',
             'Cbreak testsuite/foo.py:48',
             'Ccontinue',

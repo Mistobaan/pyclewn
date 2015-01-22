@@ -204,6 +204,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             pdb state
         interrupted: bool
             the interrupt command has been issued
+        start_interrupted: bool
+            the start interrupt has been issued
         attached: bool
             pdb is attached to a running process
 
@@ -218,6 +220,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.lineno = None
         self.curframe = None
         self.stack = []
+        self.start_interrupted = False
         self.interrupted = False
         self.attached = True
         self.tty = None
@@ -458,6 +461,13 @@ class Pdb(debugger.Debugger, pdb.Pdb):
 
     def interaction(self, frame, traceback, post_mortem=False):
         """Handle user interaction in the target thread."""
+        # Sleep a while to prevent both threads sending netbeans commands
+        # simultaneously which would swap around the Vim windows in an
+        # inconsistent way.
+        if self.interrupted:
+            self.interrupted = False
+            time.sleep(1)
+
         # Wait for the netbeans session to be established.
         while not self.started or self.state == STATE_INIT:
             if self.let_target_run:
@@ -472,8 +482,8 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                 return
             time.sleep(TIMEOUT)
 
-        if self.interrupted:
-            self.interrupted = False
+        if self.start_interrupted:
+            self.start_interrupted = False
             # Do not set the trace function in post mortem debugging, as
             # interaction() is not called from the trace function
             # trace_dispatch() then.
@@ -755,11 +765,12 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         # being only set in the ensuing interaction.
         if self._previous_sigint_handler:
             os.kill(os.getpid(), signal.SIGINT)
+            self.interrupted = True
         else:
             # This supposes that the trace function has not been removed so that
             # we can enter interaction on a call debug event (because of the
             # call to set_step).
-            self.interrupted = True
+            self.start_interrupted = True
             self.doprint_trace = True
             self.set_step()
 
