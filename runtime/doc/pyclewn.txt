@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 January 20
+*pyclewn.txt*                                   Last change: 2015 January 23
 
 
                             PYCLEWN USER MANUAL
@@ -169,7 +169,8 @@ following values:
 
     * pyclewn_terminal: ""
     * pyclewn_python: "python"
-    * pyclewn_connection: "localhost:3219:changeme"
+    * gdb pyclewn_connection: "localhost:3219:changeme"
+    * pdb pyclewn_connection: "localhost:3220:changeme"
     * pyclewn_args:
         "--window=top --maxlines=10000 --background=Cyan,Green,Magenta"
 
@@ -246,9 +247,7 @@ Options:
                               disabled and frame sign background colors, in
                               this order (default 'Cyan,Green,Magenta')
   -n CONN, --netbeans=CONN    set netBeans connection parameters to CONN with
-                              CONN as 'host[:port[:passwd]]', (the default is
-                              ':3219:changeme' where the empty host represents
-                              INADDR_ANY)
+                              CONN as 'host[:port[:passwd]]'
   -l LEVEL, --level=LEVEL     set the log level to LEVEL: critical, error,
                               warning, info, debug, nbdebug (default error)
   -f FILE, --file=FILE        set the log file name to FILE
@@ -367,12 +366,11 @@ The full description of pyclewn options follows:
 
 -n {CONN}
 --netbeans={CONN}   Set netBeans connection parameters to CONN with CONN as
-                    'host[:port[:passwd]]', (the default is ':3219:changeme'
-                    where the empty host represents INADDR_ANY). Pyclewn
-                    listens on host:port, with host being a name or the IP
-                    address of one of the local network interfaces in standard
-                    dot notation. These parameters must match those used by
-                    vim for the connection to succeed.
+                    'host[:port[:passwd]]', (the default is
+                    '127.0.0.1:3219:changeme' for gdb and
+                    '127.0.0.1:3220:changeme' for pdb). Pyclewn listens on
+                    host:port, with host being a name or the IP address of one
+                    of the local network interfaces in standard dot notation.
 
 -l {LEVEL}
 --level={LEVEL}     Set the log level to LEVEL: critical, error, warning, info,
@@ -999,11 +997,11 @@ When attaching to a python process, use the corresponding keyword argument: >
   pyclewn with pyclewn), change the netbeans socket port with the
   |pyclewn_connection| vim global variable before starting the script: >
 
-    :let g:pyclewn_connection="localhost:3220:foo"
+    :let g:pyclewn_connection="localhost:3222:foo"
 
 And change the corresponding keyword argument: >
 
-    import clewn.vim as vim; vim.pdb(netbeans='localhost:3220:foo')
+    import clewn.vim as vim; vim.pdb(netbeans='localhost:3222:foo')
 
 
 Limitations:

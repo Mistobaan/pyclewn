@@ -32,6 +32,7 @@ class Gdb(ClewnTestCase):
     def __init__(self, *args, **kwds):
         ClewnTestCase.__init__(self, *args, **kwds)
         self.debugger = 'gdb'
+        self.netbeans_port = 3219
 
     def setUp(self):
         ClewnTestCase.setUp(self)

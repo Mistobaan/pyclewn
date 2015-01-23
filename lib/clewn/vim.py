@@ -29,7 +29,11 @@ from . import (__version__, ClewnError, misc, netbeans, tty,
 from .process import daemonize
 
 WINDOW_LOCATION = ('top', 'bottom', 'left', 'right', 'none')
-CONNECTION_DEFAULTS = '', 3219, 'changeme'
+CONNECTION_DEFAULTS =  {
+        'gdb':      ('127.0.0.1', 3219, 'changeme'),
+        'pdb':      ('127.0.0.1', 3220, 'changeme'),
+        'simple':   ('127.0.0.1', 3221, 'changeme'),
+    }
 CONNECTION_TIMEOUT = 30
 CONNECTION_ERROR = """Connection to Vim timed out after %s seconds.
 Please check that the netbeans_intg feature is compiled
@@ -315,13 +319,10 @@ class Vim(object):
         info('sourcing the Vim script file: %s', self.f_script.name)
         args[:0] = [self.f_script.name]
         args[:0] = ['-S']
-        if not self.options.cargs \
-                or not                  \
-                [a for a in self.options.cargs if a.startswith('-nb')]:
-            args[:0] = ['-nb']
+        args[:0] = ['-nb:%s' % ':'.join(self.connection)]
         args[:0] = [self.options.editor]
 
-        # uncomment next lines to run Valgrind on Vim
+        # Uncomment next lines to run Valgrind on Vim.
         # args[:0] = ["--leak-check=yes"]
         # args[:0] = ["valgrind"]
 
@@ -335,15 +336,15 @@ class Vim(object):
         info('platform: %s' % platform.platform())
 
         # Get the connection parameters.
-        conn = list(CONNECTION_DEFAULTS)
+        connection_defaults = CONNECTION_DEFAULTS[self.module]
+        conn = list(connection_defaults)
         if self.options.netbeans:
             conn = self.options.netbeans.split(':')
-            conn[1:] = conn[1:] or [CONNECTION_DEFAULTS[1]]
-            conn[2:] = conn[2:] or [CONNECTION_DEFAULTS[2]]
-            # getaddrinfo() rejects a unicode port number on python 2.7.
-            conn[1] = str(conn[1])
-        assert len(conn) == 3, 'too many netbeans connection parameters'
-        conn[1] = conn[1] or CONNECTION_DEFAULTS[1]
+            conn[1:] = conn[1:] or [connection_defaults[1]]
+            conn[2:] = conn[2:] or [connection_defaults[2]]
+        conn[1] = conn[1] or connection_defaults[1]
+        # getaddrinfo() rejects a unicode port number on python 2.7.
+        conn[1] = str(conn[1])
         self.connection = conn
 
         module = importlib.import_module('clewn.%s' % self.module)
@@ -479,9 +480,7 @@ class Vim(object):
                 ' (default \'Cyan,Green,Magenta\')')
         parser.add_option('-n', '--netbeans', metavar='CONN',
                 help='set netBeans connection parameters to CONN with CONN as'
-                ' \'host[:port[:passwd]]\', (the default is \'%s\''
-                ' where the empty host represents INADDR_ANY)' %
-                ':'.join([str(x) for x in CONNECTION_DEFAULTS]))
+                ' \'host[:port[:passwd]]\'')
         parser.add_option('-l', '--level', metavar='LEVEL',
                 type='string', default='',
                 help='set the log level to LEVEL: %s (default \'error\')'
@@ -513,7 +512,10 @@ class Vim(object):
                     '"%s" is an invalid window LOCATION, must be one of %s'
                     % (options.window, WINDOW_LOCATION))
 
-        # set Netbeans class members
+        if options.netbeans and len(options.netbeans.split(':')) > 3:
+            parser.error('too many netbeans connection parameters')
+
+        # Set Netbeans class members.
         if location == 'none':
             netbeans.Netbeans.enable_setdot = False
 

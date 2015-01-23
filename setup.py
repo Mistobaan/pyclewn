@@ -93,8 +93,7 @@ class Test(Command):
                      ' test with \'python setup.py test --test=gdb --pdb -p'
                      ' test_021\''
                      ' then start a Vim instance and run'
-                     ' \':let g:pyclewn_connection="localhost:3220:foo" |'
-                     ' Pyclewn pdb\''),)
+                     ' \'Pyclewn pdb\''),)
     ]
 
     def initialize_options(self):

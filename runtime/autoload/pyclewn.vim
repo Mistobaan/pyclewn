@@ -11,7 +11,7 @@ let s:did_pyclewn = 1
 
 " The following global variables define how pyclewn is started. They may be
 " changed to suit your preferences.
-function s:init()
+function s:init(debugger)
     if exists("g:pyclewn_terminal")
       let s:terminal = g:pyclewn_terminal
     else
@@ -33,7 +33,13 @@ function s:init()
     if exists("g:pyclewn_connection")
       let s:connection = g:pyclewn_connection
     else
-      let s:connection = "localhost:3219:changeme"
+      if a:debugger == "gdb"
+        let s:connection = "127.0.0.1:3219:changeme"
+      elseif a:debugger == "pdb"
+        let s:connection = "127.0.0.1:3220:changeme"
+      else
+        let s:connection = "127.0.0.1:3221:changeme"
+      endif
     endif
 
     " Uncomment the following line to print full traces in a file named
@@ -160,7 +166,12 @@ function s:start(args)
 endfunction
 
 function pyclewn#StartClewn(...)
-    call s:init()
+    let l:debugger = "gdb"
+    if a:0 != 0
+      let l:debugger = a:1
+    endif
+    call s:init(l:debugger)
+
     let l:args = s:args
     if a:0 != 0
       if index(["gdb", "pdb", "simple"], a:1) == -1

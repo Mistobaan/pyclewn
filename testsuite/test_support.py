@@ -21,7 +21,6 @@ from unittest.result import failfast
 
 import clewn.vim
 
-NETBEANS_PORT = 3219
 LOGFILE = 'logfile'
 TESTRUN_SLEEP_TIME = 800
 SLOW_DOWN_TESTS = 40
@@ -153,18 +152,17 @@ class ClewnTestCase(TestCase):
         self.pdb_script = None
         self.fnull = None
         self.debugger = None
+        self.netbeans_port = 3219
 
     def setUp(self):
         """Setup pyclewn arguments."""
-        port = NETBEANS_PORT
         sys.argv = [
-            '-c',                       # argv[0], a script
-            '--netbeans=:%d' % port,    # netbeans port
-            '--cargs',                  # vim args
-            '-nb:127.0.0.1:%d:changeme '
+            '-c',
+            '--netbeans=:%d' % self.netbeans_port,
+            '--cargs',
                 '-u NORC '
                 '-U NONE '
-                '-s %s' % (port, TESTFN),
+                '-s %s' % TESTFN,
         ]
         sys.argv.append('--editor=%s' % os.environ.get('EDITOR', 'gvim'))
         if self.debugger != 'pdb':
@@ -259,7 +257,7 @@ class ClewnTestCase(TestCase):
 
         # Enable the debugging of this test case.
         if self._debug:
-            clewn.vim.pdb(netbeans='localhost:3220:foo')
+            clewn.vim.pdb()
         # Process the commands.
         vim = clewn.vim.main(True)
         # Remove the Vim script file in case the script failed to remove itself.

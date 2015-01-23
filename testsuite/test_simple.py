@@ -18,6 +18,11 @@ from .test_support import ClewnTestCase
 class Simple(ClewnTestCase):
     """Test the Simple commands."""
 
+    def __init__(self, *args, **kwds):
+        ClewnTestCase.__init__(self, *args, **kwds)
+        self.debugger = 'simple'
+        self.netbeans_port = 3221
+
     def setUp(self):
         ClewnTestCase.setUp(self)
         sys.argv.append('simple')
