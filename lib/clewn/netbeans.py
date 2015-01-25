@@ -215,7 +215,7 @@ class ClewnBuffer(object):
         """Send a netbeans function."""
         nbsock = self.nbsock
         if not self.editing and function in ('insert', 'remove'):
-            nbsock.send_cmd(None, 'startAtomic')
+            nbsock.send_cmd(self.buf, 'startAtomic')
             nbsock.send_cmd(self.buf, 'setReadOnly', 'F')
             self.editing = True
         nbsock.send_function(self.buf, function, args)
@@ -240,7 +240,7 @@ class ClewnBuffer(object):
             nbsock = self.nbsock
             nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
             nbsock.goto_last()
-            nbsock.send_cmd(None, 'endAtomic')
+            nbsock.send_cmd(self.buf, 'endAtomic')
             self.editing = False
 
     def append(self, msg, *args):

@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 January 23
+*pyclewn.txt*                                   Last change: 2015 January 25
 
 
                             PYCLEWN USER MANUAL
@@ -512,6 +512,12 @@ when the mouse pointer is hovering over the the variable. To get the
 evaluation of an expression, first select the expression in visual mode in the
 source code and point the mouse over the selected expression. To disable this
 feature, set the vim option 'noballooneval'.
+
+Limitations:
+------------
+Running ":edit (clewn)_console" while the cursor is in "(clewn)_console"
+clears the contents of the console. The same problem occurs with
+"(clewn)_dbgvar".
 
 ==============================================================================
 5. Gdb                                              *pyclewn-gdb*
