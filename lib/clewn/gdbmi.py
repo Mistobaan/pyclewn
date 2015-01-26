@@ -1210,7 +1210,8 @@ class OobGdbCommand(OobCommand, Command):
             if parsed:
                 setattr(self.gdb.info, self.info_attribute, parsed)
             else:
-                debug('no match for "%s"', remain)
+                if not hasattr(self, 'remain') or remain != self.remain:
+                    debug('no match for "%s"', remain)
 
     def handle_result(self, result):
         """Process the result of the mi command."""
@@ -1241,6 +1242,7 @@ Args =          \
                 'info_attribute': 'args',
                 'prefix': 'Argument list to give program being'     \
                           ' debugged when it is started is',
+                'remain': ' "".\n',
                 'regexp': re_args,
                 'reqkeys': set(),
                 'gdblist': False,
@@ -1253,7 +1255,8 @@ Breakpoints =   \
                 '__doc__': """Get the breakpoints list.""",
                 'gdb_cmd': '-break-list\n',
                 'info_attribute': 'breakpoints',
-                'prefix': 'done,',
+                'prefix': 'body=[',
+                'remain': ']}',
                 'regexp': re_breakpoints,
                 'reqkeys': REQ_BREAKPOINT_ATTRIBUTES,
                 'gdblist': True,
@@ -1350,6 +1353,7 @@ Sources =       \
                 'gdb_cmd': '-file-list-exec-source-files\n',
                 'info_attribute': 'sources',
                 'prefix': 'done,',
+                'remain': 'files=[]',
                 'regexp': re_sources,
                 'reqkeys': SOURCES_ATTRIBUTES,
                 'gdblist': True,
@@ -1363,6 +1367,7 @@ VarUpdate =     \
                 'gdb_cmd': '-var-update *\n',
                 'info_attribute': 'changelist',
                 'prefix': 'done,',
+                'remain': 'changelist=[]',
                 'regexp': re_varupdate,
                 'reqkeys': VARUPDATE_ATTRIBUTES,
                 'gdblist': True,
