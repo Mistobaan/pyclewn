@@ -42,19 +42,30 @@ WAIT_EOP = """
 :       exe "C" . l:marker
 :   endif
 :   let l:start = localtime()
+:   let l:lnum = 1
 :   while 1
-:       " allow vim to process netbeans events and messages
+:       " Allow vim to process netbeans events and messages.
 :       sleep 10m
 :       if ${timeout} > 0 && localtime() - l:start > ${timeout}
 :           break
 :       endif
-:       let l:lines = getbufline("(clewn)_console", "$$")
-:       if a:0 != 0
-:           if len(l:lines) && l:lines[0] == a:1
-:               break
+:       let l:lines = getbufline("(clewn)_console", l:lnum, "$$")
+:       let l:index = 0
+:       while l:index < len(l:lines)
+:          let l:line = l:lines[l:index]
+:           if a:0 != 0
+:               if l:line == a:1
+:                   return
+:               endif
+:           elseif l:line =~# l:marker
+:               return
 :           endif
-:       elseif len(l:lines) && l:lines[0] =~# l:marker
-:           break
+:          let l:index = l:index + 1
+:       endwhile
+:       if l:index != 0
+:           " The last line may be partially written, so include it in the next
+:           " search.
+:           let l:lnum = l:lnum + l:index - 1
 :       endif
 :   endwhile
 :endfunction
