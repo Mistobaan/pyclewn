@@ -29,6 +29,12 @@ PY3 = (sys.version_info >= (3,))
 # Python 3.1 or newer
 PY31 = (sys.version_info >= (3, 1))
 
+# Python 3.2 or newer
+PY32 = (sys.version_info >= (3, 2))
+
+# Python 3.3 or newer
+PY33 = (sys.version_info >= (3, 3))
+
 # Python 3.4 or newer
 PY34 = (sys.version_info >= (3, 4))
 

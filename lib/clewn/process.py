@@ -20,7 +20,7 @@ import warnings
 from abc import ABCMeta, abstractmethod
 FlowControlMixin = asyncio.streams.FlowControlMixin
 
-from . import misc
+from . import PY32, misc
 
 CTL_C = b'\x03'
 SYNC_STR_LEN= 1
@@ -104,7 +104,7 @@ class PtySocket(object):
         self.fd = -1
 
     def __del__(self):
-        if self.fd >= 0:
+        if self.fd >= 0 and PY32:
             warnings.warn("unclosed file %r" % self, ResourceWarning)
         self.close()
 

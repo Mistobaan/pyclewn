@@ -16,6 +16,7 @@ import subprocess
 import time
 from unittest import skipIf
 
+from clewn import PY33
 from .test_support import TESTRUN_SLEEP_TIME, ClewnTestCase
 
 class Pdb(ClewnTestCase):
@@ -46,10 +47,13 @@ class Pdb(ClewnTestCase):
 
         # Wait for the python script being debugged to terminate.
         if self.pdb_script:
-            try:
-                self.pdb_script.communicate(timeout=2)
-            except subprocess.TimeoutExpired:
-                self.pdb_script.kill()
+            if PY33:
+                try:
+                    self.pdb_script.communicate(timeout=2)
+                except subprocess.TimeoutExpired:
+                    self.pdb_script.kill()
+            else:
+                self.pdb_script.communicate()
             self.pdb_script.stderr.close()
             self.fnull.close()
 

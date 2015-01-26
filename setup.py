@@ -65,18 +65,6 @@ def substitute_in_file(fname, mapping):
 
 NOTTESTS = ('test_support',)
 
-def findtests(testdir, nottests=NOTTESTS):
-    """Return a list of all applicable test modules."""
-    names = os.listdir(testdir)
-    tests = []
-    for name in names:
-        if name[:5] == 'test_' and name[-3:] == os.extsep + 'py':
-            modname = name[:-3]
-            if modname not in nottests:
-                tests.append(modname)
-    tests.sort()
-    return tests
-
 class Test(Command):
     """Run the test suite.
     """
@@ -104,8 +92,7 @@ class Test(Command):
         self.pdb = False
 
     def finalize_options(self):
-        if self.test is not None:
-            self.test = ['test_' + t for t in self.test.split(',')]
+        self.test = self.test or 'pyclewn,simple,gdb,pdb'
 
     def run (self):
         """Run the test suite."""
@@ -116,7 +103,7 @@ class Test(Command):
             return
 
         testsuite = 'testsuite'
-        tests = self.test or findtests(testsuite)
+        tests = ['test_' + t for t in self.test.split(',')]
         if self.prefix:
             defaultTestLoader.testMethodPrefix = self.prefix
         for test in tests:
