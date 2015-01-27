@@ -16,6 +16,10 @@ try:
     import queue  # Python 3
 except ImportError:
     import Queue as queue   # Python 2
+try:
+    import StringIO
+except ImportError:
+    pass
 
 import sys
 import os
@@ -230,7 +234,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         self.target_queue = queue.Queue()
         self.in_interaction = False
         self.mouse_text = ''
-        self.stdout = io.StringIO() if PY3 else io.BytesIO()
+        self.stdout = io.StringIO() if PY3 else StringIO.StringIO()
         self.stop_interaction = False
         self.let_target_run = False
         self.trace_type = ''
@@ -614,7 +618,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
                 if not PY3:
                     r = unicode(r)
                 self.console_print(r)
-                self.stdout = io.StringIO() if PY3 else io.BytesIO()
+                self.stdout = io.StringIO() if PY3 else StringIO.StringIO()
 
         if cmd not in ('mapkeys', 'dumprepr', 'loglevel'):
             # A timed printout, printed  by the background task when it flushes

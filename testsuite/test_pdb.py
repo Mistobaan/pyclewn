@@ -53,7 +53,7 @@ class Pdb(ClewnTestCase):
                 except subprocess.TimeoutExpired:
                     self.pdb_script.kill()
             else:
-                self.pdb_script.communicate()
+                self.pdb_script.kill()
             self.pdb_script.stderr.close()
             self.fnull.close()
 
@@ -230,7 +230,7 @@ class Pdb(ClewnTestCase):
             'line=12  id=2  name=2',
             'line=13  id=1  name=1',
             'Signs for ${cwd}testsuite/foo.py:',
-            'line=40  id=4  name=4',
+            'line=41  id=4  name=4',
             )
         self.cltest_redir(cmd, expected)
 
@@ -257,7 +257,7 @@ class Pdb(ClewnTestCase):
             ]
         expected = (
             'Signs for ${cwd}testsuite/foo.py:',
-            'line=42  id=1  name=1',
+            'line=43  id=1  name=1',
             )
         self.cltest_redir(cmd, expected)
 
@@ -283,7 +283,7 @@ class Pdb(ClewnTestCase):
         """Interrupting an infinite loop"""
         cmd = [
             'Cinterrupt',
-            'Cbreak testsuite/foo.py:43',
+            'Cbreak testsuite/foo.py:44',
             'Ccontinue',
             'C run = True',
             'C c.value = -1',
@@ -291,7 +291,7 @@ class Pdb(ClewnTestCase):
             'Cinterrupt',
             'call Wait_eop()',
             'C i = 0',
-            'Ctbreak 27',
+            'Ctbreak 28',
             'Ccontinue',
             'redir! > ${test_out}',
             'sign place',
@@ -301,8 +301,8 @@ class Pdb(ClewnTestCase):
             ]
         expected = (
             'Signs for ${cwd}testsuite/foo.py:',
-            'line=27  id=1  name=1',
-            'line=43  id=2  name=2',
+            'line=28  id=1  name=1',
+            'line=44  id=2  name=2',
             )
         self.cltest_redir(cmd, expected)
 
@@ -311,7 +311,7 @@ class Pdb(ClewnTestCase):
         """A ZeroDivisionError exception"""
         cmd = [
             'Cinterrupt',
-            'Cbreak testsuite/foo.py:43',
+            'Cbreak testsuite/foo.py:44',
             'Ccontinue',
             'C run = True',
             'C c.value = 0',
@@ -336,7 +336,7 @@ class Pdb(ClewnTestCase):
             'Cbreak foo.foo',
             'Ccontinue',
             'C run = True',
-            'Cbreak testsuite/foo.py:47',
+            'Cbreak testsuite/foo.py:48',
             'Cclear 1',
             'Cdetach',
             'Pyclewn pdb',
@@ -352,8 +352,8 @@ class Pdb(ClewnTestCase):
             ]
         expected = (
             'Signs for ${cwd}testsuite/foo.py:',
-            'line=47  id=1  name=1',
-            'line=47  id=2  name=4',
+            'line=48  id=1  name=1',
+            'line=48  id=2  name=4',
             )
         self.cltest_redir(cmd, expected)
         os.environ['PATH'] = '.:' + os.environ['PATH']
@@ -378,7 +378,7 @@ class Pdb(ClewnTestCase):
         """Stop at breakpoint set in caller after interrupt"""
         cmd = [
             'Cinterrupt',
-            'Cbreak testsuite/foo.py:43',
+            'Cbreak testsuite/foo.py:44',
             'Ccontinue',
             'C run = True',
             'C c.value = -1',
@@ -386,7 +386,7 @@ class Pdb(ClewnTestCase):
             'Cinterrupt',
             'call Wait_eop()',
             'C i = 0',
-            'Cbreak testsuite/foo.py:48',
+            'Cbreak testsuite/foo.py:49',
             'Ccontinue',
             'redir! > ${test_out}',
             'sign place',
@@ -396,9 +396,9 @@ class Pdb(ClewnTestCase):
             ]
         expected = (
             'Signs for ${cwd}testsuite/foo.py:',
-            'line=43  id=2  name=2',
-            'line=48  id=1  name=1',
-            'line=48  id=4  name=4',
+            'line=44  id=2  name=2',
+            'line=49  id=1  name=1',
+            'line=49  id=4  name=4',
             )
         self.cltest_redir(cmd, expected)
 
