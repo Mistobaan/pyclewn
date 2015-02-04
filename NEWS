@@ -4,7 +4,33 @@ News
 Pyclewn 2.0
 -----------
 
-.. January 23, 2015
+.. February 4, 2015
+
+New features
+^^^^^^^^^^^^
+
+* Three clewn buffers are updated by gdb, they list the breakpoints, the
+  backtrace and the threads. One can jump with the <CR> key or the mouse to
+  the corresponding source code line from the ``(clewn)_breakpoints`` window
+  or switch to the corresponding frame from the ``(clewn)_backtrace`` window,
+  or switch to the correponding thread with the ``(clewn)_threads`` window.
+  The ``Ccwindow`` command has been removed.
+
+* A compound watched variable in ``(clewn)_variables`` can be expanded and
+  collapsed with the <CR> key or the mouse.
+
+* The new ``Cballooneval`` command switches on/off the Vim balloon without
+  interfering with the pyclewn key mappings that rely on the Vim 'ballooneval'
+  option to be functional.
+
+* The first optional argument of the ``:Pyclewn`` Vim command selects the
+  debugger and the following arguments are passed to the debugger. For
+  example, to debug ``foobar args`` with gdb, run the Vim commmand
+  ``:Pyclewn gdb --args foobar args``.
+
+* The new ``g:pyclewn_terminal`` Vim global variable allows the pyclewn
+  program started with ``:Pyclewn`` to run in a terminal instead of as a
+  daemon, and helps trouble shooting startup problems.
 
 Changes
 ^^^^^^^
@@ -15,34 +41,22 @@ Changes
   asyncio, i.e. version 2.7 or older than 3.4) instead of the deprecated
   asyncore Python module.
 
-* The preferred method to install pyclewn is now ``pip``. The Vim run time
-  files are installed with a vimball. Local installation is done using the
-  Python user scheme instead of the home scheme. pdb-clone is now installed
-  separately from PyPI.
+* The preferred method to install pyclewn is ``pip``. The Vim run time files
+  are installed with a vimball. Local installation is done using the Python
+  user scheme instead of the home scheme. pdb-clone is installed separately
+  from PyPI.
 
 * The pyclewn program is now started with the command ``python -m clewn``
   followed by the options and an optional argument that selects which debugger
   to run.
 
-* ``CTRL-E`` is a standard Vim command, it is replaced now with ``CTRL-K`` in
+* ``CTRL-E`` is a standard Vim command, it is replaced with ``CTRL-K`` in
   pyclewn key mappings for clearing breakpoints. The ``(clewn)_console`` is
   not any more popped up after hitting a pyclewn mapped key.
 
-New features
-^^^^^^^^^^^^
-
-* The first optional argument of the ``:Pyclewn`` Vim command selects the
-  debugger and the following arguments are passed to the debugger. For
-  example, to debug ``foobar foobar_arg`` with gdb, run the Vim commmand
-  ``:Pyclewn gdb --args foobar foobar_arg``.
-
-* The new ``g:pyclewn_terminal`` Vim global variable allows the pyclewn
-  program started with ``:Pyclewn`` to run in a terminal instead of as a
-  daemon, and helps trouble shooting startup problems.
-
-* The new ``Cballooneval`` command switches on/off the Vim balloon without
-  interfering with the pyclewn key mappings that rely on the 'ballooneval'
-  feature to be enabled.
+* The watched variables clewn buffer is now named ``(clewn)_variables`` and
+  the installed Vim syntax file has been renamed from ``dbgvar.vim`` to
+  ``clewn_variables.vim``.
 
 Bug fixes
 ^^^^^^^^^
@@ -64,6 +78,9 @@ Bug fixes
 * Pyclewn listens on '127.0.0.1' and each debugger type uses now a different
   netbeans port number.
 
+* Pyclewn prevents now the spawning of a terminal by ``Cinferiortty`` also
+  when the inferior is stopped in a shared library.
+
 Pyclewn 1.11
 ------------
 
@@ -80,8 +97,8 @@ Pyclewn 1.10
 
 .. February 7, 2013
 
-New feature
-^^^^^^^^^^^
+New features
+^^^^^^^^^^^^
 
 * Use now pdb-clone_ instead of the standard library Python debugger, pdb_.
 
@@ -105,8 +122,8 @@ New feature
       redirects all three standard streams to this pseudo tty (convenient for
       re-using the same pseudo tty across multiple debugging sessions).
 
-Change
-^^^^^^
+Changes
+^^^^^^^
 
 * An error message warns now the user when attempting to spawn the terminal
   from gdb with the ``inferiortty`` command and the inferior has been already
@@ -114,8 +131,8 @@ Change
 * pdb prints now a message to the console when the script has terminated.
 * Add file completion to the gdb command ``shell`` first argument.
 
-Bug fix
-^^^^^^^
+Bug fixes
+^^^^^^^^^
 
 * When the Python script is started from Vim with the command ``:Pyclewn pdb
   script.py``, the script is now terminated after the ``quit`` command has
@@ -156,8 +173,8 @@ New features
   the test suite by pyclewn. Run the ``python setup.py --help test`` command
   to see how to proceed to debug a test case with this option.
 
-Change
-^^^^^^
+Changes
+^^^^^^^
 
 * Avoid having the cursor hang for one second on the character ``n`` in Vim
   command line when pyclewn keys are not mapped.

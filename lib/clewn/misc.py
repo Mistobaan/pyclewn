@@ -115,14 +115,14 @@ def parse_keyval(regexp, line):
         r'(key1|key2|...)=%s' % QUOTED_STRING
 
     """
+    keyval_dict = {}
     parsed = regexp.findall(line)
     if parsed and isinstance(parsed[0], tuple) and len(parsed[0]) == 2:
-        keyval_dict = {}
         for (key, value) in parsed:
             keyval_dict[key] = unquote(value)
-        return keyval_dict
-    debug('not an iterable of key/value pairs: "%s"', line)
-    return None
+    else:
+        debug('not an iterable of key/value pairs: "%s"', line)
+    return keyval_dict
 
 def smallest_prefix(word, other):
     """Return the smallest prefix of 'word', not prefix of 'other'."""

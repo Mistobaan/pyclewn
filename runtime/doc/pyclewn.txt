@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 January 25
+*pyclewn.txt*                                   Last change: 2015 February 4
 
 
                             PYCLEWN USER MANUAL
@@ -517,7 +517,7 @@ Limitations:
 ------------
 Running ":edit (clewn)_console" while the cursor is in "(clewn)_console"
 clears the contents of the console. The same problem occurs with
-"(clewn)_dbgvar".
+"(clewn)_variables".
 
 ==============================================================================
 5. Gdb                                              *pyclewn-gdb*
@@ -525,6 +525,22 @@ clears the contents of the console. The same problem occurs with
 
 When gdb is started, it automatically executes commands from its init file,
 normally called '.gdbinit'. See the gdb documentation.
+
+
+                                                    *clewn-list-buffers*
+
+The clewn list buffers:
+-----------------------
+Three buffers are updated by pyclewn whenever the state of the debuggee
+changes. The buffers list the breakpoints, the backtrace and the threads. From
+a window loaded with one of these buffers and with the <CR> key or the mouse,
+one may:
+
+    * "(clewn)_breakpoints": jump to the corresponding source code line.
+
+    * "(clewn)_backtrace": switch to the corresponding frame.
+
+    * "(clewn)_threads": switch to the correponding thread.
 
 
                                                     *inferior_tty*
@@ -716,15 +732,11 @@ commands that are listed here:
                      CTRL-P to be still functioning after showing text in the
                      balloon has been disabled
 
-    * Ccwindow       opens a vim quickfix window holding the list of the
-                     breakpoints with their current state; the quickfix
-                     window allows moving directly to any breakpoint
-                     (requires the vim |+quickfix| feature)
-
     *|Cdbgvar|       add a watched variable or expression to the
-                     (clewn)_dbgvar buffer
+                     (clewn)_variables buffer
 
-    *|Cdelvar|       delete a watched variable from the (clewn)_dbgvar buffer
+    *|Cdelvar|       delete a watched variable from the (clewn)_variables
+                     buffer
 
     * Cdumprepr      print on the console pyclewn internal structures that
                      may be used for debugging pyclewn
@@ -1071,55 +1083,34 @@ mappings.
 
 
 The Watched Variables feature is available with the gdb debugger. The vim
-watched variables buffer is named "(clewn)_dbgvar".
+watched variables buffer is named "(clewn)_variables".
 
                                                     *Cdbgvar*
-The |Cdbgvar| command is used to create a gdb watched variable in the variables
+The |Cdbgvar| command is used to create a gdb watched variable in the Variables
 buffer from any valid expression. A valid expression is an expression that is
-valid in the current frame.
-The argument of the |Cdbgvar| pyclewn command is the expression to be watched.
-For example, to create a watched variable for the expression "len - max":
+valid in the current frame. The argument of the |Cdbgvar| pyclewn command is
+the expression to be watched. For example, to create a watched variable for
+the expression "len - max":
 >
     :Cdbgvar len - max
 
-Upon creation, the watched variable is given a name by gdb, for example:
-<var1>.
-The watched variables buffer, "(clewn)_dbgvar", is created upon creation of
-the first watched variable. It is created but not displayed in a window.
-To display "(clewn)_dbgvar" just after the creation of the first variable: >
-    :e #
-or >
-    CTL-^
-
-Use the following command to find the number N of the "(clewn)_dbgvar"
-buffer: >
-    :ls
-
-Knowing N, the following commands display the "(clewn)_dbgvar" buffer: >
-    :Nb
-or >
-    N CTL-^
-
-To split the current window and display "(clewn)_dbgvar": >
-    :Nsb
-.
+Upon creation, the watched variable is given a name by gdb, for example: >
+    <var1>
+The watched variables buffer, "(clewn)_variables", is created upon creation of
+the first watched variable.
 
                                                     *Cfoldvar*
 When the watched variable is a structure or class instance, it can be expanded
-with the |Cfoldvar| pyclewn command to display all its members and their values
-as children watched variables.
-The argument of the |Cfoldvar| command is the line number of the watched
-variable to expand, in the watched variable window.
-For example: >
+and collapsed with the |Cfoldvar| command to display all its members and their
+values as children watched variables. The argument of the |Cfoldvar| command
+is the line number of the watched variable to expand, in the watched variable
+window. For example: >
 
     :Cfoldvar 1
 
-The |Cfoldvar| command is meant to be used in a key mapping. This is the 'X' key
-when using pyclewn key mappings, or one can use the following mapping:
->
-    :map <F8> :exe "Cfoldvar " . line(".")<CR>
-
-The watched variable can also be collapsed with the |Cfoldvar| command.
+The |Cfoldvar| command is mapped to <CR> and to the double-click on the mouse
+left-button so that it is easy to expand/collapse the tree with the mouse or
+<CR> key.
 
 
                                                     *Cdelvar*

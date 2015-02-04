@@ -80,17 +80,6 @@ re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_mirecord = re.compile(RE_MIRECORD, re.VERBOSE)
 re_anno_1 = re.compile(RE_ANNO_1, re.VERBOSE)
 
-CWINDOW = """
-" open the quickfix window of breakpoints
-function s:cwindow()
-    cfile ${tmpfile}
-    cwindow
-endfunction
-
-command! -bar ${pre}cwindow call s:cwindow()
-
-"""
-
 SYMCOMPLETION = """
 " print a warning message on vim command line
 function s:message(msg)
@@ -360,8 +349,6 @@ class GlobalSetup(misc.Singleton):
             gdb program name to execute
         cmds: dict
             See the description of the Debugger 'cmds' attribute dictionary.
-        f_bps: closed file object
-            temporary file used to store the list of breakpoints
         f_ack: closed file object
             temporary file used to acknowledge the end of writing to f_clist
         f_clist: closed file object
@@ -435,7 +422,6 @@ class GlobalSetup(misc.Singleton):
         self.illegal_setargs_prefix = []
         self.gdb_cmds()
 
-        self.f_bps = misc.tmpfile('gdb')
         self.f_ack = misc.tmpfile('gdb')
         self.f_clist = misc.tmpfile('gdb')
 
@@ -597,7 +583,6 @@ class Gdb(debugger.Debugger, Process):
                 'setfmtvar': (),
                 'project': True,
                 'sigint': (),
-                'cwindow': (),
                 'symcompletion': (),
                 'define': (),
                 'document': (),
@@ -606,7 +591,6 @@ class Gdb(debugger.Debugger, Process):
         self.pyclewn_cmds['inferiortty'] = ()
         self.vim_implementation.extend(
             [
-                'cwindow',
                 'define',
                 'document',
                 'commands'
@@ -705,12 +689,9 @@ class Gdb(debugger.Debugger, Process):
                         complete_tmpfile=misc.quote(self.globaal.f_clist.name),
                         complete_timeout=SYMBOL_COMPLETION_TIMEOUT)
 
-        cwindow = string.Template(CWINDOW).substitute(pre=prefix,
-                                            tmpfile=self.globaal.f_bps.name)
-
         sequences = string.Template(SEQUENCES).substitute(pre=prefix)
 
-        return symcompletion + cwindow + sequences
+        return symcompletion + sequences
 
     def start(self):
         """Start gdb."""
@@ -758,9 +739,16 @@ class Gdb(debugger.Debugger, Process):
             self.clicmd_notify(self.firstcmdline)
         self.firstcmdline = ''
 
+        # Update the list buffers.
+        self.update_listbuffer('breakpoints', self.info.collect_breakpoints,
+                               self.info.bp_dirty)
+        self.update_listbuffer('backtrace', self.info.collect_backtrace,
+                               self.info.backtrace_dirty)
+        self.update_listbuffer('threads', self.info.collect_threads,
+                               self.info.threads_dirty)
         varobj = self.info.varobj
-        debugger.Debugger.update_dbgvarbuf(
-                self, varobj.collect, varobj.dirty, self.foldlnum)
+        self.update_listbuffer('variables', varobj.collect, varobj.dirty,
+                               self.foldlnum)
         self.foldlnum = None
 
         if self.time is not None:
@@ -925,12 +913,12 @@ class Gdb(debugger.Debugger, Process):
             debugger.Debugger.close(self)
             Process.close(self)
 
-            # clear varobj
-            rootvarobj = self.info.varobj
-            cleared = rootvarobj.clear()
-            self.update_dbgvarbuf(rootvarobj.collect, cleared)
+            # Update the list buffers.
+            varobj = self.info.varobj
+            cleared = varobj.clear()
+            self.update_listbuffer('variables', varobj.collect, cleared)
 
-            # remove temporary files
+            # Remove temporary files.
             try:
                 del self.f_init
             except AttributeError:
@@ -994,12 +982,16 @@ class Gdb(debugger.Debugger, Process):
                 self.print_prompt()
                 return
 
-        # turn off the frame sign after a run command
+        # Turn off the frame sign after a run command.
         if any([cmd.startswith(x)
                     for x in self.globaal.run_cmds_prefix])     \
                 or any([cmd == x
                     for x in ('d', 'r', 'c', 's', 'n', 'u', 'j')]):
-            self.info.update_frame(hide=True)
+            self.info.hide_frame()
+            self.update_listbuffer('backtrace', self.info.collect_backtrace,
+                               self.info.backtrace_dirty)
+            self.update_listbuffer('threads', self.info.collect_threads,
+                               self.info.threads_dirty)
 
         if self.firstcmdline is None:
             self.firstcmdline = self.curcmdline
@@ -1033,10 +1025,6 @@ class Gdb(debugger.Debugger, Process):
         else:
             self.inferiortty(set_inferior_tty_cb)
         self.print_prompt()
-
-    def cmd_cwindow(self, cmd, *args):
-        """List the breakpoints in a quickfix window."""
-        self.not_a_pyclewn_method(cmd)
 
     def cmd_symcompletion(self, *args):
         """Populate the break and clear commands with symbols completion."""

@@ -25,7 +25,7 @@ from . import buffer as vimbuffer
 NETBEANS_VERSION = '2.3'
 CONSOLE = '(clewn)_console'
 CONSOLE_MAXLINES = 10000
-VARIABLES_BUFFER = '(clewn)_dbgvar'
+LIST_BUFFERS = ('Variables', 'Breakpoints', 'Backtrace', 'Threads')
 
 RE_AUTH = r'^\s*AUTH\s*(?P<passwd>\S+)\s*$'                             \
           r'# RE: password authentication'
@@ -191,6 +191,8 @@ class ClewnBuffer(object):
             count of netbeans 'getLength' functions without a reply
 
     """
+
+    __metaclass__ = ABCMeta
 
     def __init__(self, name, nbsock):
         assert vimbuffer.is_clewnbuf(name)
@@ -374,8 +376,8 @@ class Console(ClewnBuffer):
                 self.clear(self.count)
                 self.count = 0
 
-class DebuggerVarBuffer(ClewnBuffer):
-    """The debugger variable buffer.
+class ClewnListBuffer(ClewnBuffer):
+    """An abstract Clewn buffer with a list.
 
     Instance attributes:
         linelist: list
@@ -383,8 +385,8 @@ class DebuggerVarBuffer(ClewnBuffer):
 
     """
 
-    def __init__(self, nbsock):
-        ClewnBuffer.__init__(self, VARIABLES_BUFFER, nbsock)
+    def __init__(self, name, nbsock):
+        ClewnBuffer.__init__(self, name, nbsock)
         self.linelist = []
 
     def clear(self, len=-1):
@@ -568,8 +570,8 @@ class Netbeans(asyncio.Protocol, object):
             the last buffer (non ClewnBuffer) where the cursor was positioned
         console: Console
             the pyclewn console
-        dbgvarbuf: DebuggerVarBuffer
-            the pyclewn debugger var buffer
+        list_buffers: dict
+            the list buffer instances
         reply_fifo: fifo
             the fifo containing Reply instances used to check netbeans replies
         addr: tuple
@@ -603,7 +605,7 @@ class Netbeans(asyncio.Protocol, object):
         getLength_fix: str
             '0' with vim 7.2 before patch 253
         enable_setdot: boolean
-            False when the console and dbgvarbuf are not redrawn
+            False when the Console and list buffers are not redrawn
         max_lines: int
             Console maximum number of lines
         bg_colors: tuple
@@ -626,7 +628,7 @@ class Netbeans(asyncio.Protocol, object):
         self._bset = vimbuffer.BufferSet(self)
         self.last_buf = None
         self.console = None
-        self.dbgvarbuf = None
+        self.list_buffers = None
         self.reply_fifo = []
         self.ready = False
         self.detached = False
@@ -847,23 +849,18 @@ class Netbeans(asyncio.Protocol, object):
         """
         tokens = cmd.split('.')
         if len(tokens) == 3 and tokens[0] == 'ClewnBuffer':
+            clewnbuf = visible = None
             if tokens[2] == 'open':
                 visible = True
             elif tokens[2] == 'close':
                 visible = False
-            else:
-                return False
-            try:
-                clss = eval(tokens[1])
-            except NameError:
-                return False
-            if not issubclass(clss, ClewnBuffer):
-                return False
-            for buf in self._bset.values():
-                editport = buf.editport
-                if editport and isinstance(editport, clss):
-                    editport.visible = visible
-                    return True
+            if tokens[1] == 'Console':
+                clewnbuf = self.console
+            elif tokens[1] in LIST_BUFFERS:
+                clewnbuf = self.list_buffers[tokens[1].lower()]
+            if visible is not None and clewnbuf:
+                clewnbuf.visible = visible
+                return True
         return False
 
     def evt_keyAtPos(self, buf_id, nbstring, arg_list):
@@ -872,8 +869,11 @@ class Netbeans(asyncio.Protocol, object):
             self.console = Console(self)
             self.console.register()
 
-        if self.dbgvarbuf is None:
-            self.dbgvarbuf = DebuggerVarBuffer(self)
+        if self.list_buffers is None:
+            self.list_buffers = {}
+            for n in LIST_BUFFERS:
+                n = n.lower()
+                self.list_buffers[n] = ClewnListBuffer('(clewn)_%s' % n, self)
 
         buf = self._bset.getbuf(buf_id)
         if buf is None:

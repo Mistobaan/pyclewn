@@ -171,7 +171,7 @@ class ClewnTestCase(TestCase):
             '-c',
             '--netbeans=:%d' % self.netbeans_port,
             '--cargs',
-                '-u NORC '
+                '-u NORC -N '
                 '-U NONE '
                 '-s %s' % TESTFN,
         ]

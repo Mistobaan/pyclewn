@@ -16,7 +16,7 @@ RUNTIME = [
     'autoload/pyclewn.vim',
     'doc/pyclewn.txt',
     'plugin/pyclewn.vim',
-    'syntax/dbgvar.vim',
+    'syntax/clewn_variables.vim',
     'macros/.pyclewn_keys.gdb',
     'macros/.pyclewn_keys.pdb',
     'macros/.pyclewn_keys.simple',

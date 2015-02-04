@@ -299,11 +299,11 @@ class Simple(debugger.Debugger):
     def post_cmd(self, cmd, args):
         """The method called after each invocation of a 'cmd_xxx' method."""
         # to preserve window order appearance, all the writing to the
-        # console must be done before starting to handle the (clewn)_dbgvar
+        # console must be done before starting to handle the (clewn)_variables
         # buffer when processing Cdbgvar
         # update the vim debugger variable buffer with the variables values
         varobj = self.varobj
-        self.update_dbgvarbuf(varobj.__str__, varobj.dirty)
+        self.update_listbuffer('variables', varobj.__str__, varobj.dirty)
 
     def default_cmd_processing(self, cmd, args):
         """Process any command whose cmd_xxx method does not exist."""

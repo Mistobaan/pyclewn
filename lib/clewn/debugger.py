@@ -13,9 +13,6 @@ methods may call the 'Debugger' API methods to control Vim. For example,
 'console_print' may be called to write the output of a command in the
 Vim debugger console.
 
-The 'Debugger' subclass is made available to the user after adding an
-option to the 'parse_options' method in the 'Vim' class, see vim.py.
-
 The 'Simple' class in simple.py provides a simple example of a fake
 debugger front-end.
 """
@@ -65,32 +62,128 @@ re_key = re.compile(RE_KEY, re.VERBOSE)
 re_comment = re.compile(RE_COMMENT, re.VERBOSE)
 re_filenamelnum = re.compile(RE_FILENAMELNUM, re.VERBOSE)
 
-AUTOCOMMANDS = """
-augroup clewn
-    autocmd!
-    autocmd BufWinEnter (clewn)_* silent! setlocal bufhidden=hide"""    \
-"""                                     | setlocal buftype=nofile"""    \
-"""                                     | setlocal noswapfile"""        \
-"""                                     | setlocal fileformat=unix"""   \
-"""                                     | setlocal expandtab"""         \
-"""                                     | setlocal nowrap"""            \
-"""
-    ${bufferlist_autocmd}
-    autocmd BufWinEnter ${console} silent! nbkey ClewnBuffer.Console.open
-    autocmd BufWinLeave ${console} silent! nbkey ClewnBuffer.Console.close
-    autocmd BufWinEnter ${variables} silent! nbkey ClewnBuffer.DebuggerVarBuffer.open
-    autocmd BufWinLeave ${variables} silent! nbkey ClewnBuffer.DebuggerVarBuffer.close
-    autocmd BufWinEnter ${variables} silent! setlocal syntax=dbgvar
-augroup END
+VIM_SCRIPT_FIXED = r"""
+" Set 'cpo' option to its vim default value.
+let s:cpo_save=&cpo
+set cpo&vim
 
-"""
+function <SID>goto_line()
+    let l:line = getline(".")
+    let l:regexp = '^\(.*\) at \(\d\+\):\(.\+\)$'
+    let l:lnum = substitute(l:line, l:regexp , '\2', "")
+    if l:line != l:lnum
+        let l:fname = substitute(l:line, l:regexp , '\3', "")
+        if ! filereadable(l:fname)
+            echohl ErrorMsg
+            echo l:fname . " does not exist."
+            echohl None
+            return
+        endif
 
-BUFFERLIST_AUTOCMD = """
-    autocmd VimEnter * silent! call s:BuildList()
-    autocmd BufWinEnter * silent! call s:InBufferList(expand("<afile>:p"))
-"""
+        if winnr() ==  bufwinnr("(clewn)_breakpoints")
+            let l:nr = bufwinnr(l:fname)
+            if l:nr == -1
+                exe &previewheight . "split"
+                wincmd w
+                exe "edit " . l:fname
+            else
+                exe l:nr . "wincmd w"
+            endif
+            call cursor(l:lnum, 0)
+        endif
 
-FUNCTION_BUFLIST = """
+    endif
+endfunction
+
+function <SID>goto_frame()
+    let l:line = getline(".")
+    let l:regexp = '^\([ *] \)#\(\d\+\).*$'
+    let l:num = substitute(l:line, l:regexp , '\2', "")
+    if l:line != l:num
+        exe "Cframe " . l:num
+    endif
+endfunction
+
+function <SID>goto_thread()
+    let l:line = getline(".")
+    let l:regexp = '^\([ *] \)\(\d\+\).*$'
+    let l:thread = substitute(l:line, l:regexp , '\2', "")
+    if l:line != l:thread
+        exe "Cthread " . l:thread
+    endif
+endfunction
+
+" Split a window and display a buffer with previewheight.
+function s:winsplit(bufname, lnum, location)
+    if a:location == "none"
+        return
+    endif
+
+    " The window does not exist.
+    let l:nr = bufwinnr(a:bufname)
+    if l:nr == -1
+        call s:split(a:bufname, a:lnum, a:location)
+    elseif a:lnum != ""
+        let l:prevbuf_winnr = bufwinnr(bufname("%"))
+        exe l:nr . "wincmd w"
+        call cursor(a:lnum, 0)
+        exe l:prevbuf_winnr . "wincmd w"
+    endif
+
+    " Split the window (when the only window)
+    " this is required to prevent Vim display toggling between
+    " clewn console and the last buffer where the cursor was
+    " positionned (clewn does not know that this buffer is not
+    " anymore displayed).
+    if winnr("$") == 1
+        call s:split("", "", a:location)
+    endif
+endfunction
+
+" Split a window and return to the initial window,
+" if 'location' is not ''
+"   'location' may be: '', 'top', 'bottom', 'left' or 'right'.
+function s:split(bufname, lnum, location)
+    let nr = 1
+    let split = "split"
+    let spr = &splitright
+    let sb = &splitbelow
+    set nosplitright
+    set nosplitbelow
+    let prevbuf_winnr = bufwinnr(bufname("%"))
+    if winnr("$") == 1 && (a:location == "right" || a:location == "left")
+	let split = "vsplit"
+	if a:location == "right"
+	    set splitright
+        else
+            let prevbuf_winnr = 2
+	endif
+    else
+	if a:location == "bottom"
+ 	    let nr = winnr("$")
+	    set splitbelow
+        else
+            let prevbuf_winnr = prevbuf_winnr + 1
+	endif
+	if a:location != ""
+	    exe nr . "wincmd w"
+	endif
+    endif
+    let nr = bufnr(a:bufname)
+    if nr != -1
+        exe &previewheight . split
+        exe nr . "buffer"
+    else
+        exe &previewheight . split . " " . a:bufname
+    endif
+    if a:lnum != ""
+        call cursor(a:lnum, 0)
+    endif
+    let &splitright = spr
+    let &splitbelow = sb
+    exe prevbuf_winnr . "wincmd w"
+endfunc
+
 let s:bufList = {}
 let s:bufLen = 0
 
@@ -125,80 +218,48 @@ function! s:PrintBufferList()
     endfor
 endfunction
 
-"""
-
-FUNCTION_SPLIT = """
-" Split a window and return to the initial window,
-" if 'location' is not ''
-"   'location' may be: '', 'top', 'bottom', 'left' or 'right'
-function s:split(bufname, location)
-    let nr = 1
-    let split = "split"
-    let spr = &splitright
-    let sb = &splitbelow
-    set nosplitright
-    set nosplitbelow
-    let prevbuf_winnr = bufwinnr(bufname("%"))
-    if winnr("$") == 1 && (a:location == "right" || a:location == "left")
-	let split = "vsplit"
-	if a:location == "right"
-	    set splitright
-        else
-            let prevbuf_winnr = 2
-	endif
-    else
-	if a:location == "bottom"
- 	    let nr = winnr("$")
-	    set splitbelow
-        else
-            let prevbuf_winnr = prevbuf_winnr + 1
-	endif
-	if a:location != ""
-	    exe nr . "wincmd w"
-	endif
-    endif
-    let nr = bufnr(a:bufname)
-    if nr != -1
-        exe &previewheight . split
-        exe nr . "buffer"
-    else
-        exe &previewheight . split . " " . a:bufname
-    endif
-    let &splitright = spr
-    let &splitbelow = sb
-    exe prevbuf_winnr . "wincmd w"
-endfunc
-
-"""
-
-FUNCTION_CONSOLE = """
-" Split a window and display a buffer with previewheight.
-function s:winsplit(bufname, location)
-    if a:location == "none"
-        return
-    endif
-
-    " The console window does not exist
-    if bufwinnr(a:bufname) == -1
-        call s:split(a:bufname, a:location)
-    " Split the console window (when the only window)
-    " this is required to prevent Vim display toggling between
-    " clewn console and the last buffer where the cursor was
-    " positionned (clewn does not know that this buffer is not
-    " anymore displayed)
-    elseif winnr("$") == 1
-        call s:split("", a:location)
-    endif
-endfunction
-
-"""
-
-FUNCTION_MAPKEYS = """
 " Popup gdb console on pyclewn mapped keys.
 function s:mapkeys()
     call s:nbcommand("mapkeys")
 endfunction
 
+"""
+
+AUTOCOMMANDS = """
+augroup clewn
+    autocmd!
+    autocmd BufWinEnter (clewn)_* silent! setlocal bufhidden=hide"""    \
+"""                                     | setlocal buftype=nofile"""    \
+"""                                     | setlocal noswapfile"""        \
+"""                                     | setlocal fileformat=unix"""   \
+"""                                     | setlocal expandtab"""         \
+"""                                     | setlocal nowrap"""            \
+"""
+    ${bufferlist_autocmd}
+    autocmd BufWinEnter (clewn)_console silent! nbkey ClewnBuffer.Console.open
+    autocmd BufWinLeave (clewn)_console silent! nbkey ClewnBuffer.Console.close
+    autocmd BufWinEnter (clewn)_variables silent! setlocal syntax=clewn_variables
+    autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <CR> :exe "Cfoldvar " . line(".")<CR>
+    autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <2-Leftmouse> :exe "Cfoldvar " . line(".")<CR>
+    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <CR> :call <SID>goto_line()<CR>
+    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_line()<CR>
+    autocmd BufEnter (clewn)_backtrace nnoremap <buffer> <silent> <CR> :call <SID>goto_frame()<CR>
+    autocmd BufEnter (clewn)_backtrace nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_frame()<CR>
+    autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <CR> :call <SID>goto_thread()<CR>
+    autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_thread()<CR>
+    ${list_buffers_autocmd}
+augroup END
+
+"""
+
+LIST_BUFFERS_AUTOCMD = """
+    autocmd BufWinEnter ${bufname} silent! nbkey ClewnBuffer.${name}.open
+    autocmd BufWinLeave ${bufname} silent! nbkey ClewnBuffer.${name}.close
+"""
+
+BUFFERLIST_AUTOCMD = """
+    autocmd VimEnter * silent! call s:BuildList()
+    autocmd BufWinEnter * silent! call s:InBufferList(expand("<afile>:p"))
 """
 
 FUNCTION_NBCOMMAND = """
@@ -217,11 +278,12 @@ function s:nbcommand(...)
             if bufname("%") == ""
                 edit ${console}
             else
-                call s:winsplit("${console}", "${location}")
+                call s:winsplit("${console}", "", "${location}")
             endif
-            ${split_dbgvar_buf}
+            ${split_vars_buf}
             let cmd = "nbkey " . join(a:000, ' ')
             exe cmd
+            ${split_bt_buf}
         endif
     endif
 endfunction
@@ -256,19 +318,30 @@ function s:nbcommand(...)
                 call inputrestore()
                 echohl None
             endif
-            call s:winsplit("${console}", "${location}")
-            ${split_dbgvar_buf}
+            call s:winsplit("${console}", "", "${location}")
+            ${split_vars_buf}
             let cmd = "nbkey " . join(a:000, ' ')
             exe cmd
+            ${split_bt_buf}
         endif
     endif
 endfunction
 
 """
 
-SPLIT_DBGVAR_BUF = """
+SPLIT_VARS_BUF = """
             if a:1 == "dbgvar"
-                call s:winsplit("${dbgvar_buf}", "")
+                call s:winsplit("(clewn)_variables", "", "")
+            endif
+"""
+
+SPLIT_BT_BUF = """
+            " <CR> in the backtrace list buffer may cause the backtrace
+            " window to be replaced by another window. So wait for this
+            " to happen and split this window in this case.
+            if a:1 == "frame" && bufwinnr("(clewn)_backtrace") != -1
+                sleep 500m
+                call s:winsplit("(clewn)_backtrace", "", "")
             endif
 """
 
@@ -520,19 +593,20 @@ class Debugger(object):
         """
         return self.__nbsock.get_lnum_list(pathname)
 
-    def update_dbgvarbuf(self, getdata, dirty, lnum=None):
-        """Update the variables buffer in Vim.
+    def update_listbuffer(self, bufname, getdata, dirty, lnum=None):
+        """Update a list buffer in Vim.
 
-        Update the variables buffer in Vim when one the following
-        conditions is
-        True:
+        Update the list buffer in Vim when one the following conditions
+        is True:
             * 'dirty' is True
-            * the content of the Vim variables buffer and the content of
-              pyclewn 'dbgvarbuf' are not consistent after an error in the
-              netbeans protocol occured
+            * the content of the Vim buffer and the content of the
+            pyclewn list buffer are not consistent after an error in the
+            netbeans protocol occured
         Set the Vim cursor at 'lnum' after the buffer has been updated.
 
         Method parameters:
+            bufname: str
+                The key to self.__nbsock.list_buffers dictionary.
             getdata: callable
                 A callable that returns the content of the variables
                 buffer as a string.
@@ -545,20 +619,18 @@ class Debugger(object):
         if not self.__nbsock:
             return
 
-        dbgvarbuf = self.__nbsock.dbgvarbuf
-        if dbgvarbuf is None:
-            return
-        if dirty and not dbgvarbuf.buf.registered:
-            dbgvarbuf.register()
+        lbuf = self.__nbsock.list_buffers[bufname]
+        if dirty and not lbuf.buf.registered:
+            lbuf.register()
 
-        # race condition: must note the state of the buffer before
+        # Race condition: must note the state of the buffer before
         # updating the buffer, since this will change its visible state
-        # temporarily
-        if dirty or dbgvarbuf.dirty:
-            dbgvarbuf.update(getdata())
-            # set the cursor on the current fold when visible
+        # temporarily.
+        if dirty or lbuf.dirty:
+            lbuf.update(getdata())
+            # Set the cursor on the current fold when visible.
             if lnum is not None:
-                dbgvarbuf.setdot(lnum=lnum)
+                lbuf.setdot(lnum=lnum)
 
     def show_frame(self, pathname=None, lnum=1):
         """Show the frame highlighted sign in a Vim buffer.
@@ -782,29 +854,23 @@ class Debugger(object):
             else:
                 f = misc.TmpFile('vimscript')
 
-            # set 'cpo' option to its vim default value
-            f.write('let s:cpo_save=&cpo\n')
-            f.write('set cpo&vim\n')
+            f.write(VIM_SCRIPT_FIXED)
 
-            # vim autocommands
-            bufferlist_autocmd = ''
-            if options.noname_fix == '0':
-                bufferlist_autocmd = BUFFERLIST_AUTOCMD
+            # Vim autocommands.
+            list_buffers_autocmd = ''
+            for n in netbeans.LIST_BUFFERS:
+                list_buffers_autocmd += (string.Template(LIST_BUFFERS_AUTOCMD)
+                                         .substitute(
+                                         bufname='(clewn)_%s' % n.lower(),
+                                         name=n
+                                         ))
+            bufferlist_autocmd = (BUFFERLIST_AUTOCMD if
+                                  options.noname_fix == '0' else '')
             f.write(string.Template(AUTOCOMMANDS).substitute(
-                                        console=netbeans.CONSOLE,
-                                        variables=netbeans.VARIABLES_BUFFER,
-                                        bufferlist_autocmd=bufferlist_autocmd))
+                                    list_buffers_autocmd=list_buffers_autocmd,
+                                    bufferlist_autocmd=bufferlist_autocmd))
 
-            # utility vim functions
-            if options.noname_fix == '0':
-                f.write(FUNCTION_BUFLIST)
-            f.write(FUNCTION_SPLIT)
-            f.write(FUNCTION_CONSOLE)
-
-            # mapkeys function
-            f.write(FUNCTION_MAPKEYS)
-
-            # unmapkeys function
+            # unmapkeys function.
             f.write('function s:unmapkeys()\n')
             for key in self.mapkeys:
                 f.write('   try\n')
@@ -813,20 +879,21 @@ class Debugger(object):
                 f.write('   endtry\n')
             f.write('endfunction\n')
 
-            # setup pyclewn vim user defined commands
+            # Setup pyclewn vim user defined commands.
             if options.noname_fix != '0':
                 function_nbcommand = FUNCTION_NBCOMMAND
             else:
                 function_nbcommand = FUNCTION_NBCOMMAND_RESTRICT
 
-            split_dbgvar_buf = ''
-            if netbeans.Netbeans.getLength_fix != '0':
-                split_dbgvar_buf = string.Template(SPLIT_DBGVAR_BUF).substitute(
-                                        dbgvar_buf=netbeans.VARIABLES_BUFFER)
+            split_vars_buf = (SPLIT_VARS_BUF if
+                              netbeans.Netbeans.getLength_fix != '0' else '')
+            split_bt_buf = (SPLIT_BT_BUF if
+                              netbeans.Netbeans.getLength_fix != '0' else '')
             f.write(string.Template(function_nbcommand).substitute(
                                         console=netbeans.CONSOLE,
                                         location=options.window,
-                                        split_dbgvar_buf=split_dbgvar_buf))
+                                        split_vars_buf=split_vars_buf,
+                                        split_bt_buf=split_bt_buf))
             noCompletion = string.Template('command! -bar -nargs=* ${pre}${cmd} '
                                     'call s:nbcommand("${cmd}", <f-args>)\n')
             fileCompletion = string.Template('command! -bar -nargs=* '
@@ -856,13 +923,13 @@ class Debugger(object):
                         args = '\\n'.join(completion)
                         f.write(argsList.substitute(args=args, cmd=cmd))
 
-            # add debugger specific vim statements
+            # Add debugger specific vim statements.
             f.write(self.vim_script_custom(prefix))
 
-            # reset 'cpo' option
+            # Reset 'cpo' option.
             f.write('let &cpo = s:cpo_save\n')
 
-            # delete the vim script after it has been sourced
+            # Delete the vim script after it has been sourced.
             f.write('\ncall delete(expand("<sfile>"))\n')
         finally:
             if f:

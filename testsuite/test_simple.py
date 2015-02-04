@@ -66,7 +66,7 @@ class Simple(ClewnTestCase):
             'Cstep',
             'Cstep',
             'Cstep',
-            'edit (clewn)_dbgvar | w! ${test_out}',
+            'edit (clewn)_variables | w! ${test_out}',
             'qa!',
             ]
         expected = (
@@ -85,7 +85,7 @@ class Simple(ClewnTestCase):
             'Cdelvar unknown',
             'Cdelvar testvar',
             'edit (clewn)_console | $$-7,$$-1w! ${test_out}',
-            'edit (clewn)_dbgvar',
+            'edit (clewn)_variables',
             'redir! >> ${test_out}',
             'file',
             'qa!',
@@ -96,7 +96,7 @@ class Simple(ClewnTestCase):
             '(simple) delvar unknown',
             '"unknown" not found.',
             '(simple) delvar testvar',
-            '"(clewn)_dbgvar" [readonly] --No lines in buffer--',
+            '"(clewn)_variables" [readonly] --No lines in buffer--',
             )
         self.cltest_redir(cmd, expected, 'line 1\n')
 

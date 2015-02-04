@@ -21,5 +21,5 @@ high def link dbgDeScoped   Comment
 high def link dbgVarNum	    Identifier
 high def link dbgIgnore	    Ignore
 
-let b:current_syntax = "dbgvar"
+let b:current_syntax = "clewn_variables"
 

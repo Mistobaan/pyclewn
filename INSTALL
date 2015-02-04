@@ -62,7 +62,7 @@ The vimball contains the following runtime files::
     autoload/pyclewn.vim            # The pyclewn plugin.
     plugin/pyclewn.vim
     doc/pyclewn.txt                 # The help.
-    syntax/dbgvar.vim               # The pyclewn syntax file.
+    syntax/clewn_variables.vim      # The (clewn)_variables syntax file.
     macros/.pyclewn_keys.gdb        # The 'Cmapkeys' files.
     macros/.pyclewn_keys.pdb
     macros/.pyclewn_keys.simple

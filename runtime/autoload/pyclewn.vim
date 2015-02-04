@@ -1,4 +1,4 @@
-" vi:set ts=8 sts=2 sw=2 et tw=80:
+" vi:set ts=8 sts=4 sw=4 et tw=80:
 " Pyclewn run time file.
 " Maintainer:   <xdegaye at users dot sourceforge dot net>
 "
@@ -13,47 +13,47 @@ let s:did_pyclewn = 1
 " changed to suit your preferences.
 function s:init(debugger)
     if exists("g:pyclewn_terminal")
-      let s:terminal = g:pyclewn_terminal
+        let s:terminal = g:pyclewn_terminal
     else
-      let s:terminal = ""
+        let s:terminal = ""
     endif
 
     if exists("g:pyclewn_python")
-      let s:python = g:pyclewn_python
+        let s:python = g:pyclewn_python
     else
-      let s:python = "python"
+        let s:python = "python"
     endif
 
     if exists("g:pyclewn_args")
-      let s:args = g:pyclewn_args
+        let s:args = g:pyclewn_args
     else
-      let s:args = "--window=top --maxlines=10000 --background=Cyan,Green,Magenta"
+        let s:args = "--window=top --maxlines=10000 --background=Cyan,Green,Magenta"
     endif
 
     if exists("g:pyclewn_connection")
-      let s:connection = g:pyclewn_connection
+        let s:connection = g:pyclewn_connection
     else
-      if a:debugger == "gdb"
-        let s:connection = "127.0.0.1:3219:changeme"
-      elseif a:debugger == "pdb"
-        let s:connection = "127.0.0.1:3220:changeme"
-      else
-        let s:connection = "127.0.0.1:3221:changeme"
-      endif
+        if a:debugger == "gdb"
+            let s:connection = "127.0.0.1:3219:changeme"
+        elseif a:debugger == "pdb"
+            let s:connection = "127.0.0.1:3220:changeme"
+        else
+            let s:connection = "127.0.0.1:3221:changeme"
+        endif
     endif
 
     " Uncomment the following line to print full traces in a file named
     " 'logfile' for debugging purpose (or change g:pyclewn_args).
     " let s:args .= " --level=nbdebug --file=logfile"
     if s:terminal != ""
-      let s:args .= " --level=info"
+        let s:args .= " --level=info"
     endif
 
     let l:fixed_args = "--editor= --netbeans=" . s:connection . " --cargs="
     if s:terminal != ""
-      let s:fixed = l:fixed_args
+        let s:fixed = l:fixed_args
     else
-      let s:fixed = "--daemon " . l:fixed_args
+        let s:fixed = "--daemon " . l:fixed_args
     endif
 endfunction
 
@@ -126,22 +126,25 @@ function s:start(args)
     endif
     let l:tmpfile = tempname()
 
-    " remove console and dbgvar buffers from previous session
+    " Remove the Console and the list buffers from the previous session.
     if bufexists("(clewn)_console")
         bwipeout (clewn)_console
     endif
-    if bufexists("(clewn)_dbgvar")
-        bwipeout (clewn)_dbgvar
-    endif
+    for l:b in ["Variables", "Breakpoints", "Backtrace", "Threads"]
+        let l:bufname = "(clewn)_" . tolower(l:b)
+        if bufexists(l:bufname)
+            exe "bwipeout " . l:bufname
+        endif
+    endfor
 
     " Start pyclewn and netbeans.
     call s:info("Starting pyclewn.\n")
     let l:run_pyclewn = s:python . " -m clewn " . s:fixed . l:tmpfile . " " . a:args
     if s:terminal == ""
-      exe "silent !" . l:run_pyclewn . " &"
+        exe "silent !" . l:run_pyclewn . " &"
     else
-      let l:run_terminal = join(split(s:terminal, ","), " ")
-      exe "silent !" . l:run_terminal . " sh -c '" . l:run_pyclewn . " || sleep 600' &"
+        let l:run_terminal = join(split(s:terminal, ","), " ")
+        exe "silent !" . l:run_terminal . " sh -c '" . l:run_pyclewn . " || sleep 600' &"
     endif
 
     call s:info("Running nbstart, <C-C> to interrupt.\n")
@@ -168,26 +171,26 @@ endfunction
 function pyclewn#StartClewn(...)
     let l:debugger = "gdb"
     if a:0 != 0
-      let l:debugger = a:1
+        let l:debugger = a:1
     endif
     call s:init(l:debugger)
 
     let l:args = s:args
     if a:0 != 0
-      if index(["gdb", "pdb", "simple"], a:1) == -1
-        call s:error("Unknown debugger '" . a:1 . "'.")
-        return
-      endif
-      if a:0 > 1
-          let l:args .= " --args \"" . join(a:000[1:], ' ') . "\""
-      endif
-      let l:args .= " " . a:1
+        if index(["gdb", "pdb", "simple"], a:1) == -1
+            call s:error("Unknown debugger '" . a:1 . "'.")
+            return
+        endif
+        if a:0 > 1
+            let l:args .= " --args \"" . join(a:000[1:], ' ') . "\""
+        endif
+        let l:args .= " " . a:1
     endif
 
     try
         call s:start(l:args)
     catch /^Vim:Interrupt$/
-      return
+        return
     catch /.*/
         call s:info("The 'Pyclewn' command has been aborted.\n")
         let l:err = v:exception . "\n"

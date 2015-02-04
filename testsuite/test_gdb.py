@@ -247,8 +247,6 @@ class Gdb(ClewnTestCase):
             "          'func': 'main',",
             "          'level': '0',",
             "          'line': '9'},",
-            "'frame_location': {'lnum': 9,",
-            "             'pathname': '${cwd}testsuite/foobar.c'},",
             )
         self.cltest_redir(cmd, expected)
 
@@ -273,8 +271,6 @@ class Gdb(ClewnTestCase):
             "          'func': 'main',",
             "          'level': '0',",
             "          'line': '10'},",
-            "'frame_location': {'lnum': 10,",
-            "             'pathname': '${cwd}testsuite/foobar.c'},",
             )
         self.cltest_redir(cmd, expected)
 
@@ -428,7 +424,7 @@ class Gdb(ClewnTestCase):
             'Cdbgvar map',
             'Cfoldvar 1',
             'Cdelvar var1.value',
-            'buffer (clewn)_dbgvar | 1,$$w!  ${test_out}',
+            'buffer (clewn)_variables | 1,$$w!  ${test_out}',
             'qa!',
             ]
         expected = (
@@ -451,7 +447,7 @@ class Gdb(ClewnTestCase):
             'Cfoldvar 2',
             'Cfoldvar 1',
             'Cfoldvar 1',
-            'buffer (clewn)_dbgvar | 1,3w!  ${test_out}',
+            'buffer (clewn)_variables | 1,3w!  ${test_out}',
             'qa!',
             ]
         expected = (
@@ -475,7 +471,7 @@ class Gdb(ClewnTestCase):
             'Cstep',
             'Cstep',
             'Cdelvar var3',
-            'buffer (clewn)_dbgvar | 1,3w!  ${test_out}',
+            'buffer (clewn)_variables | 1,3w!  ${test_out}',
             'qa!',
             ]
         expected = (
@@ -499,7 +495,7 @@ class Gdb(ClewnTestCase):
             'Cstep',
             'Cstep',
             'Cdelvar var1',
-            'buffer (clewn)_dbgvar | 1,2w!  ${test_out}',
+            'buffer (clewn)_variables | 1,2w!  ${test_out}',
             'qa!',
             ]
         expected = (
@@ -522,7 +518,7 @@ class Gdb(ClewnTestCase):
             'Cstep',
             'Cstep',
             'Cdelvar var2',
-            'buffer (clewn)_dbgvar | 1,2w!  ${test_out}',
+            'buffer (clewn)_variables | 1,2w!  ${test_out}',
             'qa!',
             ]
         expected = (
@@ -540,15 +536,15 @@ class Gdb(ClewnTestCase):
             'Crun',
             'Cstep',
             'Cdbgvar i',
-            'edit (clewn)_dbgvar | 1,$$w!  ${test_out}',
+            'edit (clewn)_variables | 1,$$w!  ${test_out}',
             'Cstep',
             'Cstep',
             'Cstep',
             'Cstep',
             'Cstep',
-            'edit (clewn)_dbgvar | 1,$$w! >> ${test_out}',
+            'edit (clewn)_variables | 1,$$w! >> ${test_out}',
             'Cfinish',
-            'edit (clewn)_dbgvar | 1,$$w! >> ${test_out}',
+            'edit (clewn)_variables | 1,$$w! >> ${test_out}',
             'qa!',
             ]
         expected = (
@@ -559,14 +555,14 @@ class Gdb(ClewnTestCase):
         self.cltest_redir(cmd, expected)
 
     def test_027(self):
-        """Check robustness against vim 'tabedit (clewn)_dbgvar' bug"""
+        """Check robustness against vim 'tabedit (clewn)_variables' bug"""
         cmd = [
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Crun',
             'Cdbgvar map',
-            'edit (clewn)_dbgvar',
-            'tabedit (clewn)_dbgvar',
+            'edit (clewn)_variables',
+            'tabedit (clewn)_variables',
             'Cshow annotate',
             '1,$$w! >> ${test_out}',
             'qa!',
@@ -585,7 +581,7 @@ class Gdb(ClewnTestCase):
             'Crun',
             'Cdbgvar len',
             'Cprint len=555',
-            'edit (clewn)_dbgvar | 1,$$w! >> ${test_out}',
+            'edit (clewn)_variables | 1,$$w! >> ${test_out}',
             'qa!',
             ]
         expected = (
@@ -755,26 +751,6 @@ class Gdb(ClewnTestCase):
         self.cltest_redir(cmd, expected)
 
     def test_037(self):
-        """The cwindow command opens the quickfix window of breakpoints"""
-        cmd = [
-            'Cfile testsuite/foobar',
-            'Cbreak foo',
-            'Cbreak bar',
-            'Cbreak bar',
-            'Cdisable 1',
-            'Cdelete 2',
-            'Ccwindow',
-            '5buffer',
-            '1,$$w! >> ${test_out}',
-            'qa!',
-            ]
-        expected = (
-            "${cwd}testsuite/foo.c|30| breakpoint 1 disabled",
-            "${cwd}testsuite/bar.c|5| breakpoint 3 enabled",
-            )
-        self.cltest_redir(cmd, expected)
-
-    def test_038(self):
         """Check number 1, adding breakpoints after a quit"""
         cmd = [
             'edit testsuite/foobar.c',
@@ -793,7 +769,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    def test_039(self):
+    def test_038(self):
         """Check number 2, adding breakpoints after a quit"""
         cmd = [
             'Cfile testsuite/foobar',
@@ -814,7 +790,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    def test_040(self):
+    def test_039(self):
         """Check number 3, adding breakpoints after a quit"""
         cmd = [
             'edit testsuite/foobar.c',
@@ -836,7 +812,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    def test_041(self):
+    def test_040(self):
         """Check number 4, adding breakpoints after a quit"""
         cmd = [
             'edit testsuite/foobar.c',
@@ -865,7 +841,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    def test_042(self):
+    def test_041(self):
         """Set a breakpoint in a template function"""
         cmd = [
             'Cfile testsuite/function_template',
@@ -880,7 +856,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    def test_043(self):
+    def test_042(self):
         """Check starting the session with the 'sigint' command"""
         cmd = [
             'Csigint',
@@ -896,7 +872,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    def test_044(self):
+    def test_043(self):
         """Check the frame command moves the cursor to the frame location"""
         cmd = [
             'Cfile testsuite/foobar',
@@ -904,7 +880,7 @@ class Gdb(ClewnTestCase):
             'Crun',
             'edit testsuite/foobar.c',
             'echo bufname("%")',
-            'Cframe',
+            'Cframe 0',
             'sleep ${sleep_time}',
             'redir! > ${test_out}',
             'echo bufname("%")',
@@ -915,7 +891,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    def test_045(self):
+    def test_044(self):
         """Set a breakpoint after a 'throw' catchpoint"""
         cmd = [
             'edit testsuite/overloaded.cc',
@@ -929,7 +905,7 @@ class Gdb(ClewnTestCase):
             ]
         self.cltest_redir(cmd, expected_break_main)
 
-    def test_046(self):
+    def test_045(self):
         """Set a breakpoint after deleting a 'throw' catchpoint"""
         cmd = [
             'edit testsuite/overloaded.cc',
@@ -943,4 +919,111 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         self.cltest_redir(cmd, expected_break_main)
+
+    def test_046(self):
+        """Test the (clewn)_breakpoints list buffer."""
+        cmd = [
+            'Cfile testsuite/foobar',
+            'Cbreak foo',
+            'Cenable delete 1',
+            'Cbreak foo',
+            'Cbreak nanosleep',
+            'Cbreak nanosleep',
+            'Cbreak nanosleep',
+            'Cdelete 3',
+            'Crun',
+            'Cdisable 2 4',
+            'edit (clewn)_breakpoints | %w!  ${test_out}',
+            'qa!',
+            ]
+        expected = (
+            '2 breakpoint n 1 keep in foo at 30:${cwd}testsuite/foo.c',
+            '4 breakpoint n 0 keep in nanosleep',
+            '5 breakpoint y 0 keep in nanosleep',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_047(self):
+        """Test the (clewn)_backtrace list buffer."""
+        cmd = [
+            'Cfile testsuite/foobar',
+            'Cbreak nanosleep',
+            'Crun',
+            'Cup',
+            'edit (clewn)_backtrace | %w!  ${test_out}',
+            'qa!',
+            ]
+        expected = (
+            '  #0   in nanosleep',
+            '* #1   in msleep at foo.c:23',
+            '  #2   in foo at foo.c:37',
+            '  #3   in main at foobar.c:60',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_048(self):
+        """Test the <CR> map in (clewn)_backtrace."""
+        cmd = [
+            'Cfile testsuite/foobar',
+            'Cbreak nanosleep',
+            'Crun',
+            'edit (clewn)_backtrace',
+            '2',
+            'exe "normal \<CR>"',
+            'sleep ${sleep_time}',
+            'redir! > ${test_out}',
+            'echo bufwinnr("${cwd}testsuite/foo.c") != -1',
+            'qa!',
+            ]
+        expected = (
+            '1',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_049(self):
+        """Test the (clewn)_threads list buffer."""
+        cmd = [
+            'Cfile %s' % sys.executable,
+            'Cset args testsuite/foo_thread.py',
+            'Cbreak sys_getrecursionlimit',
+            'Cbreak sys_getdefaultencoding',
+            'Crun',
+            'edit (clewn)_threads | 2,$$write! ${test_out}',
+            'Ccontinue',
+            'edit (clewn)_threads | 2,$$write! >> ${test_out}',
+            'edit ${test_out}',
+            r'%s/\(python\).*in \(\S\+\).*$$/\1 \2',
+            'write',
+            'qa!',
+            ]
+        expected = (
+            '* 1   python sys_getrecursionlimit',
+            '  2   python sem_wait',
+            '  1   python sem_wait',
+            '* 2   python sys_getdefaultencoding',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_050(self):
+        """Test the <CR> map in (clewn)_threads."""
+        cmd = [
+            'Cfile %s' % sys.executable,
+            'Cset args testsuite/foo_thread.py',
+            'Cbreak sys_getrecursionlimit',
+            'Crun',
+            'edit (clewn)_threads',
+            '3',
+            'exe "normal \<CR>"',
+            'sleep ${sleep_time}',
+            'edit (clewn)_threads | 2,$$write! ${test_out}',
+            'edit ${test_out}',
+            r'%s/\(python\).*in \(\S\+\).*$$/\1 \2',
+            'write',
+            'qa!',
+            ]
+        expected = (
+            '  1   python sys_getrecursionlimit',
+            '* 2   python sem_wait',
+            )
+        self.cltest_redir(cmd, expected)
 

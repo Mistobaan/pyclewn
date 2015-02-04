@@ -30,6 +30,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from io import open
 
+import sys
 import os
 import re
 import io
@@ -48,6 +49,7 @@ VAROBJ_FMT = '%%(name)-%ds: (%%(type)-%ds) %%(exp)-%ds %%(chged)s %%(value)s\n'
 BREAKPOINT_CMDS = ()
 FILE_CMDS = ()
 FRAME_CMDS = ()
+THREADS_CMDS = ()
 VARUPDATE_CMDS = ()
 
 DIRECTORY_CMDS = (
@@ -61,13 +63,15 @@ SOURCE_CMDS = (
 
 PROJECT_CMDS = tuple(['project'] + list(SOURCE_CMDS))
 
-# gdb objects attributes
-BREAKPOINT_ATTRIBUTES = {'number', 'type', 'enabled', 'what', 'file', 'line',
-                             'original-location'}
+# gdb objects attributes.
+BREAKPOINT_ATTRIBUTES = {'number', 'type', 'disp', 'enabled', 'func', 'file',
+                         'line', 'times', 'original-location'}
 REQ_BREAKPOINT_ATTRIBUTES = {'number', 'type', 'enabled'}
 FILE_ATTRIBUTES = {'line', 'file', 'fullname'}
 FRAMECLI_ATTRIBUTES = {'level', 'func', 'file', 'line', }
-FRAME_ATTRIBUTES = {'level', 'func', 'file', 'line', 'fullname', }
+FRAME_ATTRIBUTES = {'level', 'func', 'file', 'fullname', 'line', 'from',  }
+REQ_FRAME_ATTRIBUTES = {'level', }
+THREADS_ATTRIBUTES = {'current', 'id', 'target-id', 'name', 'state', 'core', }
 SOURCES_ATTRIBUTES = {'file', 'fullname'}
 VARUPDATE_ATTRIBUTES = {'name', 'in_scope'}
 VARCREATE_ATTRIBUTES = {'name', 'numchild', 'type'}
@@ -117,6 +121,23 @@ RE_FRAMECLI = keyval_pattern(FRAMECLI_ATTRIBUTES,
             '{name="argv",value="0xbfde84a4"}],file="foobar.c",line="12"}')
 RE_FRAME = keyval_pattern(FRAME_ATTRIBUTES)
 
+# Output of '-thread-info':
+# '{id="2",target-id="Thread 0x7ffff6bd9700 (LWP # 3820)",name="python",
+#   frame={level="0",addr="0x00007ffff7bcd920",func="sem_wait",args=[],
+#     from="/usr/lib/libpthread.so.0"},
+#   state="stopped",core="2"},
+# {id="1",target-id="Thread 0x7ffff7fce700 (LWP # 3816)",name="python",
+#   frame={level="0",addr="0x0000000000432e77",func="sys_getrecursionlimit",
+#     args=[{name="self",value="0x7ffff70ec7d8"}],
+#     file="./Python/sysmodule.c",
+#     fullname="/home/xavier/src/python/cpython-hg-default/Python/sysmodule.c",
+#     line="726"}
+#   ,state="stopped",core="3"}],
+# current-thread-id="1"]'
+RE_THREADS = '({[^{]+{[^}]*args=\[[^]]*\][^}]*}[^}]*})|current-thread-id="(\d+)"'
+
+RE_THREADS_ATTRIBUTES = keyval_pattern(THREADS_ATTRIBUTES)
+
 RE_PGMFILE = r'\s*"(?P<debuggee>[^"]+)"\.'                                  \
              r'# "/path/to/pyclewn/testsuite/foobar".'
 
@@ -148,6 +169,8 @@ re_directories = re.compile(RE_DIRECTORIES, re.VERBOSE)
 re_file = re.compile(RE_FILE, re.VERBOSE)
 re_framecli = re.compile(RE_FRAMECLI, re.VERBOSE)
 re_frame = re.compile(RE_FRAME, re.VERBOSE)
+re_threads = re.compile(RE_THREADS)
+re_threads_attributes = re.compile(RE_THREADS_ATTRIBUTES)
 re_pgmfile = re.compile(RE_PGMFILE, re.VERBOSE)
 re_pwd = re.compile(RE_PWD, re.VERBOSE)
 re_sources = re.compile(RE_SOURCES, re.VERBOSE)
@@ -163,13 +186,26 @@ def fullname(name, source_dict):
         pass
     return ''
 
+def fix_bp_attributes(bp):
+    if 'line' not in bp or 'file' not in bp:
+        # When file/line is missing (a template function), use the
+        # original-location.
+        if 'original-location' in bp:
+            oloc = bp['original-location']
+            if ':' in oloc:
+                fn, lno = oloc.rsplit(':', 1)
+                bp['file'] = fn.strip(misc.DOUBLEQUOTE)
+                bp['line'] = lno
+            elif 'func' not in bp:
+                bp['func'] = oloc
+
 class VarObjList(OrderedDict):
     """A dictionary of {name:VarObj instance}."""
 
     def collect(self, parents, lnum, stream, indent=0):
         """Collect all varobj children data.
 
-        Return True when dbgvarbuf must be set as dirty
+        Return True when the Variables buffer must be set as dirty
         for the next update run (for syntax highlighting).
 
         """
@@ -324,6 +360,8 @@ class Info(object):
             list of breakpoints, result of a previous OobGdbCommand
         bp_dictionary: dict
             breakpoints dictionary, with bp number as key
+        bp_dirty: boolean
+            True when the breakpoints have changed
         cwd: list
             current working directory
         debuggee: list
@@ -334,10 +372,20 @@ class Info(object):
             current gdb source attributes
         frame: dict
             gdb frame attributes
-        frame_location: dict
-            current frame location
+        prev_frame: dict
+            previous frame
         frame_prefix: str
             completion prefix for the 'frame' command
+        backtrace: dict
+            the backtrace
+        backtrace_dirty: boolean
+            True when the backtrace has changed
+        threads_list: list
+            list of the gdb representation of a thread
+        threads: dict
+            the threads
+        threads_dirty: boolean
+            True when the threads have changed
         sources: list
             list of gdb sources
         varobj: RootVarObj
@@ -352,13 +400,19 @@ class Info(object):
         self.args = []
         self.breakpoints = []
         self.bp_dictionary = {}
+        self.bp_dirty = False
         self.cwd = []
         self.debuggee = []
         self.directories = ['$cdir', '$cwd']
         self.file = {}
         self.frame = {}
-        self.frame_location = {}
+        self.prev_frame = {}
         self.frame_prefix = ''
+        self.backtrace = {}
+        self.backtrace_dirty = False
+        self.threads_list = []
+        self.threads = {}
+        self.threads_dirty = False
         self.sources = []
         self.varobj = RootVarObj()
         self.changelist = []
@@ -405,109 +459,203 @@ class Info(object):
 
         return None
 
+    def collect_breakpoints(self):
+        self.bp_dirty = False
+        lines = []
+        for num in sorted(self.bp_dictionary.keys()):
+            bp = self.bp_dictionary[num]
+            line = (('%-4s' % num) +
+                    (' %(type)-10s %(enabled)-3s %(times)-5s '
+                     '%(disp)-6s' % bp))
+            if 'func' in bp:
+                line += ' in %(func)s' % bp
+            if 'line' in bp and 'file' in bp:
+                pathname = self.get_fullpath(bp['file'])
+                if pathname is not None:
+                    lnum = bp['line']
+                    line += ' at %s:%s' % (lnum, pathname)
+            lines.append(line)
+
+        if lines:
+            lines.insert(0, 'Num  Type       Enb Hit   Disp   What')
+            return '\n'.join(lines) + '\n'
+        else:
+            return ''
+
     def update_breakpoints(self, cmd):
         """Update the breakpoints."""
-        is_changed = False
-
-        # build the breakpoints dictionary
+        # Build the breakpoints dictionary.
         bp_dictionary = {}
         for bp in self.breakpoints:
             if ('breakpoint' in bp['type']
-                    # exclude 'throw' and 'catch 'catchpoints (they are typed by
-                    # gdb as 'breakpoint' instead of 'catchpoint')
+                    # Exclude 'throw' and 'catch 'catchpoints (they are typed by
+                    # gdb as 'breakpoint' instead of 'catchpoint').
                     and not
                         ('what' in bp and 'exception' in bp['what'])):
-                bp_dictionary[bp['number']] = bp
+                bp_dictionary[int(bp['number'])] = bp
 
         nset = set(bp_dictionary.keys())
         oldset = set(self.bp_dictionary.keys())
-        # update sign status of common breakpoints
+        # Update the sign status of common breakpoints.
         for num in (nset & oldset):
-            state = bp_dictionary[num]['enabled']
-            if state != self.bp_dictionary[num]['enabled']:
-                is_changed = True
-                enabled = (state == 'y')
-                self.gdb.update_bp(int(num), not enabled)
+            bp = bp_dictionary[num]
+            old_bp = self.bp_dictionary[num]
+            fix_bp_attributes(bp)
+            state = bp['enabled']
+            if state != old_bp['enabled']:
+                self.bp_dirty = True
+                if 'line' in old_bp and 'file' in old_bp:
+                    enabled = (state == 'y')
+                    self.gdb.update_bp(num, not enabled)
+            if bp['times'] != old_bp['times']:
+                self.bp_dirty = True
 
-        # delete signs for non-existent breakpoints
+        # Delete signs for non-existent breakpoints.
         for num in (oldset - nset):
-            number = int(self.bp_dictionary[num]['number'])
-            self.gdb.delete_bp(number)
+            bp = self.bp_dictionary[num]
+            if 'line' in bp and 'file' in bp:
+                self.gdb.delete_bp(num)
 
-        # create signs for new breakpoints
+        # Create signs for the new breakpoints.
         for num in sorted(nset - oldset):
-            # when file/line is missing (template function), use the
-            # original-location
-            if ('line' not in bp_dictionary[num]
-                    and 'file' not in bp_dictionary[num]):
-                try:
-                    fn, lno = (
-                        bp_dictionary[num]['original-location'].rsplit(':', 1))
-                except ValueError as err:
-                    error(repr(err))
-                    error('breakpoint %s ignored:'
-                            ' cannot split "original-location"', num)
-                    del bp_dictionary[num]
-                    continue
-                bp_dictionary[num]['file'] = fn.strip(misc.DOUBLEQUOTE)
-                bp_dictionary[num]['line'] = lno
-
-            pathname = self.get_fullpath(bp_dictionary[num]['file'])
-            if pathname is not None:
-                lnum = int(bp_dictionary[num]['line'])
-                self.gdb.add_bp(int(num), pathname, lnum)
+            bp = bp_dictionary[num]
+            fix_bp_attributes(bp)
+            if 'line' in bp and 'file' in bp:
+                pathname = self.get_fullpath(bp['file'])
+                if pathname is not None:
+                    lnum = int(bp['line'])
+                    self.gdb.add_bp(num, pathname, lnum)
 
         self.bp_dictionary = bp_dictionary
 
         if (oldset - nset) or (nset - oldset):
-            is_changed = True
-        if is_changed:
-            with open(self.gdb.globaal.f_bps.name, 'w') as f_bps:
-                for num in sorted(bp_dictionary.keys()):
-                    pathname = self.get_fullpath(bp_dictionary[num]['file'])
-                    if pathname is not None:
-                        lnum = bp_dictionary[num]['line']
-                        state = bp_dictionary[num]['enabled']
-                        if state == 'y':
-                            state = 'enabled'
-                        else:
-                            state = 'disabled'
-                        f_bps.write('%s:%s:breakpoint %s %s\n'
-                                            % (pathname, lnum, num, state))
+            self.bp_dirty = True
 
-    def update_frame(self, cmd='', hide=False):
+    def collect_backtrace(self):
+        self.backtrace_dirty = False
+        flevel = self.frame.get('level')
+        lines = []
+        for f in self.backtrace:
+            curlevel = f['level']
+            line = '* #%-3s' if curlevel == flevel else '  #%-3s'
+            line = line % curlevel
+            if 'func' in f:
+                line += ' in %s' % f['func']
+            elif 'from' in f:
+                line += ' from %s' % f['from']
+            if 'file' in f and 'line' in f:
+                line += ' at %s:%s' % (f['file'], f['line'])
+            lines.append(line)
+
+        if lines:
+            return '\n'.join(lines) + '\n'
+        else:
+            return ''
+
+    def update_frame(self, cmd):
         """Update the frame sign."""
-        if hide:
-            self.frame = {}
-        if self.frame and isinstance(self.frame, dict):
-            line = int(self.frame['line'])
-            # gdb 6.4 and above
-            if 'fullname' in self.frame:
-                source = self.frame['fullname']
-            else:
-                fullname = self.file['fullname']
-                source = self.frame['file']
-                if os.path.basename(fullname) == source:
-                    source = fullname
-            pathname = self.get_fullpath(source)
+        try:
+            if self.prev_frame != self.frame:
+                self.backtrace_dirty = True
+            if 'line' in self.frame:
+                f = self.frame
+                line = int(f['line'])
+                # gdb 6.4 and above.
+                if 'fullname' in f:
+                    fname = f['fullname']
+                else:
+                    fullname = self.file.get('fullname')
+                    fname = f.get('file')
+                    if (fname and fullname and
+                            os.path.basename(fullname) == fname):
+                        fname = fullname
+                pathname = self.get_fullpath(fname) if fname else None
+                if pathname:
+                    if not self.frame_prefix:
+                        keys = list(self.gdb.cmds.keys())
+                        keys.remove('frame')
+                        self.frame_prefix = misc.smallpref_inlist('frame',
+                                                                   keys)
+                    if (self.prev_frame != self.frame or
+                                cmd.startswith(self.frame_prefix)):
+                        self.gdb.show_frame(pathname, line)
+                    return
 
-            if pathname is not None:
-                frame_location = {'pathname':pathname, 'lnum':line}
-                if not self.frame_prefix:
-                    keys = list(self.gdb.cmds.keys())
-                    keys.remove('frame')
-                    self.frame_prefix = misc.smallpref_inlist('frame', keys)
-                # when the frame location has changed or when running the
-                # 'frame' command
-                if (self.frame_location != frame_location or
-                            cmd.startswith(self.frame_prefix)):
-                    self.gdb.show_frame(**frame_location)
-                    self.frame_location = frame_location
-                return
+            self.hide_frame()
+        finally:
+            self.prev_frame = self.frame
 
-        # hide frame sign
+    def hide_frame(self):
+        if self.prev_frame:
+            self.prev_frame = {}
+            self.backtrace_dirty = True
+            self.backtrace = {}
         self.gdb.show_frame()
-        self.frame_location = {}
+
+    def collect_threads(self):
+        self.threads_dirty = False
+        lines = []
+        for id in sorted(self.threads):
+            thread = self.threads[id]
+            line = ('%(current)s %(id)-3s %(name)-16s %(core)-4s %(state)-7s'
+                    ' %(target-id)-32s' % thread)
+            if 'frame' in thread:
+                f = thread['frame']
+                if 'func' in f:
+                    line += ' in %s' % f['func']
+                elif 'from' in f:
+                    line += ' from %s' % f['from']
+                if 'file' in f and 'line' in f:
+                    line += ' at %s:%s' % (f['file'], f['line'])
+            lines.append(line)
+
+        if lines:
+            lines.insert(0, '  Id  Name             Core State   Info')
+            return '\n'.join(lines) + '\n'
+        else:
+            return ''
+
+    def update_threads(self, cmd):
+        threads = {}
+        current = None
+        # Parse the threads_list and build a new threads dictionary.
+        for sthread, current in self.threads_list:
+            if not sthread:
+                continue
+            sframe = ''
+            lthread = sthread[1:-1].split('frame={', 1)
+            if len(lthread) == 2:
+                remain = lthread[1].rsplit('}', 1)
+                sthread = lthread[0].strip(' ,') + remain[1]
+                sframe = remain[0]
+            else:
+                sthread = lthread[0]
+            thread = misc.parse_keyval(re_threads_attributes, sthread)
+            if 'current' not in thread:
+                thread['current'] = ' '
+            if sframe:
+                if self.gdb.version >= [6, 4]:
+                    frame = misc.parse_keyval(re_frame, sframe)
+                else:
+                    frame = misc.parse_keyval(re_framecli, sframe)
+                thread['frame'] = frame
+
+            try:
+                threads[int(thread['id'])] = thread
+            except (ValueError, KeyError):
+                error('invalid thread id %s', thread)
+
+        if current is not None:
+            try:
+                threads[int(current)]['current'] = '*'
+            except (ValueError, KeyError):
+                error('unknown current-thread-id %s', current)
+
+        # Check if the threads have changed.
+        if any(x not in threads or threads[x] != self.threads[x]
+                for x in self.threads) or set(threads) > set(self.threads):
+            self.threads_dirty = True
+        self.threads = threads
 
     def update_changelist(self, cmd):
         """Process a varobj changelist event."""
@@ -589,19 +737,20 @@ class OobList(object):
         self.running_list = []
         self.fifo = None
 
-        # build the OobCommand objects list
-        # object ordering is important
+        # Build the OobCommand objects list, object ordering is important.
         cmdlist = [
             Args(gdb),
             Directories(gdb),
             File(gdb),
-            FrameCli(gdb),      # after File
+            FrameCli(gdb),      # After File.
             Frame(gdb),
+            BackTrace(gdb),     # After Frame.
+            Threads(gdb),
             PgmFile(gdb),
-            VarUpdate(gdb),     # not last after gdb 7.0
+            VarUpdate(gdb),     # Not last after gdb 7.0.
             Pwd(gdb),
             Sources(gdb),
-            Breakpoints(gdb),   # after File and Sources
+            Breakpoints(gdb),   # After File and Sources.
             Project(gdb),
             Quit(gdb),
         ]
@@ -810,7 +959,7 @@ class VarCreateCommand(MiCommand):
     def handle_result(self, line):
         """Process gdb/mi result."""
         parsed = misc.parse_keyval(re_varcreate, line)
-        if parsed is not None and VARCREATE_ATTRIBUTES.issubset(parsed):
+        if VARCREATE_ATTRIBUTES.issubset(parsed):
             rootvarobj = self.gdb.info.varobj
             varobj = self.varobj
             varobj.update(parsed)
@@ -888,7 +1037,7 @@ class ListChildrenCommand(MiCommand):
         varlist = [VarObj(x) for x in
                         [misc.parse_keyval(re_varlistchildren, list_element)
                             for list_element in re_dict_list.findall(line)]
-                if x is not None and LIST_CHILDREN_KEYS.issubset(x)]
+                if LIST_CHILDREN_KEYS.issubset(x)]
         for varobj in varlist:
             self.varobj['children'][varobj['name']] = varobj
         self.gdb.info.varobj.dirty = True
@@ -1037,7 +1186,7 @@ class VarObjCmdEvaluate(VarObjCmd):
     def handle_result(self, line):
         """Send the gdb command."""
         parsed = misc.parse_keyval(re_varevaluate, line)
-        if parsed is not None and VAREVALUATE_ATTRIBUTES.issubset(parsed):
+        if VAREVALUATE_ATTRIBUTES.issubset(parsed):
             self.result = line
             value = parsed['value']
             if value != self.varobj['value']:
@@ -1177,7 +1326,11 @@ class OobGdbCommand(OobCommand, Command):
 
         """
         if self.trigger:
-            setattr(self.gdb.info, self.info_attribute, [])
+            if not self.gdblist and self.reqkeys:
+                setattr(self.gdb.info, self.info_attribute, {})
+            else:
+                setattr(self.gdb.info, self.info_attribute, [])
+
             self.trigger = False
             return self.send(self.gdb_cmd)
         return False
@@ -1188,30 +1341,37 @@ class OobGdbCommand(OobCommand, Command):
         When successful, set the info_attribute.
 
         """
-        try:
+        if self.prefix in data:
             remain = data[data.index(self.prefix) + len(self.prefix):]
-        except ValueError:
+        elif hasattr(self, 'ignore') and self.ignore in data:
+            return
+        else:
             debug('bad prefix in oob parsing of "%s",'
                     ' requested prefix: "%s"', data.strip(), self.prefix)
+            return
+
+        # Parse as a Python:
+        #   * list of dict: self.gdblist is True
+        #   * a dict: self.gdblist is False and self.reqkeys not empty
+        #   * a list: self.gdblist is False and self.reqkeys empty
+        if self.gdblist:
+            # A list of dictionaries.
+            parsed = [x for x in
+                       [misc.parse_keyval(self.regexp, list_element)
+                        for list_element in re_dict_list.findall(remain)]
+                             if self.reqkeys.issubset(x)]
         else:
-            if self.gdblist:
-                # a list of dictionaries
-                parsed = [x for x in
-                           [misc.parse_keyval(self.regexp, list_element)
-                            for list_element in re_dict_list.findall(remain)]
-                                 if x is not None and self.reqkeys.issubset(x)]
+            if self.reqkeys:
+                parsed = misc.parse_keyval(self.regexp, remain)
+                if not self.reqkeys.issubset(parsed):
+                    parsed = {}
             else:
-                if self.reqkeys:
-                    parsed = misc.parse_keyval(self.regexp, remain)
-                    if parsed is not None and not self.reqkeys.issubset(parsed):
-                        parsed = None
-                else:
-                    parsed = self.regexp.findall(remain)
-            if parsed:
-                setattr(self.gdb.info, self.info_attribute, parsed)
-            else:
-                if not hasattr(self, 'remain') or remain != self.remain:
-                    debug('no match for "%s"', remain)
+                parsed = self.regexp.findall(remain)
+        if parsed:
+            setattr(self.gdb.info, self.info_attribute, parsed)
+        else:
+            if not hasattr(self, 'remain') or remain != self.remain:
+                debug('no match for "%s"', remain)
 
     def handle_result(self, result):
         """Process the result of the mi command."""
@@ -1299,7 +1459,7 @@ FrameCli =      \
                 'info_attribute': 'frame',
                 'prefix': 'done,',
                 'regexp': re_framecli,
-                'reqkeys': FRAMECLI_ATTRIBUTES,
+                'reqkeys': REQ_FRAME_ATTRIBUTES,
                 'gdblist': False,
                 'action': 'update_frame',
                 'trigger_list': FRAME_CMDS,
@@ -1313,11 +1473,42 @@ Frame=          \
                 'gdb_cmd': '-stack-info-frame\n',
                 'info_attribute': 'frame',
                 'prefix': 'done,',
+                'ignore': 'error,msg="No registers."',
                 'regexp': re_frame,
-                'reqkeys': FRAME_ATTRIBUTES,
+                'reqkeys': REQ_FRAME_ATTRIBUTES,
                 'gdblist': False,
                 'action': 'update_frame',
                 'trigger_list': FRAME_CMDS,
+            })
+
+BackTrace=          \
+    type(str('BackTrace'), (OobGdbCommand,),
+            {
+                '__doc__': """Get the backtrace information.""",
+                'gdb_cmd': '-stack-list-frames\n',
+                'info_attribute': 'backtrace',
+                'prefix': 'stack=[',
+                'remain': ']}',
+                'ignore': 'error,msg="No registers."',
+                'regexp': re_frame,
+                'reqkeys': REQ_FRAME_ATTRIBUTES,
+                'gdblist': True,
+                'trigger_list': FRAME_CMDS,
+            })
+
+Threads=          \
+    type(str('Threads'), (OobGdbCommand,),
+            {
+                '__doc__': """Get the threads information.""",
+                'gdb_cmd': '-thread-info\n',
+                'info_attribute': 'threads_list',
+                'prefix': 'threads=[',
+                'remain': ']',
+                'regexp': re_threads,
+                'reqkeys': set(),
+                'gdblist': False,
+                'action': 'update_threads',
+                'trigger_list': THREADS_CMDS,
             })
 
 PgmFile =       \
