@@ -598,7 +598,7 @@ class Info(object):
         for id in sorted(self.threads):
             thread = self.threads[id]
             line = ('%(current)s %(id)-3s %(name)-16s %(core)-4s %(state)-7s'
-                    ' %(target-id)-32s' % thread)
+                    ' %(target-id)s' % thread)
             if 'frame' in thread:
                 f = thread['frame']
                 if 'func' in f:

@@ -4,10 +4,10 @@
 "
 " Configure VIM to be used with pyclewn and netbeans.
 "
-if exists("s:did_pyclewn")
+if exists("s:did_start")
     finish
 endif
-let s:did_pyclewn = 1
+let s:did_start = 1
 
 " The following global variables define how pyclewn is started. They may be
 " changed to suit your preferences.
@@ -168,7 +168,7 @@ function s:start(args)
     endif
 endfunction
 
-function pyclewn#StartClewn(...)
+function pyclewn#start#StartClewn(...)
     let l:debugger = "gdb"
     if a:0 != 0
         let l:debugger = a:1

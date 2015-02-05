@@ -13,7 +13,8 @@ from lib.clewn import __version__
 
 DEBUGGERS = ('simple', 'gdb', 'pdb')
 RUNTIME = [
-    'autoload/pyclewn.vim',
+    'autoload/pyclewn/start.vim',
+    'autoload/pyclewn/buffers.vim',
     'doc/pyclewn.txt',
     'plugin/pyclewn.vim',
     'syntax/clewn_variables.vim',

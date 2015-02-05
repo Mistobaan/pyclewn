@@ -140,9 +140,6 @@ class Pyclewn(ClewnTestCase):
             'map <C-K> ',
             'map <C-P>',
             'map <C-Z>',
-            'map <S-C>',
-            'map <S-Q>',
-            'map <S-S>',
             'qa!',
             ]
         expected = (
@@ -150,9 +147,6 @@ class Pyclewn(ClewnTestCase):
             'n  <C-K>         :nbkey C-K<CR>',
             'n  <C-P>         :nbkey C-P<CR>',
             'n  <C-Z>         :nbkey C-Z<CR>',
-            'n  <S-C>         :nbkey S-C<CR>',
-            'n  <S-Q>         :nbkey S-Q<CR>',
-            'n  <S-S>         :nbkey S-S<CR>',
             )
         self.cltest_redir(cmd, expected, 'line 1\n')
 

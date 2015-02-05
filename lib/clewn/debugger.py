@@ -81,17 +81,8 @@ function <SID>goto_line()
         endif
 
         if winnr() ==  bufwinnr("(clewn)_breakpoints")
-            let l:nr = bufwinnr(l:fname)
-            if l:nr == -1
-                exe &previewheight . "split"
-                wincmd w
-                exe "edit " . l:fname
-            else
-                exe l:nr . "wincmd w"
-            endif
-            call cursor(l:lnum, 0)
+            call pyclewn#buffers#GotoBreakpoint(l:fname, l:lnum)
         endif
-
     endif
 endfunction
 
@@ -112,77 +103,6 @@ function <SID>goto_thread()
         exe "Cthread " . l:thread
     endif
 endfunction
-
-" Split a window and display a buffer with previewheight.
-function s:winsplit(bufname, lnum, location)
-    if a:location == "none"
-        return
-    endif
-
-    " The window does not exist.
-    let l:nr = bufwinnr(a:bufname)
-    if l:nr == -1
-        call s:split(a:bufname, a:lnum, a:location)
-    elseif a:lnum != ""
-        let l:prevbuf_winnr = bufwinnr(bufname("%"))
-        exe l:nr . "wincmd w"
-        call cursor(a:lnum, 0)
-        exe l:prevbuf_winnr . "wincmd w"
-    endif
-
-    " Split the window (when the only window)
-    " this is required to prevent Vim display toggling between
-    " clewn console and the last buffer where the cursor was
-    " positionned (clewn does not know that this buffer is not
-    " anymore displayed).
-    if winnr("$") == 1
-        call s:split("", "", a:location)
-    endif
-endfunction
-
-" Split a window and return to the initial window,
-" if 'location' is not ''
-"   'location' may be: '', 'top', 'bottom', 'left' or 'right'.
-function s:split(bufname, lnum, location)
-    let nr = 1
-    let split = "split"
-    let spr = &splitright
-    let sb = &splitbelow
-    set nosplitright
-    set nosplitbelow
-    let prevbuf_winnr = bufwinnr(bufname("%"))
-    if winnr("$") == 1 && (a:location == "right" || a:location == "left")
-	let split = "vsplit"
-	if a:location == "right"
-	    set splitright
-        else
-            let prevbuf_winnr = 2
-	endif
-    else
-	if a:location == "bottom"
- 	    let nr = winnr("$")
-	    set splitbelow
-        else
-            let prevbuf_winnr = prevbuf_winnr + 1
-	endif
-	if a:location != ""
-	    exe nr . "wincmd w"
-	endif
-    endif
-    let nr = bufnr(a:bufname)
-    if nr != -1
-        exe &previewheight . split
-        exe nr . "buffer"
-    else
-        exe &previewheight . split . " " . a:bufname
-    endif
-    if a:lnum != ""
-        call cursor(a:lnum, 0)
-    endif
-    let &splitright = spr
-    let &splitbelow = sb
-    exe prevbuf_winnr . "wincmd w"
-endfunc
 
 let s:bufList = {}
 let s:bufLen = 0
@@ -278,7 +198,7 @@ function s:nbcommand(...)
             if bufname("%") == ""
                 edit ${console}
             else
-                call s:winsplit("${console}", "", "${location}")
+                call pyclewn#buffers#DisplayConsole("${location}")
             endif
             ${split_vars_buf}
             let cmd = "nbkey " . join(a:000, ' ')
@@ -318,7 +238,7 @@ function s:nbcommand(...)
                 call inputrestore()
                 echohl None
             endif
-            call s:winsplit("${console}", "", "${location}")
+            call pyclewn#buffers#DisplayConsole("${location}")
             ${split_vars_buf}
             let cmd = "nbkey " . join(a:000, ' ')
             exe cmd
@@ -331,7 +251,7 @@ endfunction
 
 SPLIT_VARS_BUF = """
             if a:1 == "dbgvar"
-                call s:winsplit("(clewn)_variables", "", "")
+                call pyclewn#buffers#DbgvarSplit()
             endif
 """
 
@@ -341,7 +261,7 @@ SPLIT_BT_BUF = """
             " to happen and split this window in this case.
             if a:1 == "frame" && bufwinnr("(clewn)_backtrace") != -1
                 sleep 500m
-                call s:winsplit("(clewn)_backtrace", "", "")
+                call pyclewn#buffers#BacktraceSplit()
             endif
 """
 

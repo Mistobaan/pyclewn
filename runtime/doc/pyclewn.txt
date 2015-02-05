@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 February 4
+*pyclewn.txt*                                   Last change: 2015 February 5
 
 
                             PYCLEWN USER MANUAL
@@ -13,6 +13,7 @@ The Pyclewn user guide                              *pyclewn*
 6. Pdb                                              |pyclewn-pdb|
 7. Key mappings                                     |pyclewn-mappings|
 8. Watched variables                                |pyclewn-variable|
+9. Splitting windows                                |pyclewn-splitting|
 
 
 ==============================================================================
@@ -70,11 +71,16 @@ Pyclewn provides the following features:
   may be conducted later on this same process, possibly from another Vim
   instance.
 
-* An expression can be watched in a vim window. The expression value is
+* A gdb expression can be watched in a vim window. The expression value is
   updated and highlighted whenever it has changed. When the expression is a
   structure or class instance, it can be expanded (resp. folded) to show
   (resp. hide) its members and their values. This feature is only available
   with gdb.
+
+* With gdb, one can jump with the <CR> key or the mouse to the corresponding
+  source code line from a "(clewn)_breakpoints" window or switch to the
+  corresponding frame from a "(clewn)_backtrace" window, or switch to the
+  correponding thread with a "(clewn)_threads" window.
 
 * The |project-command| saves the current gdb settings to a project file that
   may be sourced later by the gdb "source" command. These settings are the
@@ -513,11 +519,12 @@ evaluation of an expression, first select the expression in visual mode in the
 source code and point the mouse over the selected expression. To disable this
 feature, set the vim option 'noballooneval'.
 
+
 Limitations:
 ------------
 Running ":edit (clewn)_console" while the cursor is in "(clewn)_console"
-clears the contents of the console. The same problem occurs with
-"(clewn)_variables".
+clears the contents of the console. The same problem occurs with all the
+"(clewn)_xxx" buffers and should be fixed starting with Vim 7.5.
 
 ==============================================================================
 5. Gdb                                              *pyclewn-gdb*
@@ -1157,6 +1164,41 @@ When a watched variable becomes out of scope, it is highlighted with the
 
 The foreground and background colors used by these highlight groups are setup
 by the |:colorscheme| currently in use.
+
+==============================================================================
+9. Splitting windows                                *pyclewn-splitting*
+
+
+All the Vim functions defined by pyclewn that split windows can be overriden.
+When the following functions are defined, they will be called by pyclewn
+instead of calling the corresponding functions defined in
+"autoload/pyclewn/buffers.vim": >
+
+
+    Pyclewn_DisplayConsole(location)
+        Display the console in a window, split if needed. The function is
+        called before a 'C' command is executed.
+          'location': the value of the '--window' option, i.e. "top", "bottom",
+                      "left", "right" or "none".
+
+    Pyclewn_DbgvarSplit()
+        Display the '(clewn)_variables' buffer in a window, split if needed.
+        The function is called before the 'Cdbgvar' command is executed and
+        after 'Pyclewn_DisplayConsole'.
+
+    call Pyclewn_BacktraceSplit()
+        Display the '(clewn)_backtrace' buffer in a window. This is made
+        necessary because the result of the <CR> key (or the mouse) may cause
+        the '(clewn)_backtrace' window to be replaced by a source code window.
+        The function is called after the <CR> key or the mouse is used in a
+        '(clewn)_backtrace' window.
+
+    Pyclewn_GotoBreakpoint(bufname, lnum)
+        Display the breakpoint source code in a window. The function is called
+        after the <CR> key or the mouse is used in a '(clewn)_breakpoints'
+        window.
+          'bufname': the source code full path name.
+          'lnum':    the source code line number.
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:et:

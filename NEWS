@@ -4,7 +4,7 @@ News
 Pyclewn 2.0
 -----------
 
-.. February 4, 2015
+.. February 5, 2015
 
 New features
 ^^^^^^^^^^^^
@@ -15,6 +15,9 @@ New features
   or switch to the corresponding frame from the ``(clewn)_backtrace`` window,
   or switch to the correponding thread with the ``(clewn)_threads`` window.
   The ``Ccwindow`` command has been removed.
+
+* All the Vim functions defined by pyclewn that split windows can be
+  overriden.
 
 * A compound watched variable in ``(clewn)_variables`` can be expanded and
   collapsed with the <CR> key or the mouse.
