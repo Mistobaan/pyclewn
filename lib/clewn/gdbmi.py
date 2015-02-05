@@ -345,6 +345,12 @@ class VarObj(dict):
 
         return dirty
 
+class LooseFrame(dict):
+    """Compare equal when only their 'line', 'addr' is different."""
+    def __eq__(self, other):
+        return set(other) == set(self) and all(other[x] == self[x]
+               for x in self if x not in ('line', 'addr'))
+
 class Info(object):
     """Container for the debuggee state information.
 
@@ -543,8 +549,9 @@ class Info(object):
                 line += ' in %s' % f['func']
             elif 'from' in f:
                 line += ' from %s' % f['from']
-            if 'file' in f and 'line' in f:
-                line += ' at %s:%s' % (f['file'], f['line'])
+            # Do not display the line number to avoid screen blinks.
+            if 'file' in f:
+                line += ' at %s' % f['file']
             lines.append(line)
 
         if lines:
@@ -554,6 +561,7 @@ class Info(object):
 
     def update_frame(self, cmd):
         """Update the frame sign."""
+        self.frame = LooseFrame(self.frame)
         try:
             if self.prev_frame != self.frame:
                 self.backtrace_dirty = True
@@ -597,7 +605,7 @@ class Info(object):
         lines = []
         for id in sorted(self.threads):
             thread = self.threads[id]
-            line = ('%(current)s %(id)-3s %(name)-16s %(core)-4s %(state)-7s'
+            line = ('%(current)s %(id)-3s %(name)-16s %(state)-7s'
                     ' %(target-id)s' % thread)
             if 'frame' in thread:
                 f = thread['frame']
@@ -605,12 +613,13 @@ class Info(object):
                     line += ' in %s' % f['func']
                 elif 'from' in f:
                     line += ' from %s' % f['from']
-                if 'file' in f and 'line' in f:
-                    line += ' at %s:%s' % (f['file'], f['line'])
+                # Do not display the line number to avoid screen blinks.
+                if 'file' in f:
+                    line += ' at %s' % f['file']
             lines.append(line)
 
         if lines:
-            lines.insert(0, '  Id  Name             Core State   Info')
+            lines.insert(0, '  Id  Name             State   Info')
             return '\n'.join(lines) + '\n'
         else:
             return ''
@@ -638,7 +647,7 @@ class Info(object):
                     frame = misc.parse_keyval(re_frame, sframe)
                 else:
                     frame = misc.parse_keyval(re_framecli, sframe)
-                thread['frame'] = frame
+                thread['frame'] = LooseFrame(frame)
 
             try:
                 threads[int(thread['id'])] = thread
@@ -652,8 +661,7 @@ class Info(object):
                 error('unknown current-thread-id %s', current)
 
         # Check if the threads have changed.
-        if any(x not in threads or threads[x] != self.threads[x]
-                for x in self.threads) or set(threads) > set(self.threads):
+        if threads != self.threads:
             self.threads_dirty = True
         self.threads = threads
 

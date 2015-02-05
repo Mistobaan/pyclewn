@@ -988,10 +988,6 @@ class Gdb(debugger.Debugger, Process):
                 or any([cmd == x
                     for x in ('d', 'r', 'c', 's', 'n', 'u', 'j')]):
             self.info.hide_frame()
-            self.update_listbuffer('backtrace', self.info.collect_backtrace,
-                               self.info.backtrace_dirty)
-            self.update_listbuffer('threads', self.info.collect_threads,
-                               self.info.threads_dirty)
 
         if self.firstcmdline is None:
             self.firstcmdline = self.curcmdline

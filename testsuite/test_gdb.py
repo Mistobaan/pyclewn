@@ -955,9 +955,9 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             '  #0   in nanosleep',
-            '* #1   in msleep at foo.c:23',
-            '  #2   in foo at foo.c:37',
-            '  #3   in main at foobar.c:60',
+            '* #1   in msleep at foo.c',
+            '  #2   in foo at foo.c',
+            '  #3   in main at foobar.c',
             )
         self.cltest_redir(cmd, expected)
 
