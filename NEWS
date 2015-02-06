@@ -53,6 +53,8 @@ Changes
   followed by the options and an optional argument that selects which debugger
   to run.
 
+* The ``(clewn)_console`` window is only created at the first ``C`` command.
+
 * ``CTRL-E`` is a standard Vim command, it is replaced with ``CTRL-K`` in
   pyclewn key mappings for clearing breakpoints. The ``(clewn)_console`` is
   not any more popped up after hitting a pyclewn mapped key.

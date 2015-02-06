@@ -165,6 +165,7 @@ augroup clewn
     autocmd BufEnter (clewn)_backtrace nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_frame()<CR>
     autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <CR> :call <SID>goto_thread()<CR>
     autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_thread()<CR>
+    autocmd BufAdd (clewn)_* call pyclewn#buffers#CreateWindow(expand("<afile>"), "${location}")
     ${list_buffers_autocmd}
 augroup END
 
@@ -193,10 +194,9 @@ function s:nbcommand(...)
     " Allow '' as first arg: the 'C' command followed by a mandatory parameter
     if a:0 != 0
         if a:1 != "" || (a:0 > 1 && a:2 != "")
+            " The buffer list is empty.
             if bufname("%") == ""
-                edit ${console}
-            else
-                call pyclewn#buffers#DisplayConsole("${location}")
+                call pyclewn#buffers#CreateWindow("${console}", "${location}")
             endif
             ${split_vars_buf}
             let cmd = "nbkey " . join(a:000, ' ')
@@ -235,7 +235,6 @@ function s:nbcommand(...)
                 call inputrestore()
                 echohl None
             endif
-            call pyclewn#buffers#DisplayConsole("${location}")
             ${split_vars_buf}
             let cmd = "nbkey " . join(a:000, ' ')
             exe cmd
@@ -522,7 +521,7 @@ class Debugger(object):
                 The line number in the Vim buffer.
 
         """
-        if not self.__nbsock:
+        if not self.__nbsock or not self.__nbsock.list_buffers:
             return
 
         lbuf = self.__nbsock.list_buffers[bufname]
@@ -773,6 +772,7 @@ class Debugger(object):
             bufferlist_autocmd = (BUFFERLIST_AUTOCMD if
                                   options.noname_fix == '0' else '')
             f.write(string.Template(AUTOCOMMANDS).substitute(
+                                    location=options.window,
                                     list_buffers_autocmd=list_buffers_autocmd,
                                     bufferlist_autocmd=bufferlist_autocmd))
 

@@ -167,26 +167,3 @@ class Pyclewn(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected, 'line 1\nline 2\n')
 
-    def test_008(self):
-        """There is only one console after a chdir"""
-        cmd = [
-            'edit ${test_file}1',
-            'Cbreak ${test_file}1:1',
-            'wincmd k',
-            'quit',
-            'cd testsuite',
-            'Cstep',
-            'cd ..',
-            'edit ${test_file}2',
-            'redir! > ${test_out}',
-            'ls',
-            'qa!',
-            ]
-        expected = (
-            '1 #    "${test_file}1"                 line 1',
-            '2  a=  "(clewn)_console"               line 1',
-            '3 %a   "${test_file}2"                 line 1',
-
-            )
-        self.cltest_redir(cmd, expected, 'line 1\nline 2\n')
-

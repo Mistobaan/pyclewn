@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 February 5
+*pyclewn.txt*                                   Last change: 2015 February 6
 
 
                             PYCLEWN USER MANUAL
@@ -548,6 +548,12 @@ one may:
     * "(clewn)_backtrace": switch to the corresponding frame.
 
     * "(clewn)_threads": switch to the correponding thread.
+
+When the "--window" option is "top" (the default), pyclewn creates three
+windows at the first user command that creates a breakpoint or start the
+debuggee. The windows are then populated with their corresponding list
+buffers as soon as these buffers become available. See |pyclewn-splitting| for
+a way to disable or customize this feature.
 
 
                                                     *inferior_tty*
@@ -1169,23 +1175,26 @@ by the |:colorscheme| currently in use.
 9. Splitting windows                                *pyclewn-splitting*
 
 
-All the Vim functions defined by pyclewn that split windows can be overriden.
+All the Vim functions defined by pyclewn that manage windows can be overriden.
 When the following functions are defined, they will be called by pyclewn
 instead of calling the corresponding functions defined in
 "autoload/pyclewn/buffers.vim": >
 
 
-    Pyclewn_DisplayConsole(location)
-        Display the console in a window, split if needed. The function is
-        called before a 'C' command is executed.
+    Pyclewn_CreateWindow(name, location)
+        Display one of the pyclewn buffers in a window. The function is
+        triggered by a 'BufAdd' autocommand. The function is also called
+        directly with 'name' as "(clewn)_console" just before the first 'C'
+        command when the buffer list is empty (to workaround a problem with
+        Vim that fails to send netbeans events when the buffer list is empty).
 
+          'name':     the pyclewn buffer name.
           'location': the value of the '--window' option, i.e. "top", "bottom",
                       "left", "right" or "none".
 
     Pyclewn_DbgvarSplit()
         Display the '(clewn)_variables' buffer in a window, split if needed.
-        The function is called before the 'Cdbgvar' command is executed and
-        after 'Pyclewn_DisplayConsole'.
+        The function is called before the 'Cdbgvar' command is executed.
 
     Pyclewn_GotoFrame(fname)
         Display the frame source code in a window. The function is called
@@ -1202,7 +1211,7 @@ instead of calling the corresponding functions defined in
         window.
 
           'fname': the source code full path name.
-          'lnum':    the source code line number.
+          'lnum':  the source code line number.
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:et:
