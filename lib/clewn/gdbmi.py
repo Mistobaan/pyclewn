@@ -58,6 +58,7 @@ DIRECTORY_CMDS = (
 
 SOURCE_CMDS = (
     'r', 'start',
+    'break', 'tbreak', 'hbreak', 'thbreak', 'rbreak',
     'file', 'exec-file', 'core-file', 'symbol-file', 'add-symbol-file',
     'source')
 
@@ -177,14 +178,12 @@ re_sources = re.compile(RE_SOURCES, re.VERBOSE)
 re_varupdate = re.compile(RE_VARUPDATE, re.VERBOSE)
 re_type = re.compile(RE_TYPE, re.VERBOSE)
 
-def fullname(name, source_dict):
-    """Return 'fullname' value, matching name in the source_dict dictionary."""
-    try:
-        if source_dict and source_dict['file'] == name:
-            return source_dict['fullname']
-    except KeyError:
-        pass
-    return ''
+def get_pathname(name, source):
+    """Return a valid path name, matching name in the source dictionary."""
+    if source:
+        pathname = source['fullname'] if source['file'] == name else ''
+        if pathname and os.path.exists(pathname):
+            return pathname
 
 def fix_bp_attributes(bp):
     if 'line' not in bp or 'file' not in bp:
@@ -430,40 +429,37 @@ class Info(object):
 
         If name is an absolute path, just stat it. Otherwise, add name to
         each directory in gdb source directories and stat the result.
-        Path names are unix normalized with forward slashes.
         """
 
-        # an absolute path name
+        # An absolute path name.
         if os.path.isabs(name):
             if os.path.exists(name):
                 return name
             else:
-                # strip off the directory part and continue
+                # Strip off the directory part and continue.
                 name = os.path.split(name)[1]
 
         if not name:
             return None
 
-        # proceed with each directory in gdb source directories
+        # Proceed with each directory in gdb source directories.
         for dirname in self.directories:
             if dirname == '$cdir':
-                pathname = fullname(name, self.file)
-                if not pathname:
-                    for source_dict in self.sources:
-                        pathname = fullname(name, source_dict)
-                        if pathname:
-                            break
-                    else:
-                        continue # main loop
+                pathname = get_pathname(name, self.file)
+                if pathname:
+                    return pathname
+                for source in self.sources:
+                    pathname = get_pathname(name, source)
+                    if pathname:
+                        return pathname
             elif dirname == '$cwd':
                 pathname = os.path.abspath(name)
+                if os.path.exists(pathname):
+                    return pathname
             else:
-                pathname = os.path.normpath(name)
-
-            if os.path.exists(pathname):
-                return pathname
-
-        return None
+                pathname = os.path.join(dirname, name)
+                if os.path.exists(pathname):
+                    return pathname
 
     def collect_breakpoints(self):
         self.bp_dirty = False

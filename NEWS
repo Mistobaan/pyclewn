@@ -4,7 +4,7 @@ News
 Pyclewn 2.0
 -----------
 
-.. February 5, 2015
+.. February 6, 2015
 
 New features
 ^^^^^^^^^^^^
@@ -83,6 +83,9 @@ Bug fixes
 
 * Pyclewn prevents now the spawning of a terminal by ``Cinferiortty`` also
   when the inferior is stopped in a shared library.
+
+* Fix the problem that when the first command is 'Cbreak', the breakpoint is
+  not highlighted.
 
 Pyclewn 1.11
 ------------

@@ -1052,3 +1052,17 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
+    def test_052(self):
+        """'Cbreak' as the first command, does highlight the breakpoint."""
+        sys.argv.append('--args=testsuite/foobar')
+        cmd = [
+            'Cbreak foo',
+            'redir! > ${test_out}',
+            'echo bufwinnr("${cwd}testsuite/foo.c") != -1',
+            'qa!',
+            ]
+        expected = (
+            '1',
+            )
+        self.cltest_redir(cmd, expected)
+
