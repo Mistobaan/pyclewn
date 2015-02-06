@@ -20,7 +20,7 @@ function pyclewn#buffers#DisplayConsole(location)
         call Pyclewn_DisplayConsole(a:location)
         return
     endif
-    call s:winsplit("(clewn)_console", a:location)
+    call s:split_console("(clewn)_console", a:location)
 endfunction
 
 " Display the '(clewn)_variables' buffer in a window, split if needed. The
@@ -31,55 +31,46 @@ function pyclewn#buffers#DbgvarSplit()
         call Pyclewn_DbgvarSplit()
         return
     endif
-    call s:winsplit("(clewn)_variables", "")
+    call s:split_console("(clewn)_variables", "")
 endfunction
 
-" Display the '(clewn)_backtrace' buffer in a window. This is made necessary
-" because the result of the <CR> key (or the mouse) may cause the
-" '(clewn)_backtrace' window to be replaced by a source code window. The
-" function is called after the <CR> key or the mouse is used in a
-" '(clewn)_backtrace' window.
-function pyclewn#buffers#BacktraceSplit()
-    if exists("*Pyclewn_BacktraceSplit")
-        call Pyclewn_BacktraceSplit()
+" Display the frame source code in a window. The function is called after the
+" <CR> key or the mouse is used in a '(clewn)_backtrace' window. The line number
+" is not available (to avoid screen blinks) in this window, but the ensuing
+" 'Cframe' command will automatically move the cursor to the right place.
+"   'fname': the source code full path name.
+function pyclewn#buffers#GotoFrame(fname)
+    if exists("*Pyclewn_GotoFrame")
+        call Pyclewn_GotoFrame(a:fname)
         return
     endif
-    call s:winsplit("(clewn)_backtrace", "")
+    call s:split_source(a:fname, "")
 endfunction
 
 " Display the breakpoint source code in a window. The function is called after
 " the <CR> key or the mouse is used in a '(clewn)_breakpoints' window.
-"   'bufname': the source code full path name.
+"   'fname': the source code full path name.
 "   'lnum':    the source code line number.
-function pyclewn#buffers#GotoBreakpoint(bufname, lnum)
+function pyclewn#buffers#GotoBreakpoint(fname, lnum)
     if exists("*Pyclewn_GotoBreakpoint")
-        call Pyclewn_GotoBreakpoint(a:bufname, a:lnum)
+        call Pyclewn_GotoBreakpoint(a:fname, a:lnum)
         return
     endif
-
-    let l:nr = bufwinnr(a:bufname)
-    if l:nr == -1
-        exe &previewheight . "split"
-        wincmd w
-        exe "edit " . a:bufname
-    else
-        exe l:nr . "wincmd w"
-    endif
-    call cursor(a:lnum, 0)
+    call s:split_source(a:fname, a:lnum)
 endfunction
 
 "-------------------   END AUTOLOAD FUNCTIONS   -------------------
 
 " Split a window and display a buffer with previewheight.
-function s:winsplit(bufname, location)
+function s:split_console(fname, location)
     if a:location == "none"
         return
     endif
 
     " The window does not exist.
-    let l:nr = bufwinnr(a:bufname)
+    let l:nr = bufwinnr(a:fname)
     if l:nr == -1
-        call s:split(a:bufname, a:location)
+        call s:split(a:fname, a:location)
     endif
 
     " Split the window (when the only window)
@@ -95,41 +86,82 @@ endfunction
 " Split a window and return to the initial window,
 " if 'location' is not ''
 "   'location' may be: '', 'top', 'bottom', 'left' or 'right'.
-function s:split(bufname, location)
+function s:split(fname, location)
     let nr = 1
-    let split = "split"
+    let l:split = "split"
     let spr = &splitright
     let sb = &splitbelow
     set nosplitright
     set nosplitbelow
     let prevbuf_winnr = bufwinnr(bufname("%"))
     if winnr("$") == 1 && (a:location == "right" || a:location == "left")
-	let split = "vsplit"
-	if a:location == "right"
-	    set splitright
+        let l:split = "vsplit"
+        if a:location == "right"
+            set splitright
         else
             let prevbuf_winnr = 2
-	endif
+        endif
     else
-	if a:location == "bottom"
- 	    let nr = winnr("$")
-	    set splitbelow
+        if a:location == "bottom"
+            let nr = winnr("$")
+            set splitbelow
         else
             let prevbuf_winnr = prevbuf_winnr + 1
-	endif
-	if a:location != ""
-	    exe nr . "wincmd w"
-	endif
+        endif
+        if a:location != ""
+            exe nr . "wincmd w"
+        endif
     endif
-    let nr = bufnr(a:bufname)
+    let nr = bufnr(a:fname)
     if nr != -1
-        exe &previewheight . split
+        exe &previewheight . l:split
         exe nr . "buffer"
     else
-        exe &previewheight . split . " " . a:bufname
+        exe &previewheight . l:split . " " . a:fname
     endif
     let &splitright = spr
     let &splitbelow = sb
     exe prevbuf_winnr . "wincmd w"
 endfunc
+
+function s:split_source(fname, lnum)
+    let l:nr = bufwinnr(a:fname)
+    if l:nr != -1
+        exe l:nr . "wincmd w"
+        if a:lnum != ""
+            call cursor(a:lnum, 0)
+        endif
+        return
+    endif
+
+    " Search for a source code window.
+    let l:count = winnr('$')
+    let l:nr = 1
+    while l:nr <= l:count
+        if ! s:is_clewn_buffer(bufname(winbufnr(l:nr)))
+            exe l:nr . "wincmd w"
+            break
+        endif
+        let l:nr = l:nr + 1
+    endwhile
+
+    " Split the window.
+    exe &previewheight . "split"
+    if l:nr > l:count
+        wincmd w
+    endif
+    exe "edit " . a:fname
+    if a:lnum != ""
+        call cursor(a:lnum, 0)
+    endif
+endfunction
+
+function s:is_clewn_buffer(fname)
+    for l:name in ['console', 'variables', 'breakpoints', 'backtrace', 'threads']
+        if a:fname == "(clewn)_" . l:name
+            return 1
+        endif
+    endfor
+    return 0
+endfunction
 

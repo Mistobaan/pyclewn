@@ -476,10 +476,12 @@ class Info(object):
             if 'func' in bp:
                 line += ' in %(func)s' % bp
             if 'line' in bp and 'file' in bp:
-                pathname = self.get_fullpath(bp['file'])
+                lnum = bp['line']
+                fname = bp['file']
+                line += ' at %s:%s' % (fname, lnum)
+                pathname = self.get_fullpath(fname)
                 if pathname is not None:
-                    lnum = bp['line']
-                    line += ' at %s:%s' % (lnum, pathname)
+                    line += ' <%s>' % pathname
             lines.append(line)
 
         if lines:
@@ -551,7 +553,11 @@ class Info(object):
                 line += ' from %s' % f['from']
             # Do not display the line number to avoid screen blinks.
             if 'file' in f:
-                line += ' at %s' % f['file']
+                fname = f['file']
+                line += ' at %s' % fname
+                pathname = self.get_fullpath(fname)
+                if pathname is not None:
+                    line += ' <%s>' % pathname
             lines.append(line)
 
         if lines:

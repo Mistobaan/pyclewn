@@ -1178,6 +1178,7 @@ instead of calling the corresponding functions defined in
     Pyclewn_DisplayConsole(location)
         Display the console in a window, split if needed. The function is
         called before a 'C' command is executed.
+
           'location': the value of the '--window' option, i.e. "top", "bottom",
                       "left", "right" or "none".
 
@@ -1186,18 +1187,21 @@ instead of calling the corresponding functions defined in
         The function is called before the 'Cdbgvar' command is executed and
         after 'Pyclewn_DisplayConsole'.
 
-    call Pyclewn_BacktraceSplit()
-        Display the '(clewn)_backtrace' buffer in a window. This is made
-        necessary because the result of the <CR> key (or the mouse) may cause
-        the '(clewn)_backtrace' window to be replaced by a source code window.
-        The function is called after the <CR> key or the mouse is used in a
-        '(clewn)_backtrace' window.
+    Pyclewn_GotoFrame(fname)
+        Display the frame source code in a window. The function is called
+        after the <CR> key or the mouse is used in a '(clewn)_backtrace'
+        window. The line number is not available (to avoid screen blinks) in
+        this window, but the ensuing 'Cframe' command will automatically move
+        the cursor to the right place.
 
-    Pyclewn_GotoBreakpoint(bufname, lnum)
+          'fname': the source code full path name.
+
+    Pyclewn_GotoBreakpoint(fname, lnum)
         Display the breakpoint source code in a window. The function is called
         after the <CR> key or the mouse is used in a '(clewn)_breakpoints'
         window.
-          'bufname': the source code full path name.
+
+          'fname': the source code full path name.
           'lnum':    the source code line number.
 
 ==============================================================================

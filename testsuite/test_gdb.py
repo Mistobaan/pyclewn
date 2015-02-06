@@ -934,10 +934,13 @@ class Gdb(ClewnTestCase):
             'Crun',
             'Cdisable 2 4',
             'edit (clewn)_breakpoints | %w!  ${test_out}',
+            'edit ${test_out}',
+            r'%s/\(.*\) <.*>$$/\1',
+            'write',
             'qa!',
             ]
         expected = (
-            '2 breakpoint n 1 keep in foo at 30:${cwd}testsuite/foo.c',
+            '2 breakpoint n 1 keep in foo at foo.c:30',
             '4 breakpoint n 0 keep in nanosleep',
             '5 breakpoint y 0 keep in nanosleep',
             )
@@ -951,6 +954,9 @@ class Gdb(ClewnTestCase):
             'Crun',
             'Cup',
             'edit (clewn)_backtrace | %w!  ${test_out}',
+            'edit ${test_out}',
+            r'%s/\(.*\) <.*>$$/\1',
+            'write',
             'qa!',
             ]
         expected = (
@@ -1024,6 +1030,25 @@ class Gdb(ClewnTestCase):
         expected = (
             '  1   python sys_getrecursionlimit',
             '* 2   python sem_wait',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_051(self):
+        """Test the <CR> map in (clewn)_breakpoints."""
+        cmd = [
+            'Cfile testsuite/foobar',
+            'Cbreak foo',
+            'Cstart',
+            'edit (clewn)_breakpoints',
+            '2',
+            'exe "normal \<CR>"',
+            'sleep ${sleep_time}',
+            'redir! > ${test_out}',
+            'echo bufwinnr("${cwd}testsuite/foo.c") != -1',
+            'qa!',
+            ]
+        expected = (
+            '1',
             )
         self.cltest_redir(cmd, expected)
 

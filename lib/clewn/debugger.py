@@ -67,20 +67,13 @@ VIM_SCRIPT_FIXED = r"""
 let s:cpo_save=&cpo
 set cpo&vim
 
-function <SID>goto_line()
+function <SID>goto_breakpoint()
     let l:line = getline(".")
-    let l:regexp = '^\(.*\) at \(\d\+\):\(.\+\)$'
-    let l:lnum = substitute(l:line, l:regexp , '\2', "")
+    let l:regexp = '^\(.*\) at \(.\+\):\(\d\+\) <\(.\+\)>$'
+    let l:lnum = substitute(l:line, l:regexp , '\3', "")
     if l:line != l:lnum
-        let l:fname = substitute(l:line, l:regexp , '\3', "")
-        if ! filereadable(l:fname)
-            echohl ErrorMsg
-            echo l:fname . " does not exist."
-            echohl None
-            return
-        endif
-
-        if winnr() ==  bufwinnr("(clewn)_breakpoints")
+        let l:fname = substitute(l:line, l:regexp , '\4', "")
+        if filereadable(l:fname)
             call pyclewn#buffers#GotoBreakpoint(l:fname, l:lnum)
         endif
     endif
@@ -89,9 +82,14 @@ endfunction
 function <SID>goto_frame()
     let l:line = getline(".")
     let l:regexp = '^\([ *] \)#\(\d\+\).*$'
-    let l:num = substitute(l:line, l:regexp , '\2', "")
-    if l:line != l:num
-        exe "Cframe " . l:num
+    let l:id = substitute(l:line, l:regexp , '\2', "")
+    if l:line != l:id
+        let l:regexp = '^\([ *] \)#\(\d\+\).* at \(.\+\) <\(.\+\)>$'
+        let l:fname = substitute(l:line, l:regexp , '\4', "")
+        if l:line != l:fname && filereadable(l:fname)
+            call pyclewn#buffers#GotoFrame(l:fname)
+        endif
+        exe "Cframe " . l:id
     endif
 endfunction
 
@@ -161,8 +159,8 @@ augroup clewn
     autocmd BufWinEnter (clewn)_variables silent! setlocal syntax=clewn_variables
     autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <CR> :exe "Cfoldvar " . line(".")<CR>
     autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <2-Leftmouse> :exe "Cfoldvar " . line(".")<CR>
-    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <CR> :call <SID>goto_line()<CR>
-    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_line()<CR>
+    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <CR> :call <SID>goto_breakpoint()<CR>
+    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_breakpoint()<CR>
     autocmd BufEnter (clewn)_backtrace nnoremap <buffer> <silent> <CR> :call <SID>goto_frame()<CR>
     autocmd BufEnter (clewn)_backtrace nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_frame()<CR>
     autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <CR> :call <SID>goto_thread()<CR>
@@ -203,7 +201,6 @@ function s:nbcommand(...)
             ${split_vars_buf}
             let cmd = "nbkey " . join(a:000, ' ')
             exe cmd
-            ${split_bt_buf}
         endif
     endif
 endfunction
@@ -242,7 +239,6 @@ function s:nbcommand(...)
             ${split_vars_buf}
             let cmd = "nbkey " . join(a:000, ' ')
             exe cmd
-            ${split_bt_buf}
         endif
     endif
 endfunction
@@ -252,16 +248,6 @@ endfunction
 SPLIT_VARS_BUF = """
             if a:1 == "dbgvar"
                 call pyclewn#buffers#DbgvarSplit()
-            endif
-"""
-
-SPLIT_BT_BUF = """
-            " <CR> in the backtrace list buffer may cause the backtrace
-            " window to be replaced by another window. So wait for this
-            " to happen and split this window in this case.
-            if a:1 == "frame" && bufwinnr("(clewn)_backtrace") != -1
-                sleep 500m
-                call pyclewn#buffers#BacktraceSplit()
             endif
 """
 
@@ -807,13 +793,10 @@ class Debugger(object):
 
             split_vars_buf = (SPLIT_VARS_BUF if
                               netbeans.Netbeans.getLength_fix != '0' else '')
-            split_bt_buf = (SPLIT_BT_BUF if
-                              netbeans.Netbeans.getLength_fix != '0' else '')
             f.write(string.Template(function_nbcommand).substitute(
                                         console=netbeans.CONSOLE,
                                         location=options.window,
-                                        split_vars_buf=split_vars_buf,
-                                        split_bt_buf=split_bt_buf))
+                                        split_vars_buf=split_vars_buf))
             noCompletion = string.Template('command! -bar -nargs=* ${pre}${cmd} '
                                     'call s:nbcommand("${cmd}", <f-args>)\n')
             fileCompletion = string.Template('command! -bar -nargs=* '
