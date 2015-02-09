@@ -343,6 +343,7 @@ class Pdb(ClewnTestCase):
             'Cinterrupt',
             'Cinterrupt',
             'Ccontinue',
+            'sleep ${sleep_time}',
             'redir! > ${test_out}',
             'sign place',
             'redir! > ${test_file}1',

@@ -58,11 +58,13 @@ DIRECTORY_CMDS = (
 
 SOURCE_CMDS = (
     'r', 'start',
-    'break', 'tbreak', 'hbreak', 'thbreak', 'rbreak',
     'file', 'exec-file', 'core-file', 'symbol-file', 'add-symbol-file',
     'source')
 
-PROJECT_CMDS = tuple(['project'] + list(SOURCE_CMDS))
+# Need to know the list of sources to build the breakpoint full pathname.
+SOURCE_CMDS_EXTRA = ('break', 'tbreak', 'hbreak', 'thbreak', 'rbreak')
+
+PROJECT_CMDS = ('project',) + SOURCE_CMDS
 
 # gdb objects attributes.
 BREAKPOINT_ATTRIBUTES = {'number', 'type', 'disp', 'enabled', 'func', 'file',
@@ -1558,7 +1560,7 @@ Sources =       \
                 'regexp': re_sources,
                 'reqkeys': SOURCES_ATTRIBUTES,
                 'gdblist': True,
-                'trigger_list': SOURCE_CMDS,
+                'trigger_list': SOURCE_CMDS + SOURCE_CMDS_EXTRA,
             })
 
 VarUpdate =     \
