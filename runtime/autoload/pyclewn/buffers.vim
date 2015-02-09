@@ -205,7 +205,7 @@ function s:split_source(fname, lnum)
     let l:count = winnr('$')
     let l:nr = 1
     while l:nr <= l:count
-        if ! s:is_clewn_buffer(bufname(winbufnr(l:nr)))
+        if bufname(winbufnr(l:nr)) !~# "^(clewn)_"
             exe l:nr . "wincmd w"
             break
         endif
@@ -221,14 +221,5 @@ function s:split_source(fname, lnum)
     if a:lnum != ""
         call cursor(a:lnum, 0)
     endif
-endfunction
-
-function s:is_clewn_buffer(fname)
-    for l:name in ['console', 'variables', 'breakpoints', 'backtrace', 'threads']
-        if a:fname == "(clewn)_" . l:name
-            return 1
-        endif
-    endfor
-    return 0
 endfunction
 

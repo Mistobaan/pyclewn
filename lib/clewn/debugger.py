@@ -98,6 +98,17 @@ function <SID>goto_thread()
     let l:regexp = '^\([ *] \)\(\d\+\).*$'
     let l:thread = substitute(l:line, l:regexp , '\2', "")
     if l:line != l:thread
+        " Search for a source code window.
+        let l:count = winnr("$")
+        let l:nr = 1
+        while l:nr <= l:count
+            if bufname(winbufnr(l:nr)) !~# "^(clewn)_"
+                exe l:nr . "wincmd w"
+                break
+            endif
+            let l:nr = l:nr + 1
+        endwhile
+
         exe "Cthread " . l:thread
     endif
 endfunction
