@@ -271,10 +271,9 @@ The full description of pyclewn options follows:
                         python -m clewn -g ""
                         python -m clewn --gdb=
 .
-                    There are three optional parameters:
+                    There are two optional parameters:
 
                         * the "async" keyword sets the |async-option|
-                        * the "nodereference" keyword, see |gdb-balloon|.
                         * the project file name sets the |project-file|
 
                     The project file name can be an absolute pathname, a
@@ -652,12 +651,10 @@ program file to debug, while pyclewn uses only the file system.
                                                     *gdb-balloon*
 Balloon evaluation:
 -------------------
-The gdb <whatis> command is used by pyclewn to get the type of the variable or
-the type of the selected expression that is being hovered over by the mouse.
-When it is a pointer to data, the pointer is dereferenced and its value
-displayed in the Vim balloon. The paramater of the "--gdb" option named
-"nodereference" disables this feature: the balloon prints the pointer address
-value.
+To dereference a pointer "ptr" to a structure and show its members, select an
+expression that dereferences the pointer, for example "*ptr", and hover above
+the selected area with the mouse. Another solution is to hover with the mouse
+above "ptr" and type <C-X>.
 
 
                                       *Cproject* *project-command* *project-file*

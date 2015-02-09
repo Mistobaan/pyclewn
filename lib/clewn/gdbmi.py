@@ -5,15 +5,15 @@ Contain classes that implement the gdb commands.
 A Gdb command may be an:
     * instance of CliCommand
     * instance of MiCommand
-    * instance of WhatIs
-A Gdb command triggers execution of out of band (oob) commands.
+    * instance of ShowBalloon
+The first two types trigger execution of out of band (oob) commands.
 
 An oob command may be an:
     * instance of OobCommand
     * instance of VarObjCmd
-    * instance of ShowBalloon
-OobCommand instances are part of a static list in OobList, while VarObjCmd and
-ShowBalloon instances are pushed into this list dynamically.
+The difference between both types is that OobCommand instances are part of a
+static list in OobList, while VarObjCmd instances are pushed into this list
+dynamically.
 
 The oob commands fetch from gdb, using gdb/mi, the information required to
 maintain the state of the breakpoints table, the varobj data, ...
@@ -154,9 +154,6 @@ RE_VARUPDATE = keyval_pattern(VARUPDATE_ATTRIBUTES,
             'changelist='
             '[{name="var3.key",in_scope="true",type_changed="false"}]')
 
-RE_TYPE = r'^type\s=\s(?P<name>\w+).*?[^*]?(?P<star>\*+)$'                  \
-          r'# "type = char *".'
-
 # compile regexps
 re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_evaluate = re.compile(RE_EVALUATE, re.VERBOSE)
@@ -178,7 +175,6 @@ re_pgmfile = re.compile(RE_PGMFILE, re.VERBOSE)
 re_pwd = re.compile(RE_PWD, re.VERBOSE)
 re_sources = re.compile(RE_SOURCES, re.VERBOSE)
 re_varupdate = re.compile(RE_VARUPDATE, re.VERBOSE)
-re_type = re.compile(RE_TYPE, re.VERBOSE)
 
 def get_pathname(name, source):
     """Return a valid path name, matching name in the source dictionary."""
@@ -797,12 +793,12 @@ class OobList(object):
     next = __next__
 
     def push(self, obj):
-        """Push a Command object.
+        """Push a VarObjCmd object.
 
         When the iterator is not running, push the object to the
         running_list (as a result of a dbgvar, delvar or foldvar command).
         """
-        assert isinstance(obj, collections.Callable)
+        assert isinstance(obj, VarObjCmd)
         if self.fifo is not None:
             self.fifo.append(obj)
         else:
@@ -1054,44 +1050,6 @@ class ListChildrenCommand(MiCommand):
             self.varobj['children'][varobj['name']] = varobj
         self.gdb.info.varobj.dirty = True
 
-class WhatIs(Command):
-    """The WhatIs command.
-
-    Instance attributes:
-        gdb: Gdb
-            the Gdb instance
-        text: str
-            the selected text under the mouse
-
-    """
-
-    def __init__(self, gdb, text):
-        self.gdb = gdb
-        self.text = text
-
-    def sendcmd(self):
-        """Send the gdb command."""
-        if self.gdb.accepting_cmd():
-            self.gdb.gdb_busy = True
-            return self.send('-interpreter-exec console %s\n',
-                                misc.quote('whatis %s' % self.text))
-        return False
-
-    def handle_result(self, line):
-        """Process gdb/mi result."""
-        # ignore the error
-        return
-
-    def handle_strrecord(self, stream_record):
-        """Process the gdb/mi stream records."""
-        if self.gdb.dereference:
-            matchobj = re_type.match(stream_record.strip())
-            if (matchobj
-                        and len(matchobj.group('star')) == 1
-                        and matchobj.group('name') != 'char'):
-                self.text = '* %s' % self.text
-        self.gdb.oob_list.push(ShowBalloon(self.gdb, self.text))
-
 class ShowBalloon(Command):
     """The ShowBalloon command.
 
@@ -1112,9 +1070,12 @@ class ShowBalloon(Command):
 
     def sendcmd(self):
         """Send the gdb command."""
-        self.result = ''
-        return self.send('-data-evaluate-expression %s\n',
-                                    misc.quote(self.text))
+        if self.gdb.accepting_cmd():
+            self.result = ''
+            self.gdb.gdb_busy = True
+            return self.send('-data-evaluate-expression %s\n',
+                                        misc.quote(self.text))
+        return False
 
     def handle_result(self, line):
         """Process gdb/mi result."""
@@ -1123,21 +1084,11 @@ class ShowBalloon(Command):
             self.result = misc.unquote(matchobj.group('value'))
             if self.result:
                 self.gdb.show_balloon('%s = "%s"' % (self.text, self.result))
-        elif not 'Attempt to use a type name as an expression' in line:
-            self.gdb.show_balloon('%s: %s' % (self.text, line))
 
     def handle_strrecord(self, stream_record):
         """Process the gdb/mi stream records."""
         if not self.result and stream_record:
             self.gdb.show_balloon(stream_record)
-
-    def __call__(self):
-        """Run the gdb command.
-
-        Return True when the command has been sent to gdb, False otherwise.
-
-        """
-        return self.sendcmd()
 
 class VarObjCmd(Command):
     """The VarObjCmd abstract class.

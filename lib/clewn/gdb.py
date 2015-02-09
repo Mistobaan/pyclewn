@@ -538,7 +538,7 @@ class Gdb(debugger.Debugger, Process):
             iterator over the list of OobCommand and VarObjCmd instances
         stream_record: list
             list of gdb/mi stream records output by a command
-        lastcmd: gdbmi.MiCommand or gdbmi.CliCommand or gdbmi.WhatIs
+        lastcmd: gdbmi.MiCommand or gdbmi.CliCommand or gdbmi.ShowBalloon
                  instance
             + the last Command instance whose result is being processed
             + the empty string '' on startup or after a SIGINT
@@ -559,8 +559,6 @@ class Gdb(debugger.Debugger, Process):
             fifo of (method, cmd, args) tuples.
         async: boolean
             when True, store the commands in the cmd_fifo
-        dereference: boolean
-            when True (the default), dereference pointers in balloon evaluation
         project: string
             project file pathname
         foldlnum: int
@@ -623,7 +621,6 @@ class Gdb(debugger.Debugger, Process):
         self.multiple_choice = 0
         self.cmd_fifo = collections.deque()
         self.async = False
-        self.dereference = True
         self.project = ''
         self.foldlnum = None
         self.parse_paramlist(self.vim.options.gdb)
@@ -632,12 +629,8 @@ class Gdb(debugger.Debugger, Process):
     def parse_paramlist(self, parameters):
         """Process the class parameter list."""
         for param in [x.strip() for x in parameters.split(',') if x]:
-            param_lower = param.lower()
-            if param_lower == 'async':
+            if param.lower() == 'async':
                 self.async = True
-                continue
-            elif param_lower == 'nodereference':
-                self.dereference = False
                 continue
 
             pathname = os.path.expanduser(param)
@@ -832,7 +825,7 @@ class Gdb(debugger.Debugger, Process):
         else:
             self.token = token
             if isinstance(cmd, (gdbmi.CliCommand, gdbmi.MiCommand,
-                                                        gdbmi.WhatIs)):
+                                                        gdbmi.ShowBalloon)):
                 self.lastcmd = cmd
 
             self.handle_strrecord(cmd)
@@ -864,7 +857,7 @@ class Gdb(debugger.Debugger, Process):
                 self.results.clear()
 
             if not isinstance(self.lastcmd, (gdbmi.CliCommandNoPrompt,
-                                                            gdbmi.WhatIs)):
+                                                        gdbmi.ShowBalloon)):
                 self.doprompt = True
 
             self.lastcmd = None
@@ -1181,7 +1174,7 @@ class Gdb(debugger.Debugger, Process):
         """Process a netbeans balloonText event."""
         debugger.Debugger.balloon_text(self, text)
         if self.info.frame:
-            gdbmi.WhatIs(self, text).sendcmd()
+            gdbmi.ShowBalloon(self, text).sendcmd()
 
 def _test():
     """Run the doctests."""

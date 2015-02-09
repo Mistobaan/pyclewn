@@ -4,7 +4,7 @@ News
 Pyclewn 2.0
 -----------
 
-.. February 6, 2015
+.. February 9, 2015
 
 New features
 ^^^^^^^^^^^^
@@ -54,6 +54,10 @@ Changes
   to run.
 
 * The ``(clewn)_console`` window is only created at the first ``C`` command.
+
+* Pointers are not dereferenced anymore in the Vim balloon and the
+  ``nodereference`` keyword of the ``--gdb`` option is now ignored. As a
+  result, gdb Python-based pretty-printers output is displayed in the balloon.
 
 * ``CTRL-E`` is a standard Vim command, it is replaced with ``CTRL-K`` in
   pyclewn key mappings for clearing breakpoints. The ``(clewn)_console`` is
