@@ -1,15 +1,15 @@
 
-Pyclewn allows using Vim_ as a front end to a debugger. Pyclewn currently
-supports gdb_ and pdb_.
+Pyclewn is a Vim_ front end to a debugger. Pyclewn currently supports gdb_ and
+pdb_.
 
-The debugger output is redirected to a Vim window, the pyclewn console. The
-debugger commands are mapped to Vim user-defined commands with a common letter
-prefix, and with completion available on the commands and their first argument.
+The debugger output is redirected to a Vim window, the console. The debugger
+commands are mapped to Vim user-defined commands with a common letter prefix,
+and with completion available on the commands and their first argument.
 
 When pyclewn is started from Vim with the ``:Pyclewn`` command, the
-``:Cinferiortty`` command launches a terminal connected to a pseudo terminal that
-becomes the controlling terminal of the program being debugged by gdb or by
-pdb.
+``:Cinferiortty`` command may be used to launch a terminal connected to a
+pseudo terminal that becomes the controlling terminal of the program being
+debugged by gdb or by pdb.
 
 Features
 ========
@@ -27,8 +27,9 @@ Features
 * Multiple consecutive pyclewn sessions can be started from within Vim with
   the ``:Pyclewn`` command.
 
-* The value of an expression or variable is displayed in a balloon in gvim when
-  the mouse pointer is hovering over the selected expression or the variable.
+* The value of an expression or variable is displayed in a balloon in gvim
+  when the mouse pointer is hovering over the selected expression or the
+  variable.
 
 pdb
 ---
@@ -64,8 +65,8 @@ gdb
   that may be sourced later by the gdb ``source`` command. These settings are
   the working directory, the debuggee program file name, the program arguments
   and the breakpoints. The sourcing and saving of the project file can be
-  automated to occur on each gdb startup and termination, with the
-  ``project`` command line option.
+  automated to occur on each gdb startup and termination, with the ``project``
+  command line option.
 
 Comparison of clewn, vimGdb and pyclewn
 =======================================
@@ -81,9 +82,9 @@ The following table lists the differences between clewn, vimGdb and pyclewn
     |               |             |                       | requires GNU gdb from  |
     |               |             |                       | macports on Mac Os X   |
     +---------------+-------------+-----------------------+------------------------+
-    | language      | C           | C                     | python 2.7             |
-    |               |             |                       |                        |
-    |               |             |                       | python 3               |
+    | language      | C           | C                     | Python 2.7             |
+    |               |             |                       | or                     |
+    |               |             |                       | Python 3               |
     |               |             |                       |                        |
     |               |             |                       | C language for the     |
     |               |             |                       | pdb-clone_ python      |

@@ -24,7 +24,8 @@ A two steps installation.
 
 This command installs the ``clewn`` package and its dependencies.
 
-2) Install the Vim runtime files with a vimball. First create the
+2) Install the Vim runtime files with a vimball, the vimball is part of the
+``clewn`` package installed in the first step. First create the
 ``pyclewn-2.0.vmb`` vimball in the current directory with the command::
 
     python -c "import clewn; clewn.get_vimball()"
@@ -32,6 +33,8 @@ This command installs the ``clewn`` package and its dependencies.
 Then source the vimball and install the Vim runtime files with::
 
     vim -S pyclewn-2.0.vmb
+
+Type ``:quit`` to quit Vim after the vimball is installed.
 
 
 Installing with pip
@@ -59,8 +62,9 @@ and can be obtained at any time with::
 
 The vimball contains the following runtime files::
 
-    autoload/pyclewn.vim            # The pyclewn plugin.
+    autoload/pyclewn/start.vim      # The pyclewn plugin.
     plugin/pyclewn.vim
+    autoload/pyclewn/buffers.vim    # Windows management functions.
     doc/pyclewn.txt                 # The help.
     syntax/clewn_variables.vim      # The (clewn)_variables syntax file.
     macros/.pyclewn_keys.gdb        # The 'Cmapkeys' files.
