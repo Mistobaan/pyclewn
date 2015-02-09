@@ -20,6 +20,9 @@ let s:did_buffers = 1
 "   'location': the value of the '--window' option, i.e. "top", "bottom",
 "               "left", "right" or "none".
 function pyclewn#buffers#CreateWindow(name, location)
+    if a:name == "(clewn)_empty"
+        return
+    endif
     if exists("*Pyclewn_CreateWindow")
         call Pyclewn_CreateWindow(a:name, a:location)
         return
@@ -64,11 +67,14 @@ endfunction
 
 "-------------------   END AUTOLOAD FUNCTIONS   -------------------
 
+" The '(clewn)_empty' buffer is used here to workaround the problem that
+" BufWinLeave auto commands are never triggered when the clewn buffer is loaded
+" in a window whose current buffer is a netbeans created file.
 function s:create_window(name, location)
     if a:name == "(clewn)_console"
         " When the buffer list is empty, do not split the window.
         if bufname("%") == ""
-            edit (clewn)_console
+            exe "edit (clewn)_empty"
         else
             call s:split_clewnbuffer(a:name, a:location)
         endif
@@ -111,14 +117,14 @@ function s:create_window(name, location)
         else
             4split
         endif
-        exe "edit " . a:name
+        exe "edit (clewn)_empty"
         vsplit | vsplit
-    else
-        " Edit the new buffer.
-        let l:bufnr = l:bufnr + l:count
-        exe l:bufnr . "wincmd w"
-        exe "edit " . a:name
     endif
+
+    " Edit the new buffer.
+    let l:bufnr = l:bufnr + l:count
+    exe l:bufnr . "wincmd w"
+    exe "edit " . a:name
 
     exe l:prevbuf_winnr . "wincmd w"
 endfunction

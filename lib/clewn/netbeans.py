@@ -25,7 +25,7 @@ from . import buffer as vimbuffer
 NETBEANS_VERSION = '2.3'
 CONSOLE = '(clewn)_console'
 CONSOLE_MAXLINES = 10000
-LIST_BUFFERS = ('Variables', 'Breakpoints', 'Backtrace', 'Threads')
+LIST_BUFFERS = ('variables', 'breakpoints', 'backtrace', 'threads')
 
 RE_AUTH = r'^\s*AUTH\s*(?P<passwd>\S+)\s*$'                             \
           r'# RE: password authentication'
@@ -223,14 +223,8 @@ class ClewnBuffer(object):
         nbsock.send_function(self.buf, function, args)
 
     def setdot(self, offset=None, lnum=None):
-        """Set the cursor at the requested position.
-
-        Do not set the cursor when the 'window' command line option is 'none',
-        unless there is no netbeans buffer opened yet (the console is the
-        only buffer).
-        """
-        if ((self.nbsock.enable_setdot or not self.nbsock._bset)
-                                                    and self.visible):
+        """Set the cursor at the requested position."""
+        if self.visible:
             if offset is not None:
                 self.nbsock.send_cmd(self.buf, 'setDot', str(offset))
             else:
@@ -294,8 +288,6 @@ class ClewnBuffer(object):
         at the end of the buffer.
 
         """
-        if not self.buf.registered:
-            self.visible = False
         if count == -1:
             count = self.len
         assert 0 <= count <= self.len
@@ -329,13 +321,22 @@ class Console(ClewnBuffer):
 
     def __init__(self, nbsock):
         ClewnBuffer.__init__(self, CONSOLE, nbsock)
-        self.visible = True
         self.line_cluster = LineCluster(10, self.nbsock.max_lines // 10)
         self.buffer = ''
         self.time = time.time()
         self.count = 0
         self.timeout_str = ''
         self.timed_out = False
+
+    def setdot(self, offset=None, lnum=None):
+        """Set the cursor at the requested position.
+
+        Do not set the cursor when the 'window' command line option is 'none',
+        unless there is no netbeans buffer opened yet (the console is the
+        only buffer).
+        """
+        if (self.nbsock.enable_setdot or not self.nbsock._bset):
+            ClewnBuffer.setdot(self, offset, lnum)
 
     def timeout_append(self, msg):
         """Add string to the buffer after a timeout."""
@@ -810,6 +811,7 @@ class Netbeans(asyncio.Protocol, object):
 
     def evt_fileOpened(self, buf_id, pathname, arg_list):
         """A file was opened by the user."""
+        self.setup_clewn_buffers()
         if pathname:
             clewnbuf = vimbuffer.is_clewnbuf(pathname)
             if os.path.isabs(pathname) or clewnbuf:
@@ -840,6 +842,15 @@ class Netbeans(asyncio.Protocol, object):
                 'Please, edit a file.\n'
                 )
 
+    def setup_clewn_buffers(self):
+        if self.list_buffers is None:
+            self.list_buffers = {}
+            for n in LIST_BUFFERS:
+                self.list_buffers[n] = ClewnListBuffer('(clewn)_%s' % n, self)
+
+            # Create the empty buffer.
+            ClewnListBuffer('(clewn)_empty', self)
+
     def is_editport_evt(self, cmd):
         """Return True when this is an editport open/close event.
 
@@ -854,13 +865,13 @@ class Netbeans(asyncio.Protocol, object):
                 visible = True
             elif tokens[2] == 'close':
                 visible = False
-            if tokens[1] == 'Console':
+            if tokens[1] == 'console':
                 clewnbuf = self.console
             elif tokens[1] in LIST_BUFFERS:
-                clewnbuf = self.list_buffers[tokens[1].lower()]
+                clewnbuf = self.list_buffers[tokens[1]]
             if visible is not None and clewnbuf:
                 clewnbuf.visible = visible
-                return True
+            return True
         return False
 
     def evt_keyAtPos(self, buf_id, nbstring, arg_list):
@@ -869,11 +880,7 @@ class Netbeans(asyncio.Protocol, object):
             self.console = Console(self)
             self.console.register()
 
-        if self.list_buffers is None:
-            self.list_buffers = {}
-            for n in LIST_BUFFERS:
-                n = n.lower()
-                self.list_buffers[n] = ClewnListBuffer('(clewn)_%s' % n, self)
+        self.setup_clewn_buffers()
 
         buf = self._bset.getbuf(buf_id)
         if buf is None:

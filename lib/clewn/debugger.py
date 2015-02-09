@@ -136,6 +136,20 @@ function! s:PrintBufferList()
     endfor
 endfunction
 
+" Send the open/close event for this clewn buffer.
+function s:bufwin_event(fullname, state)
+    let l:regexp = '^(clewn)_\(.\+\)$'
+    let l:name = substitute(a:fullname, l:regexp , '\1', "")
+    if l:name == a:fullname
+        return
+    endif
+
+    " Send the event, but not for the empty buffer.
+    if l:name != "empty"
+        exe "nbkey ClewnBuffer." . l:name . "." . a:state
+    endif
+endfunction
+
 " Popup gdb console on pyclewn mapped keys.
 function s:mapkeys()
     call s:nbcommand("mapkeys")
@@ -154,8 +168,8 @@ augroup clewn
 """                                     | setlocal nowrap"""            \
 """
     ${bufferlist_autocmd}
-    autocmd BufWinEnter (clewn)_console silent! nbkey ClewnBuffer.Console.open
-    autocmd BufWinLeave (clewn)_console silent! nbkey ClewnBuffer.Console.close
+    autocmd BufWinEnter (clewn)_* silent! call s:bufwin_event(expand("<afile>"), "open")
+    autocmd BufWinLeave (clewn)_* silent! call s:bufwin_event(expand("<afile>"), "close")
     autocmd BufWinEnter (clewn)_variables silent! setlocal syntax=clewn_variables
     autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <CR> :exe "Cfoldvar " . line(".")<CR>
     autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <2-Leftmouse> :exe "Cfoldvar " . line(".")<CR>
@@ -166,14 +180,8 @@ augroup clewn
     autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <CR> :call <SID>goto_thread()<CR>
     autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_thread()<CR>
     autocmd BufAdd (clewn)_* call pyclewn#buffers#CreateWindow(expand("<afile>"), "${location}")
-    ${list_buffers_autocmd}
 augroup END
 
-"""
-
-LIST_BUFFERS_AUTOCMD = """
-    autocmd BufWinEnter ${bufname} silent! nbkey ClewnBuffer.${name}.open
-    autocmd BufWinLeave ${bufname} silent! nbkey ClewnBuffer.${name}.close
 """
 
 BUFFERLIST_AUTOCMD = """
@@ -762,18 +770,10 @@ class Debugger(object):
             f.write(VIM_SCRIPT_FIXED)
 
             # Vim autocommands.
-            list_buffers_autocmd = ''
-            for n in netbeans.LIST_BUFFERS:
-                list_buffers_autocmd += (string.Template(LIST_BUFFERS_AUTOCMD)
-                                         .substitute(
-                                         bufname='(clewn)_%s' % n.lower(),
-                                         name=n
-                                         ))
             bufferlist_autocmd = (BUFFERLIST_AUTOCMD if
                                   options.noname_fix == '0' else '')
             f.write(string.Template(AUTOCOMMANDS).substitute(
                                     location=options.window,
-                                    list_buffers_autocmd=list_buffers_autocmd,
                                     bufferlist_autocmd=bufferlist_autocmd))
 
             # unmapkeys function.
