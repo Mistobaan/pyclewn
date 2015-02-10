@@ -1021,7 +1021,7 @@ class Gdb(ClewnTestCase):
             '3',
             'exe "normal \<CR>"',
             'sleep ${sleep_time}',
-            'edit (clewn)_threads | 2,$$write! ${test_out}',
+            'call Edit_clewnbuffer("(clewn)_threads") | 2,$$write! ${test_out}',
             'edit ${test_out}',
             r'%s/\(python\).*in \(\S\+\).*$$/\1 \2',
             'write',

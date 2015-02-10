@@ -34,41 +34,59 @@ TESTFN_OUT = TESTFN + '_out'
 # Wait for the expected string passed as the argument to the function, or run
 # the 'dumprepr' command and wait for the command.
 WAIT_EOP = """
-:let g:testrun_key = ${key}
-:function Wait_eop(...)
-:   let g:testrun_key += 1
-:   let l:marker = "dumprepr " . g:testrun_key
-:   if a:0 == 0
-:       exe "C" . l:marker
-:   endif
-:   let l:start = localtime()
-:   let l:lnum = 1
-:   while 1
-:       " Allow vim to process netbeans events and messages.
-:       sleep 10m
-:       if ${timeout} > 0 && localtime() - l:start > ${timeout}
-:           break
-:       endif
-:       let l:lines = getbufline("(clewn)_console", l:lnum, "$$")
-:       let l:index = 0
-:       while l:index < len(l:lines)
-:          let l:line = l:lines[l:index]
-:           if a:0 != 0
-:               if l:line == a:1
-:                   return
-:               endif
-:           elseif l:line =~# l:marker
-:               return
-:           endif
-:          let l:index = l:index + 1
-:       endwhile
-:       if l:index != 0
-:           " The last line may be partially written, so include it in the next
-:           " search.
-:           let l:lnum = l:lnum + l:index - 1
-:       endif
-:   endwhile
-:endfunction
+let g:testrun_key = ${key}
+function Wait_eop(...)
+   let g:testrun_key += 1
+   let l:marker = "dumprepr " . g:testrun_key
+   if a:0 == 0
+       exe "C" . l:marker
+   endif
+   let l:start = localtime()
+   let l:lnum = 1
+   while 1
+       " Allow vim to process netbeans events and messages.
+       sleep 10m
+       if ${timeout} > 0 && localtime() - l:start > ${timeout}
+           break
+       endif
+       let l:lines = getbufline("(clewn)_console", l:lnum, "$$")
+       let l:index = 0
+       while l:index < len(l:lines)
+          let l:line = l:lines[l:index]
+           if a:0 != 0
+               if l:line == a:1
+                   return
+               endif
+           elseif l:line =~# l:marker
+               return
+           endif
+          let l:index = l:index + 1
+       endwhile
+       if l:index != 0
+           " The last line may be partially written, so include it in the next
+           " search.
+           let l:lnum = l:lnum + l:index - 1
+       endif
+   endwhile
+endfunction
+"""
+
+# Editing a 'nofile' buffer empties its content when the cursor is already in
+# this buffer (fixed at Vim 7.4.592). Try to find another buffer.
+EDIT_CLEWNBUFFER = """
+function Edit_clewnbuffer(fname)
+    " Search for another buffer.
+    let l:count = winnr("$$")
+    let l:nr = 1
+    while l:nr <= l:count
+        if bufname(winbufnr(l:nr)) != a:fname
+            exe l:nr . "wincmd w"
+            break
+        endif
+        let l:nr = l:nr + 1
+    endwhile
+    exe "edit " . a:fname
+endfunction
 """
 
 def cmd_append(commands, append, wait_for=None, cmd_list=None, exclude=None, do_all=False):
@@ -240,7 +258,10 @@ class ClewnTestCase(TestCase):
         # Slow down the tests.
         commands = cmd_append(commands, 'sleep %dm' % SLOW_DOWN_TESTS,
                               exclude=exclude, do_all=True)
-        commands = '%s:%s\n' % (WAIT_EOP, '\n:'.join(commands))
+        commands = '%s\n:%s\n:%s\n' % (
+                                    '\n:'.join(WAIT_EOP.split('\n')),
+                                    '\n:'.join(EDIT_CLEWNBUFFER.split('\n')),
+                                    '\n:'.join(commands))
 
         cwd = os.getcwd() + os.sep
         # Wait_eop timeout.
