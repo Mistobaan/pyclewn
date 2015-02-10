@@ -125,6 +125,7 @@ function s:create_window(name, location)
     let l:bufnr = l:bufnr + l:count
     exe l:bufnr . "wincmd w"
     exe "edit " . a:name
+    setlocal nowrap
 
     exe l:prevbuf_winnr . "wincmd w"
 endfunction
@@ -183,8 +184,10 @@ function s:split_location(fname, location)
     if l:nr != -1
         exe &previewheight . l:split
         exe l:nr . "buffer"
+        setlocal nowrap
     else
         exe &previewheight . l:split . " " . a:fname
+        setlocal nowrap
     endif
     let &splitright = l:spr
     let &splitbelow = l:sb

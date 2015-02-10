@@ -1,4 +1,4 @@
-# vi:set ts=8 sts=4 sw=4 et tw=72:
+# vi:set ts=8 sts=4 sw=4 et tw=80:
 """
 This module provides the basic infrastructure for using Vim as a
 front-end to a debugger.
@@ -171,13 +171,13 @@ endfunction
 AUTOCOMMANDS = """
 augroup clewn
     autocmd!
-    autocmd BufWinEnter (clewn)_* silent! setlocal bufhidden=hide"""    \
-"""                                     | setlocal buftype=nofile"""    \
-"""                                     | setlocal noswapfile"""        \
-"""                                     | setlocal fileformat=unix"""   \
-"""                                     | setlocal expandtab"""         \
-"""                                     | setlocal nowrap"""            \
-"""
+    autocmd BufEnter (clewn)_* silent! setlocal bufhidden=hide
+    autocmd BufEnter (clewn)_* silent! setlocal buftype=nofile
+    autocmd BufEnter (clewn)_* silent! setlocal noswapfile
+    autocmd BufEnter (clewn)_* silent! setlocal fileformat=unix
+    autocmd BufEnter (clewn)_* silent! setlocal expandtab
+    autocmd BufWinEnter (clewn)_* setlocal nowrap
+
     ${bufferlist_autocmd}
     autocmd BufWinEnter (clewn)_* silent! call s:bufwin_event(expand("<afile>"), "open")
     autocmd BufWinLeave (clewn)_* silent! call s:bufwin_event(expand("<afile>"), "close")
