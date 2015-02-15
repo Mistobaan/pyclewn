@@ -16,7 +16,7 @@ try:
     SETUPTOOLS = True
 except ImportError:
     SETUPTOOLS = False
-    from distutils import setup, Command
+    from distutils.core import setup, Command
 
 from lib.clewn import __version__, PY3, PY34
 
@@ -126,9 +126,9 @@ def main():
     if not PY34:
         requirements.append('trollius')
     if PY3:
-        requirements.append('pdb-clone==1.9.1.py3')
+        requirements.append('pdb-clone==1.9.2.py3')
     else:
-        requirements.append('pdb-clone==1.9.1.py2.7')
+        requirements.append('pdb-clone==1.9.2.py2.7')
 
     install_options = {
         'cmdclass': {'test': Test},

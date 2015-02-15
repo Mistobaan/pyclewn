@@ -26,9 +26,6 @@ PY26 = (sys.version_info < (2, 7))
 # Python 3.0 or newer
 PY3 = (sys.version_info >= (3,))
 
-# Python 3.1 or newer
-PY31 = (sys.version_info >= (3, 1))
-
 # Python 3.2 or newer
 PY32 = (sys.version_info >= (3, 2))
 
@@ -43,9 +40,10 @@ text_type = str if PY3 else unicode
 class ClewnError(Exception):
     """Base class for pyclewn exceptions."""
 
-# pyclewn uses OrderedDict (added in Python 3.1).
-if PY26 or (PY3 and not PY31):
-    raise NotImplementedError('Python 2.7 or Python 3.1 or newer is required.')
+# Pyclewn uses OrderedDict (added in Python 3.1).
+# Trollius fails on Python 3.1 and pip does not support it.
+if PY26 or (PY3 and not PY32):
+    raise NotImplementedError('Python 2.7 or Python 3.2 or newer is required.')
 
 def get_vimball():
     """Create the vimball in the current directory."""

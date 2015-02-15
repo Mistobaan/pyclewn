@@ -39,7 +39,7 @@ Changes
 ^^^^^^^
 
 * Windows support has been removed. Pyclewn runs now on Python 2.7 or Python
-  3.1 or newer and the same source code is used for all those Python versions.
+  3.2 or newer and the same source code is used for all those Python versions.
   Pyclewn uses now asyncio (or trollius on Python versions that do not support
   asyncio, i.e. version 2.7 or older than 3.4) instead of the deprecated
   asyncore Python module.

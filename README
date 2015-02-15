@@ -84,7 +84,7 @@ The following table lists the differences between clewn, vimGdb and pyclewn
     +---------------+-------------+-----------------------+------------------------+
     | language      | C           | C                     | Python 2.7             |
     |               |             |                       | or                     |
-    |               |             |                       | Python 3               |
+    |               |             |                       | Python >= 3.2          |
     |               |             |                       |                        |
     |               |             |                       | C language for the     |
     |               |             |                       | pdb-clone_ python      |
