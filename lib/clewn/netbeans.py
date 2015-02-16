@@ -488,15 +488,16 @@ class Reply(object):
         self.seqno = seqno
         self.nbsock = nbsock
 
-    def clear_onerror(self, err):
+    def clear_onerror(self, err, loggit=True):
         """Clear the clewn buffer on error in the reply."""
         clewnbuffer = self.buf.editport
         assert clewnbuffer is not None
         clewnbuffer.dirty = True
         clewnbuffer.clear()
+        if loggit:
+            error(err)
         err += '\nThe buffer will be restored on the next gdb command.'
         self.nbsock.show_balloon(err)
-        error(err)
 
     @abstractmethod
     def __call__(self, seqno, nbstring, arg_list):
@@ -543,7 +544,7 @@ class getLengthReply(Reply):
                         % (self.buf.name, clewnbuffer.len, length))
             if clewnbuffer.getLength_count == 0:
                 clewnbuffer.len = length
-                self.clear_onerror(err)
+                self.clear_onerror(err, length != 0)
             else:
                 debug('ignoring: %s', err)
 
