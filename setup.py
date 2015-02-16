@@ -1,4 +1,6 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
+"A Vim front-end to the gdb and pdb debuggers."
+
 # Python 2-3 compatibility.
 from __future__ import absolute_import
 from __future__ import division
@@ -20,15 +22,17 @@ except ImportError:
 
 from lib.clewn import __version__, PY3, PY34
 
-DESCRIPTION = 'A Vim front-end to debuggers.'
-LONG_DESCRIPTION = """Pyclewn allows using Vim as a front-end to a debugger.
-The debugger output is redirected to a Vim window, the pyclewn console.
-The debugger commands are mapped to Vim user-defined commands
-with a common letter prefix, and with completion available on the
-commands and their first argument. The controlling terminal of the
-program to debug is the terminal used to launch pyclewn, or any other
-terminal when the debugger allows it.
-"""
+long_description = []
+within_toc = False
+with open('README') as f:
+    # Exclude the toc.
+    for line in f:
+        if within_toc and line.startswith('..'):
+            within_toc = False
+        if line.startswith('.. toctree'):
+            within_toc = True
+        elif not within_toc:
+            long_description.append(line)
 
 if not PY34:
     import distutils
@@ -140,8 +144,8 @@ def main():
         # meta-data
         'name': 'pyclewn',
         'version': __version__,
-        'description': 'Pyclewn allows using Vim as a front end to a debugger.',
-        'long_description': LONG_DESCRIPTION,
+        'description': __doc__,
+        'long_description': ''.join(long_description),
         'platforms': 'all',
         'license': 'GNU GENERAL PUBLIC LICENSE Version 2',
         'author': 'Xavier de Gaye',

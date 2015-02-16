@@ -1,51 +1,33 @@
+A Vim_ front-end to the gdb_ and pdb_ debuggers. The debugger output is
+redirected to a Vim window, the console. The debugger commands are mapped to
+Vim user-defined commands, and with completion available on the commands and
+their first argument.
 
-Pyclewn is a Vim_ front end to a debugger. Pyclewn currently supports gdb_ and
-pdb_.
+**Features**
 
-The debugger output is redirected to a Vim window, the console. The debugger
-commands are mapped to Vim user-defined commands with a common letter prefix,
-and with completion available on the commands and their first argument.
-
-When pyclewn is started from Vim with the ``:Pyclewn`` command, the
-``:Cinferiortty`` command may be used to launch a terminal connected to a
-pseudo terminal that becomes the controlling terminal of the program being
-debugged by gdb or by pdb.
-
-Features
-========
+* When pyclewn is started from gvim with the ``:Pyclewn`` command, the
+  ``:Cinferiortty`` command may be used to launch a terminal connected to a
+  pseudo terminal that becomes the controlling terminal of the program being
+  debugged by gdb or by pdb.
 
 * A debugger command can be mapped in Vim to a key sequence using Vim key
   mappings. This allows, for example, to set/clear a breakpoint or print a
   variable value at the current cursor or mouse position by just hitting a
   key.
 
-* Breakpoints and the line in the current frame, are highlighted in the source
+* Breakpoints and the line in the current frame are highlighted in the source
   code. Disabled breakpoints are noted with a different highlighting color.
   Pyclewn automatically finds the source file for the breakpoint if it exists,
   and tells Vim to load and display the file and highlight the line.
 
-* Multiple consecutive pyclewn sessions can be started from within Vim with
-  the ``:Pyclewn`` command.
+* Multiple consecutive pyclewn sessions can be started from gvim with the
+  ``:Pyclewn`` command.
 
 * The value of an expression or variable is displayed in a balloon in gvim
   when the mouse pointer is hovering over the selected expression or the
   variable.
 
-pdb
----
-
-* Pyclewn is a front-end to pdb-clone_. With breakpoints pyclewn runs just
-  below the speed of the python interpreter (the command line python debugger,
-  pdb, runs 10 to 100 times slower than the interpreter).
-
-* Similarly to gdb, one may attach to a running python process with the pdb
-  debugger, interrupt the process, manage a debugging session and terminate
-  the debugging session by detaching from the process. A new debugging session
-  may be conducted later on this same process, possibly from another Vim
-  instance.
-
-gdb
----
+**gdb**
 
 * An expression can be watched in a Vim window. The expression value is
   updated and highlighted whenever it has changed. When the expression is a
@@ -68,78 +50,61 @@ gdb
   automated to occur on each gdb startup and termination, with the ``project``
   command line option.
 
-Comparison of clewn, vimGdb and pyclewn
-=======================================
+**pdb**
 
-The following table lists the differences between clewn, vimGdb and pyclewn
-(clewn and vimGdb are hosted at clewn_).
+* Pyclewn is a front-end to pdb-clone_. With breakpoints pyclewn runs just
+  below the speed of the Python interpreter (the command line Python debugger,
+  pdb, runs 10 to 100 times slower than the interpreter).
 
-    +---------------+-------------+-----------------------+------------------------+
-    |               | vimGdb      | clewn                 | pyclewn                |
-    +===============+=============+=======================+========================+
-    | platform      | unix        | unix                  | all unix platforms     |
-    |               |             |                       | supported by python -  |
-    |               |             |                       | requires GNU gdb from  |
-    |               |             |                       | macports on Mac Os X   |
-    +---------------+-------------+-----------------------+------------------------+
-    | language      | C           | C                     | Python 2.7             |
-    |               |             |                       | or                     |
-    |               |             |                       | Python >= 3.2          |
-    |               |             |                       |                        |
-    |               |             |                       | C language for the     |
-    |               |             |                       | pdb-clone_ python      |
-    |               |             |                       | extension module, _bdb |
-    +---------------+-------------+-----------------------+------------------------+
-    | Vim mode      | Vim in a    | gvim                  | gvim and Vim in a      |
-    |               | terminal,   |                       | terminal (Vim 7.3      |
-    |               | gvim        |                       | or above **required**) |
-    +---------------+-------------+-----------------------+------------------------+
-    | Vim interface | a Vim patch | a standalone program  | a standalone program   |
-    |               |             | connected to gvim with| connected to Vim with  |
-    |               |             | a netbeans socket     | a netbeans socket      |
-    |               |             |                       |                        |
-    |               |             |                       | pyclewn may be started |
-    |               |             |                       | from within Vim since  |
-    |               |             |                       | Vim 7.3                |
-    +---------------+-------------+-----------------------+------------------------+
-    | Vim version   | a different | Vim 6.3 and above     | Vim 7.0 and above      |
-    |               | patch for   |                       |                        |
-    |               | each Vim    |                       |                        |
-    |               | version     |                       |                        |
-    +---------------+-------------+-----------------------+------------------------+
-    | debuggers     | gdb         | gdb                   | gdb, pdb               |
-    |               |             |                       |                        |
-    +---------------+-------------+-----------------------+------------------------+
-    | gdb features  |             | * watched variables   | * gdb/mi interface     |
-    |               |             |                       |                        |
-    |               |             | * project file        | * asynchronous gdb     |
-    |               |             |                       |   commands             |
-    |               |             |                       |                        |
-    |               |             |                       | * watched variables,   |
-    |               |             |                       |   the breakpoints,     |
-    |               |             |                       |   backtrace and threads|
-    |               |             |                       |   buffers              |
-    |               |             |                       |                        |
-    |               |             |                       | * project file         |
-    +---------------+-------------+-----------------------+------------------------+
-    | pdb features  |             |                       | * interrupt the        |
-    |               |             |                       |   debuggee             |
-    |               |             |                       |                        |
-    |               |             |                       | * attach to a running  |
-    |               |             |                       |   python process       |
-    |               |             |                       |                        |
-    |               |             |                       | * the ``threadstack``  |
-    |               |             |                       |   command              |
-    +---------------+-------------+-----------------------+------------------------+
+* Similarly to gdb, one may attach to a running Python process with the pdb
+  debugger, interrupt the process, manage a debugging session and terminate
+  the debugging session by detaching from the process. A new debugging session
+  may be conducted later on this same process, possibly from another Vim
+  instance.
 
-Licensing
----------
+**Specifications**
 
-This software is licensed under the GNU General Public License Version 2.
+* platforms
+   All unix platforms supported by Python - GNU gdb from macports is required
+   on Mac Os X.
 
-Copyright © 2001-2012 Python Software Foundation; All Rights Reserved.
-pdb-clone is a derivative work of a part of Python and as such, subject to the
-python license_.
+* languages
+   Python 2.7 or Python >= 3.2 - C language for the pdb-clone_ Python
+   extension module, _bdb.
+
+* Vim
+
+  + gvim 7.0 and above.
+
+  + vim 7.3 or above (vim in a terminal).
+
+  + pyclewn is a standalone program connected to Vim with a netbeans socket,
+    that may be started from Vim with the ``:Pyclewn`` command since Vim 7.3.
+
+* gdb features
+
+  + gdb/mi interface.
+
+  + Asynchronous gdb commands.
+
+  + The watched variables, breakpoints, backtrace and threads windows.
+
+  + The project file.
+
+* pdb features
+
+  + Interrupt the debuggee.
+
+  + Attach to a running Python process.
+
+  + The ``threadstack`` command.
+
+**Licensing**
+
+* This software is licensed under the GNU General Public License Version 2.
+
+* pdb-clone is a derivative work of a part of Python and as such, subject to
+  the Python license_.
 
 .. toctree::
    :maxdepth: 2
@@ -154,8 +119,7 @@ python license_.
 .. _Vim: http://www.vim.org/
 .. _gdb: http://www.gnu.org/software/gdb/gdb.html
 .. _pdb: http://docs.python.org/3/library/pdb.html
-.. _clewn: http://clewn.sourceforge.net
 .. _license: http://docs.python.org/2.7/license.html
-.. _pdb-clone: http://code.google.com/p/pdb-clone/
+.. _pdb-clone: http://pypi.python.org/pypi/pdb-clone
 .. vim:filetype=rst:tw=78:ts=8:et:
 
