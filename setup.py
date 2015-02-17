@@ -15,10 +15,12 @@ import importlib
 from unittest import defaultTestLoader
 try:
     from setuptools import setup, Command
+    from setuptools.command.sdist import sdist as _sdist
     SETUPTOOLS = True
 except ImportError:
-    SETUPTOOLS = False
     from distutils.core import setup, Command
+    from distutils.command.sdist import sdist as _sdist
+    SETUPTOOLS = False
 
 from lib.clewn import __version__, PY3, PY34
 
@@ -66,6 +68,15 @@ def substitute_in_file(fname, mapping):
         if updated:
             f.seek(0)
             f.write(''.join(lines))
+
+class sdist(_sdist):
+    """Specialized sdister."""
+    def run(self):
+        import build_vimball
+        # Do not rebuild the keymap files as this will fail on Python versions
+        # that do not support 'yield from'.
+        build_vimball.vimball()
+        _sdist.run(self)
 
 NOTTESTS = ('test_support',)
 
@@ -135,7 +146,7 @@ def main():
         requirements.append('pdb-clone==1.9.2.py2.7')
 
     install_options = {
-        'cmdclass': {'test': Test},
+        'cmdclass': {'sdist': sdist, 'test': Test},
         'packages': [str('clewn')],
         'package_dir':  {str(''): str('lib')},
         'package_data': {str('clewn'):

@@ -53,6 +53,8 @@ def vimball():
            ]
 
     data_dir = 'lib/clewn/runtime'
+    if not os.path.exists(data_dir):
+        os.mkdir(data_dir)
     for dirpath, dirnames, filenames in os.walk(data_dir):
         if dirpath == data_dir:
             for fname in filenames:
