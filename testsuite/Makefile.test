@@ -1,0 +1,12 @@
+CC = gcc
+CFLAGS = -Wall -g $(PLATFORM)
+CPPFLAGS = -Wall -g $(PLATFORM)
+
+all: foobar overloaded function_template
+foobar: foobar.c foo.c bar.c
+overloaded: overloaded.cc
+function_template: function_template.cpp
+	$(CXX) $(CPPFLAGS) $^ function_template_sub/localmax.o -o $@
+
+clean:
+	@rm -f foobar overloaded function_template

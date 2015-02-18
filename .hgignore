@@ -1,0 +1,15 @@
+syntax: glob
+*.pyc
+*.swp
+testsuite/foobar
+testsuite/overloaded
+testsuite/function_template
+testsuite/function_template_sub/*.o
+logfile
+.coverage
+
+syntax: regexp
+^sphinx/_build/.*$
+^lib/pyclewn.egg-info/.*$
+^lib/clewn/runtime/pyclewn-.*.vmb$
+

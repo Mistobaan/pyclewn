@@ -1,0 +1,585 @@
+News
+====
+
+Pyclewn 2.0
+-----------
+
+.. February 9, 2015
+
+New features
+^^^^^^^^^^^^
+
+* Three clewn buffers are updated by gdb, they list the breakpoints, the
+  backtrace and the threads. One can jump with the <CR> key or the mouse to
+  the corresponding source code line from the ``(clewn)_breakpoints`` window
+  or switch to the corresponding frame from the ``(clewn)_backtrace`` window,
+  or switch to the correponding thread with the ``(clewn)_threads`` window.
+  The ``Ccwindow`` command has been removed.
+
+* All the Vim functions defined by pyclewn that split windows can be
+  overriden.
+
+* A compound watched variable in ``(clewn)_variables`` can be expanded and
+  collapsed with the <CR> key or the mouse.
+
+* The new ``Cballooneval`` command switches on/off the Vim balloon without
+  interfering with the pyclewn key mappings that rely on the Vim 'ballooneval'
+  option to be functional.
+
+* The first optional argument of the ``:Pyclewn`` Vim command selects the
+  debugger and the following arguments are passed to the debugger. For
+  example, to debug ``foobar args`` with gdb, run the Vim commmand
+  ``:Pyclewn gdb --args foobar args``.
+
+* The new ``g:pyclewn_terminal`` Vim global variable allows the pyclewn
+  program started with ``:Pyclewn`` to run in a terminal instead of as a
+  daemon, and helps trouble shooting startup problems.
+
+Changes
+^^^^^^^
+
+* Windows support has been removed. Pyclewn runs now on Python 2.7 or Python
+  3.2 or newer and the same source code is used for all those Python versions.
+  Pyclewn uses now asyncio (or trollius on Python versions that do not support
+  asyncio, i.e. version 2.7 or older than 3.4) instead of the deprecated
+  asyncore Python module.
+
+* The preferred method to install pyclewn is ``pip``. The Vim run time files
+  are installed with a vimball. Local installation is done using the Python
+  user scheme instead of the home scheme. pdb-clone is installed separately
+  from PyPI.
+
+* The pyclewn program is now started with the command ``python -m clewn``
+  followed by the options and an optional argument that selects which debugger
+  to run.
+
+* The ``(clewn)_console`` window is only created at the first ``C`` command.
+
+* Pointers are not dereferenced anymore in the Vim balloon and the
+  ``nodereference`` keyword of the ``--gdb`` option is now ignored. As a
+  result, gdb Python-based pretty-printers output is displayed in the balloon.
+
+* ``CTRL-E`` is a standard Vim command, it is replaced with ``CTRL-K`` in
+  pyclewn key mappings for clearing breakpoints. The ``(clewn)_console`` is
+  not any more popped up after hitting a pyclewn mapped key.
+
+* The watched variables clewn buffer is now named ``(clewn)_variables`` and
+  the installed Vim syntax file has been renamed from ``dbgvar.vim`` to
+  ``clewn_variables.vim``.
+
+Bug fixes
+^^^^^^^^^
+
+* When pyclewn is started from a terminal, the controlling terminal of the gdb
+  inferior process is now correctly set to the terminal from where pyclewn has
+  been started.
+
+* The terminal spawned by the ``inferiortty`` command is now automatically
+  closed at the end of each debugging session.
+
+* Fix a gdb version parsing error on the non-conformant Cygwin versions of
+  gdb. See the bug report at
+  http://cygwin.com/ml/cygwin/2014-06/msg00211.html.
+
+* Fix the problem that changes made to the plugin global variables after the
+  first invocation of ``:Pyclewn`` are ignored.
+
+* Pyclewn listens on '127.0.0.1' and each debugger type uses now a different
+  netbeans port number.
+
+* Pyclewn prevents now the spawning of a terminal by ``Cinferiortty`` also
+  when the inferior is stopped in a shared library.
+
+* Fix the problem that when the first command is ``Cbreak``, the breakpoint
+  is not highlighted.
+
+Pyclewn 1.11
+------------
+
+.. September 10, 2013
+
+Bug fix
+^^^^^^^
+
+* Fix gdb version detection on linux Suse 12.2 and Fedora 19 that print a gdb
+  header not GNU standards compliant.
+
+Pyclewn 1.10
+------------
+
+.. February 7, 2013
+
+New features
+^^^^^^^^^^^^
+
+* Use now pdb-clone_ instead of the standard library Python debugger, pdb_.
+
+  * With breakpoints, pyclewn runs now just above the speed of the
+    Python interpreter, while the command line Python debugger pdb runs at 10
+    to 100 times the speed of the interpreter.
+
+  * pdb-clone fixes also many pdb long standing bugs.
+
+* Add the pdb ``commands`` command.
+
+* Add the pdb ``inferiortty`` command to be used on unix when the python
+  script is started from Vim. The command can be issued at any time during the
+  debugging session.
+
+    * Without argument, ``inferiortty`` spawns a terminal connected to a
+      pseudo tty and redirects the script three standard streams to this
+      pseudo tty.
+
+    * With the name of an existing pseudo tty as an argument, ``inferiortty``
+      redirects all three standard streams to this pseudo tty (convenient for
+      re-using the same pseudo tty across multiple debugging sessions).
+
+Changes
+^^^^^^^
+
+* An error message warns now the user when attempting to spawn the terminal
+  from gdb with the ``inferiortty`` command and the inferior has been already
+  started (this is too late).
+* pdb prints now a message to the console when the script has terminated.
+* Add file completion to the gdb command ``shell`` first argument.
+
+Bug fixes
+^^^^^^^^^
+
+* When the Python script is started from Vim with the command ``:Pyclewn pdb
+  script.py``, the script is now terminated after the ``quit`` command has
+  been issued.
+* pdb stops now at a breakpoint set in one of the callers after an interrupt.
+* pdb stops now at the next statement in the main module when the ``next``
+  command has been issued.
+* Fix gdb version detection.
+* Fix customized key mappings are lost when starting the second gdb session.
+
+Pyclewn 1.9
+-----------
+
+.. June 6, 2012
+
+New feature
+^^^^^^^^^^^
+
+* Add the ``inferiortty`` command. This new command spawns the controlling
+  terminal (default xterm) of the debuggee and sets accordingly gdb
+  ``inferior-tty`` variable and the TERM environment variable.
+
+Bug fix
+^^^^^^^
+
+* Fix pyclewn terminal fails to print the output of the debuggee.
+
+Pyclewn 1.8
+-----------
+
+.. December 28, 2011
+
+New features
+^^^^^^^^^^^^
+
+* The ``define``, ``commands`` and ``document`` gdb commands are implemented.
+* The new ``pdb`` test option enables the debugging of a gdb test case from
+  the test suite by pyclewn. Run the ``python setup.py --help test`` command
+  to see how to proceed to debug a test case with this option.
+
+Changes
+^^^^^^^
+
+* Avoid having the cursor hang for one second on the character ``n`` in Vim
+  command line when pyclewn keys are not mapped.
+* Gdb/mi log stream messages are now written to the console instead of being
+  ignored. This stream is dedicated to gdb debugging messages, but a bug in
+  gdb (see `gdb bug 13170
+  <http://sourceware.org/bugzilla/show_bug.cgi?id=13170>`_) has some important
+  error and warning messages, that pyclewn should not ignore, written to
+  gdb/mi log stream instead of gdb/mi console output stream.
+
+Bug fixes
+^^^^^^^^^
+
+* Fix the ``dbgvar`` command crashes pyclewn with Python 2.7.2 and Python
+  3.2.2.
+* Fix no breakpoint signs after setting a ``throw`` catchpoint.
+* Fix after starting a new gdb session, breakpoint signs may be placed in the
+  wrong files.
+
+Pyclewn 1.7
+-----------
+
+.. August 16, 2011
+
+New features
+^^^^^^^^^^^^
+
+* Support of the Python ``pdb`` debugger on Windows (Python 3 only).
+* The new ``loglevel`` command allows to print or set the log level
+  dynamically from inside Vim.
+
+Bug fixes
+^^^^^^^^^
+
+* Fix the ``pdb`` debugger raises the ignored exception
+  ``AttributeError("'NoneType' object has no attribute 'Pdb'",) in function
+  _removeHandlerRef`` with Python 3.2.
+* Fix an unfolded watched variable of 500 elements causes 100% cpu use when
+  the hiliting of all its elements is updated.
+* Fix ``inferior_tty.py`` uses 100% cpu.
+* Fix Pyclewn with the Python 2 ``pdb`` debugger raises the exception
+  ``ValueError: "lnum" must be strictly positive: 0`` when stepping into an
+  empty module.
+
+Pyclewn 1.6
+-----------
+
+.. June 14, 2011
+
+New features
+^^^^^^^^^^^^
+
+* On unix, when starting pyclewn from a terminal and using gvim, pyclewn
+  creates a pseudo terminal that is the the controlling terminal of the
+  program to debug. Programs debugged by gdb, including those based on curses
+  and termios such as vim, run in this terminal. A ``<Ctl-C>`` typed in the
+  terminal interrupts the debuggee.
+  When pyclewn is started from vim with the ``:Pyclewn`` command, there is no
+  terminal associated with pyclewn. Use instead the ``inferior_tty.py`` script
+  installed with pyclewn to get the same functionality. This script creates a
+  pseudo terminal to be used as the controlling terminal of the process
+  debugged by gdb.
+* The ``frame`` command updates the frame sign and positions the cursor on
+  this sign.
+* New ``none`` LOCATION of the ``--window`` command line option. This option
+  disables the automatic display of the console and may be useful when using
+  Vim tabs and keeping the console in a tab of its own.
+
+Changes
+^^^^^^^
+
+* Pyclewn supports Python 3, ``pyclewn-1.6.py3.tar.gz`` is the Python 3
+  distribution tarball,  ``pyclewn-1.6.py2.tar.gz`` is the Python 2
+  distribution tarball.
+* The gdb ``whatis`` command is used by pyclewn to get the type of the
+  variable or the type of the selected expression that is being hovered over
+  by the mouse.  When it is a pointer to data, the pointer is dereferenced and
+  its value displayed in the vim balloon. A new paramater to the ``--gdb``
+  option named ``nodereference`` disables this feature and switches back to
+  the old behavior of printing the pointer address value.
+
+Bug fixes
+^^^^^^^^^
+
+* Fix a syntax error in ``.pyclewn_keys.gdb`` causes ``:Pyclewn`` to hang.
+* Fix some error messages are not printed on stderr.
+* Fix gdb warning ``Failed to set controlling terminal``.
+* Handling of the netbeans socket disconnection, closes the gdb session also
+  when gdb is busy.
+* Ignore ``sigint`` or ``quit`` command on startup.
+* On gdb abnormal termination, save the project file if exists and forcibly
+  terminate the current session.
+* Set breakpoint in a template function C++.
+* Give an explicit error message after installation failure, for example when
+  the environment var ``EDITOR`` is set to something different than vim or
+  empty.
+
+Pyclewn 1.5
+-----------
+
+.. November 25, 2010
+
+New feature
+^^^^^^^^^^^
+
+* Support of ``pdb``, the python debugger.
+
+  + A python script may be run under the control of ``pdb``. For example the
+    current vim buffer may be started and debugged with the vim command
+    ``:Pyclewn pdb %:p``
+  + One may also attach to a running python process, interrupt the process,
+    manage a debugging session and terminate the debugging session by
+    detaching from the process. A new debugging session may be conducted later
+    on this same process, possibly from another Vim instance.
+  + All the ``pdb`` commands are supported except ``list`` and ``commands``.
+    This includes alias expansion and executing a python statement in the
+    context of the current frame. The new command ``threadstack`` prints the
+    instantaneous backtrace of all the threads, including those that are stuck
+    in a deadlock.
+
+* Pdb is currently supported on unix platforms and requires the latest Vim
+  version: Vim 7.3. Python3 is not supported yet.
+
+Change
+^^^^^^
+
+* Logs are written to stderr when the ``--level`` option is set and the
+  ``--file`` option is not set.
+
+Pyclewn 1.4
+-----------
+
+.. September 26, 2010
+
+New features
+^^^^^^^^^^^^
+
+* The new ``Ccwindow`` command opens a vim quickfix window holding the list of
+  the breakpoints with their current state. The quickfix window allows moving
+  directly to any breakpoint.
+* Add the ``--background`` command line option, allowing the setting of the
+  background colors for the bp enabled sign, the bp disabled sign and the
+  frame sign.
+* Show the last two digits of the gdb breakpoint numbers in the source margin
+  instead of ``bp``.
+
+Changes
+^^^^^^^
+
+* The vim ``:Pyclewn`` command can be used directly without having first to
+  run ``:runtime pyclewn.vim`` as was required previously (Sergey Khorev).
+* ``Cyan`` is the default background color for enabled breakpoint signs,
+  instead of ``Blue`` previously.
+
+Bug fixes
+^^^^^^^^^
+
+* Fix the highlighting of a watched variable child is not reset when the value
+  of the child object does not change, after stepping for example.
+* Fix error messages scramble vim (not gvim) display.
+* Fix when folding a watched variable and hitting continue, pyclewn raises
+  the exception ``invalid token`` after producing the error message ``all cmds
+  have not been processed in results``.
+* Fix cannot fold a watched variable with gdb 7.1.
+* Fix the ``:Pyclewn`` command does not work on Windows.
+
+Pyclewn 1.3
+-----------
+
+.. August 8, 2010
+
+New feature
+^^^^^^^^^^^
+
+* A new command named ``setfmtvar`` may be used to set the output format of a
+  watched variable or one of its children, for example to ``hexadecimal`` or
+  ``binary``.
+
+Bug fixes
+^^^^^^^^^
+
+* Fix handling gdb ASYNC-RECORDs in gdb 7.2 when obtaining the set of
+  available gdb commands and their completion.
+* Fix pyclewn help is not available from within Vim, after installation on
+  RedHat 6.
+* The test suite fails with Python 2.7. The ``test`` package is meant for
+  Python core developers only, so do not use it anymore and implement our own.
+* Workaround to a RuntimeError Python bug when installing pyclewn with
+  Python 2.7 (Matt McCormick).
+* Fix incorrect output in console after the first netbeans session. The
+  ``:Pyclewn`` command wipes out now both console and dbgvar buffers when they
+  exist, before starting netbeans.
+
+Pyclewn 1.2
+-----------
+
+.. March 6, 2010
+
+New feature
+^^^^^^^^^^^
+
+* Pyclewn may be started from within Vim with the ``:Pyclewn`` Vim command
+  after the ``pyclewn.vim`` script has been run. This requires that Vim
+  allows starting netbeans with the ``:nbstart`` Vim command. The
+  implementation of ``nbstart`` is available as a Mercurial Queue patch.
+
+Changes
+^^^^^^^
+
+* Extend the set of available key modifiers in key mappings, to all the key
+  modifiers supported by Vim netbeans (Sergey Khorev).
+* Allow commands in the initial buffer and on buffers loaded from the command
+  line. This feature is enabled when the running Vim version is above 7.2.334
+  (Vim 7.2 with patch 334).
+
+Bug fix
+^^^^^^^
+
+* Fix the display of the gdb console window and the dbgvar window, after the
+  gdb 'quit' command has been entered.
+
+Pyclewn 1.1
+-----------
+
+.. January 2, 2010
+
+New feature
+^^^^^^^^^^^
+
+* Support Vim running in a terminal. This requires netbeans support in Vim
+  when running in a terminal. The implementation of netbeans in ``plain vim``
+  (vim running in a terminal), is available as a Mercurial Queues patch for
+  the official Vim release and for the latest development source tree.
+
+Changes
+^^^^^^^
+
+* The console vim buffer and the watched variables buffer are set with
+  'noswapfile' option.
+
+Pyclewn 1.0
+-----------
+
+.. December 19, 2009
+
+New feature
+^^^^^^^^^^^
+
+* Split the current Vim window and display the variables window after running
+  the ``Cdbgvar`` command. This feature is enabled when the running Vim
+  version is above 7.2.253 (Vim 7.2 with patch 253).
+
+
+Changes
+^^^^^^^
+
+* Clean up the python debugger interface and use pydoc to document it.
+* Replace the existing ``timer`` method with a flexible job scheduling.
+* Replace the ``vimcmd`` environment variable with the ``EDITOR`` environment
+  variable.
+* Improve select emulation performance on linux by a factor of 2.
+* Minimize Vim screen redraws when updating the debugger console window.
+* The pyclewn sourceforge web site is now created with sphinx_ using
+  reStructuredText_ markup.
+* Switch from Subversion to Mercurial as pyclewn SCM (Source Code Management).
+
+Bug fixes
+^^^^^^^^^
+
+* Recent Fedora Core distributions are missing the Python standard library
+  ``test.regrtest`` module. Warn that the regression test suite cannot be run
+  on these platforms and continue the installation.
+* Fix quoted command line arguments are not properly parsed.
+* Fix content of gdbmi results within quotes must be unquoted.
+* Fix crash when running without a console after starting from the menu of a
+  X11 window manager.
+* Fix watched array elements are displayed in lexicographical order instead of
+  numeric order.
+* Fix gdb 7.0 causes exception on break.
+* Fix regression test suite hangs on futex.
+
+Pyclewn 0.7
+-----------
+
+.. April 18, 2009
+
+Changes
+^^^^^^^
+
+* Pyclewn falls back to pipes when a pseudo tty cannot be setup with gdb.
+* On Vim 7.2 and later Vim versions, the first pyclewn command on the initial
+  ``[NoName]`` buffer is ignored and an error message is printed. Also, when
+  the command is issued on a buffer loaded from Vim command line, the user is
+  informed that the buffer is being registered to netbeans.
+* On pyclewn installation, ``gvim`` can be replaced with the value of the
+  environment variable ``vimcmd``, for the pathname of the program to be run
+  when checking that the ``netbeans_intg`` feature has been compiled in Vim.
+
+Bug fixes
+^^^^^^^^^
+
+* Fix cannot run two simultaneous pyclewn sessions on the same listening port.
+* Fix ``Csigint`` help and warning message when running with pipes instead of a
+  pseudo tty.
+* Fix incorrect display after the Vim command bdelete or bwipeout on the clewn
+  console.
+* Fix ``Quit`` is printed on the gdb console after the output of the next
+  command.
+
+Pyclewn 0.6
+-----------
+
+.. August 16, 2008
+
+Change
+^^^^^^
+
+* Pyclewn runs on the Windows platform.
+
+Bug fixes
+^^^^^^^^^
+
+* Fix setting or clearing a breakpoint with clewn mapped keys when the
+  breakpoint file pathname includes spaces.
+* Fix an assertion error that occured on exit while pyclewn is busy processing
+  gdb messages. A side effect of this fix is that the project file is not saved
+  automatically on exit, if gdb is busy running a command at this time.
+
+Pyclewn 0.5
+-----------
+
+.. June 6, 2008
+
+New features
+^^^^^^^^^^^^
+
+* The new ``maxlines`` option sets a limit on the console buffer size.
+* The new ``window`` option positions the console window on top, bottom, left
+  or right side of the Vim window.
+* The new ``project`` pyclewn command saves the current gdb settings to a
+  project file that may be sourced later with the gdb ``source`` command.
+  These settings are the working directory, the debuggee program file name, the
+  program arguments and the breakpoints.
+* A new parameter to the ``gdb`` command line option can be used to set the
+  project file pathname. When set, the project file is automatically sourced on
+  starting a gdb session, and the gdb settings are automatically saved to the
+  project file on quitting gdb or vim.
+
+Changes
+^^^^^^^
+
+* The vim implementation of the netbeans "remove" function is buggy, and has
+  been fixed by patch 207 in vim 7.1. The workaround in pyclewn is to insert a
+  ``\n`` before the line to delete, and to delete both lines in one shot. This
+  workaround is not used when vim implements patch 207.
+* Allow a gdb command on the initial [No name] vim window.
+* Pyclewn can be started now without setting the environment variable
+  PYTHONPATH which was required in the previous release when pyclewn is
+  installed locally with the ``home scheme``.
+
+Bug fixes
+^^^^^^^^^
+
+* Avoid having Vim segfaults when stepping very fast with gdb, by the correct
+  handling of the cursor position when restoring the cursor after an update of
+  the gdb console.
+* Remove the gdb tui commands.
+* The ``help`` command must list the pyclewn commands with the gdb commands
+  only when used with no argument.
+* Fix incorrect breakpoint highlighting after user aborts on the dialog warning
+  him that the buffer is already opened by another Vim session.
+
+Pyclewn 0.4
+-----------
+
+.. April 9, 2008
+
+Bug fix
+^^^^^^^
+
+* Pyclewn exits with ``gdb CRITICAL this is not a gdb program`` when gdb writes
+  an unexpected terminfo sequence on a subprocess pipe.
+
+Pyclewn 0.3
+-----------
+
+.. March 22, 2008
+
+Initial release.
+
+.. _sphinx: http://sphinx.pocoo.org/
+.. _reStructuredText: http://docutils.sf.net/rst.html
+.. _pdb-clone: http://code.google.com/p/pdb-clone/
+.. _pdb: http://docs.python.org/3/library/pdb.html
+.. vim:filetype=rst:tw=78:ts=8:et:
+
