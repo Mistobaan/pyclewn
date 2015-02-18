@@ -18,7 +18,7 @@ import errno
 __all__ = [str(x) for x in
                ('__version__', 'PY3', 'PY26', 'text_type', 'ClewnError',)]
 
-__version__ = '2.0'
+__version__ = '2.0.1'
 
 # Python 2.6 or older
 PY26 = (sys.version_info < (2, 7))
