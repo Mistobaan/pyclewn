@@ -15,9 +15,6 @@ import tempfile
 import subprocess
 import errno
 
-__all__ = [str(x) for x in
-               ('__version__', 'PY3', 'PY26', 'text_type', 'ClewnError',)]
-
 __version__ = '2.0.1'
 
 # Python 2.6 or older

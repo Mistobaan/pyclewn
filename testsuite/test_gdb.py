@@ -994,9 +994,9 @@ class Gdb(ClewnTestCase):
             'Cbreak sys_getrecursionlimit',
             'Cbreak sys_getdefaultencoding',
             'Crun',
-            'edit (clewn)_threads | 2,$$write! ${test_out}',
+            'edit (clewn)_threads | 2write! ${test_out}',
             'Ccontinue',
-            'edit (clewn)_threads | 2,$$write! >> ${test_out}',
+            'edit (clewn)_threads | 3write! >> ${test_out}',
             'edit ${test_out}',
             r'%s/\(python\).*in \(\S\+\).*$$/\1 \2',
             'write',
@@ -1004,8 +1004,6 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             '* 1   python sys_getrecursionlimit',
-            '  2   python sem_wait',
-            '  1   python sem_wait',
             '* 2   python sys_getdefaultencoding',
             )
         self.cltest_redir(cmd, expected)
@@ -1021,7 +1019,7 @@ class Gdb(ClewnTestCase):
             '3',
             'exe "normal \<CR>"',
             'sleep ${sleep_time}',
-            'call Edit_clewnbuffer("(clewn)_threads") | 2,$$write! ${test_out}',
+            'call Edit_clewnbuffer("(clewn)_threads") | 2write! ${test_out}',
             'edit ${test_out}',
             r'%s/\(python\).*in \(\S\+\).*$$/\1 \2',
             'write',
@@ -1029,7 +1027,6 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             '  1   python sys_getrecursionlimit',
-            '* 2   python sem_wait',
             )
         self.cltest_redir(cmd, expected)
 

@@ -4,6 +4,14 @@ News
 Pyclewn 2.0.1
 -------------
 
+.. February 25, 2015
+
+Bug fixes
+^^^^^^^^^
+
+* No need to specify a required version since pdb-clone is now compliant with
+  PEP 440.
+
 Pyclewn 2.0
 -----------
 

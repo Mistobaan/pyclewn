@@ -131,13 +131,9 @@ class Test(Command):
             test_support.run_suite(suite, self.detail, self.stop, self.pdb)
 
 def main():
-    requirements = []
+    requirements = ['pdb-clone']
     if not PY34:
         requirements.append('trollius')
-    if PY3:
-        requirements.append('pdb-clone==1.9.2.py3')
-    else:
-        requirements.append('pdb-clone==1.9.2.py2.7')
 
     install_options = {
         'cmdclass': {'sdist': sdist, 'test': Test},
