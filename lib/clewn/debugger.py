@@ -859,13 +859,15 @@ class Debugger(object):
 
     def _dispatch_keypos(self, cmd, args, buf, lnum):
         """Dispatch the keyAtPos event to the proper cmd_xxx method."""
-        if not self.started:
-            self._start()
-
-        # do key mapping substitution
+        # Do key mapping substitution.
         mapping = self._keymaps(cmd, buf, lnum)
         if mapping:
             cmd, args = (lambda a, b='': (a, b))(*mapping.split(None, 1))
+
+        if not self.started:
+            if cmd == 'quit':
+                return
+            self._start()
 
         try:
             method = getattr(self, 'cmd_%s' % cmd)

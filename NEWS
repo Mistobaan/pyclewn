@@ -9,10 +9,9 @@ Pyclewn 2.0.1
 Bug fixes
 ^^^^^^^^^
 
-* The list buffer windows are now empty after the ``Cquit`` command.
+* The ``Cquit`` command cannot start a new gdb session anymore.
 
-* No need to specify a required version since pdb-clone is now compliant with
-  PEP 440.
+* The list buffer windows are now empty after the ``Cquit`` command.
 
 Pyclewn 2.0
 -----------
