@@ -251,13 +251,12 @@ class RootVarObj(object):
 
         """
         if not self.root:
-            return False
-
-        self.root.clear()
-        self.parents = {}
-        self.dirty = True
-        self.str_content = ''
-        return True
+            self.dirty = False
+        else:
+            self.root.clear()
+            self.parents = {}
+            self.dirty = True
+            self.str_content = ''
 
     def leaf(self, childname):
         """Return childname VarObj and the VarObjList of the parent of childname.
@@ -484,7 +483,7 @@ class Info(object):
         else:
             return ''
 
-    def update_breakpoints(self, cmd):
+    def update_breakpoints(self, cmd=''):
         """Update the breakpoints."""
         # Build the breakpoints dictionary.
         bp_dictionary = {}
@@ -559,7 +558,7 @@ class Info(object):
         else:
             return ''
 
-    def update_frame(self, cmd):
+    def update_frame(self, cmd=''):
         """Update the frame sign."""
         self.frame = LooseFrame(self.frame)
         try:
@@ -624,7 +623,7 @@ class Info(object):
         else:
             return ''
 
-    def update_threads(self, cmd):
+    def update_threads(self, cmd=''):
         threads = {}
         current = None
         # Parse the threads_list and build a new threads dictionary.

@@ -903,13 +903,24 @@ class Gdb(debugger.Debugger, Process):
             return
 
         if not self.closed:
+            # Update the 'breakpoints' buffer.
+            self.info.breakpoints = {}
+            self.info.update_breakpoints()
+
+            # Update the 'backtrace' buffer.
+            self.info.frame = {}
+            self.info.update_frame()
+
+            # Update the 'threads' buffer.
+            self.info.threads_list = []
+            self.info.update_threads()
+
+            # Update the 'variables' buffer.
+            varobj = self.info.varobj
+            varobj.clear()
+
             debugger.Debugger.close(self)
             Process.close(self)
-
-            # Update the list buffers.
-            varobj = self.info.varobj
-            cleared = varobj.clear()
-            self.update_listbuffer('variables', varobj.collect, cleared)
 
             # Remove temporary files.
             try:

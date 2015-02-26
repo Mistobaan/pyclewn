@@ -4,10 +4,12 @@ News
 Pyclewn 2.0.1
 -------------
 
-.. February 25, 2015
+.. February 26, 2015
 
 Bug fixes
 ^^^^^^^^^
+
+* The list buffer windows are now empty after the ``Cquit`` command.
 
 * No need to specify a required version since pdb-clone is now compliant with
   PEP 440.
