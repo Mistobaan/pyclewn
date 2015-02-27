@@ -1063,3 +1063,31 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
+    def test_053(self):
+        """Test the watchpoints in the (clewn)_breakpoints list buffer."""
+        cmd = [
+            'Cfile testsuite/foobar',
+            'Cbreak foo',
+            'Cstart',
+            'Cwatch -l len',
+            'Cwatch -l len',
+            'Cawatch -l len',
+            'Crwatch -l len',
+            'Cnext',
+            'Cnext',
+            'Cdisable 5 6',
+            'Cdelete 3',
+            'edit (clewn)_breakpoints | %w!  ${test_out}',
+            'edit ${test_out}',
+            r'%s/\(.*\) <.*>$$/\1',
+            'write',
+            'qa!',
+            ]
+        expected = (
+            '1 breakpoint      y 0 keep   in foo at foo.c:30',
+            '4 hw watchpoint   y 1 keep  -location len',
+            '5 acc watchpoint  n 2 keep  -location len',
+            '6 read watchpoint n 1 keep  -location len',
+            )
+        self.cltest_redir(cmd, expected)
+

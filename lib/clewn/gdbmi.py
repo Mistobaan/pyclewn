@@ -68,7 +68,7 @@ PROJECT_CMDS = ('project',) + SOURCE_CMDS
 
 # gdb objects attributes.
 BREAKPOINT_ATTRIBUTES = {'number', 'type', 'disp', 'enabled', 'func', 'file',
-                         'line', 'times', 'original-location'}
+                         'line', 'times', 'original-location', 'what'}
 REQ_BREAKPOINT_ATTRIBUTES = {'number', 'type', 'enabled'}
 FILE_ATTRIBUTES = {'line', 'file', 'fullname'}
 FRAMECLI_ATTRIBUTES = {'level', 'func', 'file', 'line', }
@@ -464,21 +464,25 @@ class Info(object):
         for num in sorted(self.bp_dictionary.keys()):
             bp = self.bp_dictionary[num]
             line = (('%-4s' % num) +
-                    (' %(type)-10s %(enabled)-3s %(times)-5s '
+                    (' %(type)-15s %(enabled)-3s %(times)-5s '
                      '%(disp)-6s' % bp))
-            if 'func' in bp:
-                line += ' in %(func)s' % bp
-            if 'line' in bp and 'file' in bp:
-                lnum = bp['line']
-                fname = bp['file']
-                line += ' at %s:%s' % (fname, lnum)
-                pathname = self.get_fullpath(fname)
-                if pathname is not None:
-                    line += ' <%s>' % pathname
+            if 'watchpoint' in bp['type']:
+                if 'what' in bp:
+                    line += bp['what']
+            else:
+                if 'func' in bp:
+                    line += ' in %(func)s' % bp
+                if 'line' in bp and 'file' in bp:
+                    lnum = bp['line']
+                    fname = bp['file']
+                    line += ' at %s:%s' % (fname, lnum)
+                    pathname = self.get_fullpath(fname)
+                    if pathname is not None:
+                        line += ' <%s>' % pathname
             lines.append(line)
 
         if lines:
-            lines.insert(0, 'Num  Type       Enb Hit   Disp   What')
+            lines.insert(0, 'Num  Type            Enb Hit   Disp   What')
             return '\n'.join(lines) + '\n'
         else:
             return ''
@@ -488,24 +492,27 @@ class Info(object):
         # Build the breakpoints dictionary.
         bp_dictionary = {}
         for bp in self.breakpoints:
-            if ('breakpoint' in bp['type']
+            if (('breakpoint' in bp['type']
                     # Exclude 'throw' and 'catch 'catchpoints (they are typed by
                     # gdb as 'breakpoint' instead of 'catchpoint').
                     and not
-                        ('what' in bp and 'exception' in bp['what'])):
+                        ('what' in bp and 'exception' in bp['what'])) or
+                    'watchpoint' in bp['type']):
                 bp_dictionary[int(bp['number'])] = bp
 
         nset = set(bp_dictionary.keys())
         oldset = set(self.bp_dictionary.keys())
-        # Update the sign status of common breakpoints.
+        # Update the state of common breakpoints.
         for num in (nset & oldset):
             bp = bp_dictionary[num]
             old_bp = self.bp_dictionary[num]
-            fix_bp_attributes(bp)
+            if 'watchpoint' not in bp['type']:
+                fix_bp_attributes(bp)
             state = bp['enabled']
             if state != old_bp['enabled']:
                 self.bp_dirty = True
-                if 'line' in old_bp and 'file' in old_bp:
+                if ('watchpoint' not in bp['type'] and 'line' in old_bp and
+                        'file' in old_bp):
                     enabled = (state == 'y')
                     self.gdb.update_bp(num, not enabled)
             if bp['times'] != old_bp['times']:
@@ -514,12 +521,16 @@ class Info(object):
         # Delete signs for non-existent breakpoints.
         for num in (oldset - nset):
             bp = self.bp_dictionary[num]
+            if 'watchpoint' in bp['type']:
+                continue
             if 'line' in bp and 'file' in bp:
                 self.gdb.delete_bp(num)
 
         # Create signs for the new breakpoints.
         for num in sorted(nset - oldset):
             bp = bp_dictionary[num]
+            if 'watchpoint' in bp['type']:
+                continue
             fix_bp_attributes(bp)
             if 'line' in bp and 'file' in bp:
                 pathname = self.get_fullpath(bp['file'])

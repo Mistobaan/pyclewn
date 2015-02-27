@@ -4,10 +4,12 @@ News
 Pyclewn 2.0.1
 -------------
 
-.. February 26, 2015
+.. February 27, 2015
 
 Bug fixes
 ^^^^^^^^^
+
+* Display also the watchpoints in the breakpoints window.
 
 * The ``Cquit`` command cannot start a new gdb session anymore.
 
