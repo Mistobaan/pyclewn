@@ -15,7 +15,7 @@ import tempfile
 import subprocess
 import errno
 
-__version__ = '2.0.1'
+__version__ = '2.1'
 
 # Python 2.6 or older
 PY26 = (sys.version_info < (2, 7))
