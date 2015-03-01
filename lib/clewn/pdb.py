@@ -30,10 +30,7 @@ import signal
 from collections import OrderedDict
 
 from . import PY3, text_type, misc, debugger
-from pdb_clone import __version__
-if ('py3' in __version__ and not PY3) or ('py2' in __version__ and PY3):
-    raise ImportError('Invalid pdb-clone version %s' % __version__)
-from pdb_clone import pdb, bdb
+from pdb_clone import __version__, pdb, bdb
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('pdb')

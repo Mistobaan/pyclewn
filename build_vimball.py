@@ -2,6 +2,10 @@
 # vi:set ts=8 sts=4 sw=4 et tw=80:
 """Script to build the Vim run time files."""
 
+# Python 2-3 compatibility.
+from __future__ import print_function
+
+import sys
 import os
 import string
 import tempfile
@@ -24,15 +28,19 @@ RUNTIME = [
     ]
 
 def keymap_files():
-    """Build key map files for each debugger."""
+    """Update the key map files for each debugger."""
     with open('runtime/macros/.pyclewn_keys.template') as tf:
         print('Updating:')
         template = tf.read()
         for d in DEBUGGERS:
             filename = 'runtime/macros/.pyclewn_keys.%s' % d
+            try:
+                module = importlib.import_module('.%s' % d, 'lib.clewn')
+            except ImportError:
+                print('Warning: cannot update %s' % filename, file=sys.stderr)
+                continue
             with open(filename, 'w') as f:
                 f.write(string.Template(template).substitute(clazz=d))
-                module = importlib.import_module('.%s' % d, 'lib.clewn')
                 mapkeys = getattr(module, 'MAPKEYS')
                 for k in sorted(mapkeys):
                     if len(mapkeys[k]) == 2:
