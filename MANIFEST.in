@@ -10,6 +10,7 @@ include testsuite/*.py
 include testsuite/*.c
 include testsuite/*.cc
 include testsuite/*.cpp
+include testsuite/*.vim
 include testsuite/Makefile*
 include testsuite/README
 include testsuite/function_template_sub/Makefile

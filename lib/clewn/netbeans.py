@@ -8,6 +8,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+try:
+    import queue  # Python 3
+except ImportError:
+    import Queue as queue   # Python 2
 
 import sys
 import time
@@ -600,6 +604,8 @@ class Netbeans(asyncio.Protocol, object):
             returns its incremented value, each time it is read
         frame_annotation: FrameAnnotation
             the frame annotation
+        msg_queue: queue
+            queue of netbeans messages received before the debugger is setup
 
     Class attributes:
         remove_fix: str
@@ -642,11 +648,17 @@ class Netbeans(asyncio.Protocol, object):
         self.lock = None
         self.sernum = Sernum()
         self.frame_annotation = vimbuffer.FrameAnnotation(self)
+        self.msg_queue = queue.Queue()
 
     def set_debugger(self, debugger):
         """Notify of the current debugger."""
         self.debugger = debugger
         debugger.set_nbsock(self)
+
+        # Process the netbeans messages received while the debugger instance was
+        # not yet known.
+        while not self.msg_queue.empty():
+            self.found_terminator(self.msg_queue.get())
 
     def connection_made(self, transport):
         self.transport = transport
@@ -688,17 +700,18 @@ class Netbeans(asyncio.Protocol, object):
 
     def found_terminator(self, msg):
         """Process a new line terminated netbeans message."""
-        debug(msg)
-
         if not self.ready:
+            debug(msg)
             self.open_session(msg)
             return
 
+        # The debugger is not known yet.
         if not self.debugger:
-            warning('ignoring "%s": the debugger is not started', msg)
+            self.msg_queue.put(msg)
             return
 
-        # handle variable number of elements in returned tuple
+        # Handle variable number of elements in returned tuple.
+        debug(msg)
         is_event, buf_id, event, seqno, nbstring, arg_list =        \
                 (lambda a, b=None, c=None, d=None, e=None, f=None:
                             (a, b, c, d, e, f))(*parse_msg(msg))

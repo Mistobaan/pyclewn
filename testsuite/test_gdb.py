@@ -11,10 +11,14 @@ from __future__ import unicode_literals
 
 import sys
 import os
-from unittest import skipUnless, skipIf
+import random
+import subprocess
+import string
+import time
+from unittest import TestCase, skipUnless, skipIf
 
-import clewn.gdb as gdb
-from .test_support import ClewnTestCase, TESTFN_FILE, TESTFN_OUT
+from clewn import gdb
+from .test_support import ClewnTestCase, TESTFN, TESTFN_FILE, TESTFN_OUT
 
 debuggee = 'file ${cwd}testsuite/foobar'
 expected_break_main = (
@@ -25,6 +29,35 @@ expected_break_main = (
     )
 
 gdb_v = gdb.gdb_version('gdb')
+
+def run_vim_cmds(commands):
+    """Run a list of Vim commands and return their output."""
+
+    fin = 'Fin %s' % random.random()
+    commands.insert(0, 'function Test()')
+    commands.extend(['echo "%s"' % fin, 'qa'])
+    commands.append('endfunction')
+    with open(TESTFN_FILE, 'w') as f:
+        f.write('\n'.join(commands))
+
+    editor = os.environ.get('EDITOR', 'gvim')
+    args = [editor,
+            '-u', 'NORC', '-N',
+            '-S', TESTFN_FILE,
+            '-c', 'redir! >%s' % TESTFN_OUT,
+            '-c', 'call Test()',
+            ]
+
+    subprocess.call(args)
+    while 1:
+        if os.path.exists(TESTFN_OUT):
+            with open(TESTFN_OUT) as f:
+                output = f.read()
+                if fin in output:
+                    break
+        time.sleep(.020)
+
+    return output
 
 class Gdb(ClewnTestCase):
     """Test the gdb debugger."""
@@ -1090,4 +1123,88 @@ class Gdb(ClewnTestCase):
             '6 read watchpoint n 1 keep  -location len',
             )
         self.cltest_redir(cmd, expected)
+
+class PyclewnCommand(TestCase):
+    """Test the ':Pyclewn' command."""
+
+    def __init__(self, method='runTest'):
+        TestCase.__init__(self, method)
+        self.method = method
+        self.cwd = os.getcwd() + os.sep
+
+    def tearDown(self):
+        """Cleanup stuff after the test."""
+        for name in os.listdir(os.getcwd()):
+            if name.startswith(TESTFN):
+                try:
+                    os.unlink(name)
+                except OSError:
+                    pass
+
+    def clewn_test(self, commands, expected):
+        result = run_vim_cmds(commands)
+        expected = '\n'.join(expected)
+        expected = string.Template(expected).substitute(cwd=self.cwd)
+
+        checked = ' '.join(expected.split()) in ' '.join(result.split())
+        self.assertTrue(checked,
+                "\n\n...Expected:\n%s \n\n...Got:\n%s" % (expected, result))
+
+    def test_scripting_01(self):
+        """With an empty buffer list."""
+        cmd = [
+            'source testsuite/foobar.vim',
+            'call PyclewnScripting("Cstart")',
+            'while ! bufexists("testsuite/foobar.c")',
+            '    sleep 100m',
+            'endwhile',
+            'sleep 100m',
+            'sign place',
+            ]
+        expected = (
+            "Signs for ${cwd}testsuite/foobar.c:",
+            "line=10  id=1  name=1",
+            )
+        self.clewn_test(cmd, expected)
+
+    def test_scripting_02(self):
+        """With a non empty buffer list."""
+        cmd = [
+            'edit MANIFEST.in',
+            'source testsuite/foobar.vim',
+            'call PyclewnScripting("Cstart")',
+            'while ! bufexists("testsuite/foobar.c")',
+            '    sleep 100m',
+            'endwhile',
+            'sleep 100m',
+            'sign place',
+            ]
+        expected = (
+            "Signs for ${cwd}testsuite/foobar.c:",
+            "line=10  id=1  name=1",
+            )
+        self.clewn_test(cmd, expected)
+
+    def test_scripting_03(self):
+        """Two consecutive ':Pyclewn' commands."""
+        cmd = [
+            'source testsuite/foobar.vim',
+            'call PyclewnScripting("Cstart")',
+            'while ! bufexists("testsuite/foobar.c")',
+            '    sleep 100m',
+            'endwhile',
+            'sleep 100m',
+            'nbclose',
+            'call PyclewnScripting("Cbreak foo")',
+            'while ! bufexists("testsuite/foo.c")',
+            '    sleep 100m',
+            'endwhile',
+            'sleep 100m',
+            'sign place',
+            ]
+        expected = (
+            "Signs for ${cwd}testsuite/foo.c:",
+            "line=30  id=2  name=2",
+            )
+        self.clewn_test(cmd, expected)
 

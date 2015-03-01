@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 February 16
+*pyclewn.txt*                                   Last change: 2015 February 27
 
 
                             PYCLEWN USER MANUAL
@@ -202,6 +202,32 @@ Start pyclewn with: >
 So pyclewn with the gdb debugger is simply started as: >
 
     python -m clewn
+
+
+Start pyclewn from a Vim script:
+--------------------------------
+For example, to debug with gdb a program named foobar, write the following
+script.vim: >
+
+    " A function to test the ':Pyclewn' command in a script.
+    function PyclewnScripting()
+        " This function can be called while the previous netbeans session is
+        " still open.
+        if has("netbeans_enabled")
+            echo "Error: netbeans is already connected."
+            call input("Press the <Enter> key to continue.")
+            return
+        endif
+
+        let g:pyclewn_args="--gdb=async"
+        Pyclewn gdb
+        Cfile foobar
+        Cstart
+    endfunc
+
+and run the command: >
+
+    gvim -S script.vim -c "call PyclewnScripting()"
 
 ==============================================================================
 3. Options                                          *pyclewn-options*
