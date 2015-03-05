@@ -1124,6 +1124,32 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
+    def test_054(self):
+        """Test gdbserver"""
+        # Start a new session with setsid() to handle the case where the tests
+        # are run with vim (not gvim).
+        proc = subprocess.Popen(['gdbserver', ':3456', 'testsuite/foobar'],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                preexec_fn=os.setsid)
+        cmd = [
+            'edit testsuite/foobar.c',
+            'Cfile testsuite/foobar',
+            'Ctarget remote :3456',
+            'Ctbreak main',
+            'Ccontinue',
+            'redir! > ${test_out}',
+            'sign place',
+            'qa!',
+            ]
+        expected = (
+            "Signs for testsuite/foobar.c:",
+            "    line=10  id=1  name=3",
+            )
+        self.cltest_redir(cmd, expected)
+        proc.stdout.close()
+        proc.kill()
+
 class PyclewnCommand(TestCase):
     """Test the ':Pyclewn' command."""
 

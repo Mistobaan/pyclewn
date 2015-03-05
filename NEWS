@@ -1,6 +1,17 @@
 News
 ====
 
+Pyclewn 2.1
+-----------
+
+.. March 5, 2015
+
+Bug fixes
+^^^^^^^^^
+
+* Issue #6: fix the crash in pyclewn versions 2.0 and 2.0.1 when trying to
+  attach to a remote gdb.
+
 Pyclewn 2.0.1
 -------------
 
@@ -9,7 +20,7 @@ Pyclewn 2.0.1
 Bug fixes
 ^^^^^^^^^
 
-* The ':Pyclewn' command can now be used reliably in a Vim script.
+* The ``:Pyclewn`` command can now be used reliably in a Vim script.
 
 * The watchpoints are also displayed in the breakpoints window.
 

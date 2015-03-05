@@ -615,6 +615,8 @@ class Info(object):
         lines = []
         for id in sorted(self.threads):
             thread = self.threads[id]
+            if 'name' not in thread:
+                thread['name'] = ''
             line = ('%(current)s %(id)-3s %(name)-16s %(state)-7s'
                     ' %(target-id)s' % thread)
             if 'frame' in thread:
