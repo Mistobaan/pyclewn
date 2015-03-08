@@ -4,7 +4,12 @@ News
 Pyclewn 2.1
 -----------
 
-.. March 5, 2015
+.. March 7, 2015
+
+New feature
+^^^^^^^^^^^
+
+* Full gdb completion is now available on Vim command line.
 
 Bug fixes
 ^^^^^^^^^

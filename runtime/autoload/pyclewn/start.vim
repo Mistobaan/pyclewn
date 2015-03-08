@@ -151,13 +151,9 @@ function s:start(args)
     call s:pyclewn_ready(l:tmpfile)
     exe "nbstart :" . s:connection
 
-    " source vim script
+    " Source vim script.
     if has("netbeans_enabled")
-        " the pyclewn generated vim script is sourced only once
-        if ! exists("s:source_once")
-            let s:source_once = 1
-            exe "source " . l:tmpfile
-        endif
+        exe "source " . l:tmpfile
         call s:info("The netbeans socket is connected.\n")
         let argl = split(a:args)
         if index(argl, "pdb") == len(argl) - 1

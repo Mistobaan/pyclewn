@@ -1,7 +1,6 @@
 A Vim_ front-end to the gdb_ and pdb_ debuggers. The debugger output is
 redirected to a Vim window, the console. The debugger commands are mapped to
-Vim user-defined commands, and with completion available on the commands and
-their first argument.
+Vim user-defined commands and completion is available on Vim command line.
 
 Install Pyclewn with pip_ and extract a vimball from the installed Python
 package, then install the Vim runtime files with the vimball. See install_.
@@ -31,6 +30,8 @@ package, then install the Vim runtime files with the vimball. See install_.
   variable.
 
 **gdb**
+
+* Full gdb completion on Vim command line.
 
 * An expression can be watched in a Vim window. The expression value is
   updated and highlighted whenever it has changed. When the expression is a

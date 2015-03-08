@@ -222,18 +222,35 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    def test_009(self):
-        """The break and clear commands symbols completion"""
+    def test_009a(self):
+        """The break command completion"""
         cmd = [
             'Cfile testsuite/foobar',
+            'Cstart',
+            'Cbreak msl	',
             'redir! > ${test_out}',
-            'Csymcompletion',
-            '\n',
-            'call Wait_eop()',
+            'sign place',
             'qa!',
             ]
         expected = (
-            'symbols fetched for break and clear completion\n',
+            'Signs for ${cwd}testsuite/foo.c:',
+            'line=21  id=2  name=2',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_009b(self):
+        """Completion with a 'C' command"""
+        cmd = [
+            'Cfile testsuite/foobar',
+            'Cstart',
+            'C break msl	',
+            'redir! > ${test_out}',
+            'sign place',
+            'qa!',
+            ]
+        expected = (
+            'Signs for ${cwd}testsuite/foo.c:',
+            'line=21  id=2  name=2',
             )
         self.cltest_redir(cmd, expected)
 
@@ -433,17 +450,20 @@ class Gdb(ClewnTestCase):
         """Check break completion on overloaded functions"""
         cmd = [
             'Cfile testsuite/overloaded',
-            'Csymcompletion',
-            '\n',
-            'call Wait_eop()',
+            'Cbreak tes	',
+            'Cbreak tes		',
+            'Cbreak tes			',
+            'redir! > ${test_out}',
+            'sign place',
             'qa!',
             ]
         expected = (
-            'gdb  DEBUG   ~"break test()\\n"',
-            'gdb  DEBUG   ~"break test(int)\\n"',
-            'gdb  DEBUG   ~"break test(int, int)\\n"',
+            'Signs for ${cwd}testsuite/overloaded.cc:',
+            'line=8  id=2  name=1',
+            'line=9  id=4  name=3',
+            'line=10  id=6  name=5',
             )
-        self.cltest_logfile(cmd, expected, 'debug')
+        self.cltest_redir(cmd, expected)
 
     def test_021(self):
         """Check varobj creation, folding and deletion"""

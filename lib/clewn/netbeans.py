@@ -890,12 +890,6 @@ class Netbeans(asyncio.Protocol, object):
 
     def evt_keyAtPos(self, buf_id, nbstring, arg_list):
         """Process a keyAtPos netbeans event."""
-        if self.console is None or not self.console.buf.registered:
-            self.console = Console(self)
-            self.console.register()
-
-        self.setup_clewn_buffers()
-
         buf = self._bset.getbuf(buf_id)
         if buf is None:
             error('invalid bufId: "%d" in keyAtPos', buf_id)
@@ -917,6 +911,15 @@ class Netbeans(asyncio.Protocol, object):
 
                 cmd, args = (lambda a='', b='':
                                     (a, b))(*nbstring.split(None, 1))
+
+                if not self.debugger.started:
+                    if cmd == 'quit' or cmd.startswith('complete'):
+                        return
+
+                if self.console is None or not self.console.buf.registered:
+                    self.console = Console(self)
+                    self.console.register()
+                self.setup_clewn_buffers()
 
                 if self.is_editport_evt(cmd):
                     return

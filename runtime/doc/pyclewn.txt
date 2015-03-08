@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 February 27
+*pyclewn.txt*                                   Last change: 2015 March 7
 
 
                             PYCLEWN USER MANUAL
@@ -26,8 +26,7 @@ netbeans protocol to control Vim.
 
 The debugger output is redirected to a Vim buffer. The debugger commands are
 mapped to Vim user-defined commands with a common letter prefix (the default
-is the |C| letter), and with Vim command completion available on the commands
-and their first argument.
+is the |C| letter) and completion is available on Vim command line.
 
 
 Pyclewn currently supports the following debuggers:
@@ -84,7 +83,7 @@ Pyclewn provides the following features:
   |project-file| command line option. The ``project`` command is currently only
   available with gdb.
 
-* Vim command completion on the commands and their first argument.
+* Completion on Vim command line.
 
 
 The remaining sections of this manual are:
@@ -425,9 +424,6 @@ the following example with gdb, both methods are equivalent: >
     :Cfile /path/to/foobar
     :C file /path/to/foobar
 
-The first method provides completion on the file name while the second one
-does not.
-
 The second method is useful when the command is a user defined command in the
 debugger (user defined commands built by <define> in gdb), and therefore not a
 Vim command. It is also needed for gdb command names that cannot be mapped to
@@ -464,22 +460,18 @@ Command line completion in Vim is usually done using the <Tab> key (set by the
 CTRL-D. For example, to list all the debugger commands (assuming the
 default |C| prefix is being used): >
 
-    :C<C-D>
+    :C<CTRL-D>
+
+And to get the list of all the possible arguments of the gdb "show" command
+(note the space after the word "show"): >
+
+    :Cshow <CTRL-D>
 
 See also the 'wildmenu' option. With this option, the possible matches are
 shown just above the command line and can be selected with the arrow keys.
 
-The first argument completion of a |Ccommand| may be done on a file name or on a
-list. For example with gdb, the following command lists all the gdb help
-items: >
-
-    :Chelp <C-D>
-
-The first argument completion of the |C| command is the list of all the debugger
-commands. For example, to list all the debugger commands (note the space after
-the |C|): >
-
-    :C <C-D>
+Full |gdb-completion| is available on Vim command line after gdb has been
+started by the first pyclewn command.
 
 
 Command line search:
@@ -622,22 +614,21 @@ useful when the program to debug is the result of multiple compilation units
 located in different directories.
 
 
-                                                    *Csymcompletion*
-Symbols completion:
--------------------
-The gdb <break> and <clear> commands are set initially with file name
-completion. This can be changed to completion matching the symbols of the
-program being debugged, after running the |Csymcompletion| command. This is a
-pyclewn command.
+                                                    *gdb-completion*
+Completion:
+-----------
+Full |gdb-completion| is available on Vim command line after gdb has been
+started by the first pyclewn command and when gdb is not busy, i.e. the
+debuggee *must* be stopped.
 
-To minimize the number of loaded symbols and to avoid fetching the shared
-libraries symbols, run the Csymcompletion command after the file is loaded
-with the gdb <file> command, and before the program is run.
-
-Note: The <break> and <clear> filename completion is not the same as gdb file
-name completion for these two commands. Gdb uses the symbols found in the
-program file to debug, while pyclewn uses only the file system.
-
+There is a catch. After a debugging session has been stopped by a ":Cquit"
+command, there is no gdb program running and completion does not work for the
+first command, the one that is used to spawn gdb. To workaround this problem,
+start the new session with ":Cmapkeys" or a gdb command that does nothing such
+as ":Cecho". This will spawn gdb and completion is now available for all
+commands. Note that this problem does not occur for the first debugging
+session, only after a ":Cquit" (because the first session comes with a set of
+static completions and use Vim file completion).
 
                                                     *gdb-balloon*
 Balloon evaluation:
@@ -744,9 +735,6 @@ commands that are listed here:
                      running program that is being debugged; only with gdb,
                      and when pyclewn and gdb communicate over a pseudo
                      terminal.
-
-    *|Csymcompletion|populate the break and clear commands with symbols
-                     completion (only with gdb).
 
     * Cunmapkeys     unmap the pyclewn keys, this Vim command does not invoke
                      pyclewn.

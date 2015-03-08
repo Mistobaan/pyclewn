@@ -67,7 +67,7 @@ VIM_SCRIPT_FIXED = r"""
 let s:cpo_save=&cpo
 set cpo&vim
 
-function <SID>goto_breakpoint()
+function! <SID>goto_breakpoint()
     let l:line = getline(".")
     let l:regexp = '^\(.*\) at \(.\+\):\(\d\+\) <\(.\+\)>$'
     let l:lnum = substitute(l:line, l:regexp , '\3', "")
@@ -79,7 +79,7 @@ function <SID>goto_breakpoint()
     endif
 endfunction
 
-function <SID>goto_frame()
+function! <SID>goto_frame()
     let l:line = getline(".")
     let l:regexp = '^\([ *] \)#\(\d\+\).*$'
     let l:id = substitute(l:line, l:regexp , '\2', "")
@@ -93,7 +93,7 @@ function <SID>goto_frame()
     endif
 endfunction
 
-function <SID>goto_thread()
+function! <SID>goto_thread()
     let l:line = getline(".")
     let l:regexp = '^\([ *] \)\(\d\+\).*$'
     let l:thread = substitute(l:line, l:regexp , '\2', "")
@@ -119,7 +119,7 @@ let s:bufLen = 0
 " Build the list as an hash of active buffers
 " This is the list of buffers loaded on startup,
 " that must be advertized to pyclewn
-function s:BuildList()
+function! s:BuildList()
     let wincount = winnr("$")
     let index = 1
     while index <= wincount
@@ -130,7 +130,7 @@ function s:BuildList()
 endfunction
 
 " Return true when the buffer is in the list, and remove it
-function s:InBufferList(pathname)
+function! s:InBufferList(pathname)
     if s:bufLen && has_key(s:bufList, a:pathname)
         unlet s:bufList[a:pathname]
         let s:bufLen = len(s:bufList)
@@ -148,7 +148,7 @@ function! s:PrintBufferList()
 endfunction
 
 " Send the open/close event for this clewn buffer.
-function s:bufwin_event(fullname, state)
+function! s:bufwin_event(fullname, state)
     let l:regexp = '^(clewn)_\(.\+\)$'
     let l:name = substitute(a:fullname, l:regexp , '\1', "")
     if l:name == a:fullname
@@ -162,7 +162,7 @@ function s:bufwin_event(fullname, state)
 endfunction
 
 " Popup gdb console on pyclewn mapped keys.
-function s:mapkeys()
+function! s:mapkeys()
     call s:nbcommand("mapkeys")
 endfunction
 
@@ -202,7 +202,7 @@ BUFFERLIST_AUTOCMD = """
 
 FUNCTION_NBCOMMAND = """
 " Run the nbkey netbeans Vim command.
-function s:nbcommand(...)
+function! s:nbcommand(...)
     if !has("netbeans_enabled")
         echohl ErrorMsg
         echo "Error: netbeans is not connected."
@@ -228,7 +228,7 @@ endfunction
 
 FUNCTION_NBCOMMAND_RESTRICT = """
 " Run the nbkey netbeans Vim command.
-function s:nbcommand(...)
+function! s:nbcommand(...)
     if bufname("%") == ""
         echohl ErrorMsg
         echo "Cannot run a pyclewn command on the '[No Name]' buffer."
@@ -865,8 +865,6 @@ class Debugger(object):
             cmd, args = (lambda a, b='': (a, b))(*mapping.split(None, 1))
 
         if not self.started:
-            if cmd == 'quit':
-                return
             self._start()
 
         try:

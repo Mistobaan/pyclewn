@@ -68,13 +68,15 @@ endfunction
 "-------------------   END AUTOLOAD FUNCTIONS   -------------------
 
 " The '(clewn)_empty' buffer is used here to workaround the problem that
-" BufWinLeave auto commands are never triggered when the clewn buffer is loaded
-" in a window whose current buffer is a netbeans created file.
+" BufWinLeave auto commands are not correctly triggered when the clewn buffer is
+" loaded while the buffer list is empty and an autocommand splits the buffer's
+" window. This is fixed by Vim patch 7-4-645.
 function s:create_window(name, location)
     if a:name == "(clewn)_console"
         " When the buffer list is empty, do not split the window.
         if bufname("%") == ""
             exe "edit (clewn)_empty"
+            setlocal nobuflisted
         else
             call s:split_clewnbuffer(a:name, a:location)
         endif
@@ -118,6 +120,7 @@ function s:create_window(name, location)
             4split
         endif
         exe "edit (clewn)_empty"
+        setlocal nobuflisted
         vsplit | vsplit
     endif
 

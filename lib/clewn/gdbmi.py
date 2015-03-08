@@ -86,9 +86,6 @@ def keyval_pattern(attributes, comment=''):
     return '(' + '|'.join(attributes) + ')=' + misc.QUOTED_STRING
 
 # regexp
-RE_COMPLETION = r'^break\s*(?P<sym>[\w:]*)(?P<sig>\(.*\))?(?P<rest>.*)$'    \
-                r'# break symbol completion'
-
 RE_EVALUATE = r'^done,value="(?P<value>.*)"$'                               \
               r'# result of -data-evaluate-expression'
 
@@ -155,7 +152,6 @@ RE_VARUPDATE = keyval_pattern(VARUPDATE_ATTRIBUTES,
             '[{name="var3.key",in_scope="true",type_changed="false"}]')
 
 # compile regexps
-re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_evaluate = re.compile(RE_EVALUATE, re.VERBOSE)
 re_dict_list = re.compile(RE_DICT_LIST, re.VERBOSE)
 re_varcreate = re.compile(RE_VARCREATE, re.VERBOSE)
@@ -854,11 +850,12 @@ class Command(object):
 class CliCommand(Command):
     """All cli commands."""
 
-    def sendcmd(self, cmd):
+    def sendcmd(self, cmd, verbose=True):
         """Send a cli command."""
         if not self.gdb.accepting_cmd():
-            self.gdb.console_print(
-                    "gdb busy: command discarded, please retry\n")
+            if verbose:
+                self.gdb.console_print(
+                        "gdb busy: command discarded, please retry\n")
             return False
 
         self.gdb.gdb_busy = True
@@ -888,51 +885,41 @@ class CliCommandNoPrompt(CliCommand):
     """The prompt is printed by one of the OobCommands."""
     pass
 
-class CompleteBreakCommand(CliCommand):
-    """CliCommand sent to get the symbols completion list."""
+class CompleteCommand(CliCommand):
+    """Get the gdb completion."""
 
-    def sendcmd(self, cmd=''):
+    def sendcmd(self, args):
         """Send the gdb command."""
-        if not CliCommand.sendcmd(self, 'complete break '):
-            self.handle_strrecord('')
-            return False
-        return True
+        # Set the prefix to remove from gdb answer.
+        arglead = args.rsplit(None, 1)
+        if len(arglead) != 2:
+            # A gdb command terminated with white space(s) else a completion
+            # whith an empty command such as 'C brea'.
+            self.prefix = args if len(args.rstrip()) != len(args) else ''
+        else:
+            idx = args.rfind(arglead[1])
+            self.prefix = args[:idx]
+
+        if not CliCommand.sendcmd(self, 'complete %s' % args, verbose=False):
+            with open(self.gdb.globaal.f_ack.name, 'w') as f:
+                f.write('Nok\n')
+
+    def handle_result(self, result):
+        if result == 'done':
+            plen = len(self.prefix)
+            completion = '\n'.join(l[plen:]
+                                   for l in self.stream_record.splitlines()
+                                   if l.find(self.prefix) == 0)
+
+            with open(self.gdb.globaal.f_clist.name, 'w') as f:
+                f.write(completion)
+
+            with open(self.gdb.globaal.f_ack.name, 'w') as f:
+                result = 'Ok\n' if completion else 'Nok\n'
+                f.write(result)
 
     def handle_strrecord(self, stream_record):
-        """Process the gdb/mi stream records."""
-        f_ack = None
-        if not stream_record:
-            with open(self.gdb.globaal.f_ack.name, 'w') as f_ack:
-                f_ack.write('Nok\n')
-            self.gdb.console_print(
-                    'Break and clear completion not changed.\n')
-        else:
-            invalid = 0
-            with open(self.gdb.globaal.f_clist.name, 'w') as f_clist:
-                completion_list = stream_record.splitlines()
-                for result in completion_list:
-                    matchobj = re_completion.match(result)
-                    if matchobj:
-                        symbol = matchobj.group('sym')
-                        signature = matchobj.group('sig')
-                        rest = matchobj.group('rest')
-                        if symbol and not rest:
-                            if signature:
-                                symbol += signature
-                            f_clist.write('%s\n' % symbol)
-                        else:
-                            invalid += 1
-                            warning('invalid symbol completion: %s', result)
-                    else:
-                        error('invalid symbol completion: %s', result)
-                        break
-                else:
-                    with open(self.gdb.globaal.f_ack.name, 'w') as f_ack:
-                        f_ack.write('Ok\n')
-                    info('%d symbols fetched for break and clear completion',
-                            len(completion_list) - invalid)
-        if not f_ack:
-            self.gdb.console_print('Failed to fetch symbols completion.\n')
+        self.stream_record += stream_record
 
 class MiCommand(Command):
     """The MiCommand abstract class.

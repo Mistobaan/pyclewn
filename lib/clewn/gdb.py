@@ -34,7 +34,7 @@ set height 0
 set width 0
 set annotate 1
 """
-SYMBOL_COMPLETION_TIMEOUT = 20 # seconds
+COMPLETION_TIMEOUT = 10 # seconds
 SETFMTVAR_FORMATS = ('binary', 'decimal', 'hexadecimal', 'octal', 'natural')
 
 # list of key mappings, used to build the .pyclewn_keys.gdb file
@@ -80,75 +80,10 @@ re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_mirecord = re.compile(RE_MIRECORD, re.VERBOSE)
 re_anno_1 = re.compile(RE_ANNO_1, re.VERBOSE)
 
-SYMCOMPLETION = """
-" print a warning message on vim command line
-function s:message(msg)
-    echohl WarningMsg
-    echon a:msg
-    let v:warningmsg = a:msg
-    echohl None
-endfunction
-
-function s:prompt(msg)
-    call s:message(a:msg)
-    echon "\\nPress ENTER to continue."
-    call getchar()
-endfunction
-
-" the symbols completion list
-let s:symbols= ""
-
-" the custom complete function
-function s:Arg_break(A, L, P)
-    return s:symbols
-endfunction
-
-" get the symbols completion list and define the new
-" break and clear vim user defined commands
-function s:symcompletion()
-    call writefile([], ${ack_tmpfile})
-    let start = localtime()
-    let loadmsg = "\\rLoading gdb symbols"
-    call s:nbcommand("symcompletion")
-    while 1
-        let loadmsg = loadmsg . "."
-        call s:message(loadmsg)
-
-        " pyclewn signals that complete_tmpfile is ready for reading
-        if getfsize(${ack_tmpfile}) > 0
-            " ignore empty list
-            if join(readfile(${ack_tmpfile}), "") != "Ok"
-                call s:prompt("\\nNo symbols found.")
-                break
-            endif
-            let s:symbols_list = readfile(${complete_tmpfile})
-            let s:symbols= join(s:symbols_list, "\\n")
-            command! -bar -nargs=* -complete=custom,s:Arg_break     \
-                ${pre}break call s:nbcommand("break", <f-args>)
-            command! -bar -nargs=* -complete=custom,s:Arg_break     \
-                ${pre}clear call s:nbcommand("clear", <f-args>)
-            call s:prompt("\\n" . len(s:symbols_list)               \
-                    . " symbols fetched for break and clear completion.")
-            break
-        endif
-
-        " time out has expired
-        if localtime() - start > ${complete_timeout}
-            call s:prompt("\\nCannot get symbols completion list.")
-            break
-        endif
-        sleep 300m
-    endwhile
-endfunction
-
-command! -bar ${pre}symcompletion call s:symcompletion()
-
-"""
-
 SEQUENCES = r"""
 " Implement the 'define', 'commands' and 'document' gdb commands.
 
-function s:error(msg)
+function! s:error(msg)
     echohl ErrorMsg
     echo a:msg
     call inputsave()
@@ -157,7 +92,7 @@ function s:error(msg)
     echohl None
 endfunction
 
-function s:source_commands(gdb_cmd, prompt)
+function! s:source_commands(gdb_cmd, prompt)
     " input user commands
     let l:prompt = a:prompt . ", one per line.\n"
     let l:prompt .= "End with a line saying just 'end'.\n"
@@ -184,7 +119,7 @@ function s:source_commands(gdb_cmd, prompt)
     exe "${pre}source " . l:tmpfile
 endfunction
 
-function s:define(...)
+function! s:define(...)
     if a:0 != 1
         call s:error("One argument required (name of command to define).")
         return
@@ -193,7 +128,7 @@ function s:define(...)
     \       "Type commands for definition of '" . a:1 . "'")
 endfunction
 
-function s:document(...)
+function! s:document(...)
     if a:0 != 1
         call s:error("One argument required (name of command to document).")
         return
@@ -202,7 +137,7 @@ function s:document(...)
     \       "Type documentation for '" . a:1 . "'")
 endfunction
 
-function s:commands(...)
+function! s:commands(...)
     if a:0 == 0
         call s:error("Argument required (one or more breakpoint numbers).")
         return
@@ -222,6 +157,36 @@ endfunction
 command! -bar -nargs=* ${pre}define call s:define(<f-args>)
 command! -bar -nargs=* ${pre}document call s:document(<f-args>)
 command! -bar -nargs=* ${pre}commands call s:commands(<f-args>)
+
+"""
+
+GDB_COMPLETE = """
+function! s:GdbComplete(arglead, cmdline, curpos)
+    call writefile([], ${ack_tmpfile})
+    let l:start = localtime()
+    if stridx(a:cmdline, "${pre}") == 0
+        let l:cmdline = a:cmdline[1:]
+    else
+        let l:cmdline = a:cmdline
+    endif
+    exe "nbkey complete " . l:cmdline
+
+    while 1
+        " Pyclewn signals that complete_tmpfile is ready for reading.
+        if getfsize(${ack_tmpfile}) > 0
+            if join(readfile(${ack_tmpfile}), "") != "Ok"
+                return []
+            endif
+            return readfile(${complete_tmpfile})
+        endif
+
+        " The time out has expired.
+        if localtime() - l:start > ${completion_timeout}
+            return []
+        endif
+        sleep 100m
+    endwhile
+endfunction
 
 """
 
@@ -339,16 +304,14 @@ class GlobalSetup(misc.Singleton):
             list of gdb commands that cause the frame sign to be turned off
         illegal_setargs: tuple
             list of illegal arguments to the gdb set command
-        symbol_complt: list
-            list of gdb commands with symbol completion
-            they are initialized with file name completion and are set to
-            symbol completion after running the Csymcompletion pyclewn command
 
     Instance attributes:
         gdbname: str
             gdb program name to execute
         cmds: dict
             See the description of the Debugger 'cmds' attribute dictionary.
+        gdb_cmds: list
+            List all gdb commands, excluding illegal and dash commands
         f_ack: closed file object
             temporary file used to acknowledge the end of writing to f_clist
         f_clist: closed file object
@@ -381,6 +344,8 @@ class GlobalSetup(misc.Singleton):
         ]
     illegal_cmds = [
         '-', '+', '<', '>', '!',
+        # 'complete' is an illegal user command, but it is used by
+        # s:GdbComplete() to implement the completion.
         'complete',
         'edit',
         'end',
@@ -405,10 +370,6 @@ class GlobalSetup(misc.Singleton):
         'height',
         'width',
         )
-    symbol_complt = [
-        'break',
-        'clear',
-        ]
 
     def init(self, gdbname, pyclewn_cmds, vim_implementation):
         """Singleton initialisation."""
@@ -417,10 +378,11 @@ class GlobalSetup(misc.Singleton):
         self.vim_implementation = vim_implementation
 
         self.cmds = {}
+        self.gdb_cmds = ['']
         self.illegal_cmds_prefix = []
         self.run_cmds_prefix = []
         self.illegal_setargs_prefix = []
-        self.gdb_cmds()
+        self.build_cmds()
 
         self.f_ack = misc.tmpfile('gdb')
         self.f_clist = misc.tmpfile('gdb')
@@ -430,22 +392,23 @@ class GlobalSetup(misc.Singleton):
         self.pyclewn_cmds = pyclewn_cmds
         self.vim_implementation = vim_implementation
 
-    def gdb_cmds(self):
-        """Get the completion lists from gdb and build the GlobalSetup lists.
+    def build_cmds(self):
+        """Build the completion lists from gdb and build the GlobalSetup lists.
 
-        Build the following lists:
-            cmds: gdb commands
+        Build the following lists and dict:
+            cmds: all commands
+            gdb_cmds: gdb commands
             illegal_cmds_prefix
             run_cmds_prefix
             illegal_setargs_prefix
 
         """
-        dash_cmds = []  # list of gdb commands including a '-'
+        dash_cmds = []  # List of gdb commands including a '-'.
         firstarg_complt = ''
 
-        nocomplt_cmds = (self.illegal_cmds + self.filename_complt +
-                                                        self.symbol_complt)
-        # get the list of gdb commands
+        nocomplt_cmds = self.illegal_cmds + self.filename_complt
+
+        # Get the list of gdb commands.
         for cmd in (x[2:-3] for x in gdb_batch(
                                 self.gdbname, 'complete').splitlines()
                                 if x.startswith('~"') and x.endswith(r'\n"')):
@@ -453,6 +416,9 @@ class GlobalSetup(misc.Singleton):
                 continue
             else:
                 cmd = cmd.split()[0]
+
+            if cmd not in self.illegal_cmds and '-' not in cmd:
+                self.gdb_cmds.append(cmd)
 
             if cmd in nocomplt_cmds:
                 continue
@@ -462,7 +428,7 @@ class GlobalSetup(misc.Singleton):
                 self.cmds[cmd] = []
                 firstarg_complt += 'complete %s \n' % cmd
 
-        # get first arg completion commands
+        # Get first arg completion commands.
         for result in (x[2:-3] for x in gdb_batch(
                                 self.gdbname, firstarg_complt).splitlines()
                                 if x.startswith('~"') and x.endswith(r'\n"')):
@@ -478,16 +444,14 @@ class GlobalSetup(misc.Singleton):
             else:
                 error('invalid completion returned by gdb: %s', result)
 
-        # add file name completion commands
+        # Add file name completion commands.
         for cmd in self.filename_complt:
             self.cmds[cmd] = None
-        for cmd in self.symbol_complt:
-            self.cmds[cmd] = None
 
-        # add commands including a '-' and that can't be made to a vim command
+        # Add commands including a '-' and that can't be made to a vim command.
         self.cmds[''] = dash_cmds
 
-        # add pyclewn commands
+        # Add pyclewn commands.
         for cmd, completion in self.pyclewn_cmds.items():
             if cmd and cmd != 'help':
                 self.cmds[cmd] = completion
@@ -501,8 +465,11 @@ class GlobalSetup(misc.Singleton):
         self.run_cmds_prefix = {misc.smallpref_inlist(x, keys)
                                             for x in self.run_cmds}
 
+        # Note that once the first debug session is started and full gdb
+        # completion is available, then completion on the illegal arguments to
+        # the set command becomes available.
         if 'set' in self.cmds and self.cmds['set']:
-            # remove the illegal arguments
+            # Remove the illegal arguments.
             self.cmds['set'] = list(
                                     set(self.cmds['set'])
                                     .difference(set(self.illegal_setargs)))
@@ -581,7 +548,6 @@ class Gdb(debugger.Debugger, Process):
                 'setfmtvar': (),
                 'project': True,
                 'sigint': (),
-                'symcompletion': (),
                 'define': (),
                 'document': (),
                 'commands': (),
@@ -606,6 +572,7 @@ class Gdb(debugger.Debugger, Process):
         self.globaal = GlobalSetup(self.pgm, self.pyclewn_cmds,
                                                 self.vim_implementation)
         self.cmds = self.globaal.cmds
+        self.gdb_cmds = self.globaal.gdb_cmds
         self.results = gdbmi.Result()
         self.oob_list = gdbmi.OobList(self)
         self.cli = gdbmi.CliCommand(self)
@@ -671,20 +638,34 @@ class Gdb(debugger.Debugger, Process):
         return argv
 
     def vim_script_custom(self, prefix):
-        """Return gdb specific vim statements to add to the vim script.
-
-        This is used to load the symbols completion list to the break and clear
-        gdb commands.
-
-        """
-        symcompletion = string.Template(SYMCOMPLETION).substitute(pre=prefix,
-                        ack_tmpfile=misc.quote(self.globaal.f_ack.name),
-                        complete_tmpfile=misc.quote(self.globaal.f_clist.name),
-                        complete_timeout=SYMBOL_COMPLETION_TIMEOUT)
-
+        """Return gdb specific vim statements to add to the vim script."""
         sequences = string.Template(SEQUENCES).substitute(pre=prefix)
 
-        return symcompletion + sequences
+        gdb_complete = string.Template(GDB_COMPLETE).substitute(pre=prefix,
+                        ack_tmpfile=misc.quote(self.globaal.f_ack.name),
+                        complete_tmpfile=misc.quote(self.globaal.f_clist.name),
+                        completion_timeout=COMPLETION_TIMEOUT)
+
+        # Initialize full gdb completion only once, after the first debugging
+        # session has been started.
+        completion = [
+              'autocmd clewn BufAdd (clewn)_* call s:init_gdb_completion()',
+              'let s:gdb_completion_done = 0',
+              'function s:init_gdb_completion()',
+                  'if s:gdb_completion_done',
+                  '    return',
+                  'endif',
+                  'let s:gdb_completion_done = 1',
+             ]
+        for cmd in self.gdb_cmds:
+            completion.append(
+                  'command! -bar -nargs=* '
+                  '-complete=customlist,s:GdbComplete %s%s '
+                  'call s:nbcommand("%s", <f-args>)'
+                  % (prefix, cmd, cmd))
+        completion.append('endfunction\n')
+
+        return sequences + gdb_complete + '\n'.join(completion)
 
     def start(self):
         """Start gdb."""
@@ -857,7 +838,8 @@ class Gdb(debugger.Debugger, Process):
                 self.results.clear()
 
             if not isinstance(self.lastcmd, (gdbmi.CliCommandNoPrompt,
-                                                        gdbmi.ShowBalloon)):
+                                             gdbmi.ShowBalloon,
+                                             gdbmi.CompleteCommand)):
                 self.doprompt = True
 
             self.lastcmd = None
@@ -960,10 +942,10 @@ class Gdb(debugger.Debugger, Process):
         if args:
             self.curcmdline = '%s %s' % (self.curcmdline, args)
 
-        # echo the cmd, but not the first one and when not busy
-        if self.firstcmdline is not None and cmd != 'sigint':
-            if self.accepting_cmd():
-                self.console_print('%s\n', self.curcmdline)
+        # Echo the cmd, but not the first one and when not busy.
+        if (self.firstcmdline is not None and cmd != 'sigint' and
+                cmd != 'complete' and self.accepting_cmd()):
+            self.console_print('%s\n', self.curcmdline)
 
     def post_cmd(self, cmd, args):
         """The method called after each invocation of a 'cmd_xxx' method."""
@@ -1026,9 +1008,9 @@ class Gdb(debugger.Debugger, Process):
             self.inferiortty(set_inferior_tty_cb)
         self.print_prompt()
 
-    def cmd_symcompletion(self, *args):
-        """Populate the break and clear commands with symbols completion."""
-        gdbmi.CompleteBreakCommand(self).sendcmd()
+    def cmd_complete(self, cmd, args):
+        """Perform completion as requested by s:GdbComplete()."""
+        gdbmi.CompleteCommand(self).sendcmd(args)
 
     def cmd_define(self, cmd, *args):
         """Define a new command name.  Command name is argument."""
