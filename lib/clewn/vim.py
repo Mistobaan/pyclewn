@@ -333,7 +333,8 @@ class Vim(object):
             critical('cannot start Vim'); raise
 
     def setup(self):
-        info('platform: %s' % platform.platform())
+        info('platform: %s', platform.platform())
+        info('Python version: %s', ' '.join(sys.version.split('\n')))
 
         # Get the connection parameters.
         connection_defaults = CONNECTION_DEFAULTS[self.module]
