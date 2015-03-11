@@ -44,9 +44,9 @@ if PY26 or (PY3 and not PY32):
 
 def get_vimball():
     """Create the vimball in the current directory."""
-    from pkg_resources import resource_string
+    from pkgutil import get_data
     vmb = 'pyclewn-%s.vmb' % __version__
-    vimball = resource_string(__name__, os.path.join('runtime', vmb))
+    vimball = get_data(__name__, os.path.join('runtime', vmb))
     with open(vmb, 'wb') as f:
         f.write(vimball)
     print('Creation of', os.path.abspath(vmb))

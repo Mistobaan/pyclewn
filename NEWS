@@ -4,7 +4,7 @@ News
 Pyclewn 2.1
 -----------
 
-.. March 7, 2015
+.. March 11, 2015
 
 New feature
 ^^^^^^^^^^^
@@ -16,6 +16,8 @@ Bug fixes
 
 * Issue #6: fix the crash in pyclewn versions 2.0 and 2.0.1 when trying to
   attach to a remote gdb.
+
+* Retrieving the installation vimball does not require anymore setuptools.
 
 Pyclewn 2.0.1
 -------------
