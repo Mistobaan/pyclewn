@@ -140,7 +140,8 @@ def main():
         'packages': [str('clewn')],
         'package_dir':  {str(''): str('lib')},
         'package_data': {str('clewn'):
-                            ['runtime/pyclewn-%s.vmb' % __version__]},
+                            ['*.vim',
+                             'runtime/pyclewn-%s.vmb' % __version__]},
 
         # meta-data
         'name': 'pyclewn',

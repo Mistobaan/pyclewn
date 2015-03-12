@@ -13,8 +13,8 @@ from io import open
 import os
 import subprocess
 import re
-import string
 import time
+import pkgutil
 import collections
 from itertools import takewhile
 
@@ -36,6 +36,8 @@ set annotate 1
 """
 COMPLETION_TIMEOUT = 10 # seconds
 SETFMTVAR_FORMATS = ('binary', 'decimal', 'hexadecimal', 'octal', 'natural')
+COMPLETION = ('command! -bar -nargs=* -complete=customlist,s:GdbComplete' +
+              debugger.COMPLETION_SUFFIX)
 
 # list of key mappings, used to build the .pyclewn_keys.gdb file
 #     key : (mapping, comment)
@@ -79,116 +81,6 @@ RE_ANNO_1 = r'^[~@&]"\\032\\032([a-zA-Z]:|)[^:]+:[^:]+:[^:]+:[^:]+:[^:]+$'  \
 re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_mirecord = re.compile(RE_MIRECORD, re.VERBOSE)
 re_anno_1 = re.compile(RE_ANNO_1, re.VERBOSE)
-
-SEQUENCES = r"""
-" Implement the 'define', 'commands' and 'document' gdb commands.
-
-function! s:error(msg)
-    echohl ErrorMsg
-    echo a:msg
-    call inputsave()
-    call input("Press the <Enter> key to continue.")
-    call inputrestore()
-    echohl None
-endfunction
-
-function! s:source_commands(gdb_cmd, prompt)
-    " input user commands
-    let l:prompt = a:prompt . ", one per line.\n"
-    let l:prompt .= "End with a line saying just 'end'.\n"
-    let l:prompt .= "These commands are then sourced by the"
-    \               . " 'Csource' gdb command.\n"
-    let l:prompt .= ">"
-
-    let l:commands = [a:gdb_cmd]
-    call inputsave()
-    while 1
-        let l:cmd = input(l:prompt)
-        let l:commands += [l:cmd]
-        echo "\n"
-        let l:prompt = ">"
-        if substitute(l:cmd, " ", "", "g") == "end"
-            break
-        endif
-    endwhile
-    call inputrestore()
-
-    " store them in a file and source the file
-    let l:tmpfile = tempname()
-    call writefile(commands, l:tmpfile)
-    exe "${pre}source " . l:tmpfile
-endfunction
-
-function! s:define(...)
-    if a:0 != 1
-        call s:error("One argument required (name of command to define).")
-        return
-    endif
-    call s:source_commands("define " . a:1,
-    \       "Type commands for definition of '" . a:1 . "'")
-endfunction
-
-function! s:document(...)
-    if a:0 != 1
-        call s:error("One argument required (name of command to document).")
-        return
-    endif
-    call s:source_commands("document " . a:1,
-    \       "Type documentation for '" . a:1 . "'")
-endfunction
-
-function! s:commands(...)
-    if a:0 == 0
-        call s:error("Argument required (one or more breakpoint numbers).")
-        return
-    endif
-    for bp in a:000
-        let l:x = "" + bp
-        if l:x == 0
-            call s:error("Not a breakpoint number: '" . bp . "'")
-            return
-        endif
-    endfor
-    let l:bplist = join(a:000)
-    call s:source_commands("command " . l:bplist,
-    \       "Type commands for breakpoint(s) " . l:bplist . "")
-endfunction
-
-command! -bar -nargs=* ${pre}define call s:define(<f-args>)
-command! -bar -nargs=* ${pre}document call s:document(<f-args>)
-command! -bar -nargs=* ${pre}commands call s:commands(<f-args>)
-
-"""
-
-GDB_COMPLETE = """
-function! s:GdbComplete(arglead, cmdline, curpos)
-    call writefile([], ${ack_tmpfile})
-    let l:start = localtime()
-    if stridx(a:cmdline, "${pre}") == 0
-        let l:cmdline = a:cmdline[1:]
-    else
-        let l:cmdline = a:cmdline
-    endif
-    exe "nbkey complete " . l:cmdline
-
-    while 1
-        " Pyclewn signals that complete_tmpfile is ready for reading.
-        if getfsize(${ack_tmpfile}) > 0
-            if join(readfile(${ack_tmpfile}), "") != "Ok"
-                return []
-            endif
-            return readfile(${complete_tmpfile})
-        endif
-
-        " The time out has expired.
-        if localtime() - l:start > ${completion_timeout}
-            return []
-        endif
-        sleep 100m
-    endwhile
-endfunction
-
-"""
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('gdb')
@@ -639,33 +531,20 @@ class Gdb(debugger.Debugger, Process):
 
     def vim_script_custom(self, prefix):
         """Return gdb specific vim statements to add to the vim script."""
-        sequences = string.Template(SEQUENCES).substitute(pre=prefix)
-
-        gdb_complete = string.Template(GDB_COMPLETE).substitute(pre=prefix,
-                        ack_tmpfile=misc.quote(self.globaal.f_ack.name),
-                        complete_tmpfile=misc.quote(self.globaal.f_clist.name),
-                        completion_timeout=COMPLETION_TIMEOUT)
-
-        # Initialize full gdb completion only once, after the first debugging
-        # session has been started.
-        completion = [
-              'autocmd clewn BufAdd (clewn)_* call s:init_gdb_completion()',
-              'let s:gdb_completion_done = 0',
-              'function s:init_gdb_completion()',
-                  'if s:gdb_completion_done',
-                  '    return',
-                  'endif',
-                  'let s:gdb_completion_done = 1',
-             ]
+        commands = []
+        substitute = {'pre': prefix}
         for cmd in self.gdb_cmds:
-            completion.append(
-                  'command! -bar -nargs=* '
-                  '-complete=customlist,s:GdbComplete %s%s '
-                  'call s:nbcommand("%s", <f-args>)'
-                  % (prefix, cmd, cmd))
-        completion.append('endfunction\n')
+            substitute['cmd'] = cmd
+            commands.append(COMPLETION % substitute)
 
-        return sequences + gdb_complete + '\n'.join(completion)
+        substitute = {
+                'pre': prefix,
+                'ack_tmpfile': misc.quote(self.globaal.f_ack.name),
+                'complete_tmpfile': misc.quote(self.globaal.f_clist.name),
+                'completion_timeout': COMPLETION_TIMEOUT,
+                'commands': '\n'.join(commands),
+                     }
+        return pkgutil.get_data(__name__, 'gdb.vim').decode() % substitute
 
     def start(self):
         """Start gdb."""

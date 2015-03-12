@@ -4,6 +4,7 @@ include INSTALL
 include MANIFEST.in
 include lib/__init__.py
 include lib/clewn/runtime/pyclewn-*
+include lib/clewn/*.vim
 include foobar.py
 include .pdbrc
 include testsuite/*.py

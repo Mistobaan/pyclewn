@@ -31,6 +31,7 @@ import asyncio
 import time
 import logging
 import string
+import pkgutil
 import copy
 import subprocess
 from abc import ABCMeta, abstractmethod
@@ -38,6 +39,16 @@ from abc import ABCMeta, abstractmethod
 from . import __version__, ClewnError, misc, netbeans
 
 BCKGROUND_JOB_DELAY = .200
+COMPLETION_SUFFIX = ' %(pre)s%(cmd)s call s:nbcommand("%(cmd)s", <f-args>)'
+NOCOMPLETION = 'command! -bar -nargs=*' + COMPLETION_SUFFIX
+FILECOMPLETION = 'command! -bar -nargs=* -complete=file' + COMPLETION_SUFFIX
+LISTCOMPLETION = \
+'command! -bar -nargs=* -complete=custom,s:Arg_%(cmd)s' + COMPLETION_SUFFIX
+ARGSLIST = '''
+function s:Arg_%(cmd)s(A, L, P)
+    return "%(args)s"
+endfunction
+'''
 
 RE_KEY =    \
     r'^\s*(?P<key>'                                                     \
@@ -61,213 +72,6 @@ RE_FILENAMELNUM = r'^(?P<name>\S+):(?P<lnum>\d+)$'                  \
 re_key = re.compile(RE_KEY, re.VERBOSE)
 re_comment = re.compile(RE_COMMENT, re.VERBOSE)
 re_filenamelnum = re.compile(RE_FILENAMELNUM, re.VERBOSE)
-
-VIM_SCRIPT_FIXED = r"""
-" Set 'cpo' option to its vim default value.
-let s:cpo_save=&cpo
-set cpo&vim
-
-function! <SID>goto_breakpoint()
-    let l:line = getline(".")
-    let l:regexp = '^\(.*\) at \(.\+\):\(\d\+\) <\(.\+\)>$'
-    let l:lnum = substitute(l:line, l:regexp , '\3', "")
-    if l:line != l:lnum
-        let l:fname = substitute(l:line, l:regexp , '\4', "")
-        if filereadable(l:fname)
-            call pyclewn#buffers#GotoBreakpoint(l:fname, l:lnum)
-        endif
-    endif
-endfunction
-
-function! <SID>goto_frame()
-    let l:line = getline(".")
-    let l:regexp = '^\([ *] \)#\(\d\+\).*$'
-    let l:id = substitute(l:line, l:regexp , '\2', "")
-    if l:line != l:id
-        let l:regexp = '^\([ *] \)#\(\d\+\).* at \(.\+\) <\(.\+\)>$'
-        let l:fname = substitute(l:line, l:regexp , '\4', "")
-        if l:line != l:fname && filereadable(l:fname)
-            call pyclewn#buffers#GotoFrame(l:fname)
-        endif
-        exe "Cframe " . l:id
-    endif
-endfunction
-
-function! <SID>goto_thread()
-    let l:line = getline(".")
-    let l:regexp = '^\([ *] \)\(\d\+\).*$'
-    let l:thread = substitute(l:line, l:regexp , '\2', "")
-    if l:line != l:thread
-        " Search for a source code window.
-        let l:count = winnr("$")
-        let l:nr = 1
-        while l:nr <= l:count
-            if bufname(winbufnr(l:nr)) !~# "^(clewn)_"
-                exe l:nr . "wincmd w"
-                break
-            endif
-            let l:nr = l:nr + 1
-        endwhile
-
-        exe "Cthread " . l:thread
-    endif
-endfunction
-
-let s:bufList = {}
-let s:bufLen = 0
-
-" Build the list as an hash of active buffers
-" This is the list of buffers loaded on startup,
-" that must be advertized to pyclewn
-function! s:BuildList()
-    let wincount = winnr("$")
-    let index = 1
-    while index <= wincount
-        let s:bufList[expand("#". winbufnr(index) . ":p")] = 1
-        let index = index + 1
-    endwhile
-    let s:bufLen = len(s:bufList)
-endfunction
-
-" Return true when the buffer is in the list, and remove it
-function! s:InBufferList(pathname)
-    if s:bufLen && has_key(s:bufList, a:pathname)
-        unlet s:bufList[a:pathname]
-        let s:bufLen = len(s:bufList)
-        return 1
-    endif
-    return 0
-endfunction
-
-" Function that can be used for testing
-" Remove 's:' to expand function scope to runtime
-function! s:PrintBufferList()
-    for key in keys(s:bufList)
-       echo key
-    endfor
-endfunction
-
-" Send the open/close event for this clewn buffer.
-function! s:bufwin_event(fullname, state)
-    let l:regexp = '^(clewn)_\(.\+\)$'
-    let l:name = substitute(a:fullname, l:regexp , '\1', "")
-    if l:name == a:fullname
-        return
-    endif
-
-    " Send the event, but not for the empty buffer.
-    if l:name != "empty"
-        exe "nbkey ClewnBuffer." . l:name . "." . a:state
-    endif
-endfunction
-
-" Popup gdb console on pyclewn mapped keys.
-function! s:mapkeys()
-    call s:nbcommand("mapkeys")
-endfunction
-
-"""
-
-AUTOCOMMANDS = """
-augroup clewn
-    autocmd!
-    autocmd BufEnter (clewn)_* silent! setlocal bufhidden=hide
-    autocmd BufEnter (clewn)_* silent! setlocal buftype=nofile
-    autocmd BufEnter (clewn)_* silent! setlocal noswapfile
-    autocmd BufEnter (clewn)_* silent! setlocal fileformat=unix
-    autocmd BufEnter (clewn)_* silent! setlocal expandtab
-    autocmd BufWinEnter (clewn)_* setlocal nowrap
-
-    ${bufferlist_autocmd}
-    autocmd BufWinEnter (clewn)_* silent! call s:bufwin_event(expand("<afile>"), "open")
-    autocmd BufWinLeave (clewn)_* silent! call s:bufwin_event(expand("<afile>"), "close")
-    autocmd BufWinEnter (clewn)_variables silent! setlocal syntax=clewn_variables
-    autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <CR> :exe "Cfoldvar " . line(".")<CR>
-    autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <2-Leftmouse> :exe "Cfoldvar " . line(".")<CR>
-    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <CR> :call <SID>goto_breakpoint()<CR>
-    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_breakpoint()<CR>
-    autocmd BufEnter (clewn)_backtrace nnoremap <buffer> <silent> <CR> :call <SID>goto_frame()<CR>
-    autocmd BufEnter (clewn)_backtrace nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_frame()<CR>
-    autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <CR> :call <SID>goto_thread()<CR>
-    autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_thread()<CR>
-    autocmd BufAdd (clewn)_* call pyclewn#buffers#CreateWindow(expand("<afile>"), "${location}")
-augroup END
-
-"""
-
-BUFFERLIST_AUTOCMD = """
-    autocmd VimEnter * silent! call s:BuildList()
-    autocmd BufWinEnter * silent! call s:InBufferList(expand("<afile>:p"))
-"""
-
-FUNCTION_NBCOMMAND = """
-" Run the nbkey netbeans Vim command.
-function! s:nbcommand(...)
-    if !has("netbeans_enabled")
-        echohl ErrorMsg
-        echo "Error: netbeans is not connected."
-        echohl None
-        return
-    endif
-
-    " Allow '' as first arg: the 'C' command followed by a mandatory parameter
-    if a:0 != 0
-        if a:1 != "" || (a:0 > 1 && a:2 != "")
-            " The buffer list is empty.
-            if bufname("%") == ""
-                call pyclewn#buffers#CreateWindow("${console}", "${location}")
-            endif
-            ${split_vars_buf}
-            let cmd = "nbkey " . join(a:000, ' ')
-            exe cmd
-        endif
-    endif
-endfunction
-
-"""
-
-FUNCTION_NBCOMMAND_RESTRICT = """
-" Run the nbkey netbeans Vim command.
-function! s:nbcommand(...)
-    if bufname("%") == ""
-        echohl ErrorMsg
-        echo "Cannot run a pyclewn command on the '[No Name]' buffer."
-        echo "Please edit a file first."
-        echohl None
-        return
-    endif
-
-    " Allow '' as first arg: the 'C' command followed by a mandatory parameter
-    if a:0 != 0
-        if a:1 != "" || (a:0 > 1 && a:2 != "")
-            " edit the buffer that was loaded on startup and call input() to
-            " give a chance for vim72 to process the putBufferNumber netbeans
-            " message in the idle loop before the call to nbkey
-            let l:currentfile = expand("%:p")
-            if s:InBufferList(l:currentfile)
-                exe "edit " . l:currentfile
-                echohl WarningMsg
-                echo "Files loaded on Vim startup must be registered with pyclewn."
-                echo "Registering " . l:currentfile . " with pyclewn."
-                call inputsave()
-                call input("Press the <Enter> key to continue.")
-                call inputrestore()
-                echohl None
-            endif
-            ${split_vars_buf}
-            let cmd = "nbkey " . join(a:000, ' ')
-            exe cmd
-        endif
-    endif
-endfunction
-
-"""
-
-SPLIT_VARS_BUF = """
-            if a:1 == "dbgvar"
-                call pyclewn#buffers#DbgvarSplit()
-            endif
-"""
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('dbg')
@@ -763,9 +567,32 @@ class Debugger(object):
         Return the file object of the vim script.
 
         """
-        # Create the vim script in a temporary file.
         options = self.vim.options
         prefix = options.prefix.capitalize()
+
+        commands = []
+        substitute = {'pre': prefix}
+        for cmd, completion in self._get_cmds().items():
+            substitute['cmd'] = cmd
+            if cmd in ('mapkeys', 'unmapkeys'):
+                commands.append(
+                    'command! -bar %(pre)s%(cmd)s call s:%(cmd)s()'
+                    % substitute)
+                continue
+
+            try:
+                iter(completion)
+            except TypeError:
+                commands.append(FILECOMPLETION % substitute)
+            else:
+                if not completion:
+                    commands.append(NOCOMPLETION % substitute)
+                else:
+                    commands.append(LISTCOMPLETION % substitute)
+                    substitute['args'] = '\\n'.join(completion)
+                    commands.append(ARGSLIST % substitute)
+
+        # Create the vim script in a temporary file.
         f = None
         try:
             if not options.editor:
@@ -778,73 +605,19 @@ class Debugger(object):
             else:
                 f = misc.TmpFile('vimscript')
 
-            f.write(VIM_SCRIPT_FIXED)
+            substitute = {
+                'pre': prefix,
+                'location': options.window,
+                'noname_fix': options.noname_fix,
+                'getLength_fix': netbeans.Netbeans.getLength_fix,
+                'console': netbeans.CONSOLE,
+                'mapkeys': ', '.join('"<' + k + '>"' for k in self.mapkeys),
+                'commands': '\n'.join(commands),
+                'debugger': self.vim_script_custom(prefix),
+                         }
+            f.write(pkgutil.get_data(__name__, 'debugger.vim').decode()
+                    % substitute)
 
-            # Vim autocommands.
-            bufferlist_autocmd = (BUFFERLIST_AUTOCMD if
-                                  options.noname_fix == '0' else '')
-            f.write(string.Template(AUTOCOMMANDS).substitute(
-                                    location=options.window,
-                                    bufferlist_autocmd=bufferlist_autocmd))
-
-            # unmapkeys function.
-            f.write('function s:unmapkeys()\n')
-            for key in self.mapkeys:
-                f.write('   try\n')
-                f.write('      unmap <%s>\n' % key)
-                f.write('   catch /.*/\n')
-                f.write('   endtry\n')
-            f.write('endfunction\n')
-
-            # Setup pyclewn vim user defined commands.
-            if options.noname_fix != '0':
-                function_nbcommand = FUNCTION_NBCOMMAND
-            else:
-                function_nbcommand = FUNCTION_NBCOMMAND_RESTRICT
-
-            split_vars_buf = (SPLIT_VARS_BUF if
-                              netbeans.Netbeans.getLength_fix != '0' else '')
-            f.write(string.Template(function_nbcommand).substitute(
-                                        console=netbeans.CONSOLE,
-                                        location=options.window,
-                                        split_vars_buf=split_vars_buf))
-            noCompletion = string.Template('command! -bar -nargs=* ${pre}${cmd} '
-                                    'call s:nbcommand("${cmd}", <f-args>)\n')
-            fileCompletion = string.Template('command! -bar -nargs=* '
-                                    '-complete=file ${pre}${cmd} '
-                                    'call s:nbcommand("${cmd}", <f-args>)\n')
-            listCompletion = string.Template('command! -bar -nargs=* '
-                                    '-complete=custom,s:Arg_${cmd} ${pre}${cmd} '
-                                    'call s:nbcommand("${cmd}", <f-args>)\n')
-            argsList = string.Template('function s:Arg_${cmd}(A, L, P)\n'
-                                    '\treturn "${args}"\n'
-                                    'endfunction\n')
-            for cmd, completion in self._get_cmds().items():
-                if cmd in ('mapkeys', 'unmapkeys'):
-                    f.write(string.Template('command! -bar ${pre}${cmd} call '
-                            's:${cmd}()\n').substitute(cmd=cmd, pre=prefix))
-                    continue
-
-                try:
-                    iter(completion)
-                except TypeError:
-                    f.write(fileCompletion.substitute(pre=prefix, cmd=cmd))
-                else:
-                    if not completion:
-                        f.write(noCompletion.substitute(pre=prefix, cmd=cmd))
-                    else:
-                        f.write(listCompletion.substitute(pre=prefix, cmd=cmd))
-                        args = '\\n'.join(completion)
-                        f.write(argsList.substitute(args=args, cmd=cmd))
-
-            # Add debugger specific vim statements.
-            f.write(self.vim_script_custom(prefix))
-
-            # Reset 'cpo' option.
-            f.write('let &cpo = s:cpo_save\n')
-
-            # Delete the vim script after it has been sourced.
-            f.write('\ncall delete(expand("<sfile>"))\n')
         finally:
             if f:
                 f.close()
