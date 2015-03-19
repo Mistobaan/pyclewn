@@ -347,6 +347,10 @@ class Debugger(object):
         if not self.__nbsock or not self.__nbsock.list_buffers:
             return
 
+        # Only update if the tabpage contains list buffers or the console.
+        if not netbeans.ClewnBuffer.clewn_tabpage and bufname != 'variables':
+            return
+
         lbuf = self.__nbsock.list_buffers[bufname]
         if dirty and not lbuf.buf.registered:
             lbuf.register()
@@ -359,6 +363,9 @@ class Debugger(object):
             # Set the cursor on the current fold when visible.
             if lnum is not None:
                 lbuf.setdot(lnum=lnum)
+
+    def update_tabpage_buffers(self):
+        """Update all the list buffers that may be located in a tab page."""
 
     def show_frame(self, pathname=None, lnum=1):
         """Show the frame highlighted sign in a Vim buffer.
@@ -607,13 +614,14 @@ class Debugger(object):
 
             substitute = {
                 'pre': prefix,
-                'location': options.window,
+                'window': options.window,
                 'noname_fix': options.noname_fix,
                 'getLength_fix': netbeans.Netbeans.getLength_fix,
                 'console': netbeans.CONSOLE,
                 'mapkeys': ', '.join('"<' + k + '>"' for k in self.mapkeys),
                 'commands': '\n'.join(commands),
-                'debugger': self.vim_script_custom(prefix),
+                'debugger': self.__class__.__name__.lower(),
+                'debugger_specific': self.vim_script_custom(prefix),
                          }
             f.write(pkgutil.get_data(__name__, 'debugger.vim').decode()
                     % substitute)

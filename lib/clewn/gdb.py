@@ -593,12 +593,7 @@ class Gdb(debugger.Debugger, Process):
         self.firstcmdline = ''
 
         # Update the list buffers.
-        self.update_listbuffer('breakpoints', self.info.collect_breakpoints,
-                               self.info.bp_dirty)
-        self.update_listbuffer('backtrace', self.info.collect_backtrace,
-                               self.info.backtrace_dirty)
-        self.update_listbuffer('threads', self.info.collect_threads,
-                               self.info.threads_dirty)
+        self.update_tabpage_buffers()
         varobj = self.info.varobj
         self.update_listbuffer('variables', varobj.collect, varobj.dirty,
                                self.foldlnum)
@@ -756,6 +751,15 @@ class Gdb(debugger.Debugger, Process):
         """Write data to gdb."""
         Process.write(self, data)
         debug(data.rstrip('\n'))
+
+    def update_tabpage_buffers(self):
+        debugger.Debugger.update_tabpage_buffers(self)
+        self.update_listbuffer('breakpoints', self.info.collect_breakpoints,
+                               self.info.bp_dirty)
+        self.update_listbuffer('backtrace', self.info.collect_backtrace,
+                               self.info.backtrace_dirty)
+        self.update_listbuffer('threads', self.info.collect_threads,
+                               self.info.threads_dirty)
 
     def close(self):
         """Close gdb."""

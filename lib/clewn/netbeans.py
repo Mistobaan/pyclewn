@@ -194,9 +194,15 @@ class ClewnBuffer(object):
         getLength_count: int
             count of netbeans 'getLength' functions without a reply
 
+    Class attributes:
+        clewn_tabpage: boolean
+            always True when the 'usetab' parameter of the 'window' option is
+            not set, otherwise True if the current tabpage contains the console
+            or at least one list buffer that is not (clewn)_variables
     """
 
     __metaclass__ = ABCMeta
+    clewn_tabpage = True
 
     def __init__(self, name, nbsock):
         assert vimbuffer.is_clewnbuf(name)
@@ -213,8 +219,10 @@ class ClewnBuffer(object):
 
     def register(self):
         """Register the buffer with netbeans vim."""
-        self.nbsock.send_cmd(self.buf, 'editFile', misc.quote(self.buf.name))
-        self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
+        if self.nbsock.debugger.vim.options.window != 'usetab':
+            self.nbsock.send_cmd(self.buf, 'editFile',
+                                 misc.quote(self.buf.name))
+            self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
         self.buf.registered = True
 
     def send_function(self, function, args):
@@ -234,12 +242,13 @@ class ClewnBuffer(object):
             else:
                 self.nbsock.send_cmd(self.buf, 'setDot', '%d/0' % lnum)
 
-    def terminate_editing(self):
+    def terminate_editing(self, goto_last=True):
         """Terminate editing a ClewnBuffer."""
         if self.editing:
             nbsock = self.nbsock
             nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
-            nbsock.goto_last()
+            if goto_last:
+                nbsock.goto_last()
             nbsock.send_cmd(self.buf, 'endAtomic')
             self.editing = False
 
@@ -367,6 +376,9 @@ class Console(ClewnBuffer):
         after a timeout.
 
         """
+        if not ClewnBuffer.clewn_tabpage:
+            return
+
         if ((self.buffer or self.timeout_str)
                     and (now is None or now - self.time > 0.500)):
             # write after a timeout
@@ -468,7 +480,12 @@ class ClewnListBuffer(ClewnBuffer):
                 else:
                     assert False, "unknown unified-diff line type"
         finally:
-            self.terminate_editing()
+            if (self.nbsock.debugger.vim.options.window == 'usetab' and
+                    self.buf.name != '(clewn)_variables'):
+                goto_last = False
+            else:
+                goto_last = True
+            self.terminate_editing(goto_last)
 
         self.linelist = newlist
 
@@ -805,7 +822,8 @@ class Netbeans(asyncio.Protocol, object):
 
     def goto_last(self):
         """Go to the last cursor position."""
-        if self.last_buf is not None:
+        if (not (self.debugger.vim.options.window == 'usetab' and
+                ClewnBuffer.clewn_tabpage) and self.last_buf is not None):
             self.send_cmd(self.last_buf, 'setDot', '%d/%d' %
                                     (self.last_buf.lnum, self.last_buf.col))
 
@@ -865,11 +883,12 @@ class Netbeans(asyncio.Protocol, object):
             # Create the empty buffer.
             ClewnListBuffer('(clewn)_empty', self)
 
-    def is_editport_evt(self, cmd):
-        """Return True when this is an editport open/close event.
+    def editport_evt(self, cmd):
+        """Return True when this is an editport event.
 
         The event notifies clewn of a change in the state of the editport,
-        as visible (open) or not visible (close) in a Vim window.
+        as visible (open) or not visible (close) in a Vim window or that
+        a tabpage with/without clewn buffers has been entered.
 
         """
         tokens = cmd.split('.')
@@ -879,13 +898,23 @@ class Netbeans(asyncio.Protocol, object):
                 visible = True
             elif tokens[2] == 'close':
                 visible = False
-            if tokens[1] == 'console':
-                clewnbuf = self.console
-            elif tokens[1] in LIST_BUFFERS:
-                clewnbuf = self.list_buffers[tokens[1]]
-            if visible is not None and clewnbuf:
-                clewnbuf.visible = visible
+
+            if tokens[1] == 'TabPage':
+                if self.debugger.vim.options.window == 'usetab':
+                    ClewnBuffer.clewn_tabpage = True if visible else False
+                    if ClewnBuffer.clewn_tabpage:
+                        self.debugger.update_tabpage_buffers()
+                        self.console.flush()
+            else:
+                if tokens[1] == 'console':
+                    clewnbuf = self.console
+                elif tokens[1] in LIST_BUFFERS:
+                    clewnbuf = self.list_buffers[tokens[1]]
+                if visible is not None and clewnbuf:
+                    clewnbuf.visible = visible
+
             return True
+
         return False
 
     def evt_keyAtPos(self, buf_id, nbstring, arg_list):
@@ -921,7 +950,7 @@ class Netbeans(asyncio.Protocol, object):
                     self.console.register()
                 self.setup_clewn_buffers()
 
-                if self.is_editport_evt(cmd):
+                if self.editport_evt(cmd):
                     return
 
                 self.debugger._dispatch_keypos(cmd, args, buf, lnum)

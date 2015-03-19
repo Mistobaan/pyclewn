@@ -52,6 +52,24 @@ function! s:bufwin_event(fullname, state)
     endif
 endfunction
 
+" Send a TabPage event.
+function! s:tabpage_event()
+    let l:state = "close"
+    let l:regexp = '^(clewn)_\(.\+\)$'
+    for l:nr in tabpagebuflist()
+        let l:bufname = bufname(l:nr)
+        let l:name = substitute(l:bufname, l:regexp , '\1', "")
+        " The console or one of the list buffers except '(clewn)_variables'
+        if l:name != l:bufname && l:name != "empty" && l:name != "variables"
+            let l:state = "open"
+            break
+        endif
+    endfor
+
+    " Send the event.
+    exe "nbkey ClewnBuffer.TabPage." . l:state
+endfunction
+
 " Popup gdb console on pyclewn mapped keys.
 function! s:mapkeys()
     call s:nbcommand("mapkeys")
@@ -82,7 +100,7 @@ augroup clewn
     autocmd BufEnter (clewn)_backtrace nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_frame()<CR>
     autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <CR> :call <SID>goto_thread()<CR>
     autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_thread()<CR>
-    autocmd BufAdd (clewn)_* call pyclewn#buffers#CreateWindow(expand("<afile>"), "%(location)s")
+    autocmd TabEnter * call s:tabpage_event()
 augroup END
 
 " Run the nbkey netbeans Vim command.
@@ -94,13 +112,16 @@ function! s:nbcommand(...)
         return
     endif
 
+    " Create the clewn buffers windows on the first command of the first
+    " debugging session.
+    if s:debugger != ""
+        call pyclewn#buffers#CreateWindows(s:debugger, "%(window)s")
+        let s:debugger = ""
+    endif
+
     " Allow '' as first arg: the 'C' command followed by a mandatory parameter
     if a:0 != 0
         if a:1 != "" || (a:0 > 1 && a:2 != "")
-            " The buffer list is empty.
-            if bufname("%%") == ""
-                call pyclewn#buffers#CreateWindow("%(console)s", "%(location)s")
-            endif
             if %(getLength_fix)s
                 if a:1 == "dbgvar"
                     call pyclewn#buffers#DbgvarSplit()
@@ -121,6 +142,13 @@ if ! %(noname_fix)s
             echo "Please edit a file first."
             echohl None
             return
+        endif
+
+        " Create the clewn buffers windows on the first command of the first
+        " debugging session.
+        if s:debugger != ""
+            call pyclewn#buffers#CreateWindows(s:debugger, "%(window)s")
+            let s:debugger = ""
         endif
 
         " Allow '' as first arg: the 'C' command followed by a mandatory parameter
@@ -166,7 +194,9 @@ endfunction
 %(commands)s
 
 " The debugger specific part.
-%(debugger)s
+%(debugger_specific)s
+
+let s:debugger = "%(debugger)s"
 
 let &cpo = s:cpo_save
 

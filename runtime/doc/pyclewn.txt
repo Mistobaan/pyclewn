@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 March 7
+*pyclewn.txt*                                   Last change: 2015 March 19
 
 
                             PYCLEWN USER MANUAL
@@ -261,7 +261,9 @@ Options:
   -w LOCATION, --window=LOCATION
                               open the debugger console window at LOCATION
                               which may be one of (top, bottom, left,
-                              right, none), the default is top
+                              right, none, usetab), the default is
+                              top; when LOCATION is usetab set the console
+                              and the clewn buffers in their own tab page
   -m LNUM, --maxlines=LNUM    set the maximum number of lines of the debugger
                               console window to LNUM (default 10000 lines)
   -x PREFIX, --prefix=PREFIX  set the commands prefix to PREFIX (default 'C')
@@ -355,13 +357,13 @@ The full description of pyclewn options follows:
                     debugged. The default is "/dev/null".
 
 -w {LOCATION}
---window={LOCATION} The debugger console window pops up at LOCATION, which may
-                    be one of top, bottom, left, right or none. The default is
-                    top.  In the left or right case, the window pops up on the
-                    left (resp. right) if there is only one window currently
-                    displayed, otherwise the debugger window is opened at the
-                    default top. When LOCATION is none, the automatic display
-                    of the console is disabled.
+--window={LOCATION} The debugger console window is created at LOCATION, which
+                    may be one of top, bottom, left or right. The default is
+                    top. When LOCATION is none, the console window is not
+                    created. See also |pyclewn-windows|.
+                    When LOCATION is usetab, the console and the Pyclewn
+                    buffers are loaded in windows of a dedicated tab page, see
+                    |pyclewn-usetab|
 
 -m {LNUM}
 --maxlines={LNUM}   Set the maximum number of lines of the debugger console
@@ -451,6 +453,23 @@ print foo with a string literal as first argument to the foo function: >
 And to do the same thing with the string including a new line: >
 
     :Cprint foo(\"foobar\\n\", 1)
+
+
+Using tab pages:                                    *pyclewn-usetab*
+----------------
+Set the "--window" option to "usetab" to have the console and the Pyclewn
+buffers loaded in windows of a dedicated tab page, for example: >
+
+    let pyclewn_args="--window=usetab" | Pyclewn
+
+The tab page is created at the first command. See |pyclewn-windows| to change
+the disposition of the windows within this tab page.
+
+Starting with Vim version 7.4.663 and when the 'switchbuf' option is set to
+"usetab", the Vim netbeans interface searches for all the tab pages when
+opening a file instead of restricting the search to the current tab page. This
+allows a workflow where each source code may have its own tab page. Pyclewn
+sets 'switchbuf' to "usetab" when the "--window" option is set to "usetab".
 
 
 Completion:
@@ -1133,16 +1152,21 @@ instead of calling the corresponding functions defined in
 "autoload/pyclewn/buffers.vim": >
 
 
-    Pyclewn_CreateWindow(name, location)
-        Display one of the pyclewn buffers in a window. The function is
-        triggered by a 'BufAdd' autocommand. The function is also called
-        directly with 'name' as "(clewn)_console" just before the first 'C'
-        command when the buffer list is empty (to workaround a problem with
-        Vim that fails to send netbeans events when the buffer list is empty).
-
-          'name':     the pyclewn buffer name.
-          'location': the value of the '--window' option, i.e. "top", "bottom",
+    Pyclewn_CreateWindows(debugger, window)
+        Create the windows of the console and the '(clewn)_breakpoints',
+        '(clewn)_backtrace' and '(clewn)_threads' buffers. This function is
+        called at the first Pyclewn command.
+          'debugger': the debugger being run
+          'window':   the value of the '--window' option, i.e. "top", "bottom",
                       "left", "right" or "none".
+
+    Pyclewn_CreateTabWindows(debugger)
+        Called when the '--window' option is set to "usetab". Create the
+        windows of the console and the '(clewn)_breakpoints',
+        '(clewn)_backtrace' and '(clewn)_threads' buffers in a tab page. The
+        tab page has been already created. This function is called at the
+        first Pyclewn command.
+          'debugger': the debugger being run
 
     Pyclewn_DbgvarSplit()
         Display the '(clewn)_variables' buffer in a window, split if needed.

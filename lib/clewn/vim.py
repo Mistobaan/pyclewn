@@ -28,7 +28,7 @@ from . import (__version__, ClewnError, misc, netbeans, tty,
                gdb, debugger)
 from .process import daemonize
 
-WINDOW_LOCATION = ('top', 'bottom', 'left', 'right', 'none')
+WINDOW_LOCATION = ('top', 'bottom', 'left', 'right', 'none', 'usetab')
 CONNECTION_DEFAULTS =  {
         'gdb':      ('127.0.0.1', 3219, 'changeme'),
         'pdb':      ('127.0.0.1', 3220, 'changeme'),
@@ -465,7 +465,8 @@ class Vim(object):
                 type='string', metavar='LOCATION',
                 help="%s%s%s" % ("open the debugger console window at LOCATION "
                 "which may be one of ", WINDOW_LOCATION,
-                ", the default is '%default'"))
+                ", the default is '%default'; when LOCATION is 'usetab' set "
+                "the console and the clewn buffers in their own tab page"))
         parser.add_option('-m', '--maxlines',
                 metavar='LNUM', default=netbeans.CONSOLE_MAXLINES, type='int',
                 help='set the maximum number of lines of the debugger console'
