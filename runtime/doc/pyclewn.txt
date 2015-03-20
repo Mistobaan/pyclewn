@@ -465,11 +465,17 @@ buffers loaded in windows of a dedicated tab page, for example: >
 The tab page is created at the first command. See |pyclewn-windows| to change
 the disposition of the windows within this tab page.
 
-Starting with Vim version 7.4.663 and when the 'switchbuf' option is set to
-"usetab", the Vim netbeans interface searches for all the tab pages when
-opening a file instead of restricting the search to the current tab page. This
-allows a workflow where each source code may have its own tab page. Pyclewn
-sets 'switchbuf' to "usetab" when the "--window" option is set to "usetab".
+Pyclewn sets 'switchbuf' to "usetab" when the "--window" option is set to
+"usetab".  Starting with Vim version 7.4.663 and when the 'switchbuf' option
+is set to "usetab", the Vim netbeans interface searches for all the tab pages
+when opening a file instead of restricting the search to the current tab page.
+This allows a workflow where each source code may have its own tab page.
+
+Note: If you set a breakpoint or step the debuggee (or run any command that
+updates the Vim signs) from the clewn buffers tab page and use a Vim version
+older than 7.4.663  or if there is no window available in any tab page for the
+corresponding file, then one of the clewn buffers will be replaced by this
+file.
 
 
 Completion:

@@ -480,8 +480,13 @@ class ClewnListBuffer(ClewnBuffer):
                 else:
                     assert False, "unknown unified-diff line type"
         finally:
+            # Don't go to the last source code when 'usetab', except if this is
+            # the 'variables' buffer or if we are in the clewn buffers tab page
+            # and a sign is being placed.
             if (self.nbsock.debugger.vim.options.window == 'usetab' and
-                    self.buf.name != '(clewn)_variables'):
+                    self.buf.name != '(clewn)_variables' and
+                    not (ClewnBuffer.clewn_tabpage and
+                         self.nbsock.got_addAnno)):
                 goto_last = False
             else:
                 goto_last = True
@@ -623,6 +628,8 @@ class Netbeans(asyncio.Protocol, object):
             the frame annotation
         msg_queue: queue
             queue of netbeans messages received before the debugger is setup
+        got_addAnno: boolean
+            True when a Vim sign is being placed
 
     Class attributes:
         remove_fix: str
@@ -666,6 +673,7 @@ class Netbeans(asyncio.Protocol, object):
         self.sernum = Sernum()
         self.frame_annotation = vimbuffer.FrameAnnotation(self)
         self.msg_queue = queue.Queue()
+        self.got_addAnno = False
 
     def set_debugger(self, debugger):
         """Notify of the current debugger."""
@@ -822,9 +830,12 @@ class Netbeans(asyncio.Protocol, object):
 
     def goto_last(self):
         """Go to the last cursor position."""
-        if (not (self.debugger.vim.options.window == 'usetab' and
-                ClewnBuffer.clewn_tabpage) and self.last_buf is not None):
-            self.send_cmd(self.last_buf, 'setDot', '%d/%d' %
+        # Don't go to the last source code when 'usetab', except if we are not
+        # in the clewn buffers tab page or if a sign is being placed.
+        if (self.debugger.vim.options.window != 'usetab' or
+                not ClewnBuffer.clewn_tabpage or self.got_addAnno):
+            if self.last_buf is not None:
+                self.send_cmd(self.last_buf, 'setDot', '%d/%d' %
                                     (self.last_buf.lnum, self.last_buf.col))
 
     #-----------------------------------------------------------------------
@@ -927,6 +938,9 @@ class Netbeans(asyncio.Protocol, object):
         elif len(arg_list) != 2:
             warning('invalid arg in keyAtPos')
         else:
+            # This is a new command or and editport event.
+            self.got_addAnno = False
+
             matchobj = re_lnumcol.match(arg_list[1])
             if not matchobj:
                 error('invalid lnum/col: %s', arg_list[1])
@@ -993,6 +1007,8 @@ class Netbeans(asyncio.Protocol, object):
 
     def send_cmd(self, buf, cmd, args=''):
         """Send a command to Vim."""
+        if cmd == 'addAnno':
+            self.got_addAnno = True
         self.send_request('%d:%s!%d%s%s\n', buf, cmd, args)
 
     def send_function(self, buf, function, args=''):

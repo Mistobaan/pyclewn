@@ -1173,6 +1173,59 @@ class Gdb(ClewnTestCase):
         proc.stdout.close()
         proc.kill()
 
+    def test_055(self):
+        """Test 'Cnext' from the clewn tab page"""
+        # Test that, when 'usetab' is set, the console or a clewn buffer as the
+        # current window does not hide a buffer that has a new sign placed.
+        sys.argv.append('--window=usetab')
+
+        cmd = [
+            'edit testsuite/foobar.c',
+            'Cfile testsuite/foobar',
+            'Cbreak foo',
+            'Crun',
+            'Cup',
+            'sleep ${sleep_time}',
+            'tabnext',
+            'Cnext',
+            'sleep ${sleep_time}',
+            'redir! > ${test_out}',
+            'echo bufwinnr("testsuite/foo.c")',
+            'redir END',
+            'edit #',
+
+            '2wincmd w',
+            'Cnext',
+            'sleep ${sleep_time}',
+            'redir! >> ${test_out}',
+            'echo bufwinnr("testsuite/foo.c")',
+            'redir END',
+            'edit #',
+
+            '3wincmd w',
+            'Cnext',
+            'sleep ${sleep_time}',
+            'redir! >> ${test_out}',
+            'echo bufwinnr("testsuite/foo.c")',
+            'redir END',
+            'edit #',
+
+            '4wincmd w',
+            'Cnext',
+            'sleep ${sleep_time}',
+            'redir! >> ${test_out}',
+            'echo bufwinnr("testsuite/foo.c")',
+            'redir END',
+            'qa!',
+            ]
+        expected = (
+            '1',
+            '2',
+            '3',
+            '4',
+            )
+        self.cltest_redir(cmd, expected)
+
 class PyclewnCommand(TestCase):
     """Test the ':Pyclewn' command."""
 
