@@ -19,6 +19,7 @@ DEBUGGERS = ('simple', 'gdb', 'pdb')
 RUNTIME = [
     'autoload/pyclewn/start.vim',
     'autoload/pyclewn/buffers.vim',
+    'autoload/pyclewn/version.vim',
     'doc/pyclewn.txt',
     'plugin/pyclewn.vim',
     'syntax/clewn_variables.vim',
@@ -26,6 +27,11 @@ RUNTIME = [
     'macros/.pyclewn_keys.pdb',
     'macros/.pyclewn_keys.simple',
     ]
+VERSION_FUNC = """
+function pyclewn#version#RuntimeVersion()
+    return "%s"
+endfunction
+"""
 
 def keymap_files():
     """Update the key map files for each debugger."""
@@ -60,9 +66,16 @@ def vimball():
             '-c', 'quit',
            ]
 
+    # Create version.vim.
+    version = __version__ + '.' + subprocess.check_output(
+                    ['hg',  'id',  '-i'], universal_newlines=True)
+    with open('runtime/autoload/pyclewn/version.vim', 'w') as f:
+        f.write(VERSION_FUNC % version.rstrip('+\n'))
+
     data_dir = 'lib/clewn/runtime'
     if not os.path.exists(data_dir):
         os.mkdir(data_dir)
+    # Remove the existing vimballs.
     for dirpath, dirnames, filenames in os.walk(data_dir):
         if dirpath == data_dir:
             for fname in filenames:
@@ -70,6 +83,7 @@ def vimball():
                     print('Removing', fname)
                     os.unlink(os.path.join(dirpath, fname))
 
+    # Build the vimball.
     try:
         with os.fdopen(fd, 'w') as f:
             f.write('\n'.join(RUNTIME))

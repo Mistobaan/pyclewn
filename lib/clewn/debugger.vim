@@ -8,6 +8,15 @@ set cpo&vim
 let s:bufList = {}
 let s:bufLen = 0
 
+function! s:error(msg)
+    echohl ErrorMsg
+    echo a:msg
+    call inputsave()
+    call input("Press the <Enter> key to continue.")
+    call inputrestore()
+    echohl None
+endfunction
+
 " Build the list as an hash of active buffers This is the list of buffers loaded
 " on startup, that must be advertized to pyclewn.
 function! s:BuildList()
@@ -103,19 +112,36 @@ augroup clewn
     autocmd TabEnter * call s:tabpage_event()
 augroup END
 
+" Create the windows.
+function! s:create_windows()
+    if pyclewn#version#RuntimeVersion() != "%(runtime_version)s"
+        nbclose
+        let l:msg = "Error: the version of the Vim runtime files does "
+        let l:msg .= "not match Pyclewn version.\n"
+        let l:msg .= "Please re-install the Pyclewn vimball with:\n\n"
+        let l:msg .= "  python -c \"import clewn; clewn.get_vimball()\"\n"
+        let l:msg .= "  vim -S pyclewn-%(version)s.vmb\n\n"
+        call s:error(l:msg)
+        return -1
+    endif
+    call pyclewn#buffers#CreateWindows(s:debugger, "%(window)s")
+    return 0
+endfunction
+
 " Run the nbkey netbeans Vim command.
 function! s:nbcommand(...)
     if !has("netbeans_enabled")
-        echohl ErrorMsg
-        echo "Error: netbeans is not connected."
-        echohl None
+        call s:error("Error: netbeans is not connected.")
         return
     endif
 
     " Create the clewn buffers windows on the first command of the first
     " debugging session.
     if s:debugger != ""
-        call pyclewn#buffers#CreateWindows(s:debugger, "%(window)s")
+        if s:create_windows()
+            let s:debugger = ""
+            return
+        endif
         let s:debugger = ""
     endif
 
@@ -136,18 +162,25 @@ endfunction
 if ! %(noname_fix)s
     " Run the nbkey netbeans Vim command.
     function! s:nbcommand(...)
+        if !has("netbeans_enabled")
+            call s:error("Error: netbeans is not connected.")
+            return
+        endif
+
         if bufname("%%") == ""
-            echohl ErrorMsg
-            echo "Cannot run a pyclewn command on the '[No Name]' buffer."
-            echo "Please edit a file first."
-            echohl None
+            let l:msg = "Cannot run a pyclewn command on the '[No Name]' buffer.\n"
+            let l:msg .= "Please edit a file first."
+            call s:error(l:msg)
             return
         endif
 
         " Create the clewn buffers windows on the first command of the first
         " debugging session.
         if s:debugger != ""
-            call pyclewn#buffers#CreateWindows(s:debugger, "%(window)s")
+            if s:create_windows()
+                let s:debugger = ""
+                return
+            endif
             let s:debugger = ""
         endif
 

@@ -64,6 +64,13 @@ class sdist(_sdist):
     """Specialized sdister."""
     def run(self):
         import build_vimball
+
+        # Create the runtime_version.py module.
+        version = __version__ + '.' + subprocess.check_output(
+                    ['hg',  'id',  '-i'], universal_newlines=True)
+        with open('lib/clewn/runtime_version.py', 'w') as f:
+            f.write('version = "%s"' % version.rstrip('+\n'))
+
         if PY33:
             build_vimball.main()
         else:

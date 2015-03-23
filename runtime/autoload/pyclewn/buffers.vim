@@ -28,12 +28,14 @@ function pyclewn#buffers#CreateWindows(debugger, window)
     endif
     if bufname("%") == ""
         edit (clewn)_empty
+        set nobuflisted
     endif
 
     if a:window == "usetab"
         set switchbuf=usetab
         let l:tabno = tabpagenr()
         tabnew
+        set nobuflisted
         if exists("*Pyclewn_CreateTabWindows")
             call Pyclewn_CreateTabWindows(a:debugger)
         else

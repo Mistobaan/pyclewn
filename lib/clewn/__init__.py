@@ -11,9 +11,6 @@ from __future__ import unicode_literals
 
 import sys
 import os
-import tempfile
-import subprocess
-import errno
 
 __version__ = '2.1'
 

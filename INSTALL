@@ -103,6 +103,40 @@ The ``pyclewn-2.0.1.vmb`` vimball can be found in the ``lib/clewn/runtime``
 directory of the tarball.
 
 
+Installing from the development version at BitBucket
+----------------------------------------------------
+
+First install the latest Pyclewn version using one of the methods described
+above so that the Pyclewn dependencies (pdb-clone, trollius) are satisfied.
+Then clone pyclewn::
+
+    hg clone https://xdegaye@bitbucket.org/xdegaye/pyclewn
+
+Build the source distribution ``dist/pyclewn-2.0.1.tar.gz`` from the root of
+the workarea::
+
+    python setup.py sdist
+
+And install it as root::
+
+    sudo pip install ---ignore-installed --find-links=dist pyclewn==2.0.1
+
+Or install it locally using the user scheme::
+
+    pip install ---ignore-installed --user --find-links=dist pyclewn==2.0.1
+
+Finally the Vim run time files **must** be updated after pip has installed
+the new version::
+
+    python -c "import clewn; clewn.get_vimball()"
+    vim -S pyclewn-2.0.1.vmb
+
+Once you have installed a development version, do not forget to use the
+``--ignore-installed`` option of pip when upgrading later to the latest
+release, as pip will not upgrade when the installed version is the same as the
+target version.
+
+
 .. _pip: http://pip.pypa.io/en/latest/
 .. _pdb-clone: http://pypi.python.org/pypi/pdb-clone
 .. _trollius: http://pypi.python.org/pypi/trollius

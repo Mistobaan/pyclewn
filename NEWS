@@ -4,15 +4,17 @@ News
 Pyclewn 2.1
 -----------
 
-.. March 19, 2015
+.. March 21, 2015
 
-New feature
-^^^^^^^^^^^
+New features
+^^^^^^^^^^^^
 
-* Full gdb completion is now available on Vim command line.
+* Full gdb completion is now available on Vim command line. See
+  ``:help gdb-completion``.
 
 * The console and the Pyclewn buffers are loaded in windows of a dedicated tab
-  page when the ``--window`` option is set to ``usetab``.
+  page when the ``--window`` option is set to ``usetab``. See
+  ``help pyclewn-usetab``.
 
 Bug fixes
 ^^^^^^^^^
@@ -21,6 +23,9 @@ Bug fixes
   attach to a remote gdb.
 
 * Retrieving the installation vimball does not require anymore setuptools.
+
+* Issue #12: prevent Pyclewn from running with an obsolete version of its Vim
+  run time files.
 
 Pyclewn 2.0.1
 -------------

@@ -36,7 +36,7 @@ import copy
 import subprocess
 from abc import ABCMeta, abstractmethod
 
-from . import __version__, ClewnError, misc, netbeans
+from . import __version__, ClewnError, misc, netbeans, runtime_version
 
 BCKGROUND_JOB_DELAY = .200
 COMPLETION_SUFFIX = ' %(pre)s%(cmd)s call s:nbcommand("%(cmd)s", <f-args>)'
@@ -622,6 +622,8 @@ class Debugger(object):
                 'commands': '\n'.join(commands),
                 'debugger': self.__class__.__name__.lower(),
                 'debugger_specific': self.vim_script_custom(prefix),
+                'version': __version__,
+                'runtime_version': runtime_version.version,
                          }
             f.write(pkgutil.get_data(__name__, 'debugger.vim').decode()
                     % substitute)
