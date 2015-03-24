@@ -479,8 +479,8 @@ class Debugger(object):
 
         args = self.vim.options.terminal.split(',')
         result_file = misc.tmpfile('dbg')
-        args.extend([sys.executable, '-m', 'clewn.inferiortty',
-                     result_file.name])
+        args.append('%s -m clewn.inferiortty %s' %
+                    (sys.executable, result_file.name))
         asyncio.Task(_set_inferior_tty(), loop=self.vim.loop)
 
     def close(self):

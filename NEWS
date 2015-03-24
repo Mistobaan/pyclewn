@@ -27,6 +27,9 @@ Bug fixes
 * Issue #12: prevent Pyclewn from running with an obsolete version of its Vim
   run time files.
 
+* Issue #14: tmux can be used now with the ``terminal`` option, e.g.
+  ``--terminal=tmux,split-window``.
+
 Pyclewn 2.0.1
 -------------
 

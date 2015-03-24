@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 March 19
+*pyclewn.txt*                                   Last change: 2015 March 23
 
 
                             PYCLEWN USER MANUAL
@@ -347,7 +347,7 @@ The full description of pyclewn options follows:
                     running gdb or pdb inferior (default 'xterm,-e'). The
                     option is a comma separated list of the arguments needed
                     to start the terminal and a program running in this
-                    terminal.
+                    terminal, e.g. 'tmux,split-window'.
 
 --run               By default the python debuggee is stopped at the first
                     statement after the call to pdb(). Enabling this option
