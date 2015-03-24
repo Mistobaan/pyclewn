@@ -1226,6 +1226,44 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
+    def test_056(self):
+        """Test that 'Cquit' empty the clewn buffers"""
+        sys.argv.append('--window=usetab')
+
+        cmd = [
+            'edit testsuite/foobar.c',
+            'Cfile testsuite/foobar',
+            'Cstart',
+            'Cbreak bar',
+            'Cbreak bar',
+            'Ccontinue',
+            'tabnext',
+            'sleep ${sleep_time}',
+            'tabnext',
+            'Cquit',
+            '2wincmd w',
+            'redir! > ${test_out}',
+            'echo line("$$")',
+            'redir END',
+
+            '3wincmd w',
+            'redir! >> ${test_out}',
+            'echo line("$$")',
+            'redir END',
+
+            '4wincmd w',
+            'redir! >> ${test_out}',
+            'echo line("$$")',
+            'redir END',
+            'qa!',
+            ]
+        expected = (
+            '1',
+            '1',
+            '1',
+            )
+        self.cltest_redir(cmd, expected)
+
 class PyclewnCommand(TestCase):
     """Test the ':Pyclewn' command."""
 

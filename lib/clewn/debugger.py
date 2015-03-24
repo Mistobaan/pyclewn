@@ -347,8 +347,10 @@ class Debugger(object):
         if not self.__nbsock or not self.__nbsock.list_buffers:
             return
 
-        # Only update if the tabpage contains list buffers or the console.
-        if not netbeans.ClewnBuffer.clewn_tabpage and bufname != 'variables':
+        # Update if the tabpage contains list buffers or the console
+        # or if it is the 'variables' buffer or if we are closing.
+        if (not netbeans.ClewnBuffer.clewn_tabpage and bufname != 'variables'
+                and not self.closed):
             return
 
         lbuf = self.__nbsock.list_buffers[bufname]

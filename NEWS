@@ -4,7 +4,7 @@ News
 Pyclewn 2.1
 -----------
 
-.. March 21, 2015
+.. March 24, 2015
 
 New features
 ^^^^^^^^^^^^
@@ -19,16 +19,19 @@ New features
 Bug fixes
 ^^^^^^^^^
 
-* Issue #6: fix the crash in pyclewn versions 2.0 and 2.0.1 when trying to
+* Issue #6: Fix the crash in pyclewn versions 2.0 and 2.0.1 when trying to
   attach to a remote gdb.
 
 * Retrieving the installation vimball does not require anymore setuptools.
 
-* Issue #12: prevent Pyclewn from running with an obsolete version of its Vim
+* Issue #12: Prevent Pyclewn from running with an obsolete version of its Vim
   run time files.
 
 * Issue #14: tmux can be used now with the ``terminal`` option, e.g.
   ``--terminal=tmux,split-window``.
+
+* Issue #15: The clewn buffers of a tab page are now emptied after the 'Cquit'
+  command.
 
 Pyclewn 2.0.1
 -------------
