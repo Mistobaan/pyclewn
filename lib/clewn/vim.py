@@ -117,8 +117,15 @@ def close_clewnthread(vim):
             if threading.currentThread() != pdbinst.clewn_thread:
                 pdbinst.exit()
                 pdbinst.clewn_thread.join()
+                return
+
             debug('Vim instance: ' + str(vim))
             vim.shutdown()
+
+            # Close the log file in the clewn thread.
+            if vim.file_hdlr is not None:
+                logging.getLogger().removeHandler(vim.file_hdlr)
+                vim.file_hdlr.close()
     except KeyboardInterrupt:
         close_clewnthread(vim)
 
