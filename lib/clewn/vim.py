@@ -376,7 +376,7 @@ class Vim(object):
 
         while self.events and not self.events.empty():
             event = self.events. get_nowait()
-            warning('pending event at shutdown: ', event)
+            warning('pending event at shutdown: %s', event)
 
         # Remove the Vim script file in case the script failed to remove itself.
         if (self.f_script and not (self.module == 'pdb' and self.testrun)):

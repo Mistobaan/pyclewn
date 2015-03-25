@@ -697,7 +697,7 @@ class Netbeans(asyncio.Protocol, object):
         self.ready = False
         self.close()
         if exc:
-            error('netbeans connection lost: ', exc)
+            error('netbeans connection lost: %s', exc)
 
     def close(self):
         """Close netbeans and the debugger."""
