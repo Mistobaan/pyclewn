@@ -4,7 +4,7 @@ News
 Pyclewn 2.1
 -----------
 
-.. March 26, 2015
+.. March 27, 2015
 
 New features
 ^^^^^^^^^^^^
@@ -19,19 +19,21 @@ New features
 Change
 ^^^^^^
 
-* The new vim.ping() function to check whether an existing Python process may
-  be attached to.
+* Add the new vim.ping() function to check whether an existing Python process
+  may be attached to.
 
 Bug fixes
 ^^^^^^^^^
 
-* Issue #6: Fix the crash in pyclewn versions 2.0 and 2.0.1 when trying to
+* Issue #6: Fix the crash in Pyclewn versions 2.0 and 2.0.1 when trying to
   attach to a remote gdb.
 
 * Retrieving the installation vimball does not require anymore setuptools.
 
 * Issue #12: Prevent Pyclewn from running with an obsolete version of its Vim
   run time files.
+
+* Issue #13: Fix the error messages after ``:Pyclewn pdb`` failure.
 
 * Issue #14: tmux can be used now with the ``terminal`` option, e.g.
   ``--terminal=tmux,split-window``.

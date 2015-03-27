@@ -105,13 +105,13 @@ function s:pyclewn_ready(filename)
     endwhile
     echohl None
     if !filereadable(a:filename)
-        throw "Error: pyclewn failed to start.\n\n"
+        throw "Error: pyclewn failed to start."
     endif
     call s:info("Creation of vim script file \"" . a:filename . "\": OK.\n")
 endfunction
 
 " Start pyclewn and vim netbeans interface.
-function s:start(args)
+function s:start(args, pdb_attach)
     if !exists(":nbstart")
         call s:error("Error: the ':nbstart' vim command does not exist.")
         return
@@ -138,7 +138,11 @@ function s:start(args)
     endfor
 
     " Start pyclewn and netbeans.
-    call s:info("Starting pyclewn.\n")
+    if a:pdb_attach
+        call s:info("Attaching to a Python process.\n")
+    else
+        call s:info("Starting pyclewn.\n")
+    endif
     let l:run_pyclewn = s:python . " -m clewn " . s:fixed . l:tmpfile . " " . a:args
     if s:terminal == ""
         exe "silent !" . l:run_pyclewn . " &"
@@ -184,15 +188,19 @@ function pyclewn#start#StartClewn(...)
     endif
 
     try
-        call s:start(l:args)
+        call s:start(l:args, a:0 == 1 && a:1 == "pdb")
     catch /^Vim:Interrupt$/
         return
     catch /.*/
         call s:info("The 'Pyclewn' command has been aborted.\n")
         let l:err = v:exception . "\n"
-        let l:err .= "To get the cause of the problem set the global variable"
-        let l:err .= " 'pyclewn_terminal' to:\n"
-        let l:err .= ":let g:pyclewn_terminal = \"xterm, -e\"\n"
+        if a:0 == 1 && a:1 == "pdb"
+            let l:err .= "Could not find a Python process to attach to.\n"
+        else
+            let l:err .= "To get the cause of the problem set the global variable"
+            let l:err .= " 'pyclewn_terminal' to:\n"
+            let l:err .= ":let g:pyclewn_terminal = \"xterm, -e\"\n"
+        endif
         call s:error(l:err)
         " The vim console screen is garbled, redraw the screen.
         if !has("gui_running")
