@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 import os
 import sys
 import asyncio
+import socket
 import functools
 import importlib
 import subprocess
@@ -249,6 +250,28 @@ def main(testrun=False):
         vim.shutdown()
 
     return vim
+
+def ping(host=CONNECTION_DEFAULTS['pdb'][0],
+         port=CONNECTION_DEFAULTS['pdb'][1]):
+    """Checking if a process is ready to be attached to..."""
+    import telnetlib
+
+    print(ping.__doc__)
+    try:
+        t = telnetlib.Telnet(host, port)
+    except socket.error as e:
+        print('No process is listening on (%s, %s):' % (host, port), e)
+    else:
+        # On opening the session, it is the editor that sends messages to the
+        # IDE. When pyclewn sends an error message instead, then the message is
+        # terminated by 'rejected.'.
+        errmsg = (t.read_until(b'rejected.', 1))
+        if errmsg:
+            print(errmsg.decode())
+        else:
+            print('A process is ready to be attached to on (%s, %s).' %
+                  (host, port))
+        t.close()
 
 class Vim(object):
     """The Vim class."""
@@ -663,7 +686,7 @@ class Vim(object):
                     nb = event
                     if nb.connected:
                         info('rejecting connection from %s:'
-                             ' netbeans already connected', nb.addr)
+                             ' netbeans already connected', str(nb.addr))
                         nb.close()
                 else:
                     # Netbeans connection accepted.
@@ -701,13 +724,12 @@ class Vim(object):
                 if event is self.netbeans:
                     if not self.netbeans.connected:
                         if self.netbeans.debugger is not None:
-                            self.netbeans.close()
-                            self.netbeans = None
                             info('the current netbeans session is closed')
-                            continue
                         else:
                             info('signaled netbeans is disconnected')
-                            break
+                        self.netbeans.close()
+                        self.netbeans = None
+                        continue
                     # Netbeans signaling it is ready.
                     info(self.netbeans)
                     self.netbeans.set_debugger(self.debugger)
@@ -717,7 +739,11 @@ class Vim(object):
                     nb = event
                     if nb.connected:
                         info('rejecting connection from %s:'
-                             ' netbeans already connected', nb.addr)
+                             ' netbeans already connected', str(nb.addr))
+                        nb.ready = True
+                        nb.push('There is already an active pdb session at'
+                        ' (%s, %s), connection rejected.' %
+                        (self.connection[0], self.connection[1]))
                         nb.close()
                 else:
                     info('netbeans connection accepted')

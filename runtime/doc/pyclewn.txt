@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 March 23
+*pyclewn.txt*                                   Last change: 2015 March 26
 
 
                             PYCLEWN USER MANUAL
@@ -159,7 +159,7 @@ Global variables         *pyclewn_python* *pyclewn_args* *pyclewn_connection*
 When starting pyclewn from Vim, the pyclewn command line arguments and
 connection details may be set with the following global variables:
 
-    * |pyclewn_terminal|: start pyclewn in a terminal (see next section)
+    * |pyclewn_terminal|: start pyclewn in a terminal (see |pyclewn-terminal|)
     * |pyclewn_python|: the program to use as python
     * |pyclewn_args|: pyclewn arguments
     * |pyclewn_connection|: pyclewn connection parameters
@@ -175,19 +175,38 @@ following values:
         "--window=top --maxlines=10000 --background=Cyan,Green,Magenta"
 
 
-Trouble shooting ':Pyclewn'                          *pyclewn_terminal*
+Trouble shooting ':Pyclewn'                             *pyclewn-troubleshoot*
 ---------------------------
-Set the |pyclewn_terminal| global variable to have pyclewn started in a
-terminal instead of as a daemon, and visualize the log traces at the "info"
-log level.|pyclewn_terminal| value is a comma separated list of the arguments
-needed to start the terminal and a program running in this terminal. For
-example, with xterm: >
+Pyclewn is a Python process when used with gdb and it is a Python thread when
+used with pdb, so there are two different methods to trouble shoot the startup
+sequence.
+
+                                                        *pyclewn-terminal*
+
+Trouble shooting gdb is done by setting the |pyclewn_terminal| global variable
+to have pyclewn started in a terminal instead of as a daemon, and to visualize
+the log traces at the "info" log level.|pyclewn_terminal| value is a comma
+separated list of the arguments needed to start the terminal and a program
+running in this terminal. For example, with xterm: >
 
     :let g:pyclewn_terminal = "xterm, -e"
 
 When pyclewn fails (its exit code is not zero), the terminal remains open for
 10 minutes so that the log traces may be examined. Type <Ctl-C> to close the
 terminal.
+
+                                                        *pyclewn-ping*
+
+To investigate why Vim fails to attach to a Python process when running the
+":Pyclewn pdb" command, use the Pyclewn vim.ping() function and run: >
+
+    python -c "from clewn.vim import ping; ping()"
+
+The command tells wether no process is listening to the default socket address
+or if there is a process ready to be attached to or if the process is busy
+with an active debugging session running. The function signature is: >
+
+    ping(host='127.0.0.1', port=3220)
 
 
 Start pyclewn from a shell:
@@ -831,6 +850,8 @@ Next, attach to the process and start the debugging session by running the Vim
 command: >
 
     :Pyclewn pdb
+
+See also |pyclewn-ping|.
 
 Notes:
 The current debugging session may be terminated with the ":Cdetach" or the Vim

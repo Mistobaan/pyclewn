@@ -4,7 +4,7 @@ News
 Pyclewn 2.1
 -----------
 
-.. March 24, 2015
+.. March 26, 2015
 
 New features
 ^^^^^^^^^^^^
@@ -15,6 +15,12 @@ New features
 * The console and the Pyclewn buffers are loaded in windows of a dedicated tab
   page when the ``--window`` option is set to ``usetab``. See
   ``help pyclewn-usetab``.
+
+Change
+^^^^^^
+
+* The new vim.ping() function to check whether an existing Python process may
+  be attached to.
 
 Bug fixes
 ^^^^^^^^^
@@ -30,8 +36,7 @@ Bug fixes
 * Issue #14: tmux can be used now with the ``terminal`` option, e.g.
   ``--terminal=tmux,split-window``.
 
-* Issue #15: The clewn buffers of a tab page are now emptied after the 'Cquit'
-  command.
+* Issue #15: The clewn buffers are now emptied after the 'Cquit' command.
 
 Pyclewn 2.0.1
 -------------
