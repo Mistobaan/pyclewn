@@ -219,10 +219,8 @@ class ClewnBuffer(object):
 
     def register(self):
         """Register the buffer with netbeans vim."""
-        if self.nbsock.debugger.vim.options.window != 'usetab':
-            self.nbsock.send_cmd(self.buf, 'editFile',
-                                 misc.quote(self.buf.name))
-            self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
+        self.nbsock.send_cmd(self.buf, 'editFile', misc.quote(self.buf.name))
+        self.nbsock.send_cmd(self.buf, 'setReadOnly', 'T')
         self.buf.registered = True
 
     def send_function(self, function, args):

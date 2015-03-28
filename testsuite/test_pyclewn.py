@@ -66,7 +66,7 @@ class Pyclewn(ClewnTestCase):
             'edit ${test_file}1',
             'Cbreak ${test_file}1:2',
             'edit ${test_file}2',
-            '1bwipeout',
+            '3bwipeout',
             'Cstep',
             'redir! > ${test_out}',
             'sign place',

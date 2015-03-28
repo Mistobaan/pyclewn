@@ -90,7 +90,7 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'Chelp       *          custom    call s:nbcommand("help", <f-args>)',
+            'Chelp * customlist     call s:nbcommand("help", <f-args>)',
             )
         self.cltest_redir(cmd, expected)
 
@@ -102,7 +102,7 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'Cfile       *          file      call s:nbcommand("file", <f-args>)',
+            'Cfile * customlist     call s:nbcommand("file", <f-args>)',
             )
         self.cltest_redir(cmd, expected)
 
@@ -1187,6 +1187,7 @@ class Gdb(ClewnTestCase):
             'Cup',
             'sleep ${sleep_time}',
             'tabnext',
+            '1wincmd w',
             'Cnext',
             'sleep ${sleep_time}',
             'redir! > ${test_out}',

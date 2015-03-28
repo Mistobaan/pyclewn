@@ -122,10 +122,9 @@ function! s:create_windows()
         let l:msg .= "  python -c \"import clewn; clewn.get_vimball()\"\n"
         let l:msg .= "  vim -S pyclewn-%(version)s.vmb\n\n"
         call s:error(l:msg)
-        return -1
+    else
+        call pyclewn#buffers#CreateWindows("%(debugger)s", "%(window)s")
     endif
-    call pyclewn#buffers#CreateWindows(s:debugger, "%(window)s")
-    return 0
 endfunction
 
 " Run the nbkey netbeans Vim command.
@@ -133,16 +132,6 @@ function! s:nbcommand(...)
     if !has("netbeans_enabled")
         call s:error("Error: netbeans is not connected.")
         return
-    endif
-
-    " Create the clewn buffers windows on the first command of the first
-    " debugging session.
-    if s:debugger != ""
-        if s:create_windows()
-            let s:debugger = ""
-            return
-        endif
-        let s:debugger = ""
     endif
 
     " Allow '' as first arg: the 'C' command followed by a mandatory parameter
@@ -172,16 +161,6 @@ if ! %(noname_fix)s
             let l:msg .= "Please edit a file first."
             call s:error(l:msg)
             return
-        endif
-
-        " Create the clewn buffers windows on the first command of the first
-        " debugging session.
-        if s:debugger != ""
-            if s:create_windows()
-                let s:debugger = ""
-                return
-            endif
-            let s:debugger = ""
         endif
 
         " Allow '' as first arg: the 'C' command followed by a mandatory parameter
@@ -229,7 +208,8 @@ endfunction
 " The debugger specific part.
 %(debugger_specific)s
 
-let s:debugger = "%(debugger)s"
+" Create the windows layout.
+call s:create_windows()
 
 let &cpo = s:cpo_save
 
