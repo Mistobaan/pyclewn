@@ -4,7 +4,7 @@ News
 Pyclewn 2.1
 -----------
 
-.. March 28, 2015
+.. March 29, 2015
 
 New features
 ^^^^^^^^^^^^
@@ -40,7 +40,12 @@ Bug fixes
 
 * Issue #15: The clewn buffers are now emptied after the 'Cquit' command.
 
-* Issue #18: Create the windows layout upon starting Pyclewn.
+* Issue #18: Create the windows layout upon starting Pyclewn. The windows
+  layout is still created upon the first command instead when Pyclewn is
+  started with ``python -m clewn --window=usetab``.
+
+* Issue #19: Vim signs are placed now in the window of a buffer loaded before
+  the debugging session instead of using the current window.
 
 Pyclewn 2.0.1
 -------------

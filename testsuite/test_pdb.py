@@ -339,6 +339,7 @@ class Pdb(ClewnTestCase):
             'Cbreak testsuite/foo.py:48',
             'Cclear 1',
             'Cdetach',
+            'let pyclewn_python = "%s"' % sys.executable,
             'Pyclewn pdb',
             'Cinterrupt',
             'Cinterrupt',

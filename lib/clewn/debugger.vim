@@ -112,8 +112,14 @@ augroup clewn
     autocmd TabEnter * call s:tabpage_event()
 augroup END
 
-" Create the windows.
+" Create the windows once.
+let s:windows_created = 0
 function! s:create_windows()
+    if s:windows_created
+        return
+    endif
+    let s:windows_created = 1
+
     if pyclewn#version#RuntimeVersion() != "%(runtime_version)s"
         nbclose
         let l:msg = "Error: the version of the Vim runtime files does "
@@ -127,12 +133,33 @@ function! s:create_windows()
     endif
 endfunction
 
+" Send fake fileOpened events for all the buffers existing at the start of the
+" netbeans session. This is done once.
+let s:fake_fileopened_evts = 0
+function! s:send_fake_fileopened_evts()
+    if s:fake_fileopened_evts
+        return
+    endif
+    let s:fake_fileopened_evts = 1
+
+    for l:idx in range(bufnr('$'))
+        let l:name = bufname(l:idx + 1)
+        if l:name != ""
+            exe "nbkey fakeFileOpened." . l:name
+        endif
+    endfor
+endfunction
+
 " Run the nbkey netbeans Vim command.
 function! s:nbcommand(...)
     if !has("netbeans_enabled")
         call s:error("Error: netbeans is not connected.")
         return
     endif
+
+    " Send fake fileOpened events and create the windows layout, once.
+    call s:send_fake_fileopened_evts()
+    call s:create_windows()
 
     " Allow '' as first arg: the 'C' command followed by a mandatory parameter
     if a:0 != 0
@@ -155,6 +182,10 @@ if ! %(noname_fix)s
             call s:error("Error: netbeans is not connected.")
             return
         endif
+
+        " Send fake fileOpened events and create the windows layout, once.
+        call s:send_fake_fileopened_evts()
+        call s:create_windows()
 
         if bufname("%%") == ""
             let l:msg = "Cannot run a pyclewn command on the '[No Name]' buffer.\n"
@@ -208,8 +239,18 @@ endfunction
 " The debugger specific part.
 %(debugger_specific)s
 
+
 " Create the windows layout.
-call s:create_windows()
+" The windows are created only at the first command instead of on startup, when
+" '--window=usetab' is set and pyclewn is not started from Vim to workaround the
+" problem that the cursor is set in the clewn tab page at the first command in
+" that case.
+if has("netbeans_enabled") || ! %(usetab)s
+    if has("netbeans_enabled")
+        call s:send_fake_fileopened_evts()
+    endif
+    call s:create_windows()
+endif
 
 let &cpo = s:cpo_save
 

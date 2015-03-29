@@ -626,6 +626,7 @@ class Debugger(object):
                 'debugger_specific': self.vim_script_custom(prefix),
                 'version': __version__,
                 'runtime_version': runtime_version.version,
+                'usetab': (1 if self.vim.options.window == 'usetab' else 0),
                          }
             f.write(pkgutil.get_data(__name__, 'debugger.vim').decode()
                     % substitute)

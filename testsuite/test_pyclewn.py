@@ -157,6 +157,7 @@ class Pyclewn(ClewnTestCase):
             'Cbreak ${test_file}1:1',
             'bdelete (clewn)_console',
             'Cquit',
+            'edit (clewn)_console',
             'Cbreak ${test_file}1:2',
             'edit (clewn)_console | $$-2,$$-1w! ${test_out}',
             'qa!',

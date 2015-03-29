@@ -207,7 +207,6 @@ class ClewnBuffer(object):
     def __init__(self, name, nbsock):
         assert vimbuffer.is_clewnbuf(name)
         self.buf = nbsock._bset[name]
-        self.buf.registered = False
         self.buf.editport = self
         self.nbsock = nbsock
         self.visible = False
@@ -657,8 +656,6 @@ class Netbeans(asyncio.Protocol, object):
         self.transport = None
         self._bset = vimbuffer.BufferSet(self)
         self.last_buf = None
-        self.console = None
-        self.list_buffers = None
         self.reply_fifo = []
         self.ready = False
         self.detached = False
@@ -672,6 +669,13 @@ class Netbeans(asyncio.Protocol, object):
         self.frame_annotation = vimbuffer.FrameAnnotation(self)
         self.msg_queue = queue.Queue()
         self.got_addAnno = False
+
+        # Create the console, the empty buffer and the list buffers.
+        self.console = Console(self)
+        ClewnListBuffer('(clewn)_empty', self)
+        self.list_buffers = {}
+        for n in LIST_BUFFERS:
+            self.list_buffers[n] = ClewnListBuffer('(clewn)_%s' % n, self)
 
     def set_debugger(self, debugger):
         """Notify of the current debugger."""
@@ -850,9 +854,8 @@ class Netbeans(asyncio.Protocol, object):
         """Process a disconnect netbeans event."""
         self.close()
 
-    def evt_fileOpened(self, buf_id, pathname, arg_list):
+    def evt_fileOpened(self, buf_id, pathname, *arg_list):
         """A file was opened by the user."""
-        self.setup_clewn_buffers()
         if pathname:
             clewnbuf = vimbuffer.is_clewnbuf(pathname)
             if os.path.isabs(pathname) or clewnbuf:
@@ -865,10 +868,11 @@ class Netbeans(asyncio.Protocol, object):
 
                 if buf.buf_id != buf_id:
                     if buf_id == 0:
-                        self.send_cmd(buf, 'putBufferNumber',
-                                                misc.quote(pathname))
-                        self.send_cmd(buf, 'stopDocumentListen')
-                        buf.registered = True
+                        if not buf.registered:
+                            self.send_cmd(buf, 'putBufferNumber',
+                                                    misc.quote(pathname))
+                            self.send_cmd(buf, 'stopDocumentListen')
+                            buf.registered = True
                         buf.update()
                     else:
                         warning('got fileOpened with wrong bufId')
@@ -883,16 +887,7 @@ class Netbeans(asyncio.Protocol, object):
                 'Please, edit a file.\n'
                 )
 
-    def setup_clewn_buffers(self):
-        if self.list_buffers is None:
-            self.list_buffers = {}
-            for n in LIST_BUFFERS:
-                self.list_buffers[n] = ClewnListBuffer('(clewn)_%s' % n, self)
-
-            # Create the empty buffer.
-            ClewnListBuffer('(clewn)_empty', self)
-
-    def editport_evt(self, cmd):
+    def editport_evt(self, name, state):
         """Return True when this is an editport event.
 
         The event notifies clewn of a change in the state of the editport,
@@ -900,31 +895,25 @@ class Netbeans(asyncio.Protocol, object):
         a tabpage with/without clewn buffers has been entered.
 
         """
-        tokens = cmd.split('.')
-        if len(tokens) == 3 and tokens[0] == 'ClewnBuffer':
-            clewnbuf = visible = None
-            if tokens[2] == 'open':
-                visible = True
-            elif tokens[2] == 'close':
-                visible = False
+        clewnbuf = visible = None
+        if state == 'open':
+            visible = True
+        elif state == 'close':
+            visible = False
 
-            if tokens[1] == 'TabPage':
-                if self.debugger.vim.options.window == 'usetab':
-                    ClewnBuffer.clewn_tabpage = True if visible else False
-                    if ClewnBuffer.clewn_tabpage:
-                        self.debugger.update_tabpage_buffers()
-                        self.console.flush()
-            else:
-                if tokens[1] == 'console':
-                    clewnbuf = self.console
-                elif tokens[1] in LIST_BUFFERS:
-                    clewnbuf = self.list_buffers[tokens[1]]
-                if visible is not None and clewnbuf:
-                    clewnbuf.visible = visible
-
-            return True
-
-        return False
+        if name == 'TabPage':
+            if self.debugger.vim.options.window == 'usetab':
+                ClewnBuffer.clewn_tabpage = True if visible else False
+                if ClewnBuffer.clewn_tabpage:
+                    self.debugger.update_tabpage_buffers()
+                    self.console.flush()
+        else:
+            if name == 'console':
+                clewnbuf = self.console
+            elif name in LIST_BUFFERS:
+                clewnbuf = self.list_buffers[name]
+            if visible is not None and clewnbuf:
+                clewnbuf.visible = visible
 
     def evt_keyAtPos(self, buf_id, nbstring, arg_list):
         """Process a keyAtPos netbeans event."""
@@ -957,12 +946,14 @@ class Netbeans(asyncio.Protocol, object):
                     if cmd == 'quit' or cmd.startswith('complete'):
                         return
 
-                if self.console is None or not self.console.buf.registered:
-                    self.console = Console(self)
-                    self.console.register()
-                self.setup_clewn_buffers()
+                if cmd.startswith('fakeFileOpened.'):
+                    name = cmd[len('fakeFileOpened.'):]
+                    self.evt_fileOpened(0, os.path.abspath(name))
+                    return
 
-                if self.editport_evt(cmd):
+                tokens = cmd.split('.')
+                if len(tokens) == 3 and tokens[0] == 'ClewnBuffer':
+                    self.editport_evt(tokens[1], tokens[2])
                     return
 
                 self.debugger._dispatch_keypos(cmd, args, buf, lnum)

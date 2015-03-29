@@ -35,6 +35,7 @@ def run_vim_cmds(commands):
 
     fin = 'Fin %s' % random.random()
     commands.insert(0, 'function Test()')
+    commands.insert(0, 'let pyclewn_python = "%s"' % sys.executable)
     commands.extend(['echo "%s"' % fin, 'qa'])
     commands.append('endfunction')
     with open(TESTFN_FILE, 'w') as f:
@@ -590,6 +591,8 @@ class Gdb(ClewnTestCase):
             'Cstep',
             'Cdbgvar i',
             'sleep ${sleep_time}',
+            'sleep ${sleep_time}',
+            'sleep ${sleep_time}',
             'edit (clewn)_variables | 1,$$w!  ${test_out}',
             'Cstep',
             'Cstep',
@@ -813,6 +816,7 @@ class Gdb(ClewnTestCase):
             'Cfile testsuite/foobar',
             'Cbreak main',
             'Cquit',
+            'sleep ${sleep_time}',
             'Cfile testsuite/foobar',
             'Cbreak ${cwd}testsuite/foobar.c:16',
             'redir! > ${test_out}',
@@ -832,6 +836,7 @@ class Gdb(ClewnTestCase):
             'Cbreak main',
             'Cbreak foo',
             'Cquit',
+            'sleep ${sleep_time}',
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Cbreak foo',
@@ -1261,6 +1266,47 @@ class Gdb(ClewnTestCase):
         expected = (
             '1',
             '1',
+            '1',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_057(self):
+        """Test with a buffer loaded before the debugging session"""
+        sys.argv[sys.argv.index('--cargs') + 1] += ' testsuite/foo.c'
+
+        cmd = [
+            'split',
+            'edit testsuite/foobar.c',
+            'Cfile testsuite/foobar',
+            'Cbreak main',
+            'Cbreak foo',
+            'redir! > ${test_out}',
+            'echo bufname(winbufnr(5))',
+            'redir END',
+            'qa!',
+            ]
+        expected = (
+            'testsuite/foobar.c',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_058(self):
+        """Test with a buffer loaded before a 'usetab' debugging session"""
+        sys.argv[sys.argv.index('--cargs') + 1] += ' testsuite/foo.c'
+        sys.argv.append('--window=usetab')
+
+        cmd = [
+            'tabnew',
+            'edit testsuite/foobar.c',
+            'Cfile testsuite/foobar',
+            'Cbreak main',
+            'Cbreak foo',
+            'redir! > ${test_out}',
+            'echo tabpagenr()',
+            'redir END',
+            'qa!',
+            ]
+        expected = (
             '1',
             )
         self.cltest_redir(cmd, expected)
