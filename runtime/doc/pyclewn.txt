@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 March 26
+*pyclewn.txt*                                   Last change: 2015 March 30
 
 
                             PYCLEWN USER MANUAL
@@ -378,8 +378,8 @@ The full description of pyclewn options follows:
 -w {LOCATION}
 --window={LOCATION} The debugger console window is created at LOCATION, which
                     may be one of top, bottom, left or right. The default is
-                    top. When LOCATION is none, the console window is not
-                    created. See also |pyclewn-windows|.
+                    top. When LOCATION is none, no windows are created. See
+                    also |pyclewn-windows|.
                     When LOCATION is usetab, the console and the Pyclewn
                     buffers are loaded in windows of a dedicated tab page, see
                     |pyclewn-usetab|

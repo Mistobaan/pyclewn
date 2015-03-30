@@ -4,7 +4,7 @@ News
 Pyclewn 2.1
 -----------
 
-.. March 29, 2015
+.. March 30, 2015
 
 New features
 ^^^^^^^^^^^^
@@ -16,11 +16,13 @@ New features
   page when the ``--window`` option is set to ``usetab``. See
   ``help pyclewn-usetab``.
 
-Change
-^^^^^^
+Changes
+^^^^^^^
 
 * Add the new vim.ping() function to check whether an existing Python process
   may be attached to.
+
+* No windows are created when the ``--window`` option is set to ``none``.
 
 Bug fixes
 ^^^^^^^^^

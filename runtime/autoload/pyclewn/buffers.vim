@@ -145,7 +145,7 @@ function s:create_windows(debugger, window)
         edit (clewn)_console
 
     else    " none
-        1wincmd w
+        return
     endif
 
     if a:debugger == "gdb"
@@ -154,7 +154,7 @@ function s:create_windows(debugger, window)
             exe (&previewheight - 4) . "split"
             wincmd w
             let l:split_cmd = "vsplit"
-        elseif a:window == "bottom" || a:window == "none"
+        elseif a:window == "bottom"
             4split
             let l:split_cmd = "vsplit"
         elseif a:window == "right" || a:window == "left"

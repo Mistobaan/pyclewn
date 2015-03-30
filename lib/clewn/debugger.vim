@@ -158,8 +158,8 @@ function! s:nbcommand(...)
     endif
 
     " Send fake fileOpened events and create the windows layout, once.
-    call s:send_fake_fileopened_evts()
     call s:create_windows()
+    call s:send_fake_fileopened_evts()
 
     " Allow '' as first arg: the 'C' command followed by a mandatory parameter
     if a:0 != 0
@@ -184,8 +184,8 @@ if ! %(noname_fix)s
         endif
 
         " Send fake fileOpened events and create the windows layout, once.
-        call s:send_fake_fileopened_evts()
         call s:create_windows()
+        call s:send_fake_fileopened_evts()
 
         if bufname("%%") == ""
             let l:msg = "Cannot run a pyclewn command on the '[No Name]' buffer.\n"
@@ -246,10 +246,10 @@ endfunction
 " problem that the cursor is set in the clewn tab page at the first command in
 " that case.
 if has("netbeans_enabled") || ! %(usetab)s
+    call s:create_windows()
     if has("netbeans_enabled")
         call s:send_fake_fileopened_evts()
     endif
-    call s:create_windows()
 endif
 
 let &cpo = s:cpo_save
