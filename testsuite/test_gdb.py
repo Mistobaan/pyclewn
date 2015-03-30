@@ -1080,10 +1080,10 @@ class Gdb(ClewnTestCase):
             '3',
             'exe "normal \<CR>"',
             'sleep ${sleep_time}',
-            'call Edit_clewnbuffer("(clewn)_threads") | 2write! ${test_out}',
-            'edit ${test_out}',
+            'call Goto_buffer("(clewn)_threads")',
+            'set noreadonly',
             r'%s/\(python\).*in \(\S\+\).*$$/\1 \2',
-            'write',
+            '2write! ${test_out}',
             'qa!',
             ]
         expected = (
@@ -1179,56 +1179,40 @@ class Gdb(ClewnTestCase):
         proc.kill()
 
     def test_055(self):
-        """Test 'Cnext' from the clewn tab page"""
-        # Test that, when 'usetab' is set, the console or a clewn buffer as the
-        # current window does not hide a buffer that has a new sign placed.
+        """Test 'Cbreak' from the clewn tab page"""
+        # Test that, when 'usetab' is set and the console as the current window,
+        # placing a sign in a new buffer does not change the console window and
+        # load this buffer in a non-clewn window.
         sys.argv.append('--window=usetab')
 
         cmd = [
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
-            'Cbreak foo',
-            'Crun',
-            'Cup',
+            'Cstart',
+            'sleep ${sleep_time}',
             'sleep ${sleep_time}',
             'tabnext',
             '1wincmd w',
-            'Cnext',
-            'sleep ${sleep_time}',
             'redir! > ${test_out}',
-            'echo bufwinnr("testsuite/foo.c")',
-            'redir END',
-            'edit #',
-
-            '2wincmd w',
-            'Cnext',
+            'echo bufname("%")',
+            'redir! END',
+            'Cbreak foo',
             'sleep ${sleep_time}',
             'redir! >> ${test_out}',
             'echo bufwinnr("testsuite/foo.c")',
-            'redir END',
-            'edit #',
-
-            '3wincmd w',
-            'Cnext',
-            'sleep ${sleep_time}',
+            'echo tabpagenr()',
+            'redir! END',
+            'tabnext',
+            '1wincmd w',
             'redir! >> ${test_out}',
-            'echo bufwinnr("testsuite/foo.c")',
-            'redir END',
-            'edit #',
-
-            '4wincmd w',
-            'Cnext',
-            'sleep ${sleep_time}',
-            'redir! >> ${test_out}',
-            'echo bufwinnr("testsuite/foo.c")',
-            'redir END',
+            'echo bufname("%")',
             'qa!',
             ]
         expected = (
-            '1',
-            '2',
-            '3',
-            '4',
+            '(clewn)_console',
+            '1',    # The buffer is loaded in the first window
+            '1',    # of the first tab page that is also the current page.
+            '(clewn)_console',
             )
         self.cltest_redir(cmd, expected)
 

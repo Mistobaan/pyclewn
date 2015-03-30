@@ -1216,5 +1216,20 @@ instead of calling the corresponding functions defined in
           'fname': the source code full path name.
           'lnum':  the source code line number.
 
+The Pyclewn_CreateWindows() and Pyclewn_CreateTabWindows() functions must
+set a window local variable in the "(clewn)_console", "(clewn)_breakpoints",
+"(clewn)_backtrace" and "(clewn)_threads" windows with: >
+
+    let w:pyclewn_window = 1
+
+This variable is used by Pyclewn to prevent a source code buffer to be loaded
+in one of those windows. It is safer to check the implementation of these
+functions by verifying that: >
+
+    echo exists("w:pyclewn_window")
+
+prints "1" for all the above windows and "0" for all other windows including
+"(clewn)_empty".
+
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:et:

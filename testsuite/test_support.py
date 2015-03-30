@@ -71,21 +71,15 @@ function Wait_eop(...)
 endfunction
 """
 
-# Editing a 'nofile' buffer empties its content when the cursor is already in
-# this buffer (fixed at Vim 7.4.592). Try to find another buffer.
-EDIT_CLEWNBUFFER = """
-function Edit_clewnbuffer(fname)
-    " Search for another buffer.
-    let l:count = winnr("$$")
-    let l:nr = 1
-    while l:nr <= l:count
-        if bufname(winbufnr(l:nr)) != a:fname
-            exe l:nr . "wincmd w"
-            break
+GOTO_BUFFER = """
+function Goto_buffer(name)
+    for l:winidx in range(winnr('$$'))
+        let l:winno = l:winidx + 1
+        if bufname(winbufnr(l:winno)) == a:name
+            exe l:winno . "wincmd w"
+            return
         endif
-        let l:nr = l:nr + 1
-    endwhile
-    exe "edit " . a:fname
+    endfor
 endfunction
 """
 
@@ -260,7 +254,7 @@ class ClewnTestCase(TestCase):
                               exclude=exclude, do_all=True)
         commands = '%s\n:%s\n:%s\n' % (
                                     '\n:'.join(WAIT_EOP.split('\n')),
-                                    '\n:'.join(EDIT_CLEWNBUFFER.split('\n')),
+                                    '\n:'.join(GOTO_BUFFER.split('\n')),
                                     '\n:'.join(commands))
 
         cwd = os.getcwd() + os.sep

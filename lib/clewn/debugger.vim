@@ -110,7 +110,31 @@ augroup clewn
     autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <CR> :call <SID>goto_thread()<CR>
     autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_thread()<CR>
     autocmd TabEnter * call s:tabpage_event()
+    autocmd BufWinEnter * call s:restore_clewn_window(expand("<afile>"))
 augroup END
+
+function! s:restore_clewn_window(name)
+    if ! exists("w:pyclewn_window") || a:name =~# "^(clewn)_"
+        return
+    endif
+
+    " A BufWinEnter event in a clewn window whose content is not a clewn buffer.
+    " Restore the window and load the buffer in the first non clewn window.
+    edit #
+
+    for l:tabidx in range(tabpagenr('$'))
+        let l:tabno = l:tabidx + 1
+        exe "tabnext " . l:tabno
+        for l:winidx in range(tabpagewinnr(l:tabno, '$'))
+            let l:winno = l:winidx + 1
+            exe l:winno . "wincmd w"
+            if ! exists("w:pyclewn_window")
+                exe "edit " . a:name
+                return
+            endif
+        endfor
+    endfor
+endfunction
 
 " Create the windows once.
 let s:windows_created = 0

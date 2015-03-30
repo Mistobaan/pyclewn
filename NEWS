@@ -49,6 +49,8 @@ Bug fixes
 * Issue #19: Vim signs are placed now in the window of a buffer loaded before
   the debugging session instead of using the current window.
 
+* Issue #17: Improve the window/buffer management of Pyclewn.
+
 Pyclewn 2.0.1
 -------------
 

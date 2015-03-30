@@ -93,12 +93,16 @@ function s:create_tab_windows(debugger)
     edit (clewn)_console
     if a:debugger == "gdb"
         split
+        let w:pyclewn_window = 1
         wincmd w
         edit (clewn)_threads
+        let w:pyclewn_window = 1
         split
         edit (clewn)_breakpoints
+        let w:pyclewn_window = 1
         split
         edit (clewn)_backtrace
+        let w:pyclewn_window = 1
 
         " Resize the windows to have the 'breakpoints' and 'threads' windows
         " with a height of 8 and 4.
@@ -148,10 +152,12 @@ function s:create_windows(debugger, window)
         return
     endif
 
+    let w:pyclewn_window = 1
     if a:debugger == "gdb"
         let l:split_cmd = "split"
         if a:window == "top"
             exe (&previewheight - 4) . "split"
+            let w:pyclewn_window = 1
             wincmd w
             let l:split_cmd = "vsplit"
         elseif a:window == "bottom"
@@ -162,10 +168,13 @@ function s:create_windows(debugger, window)
         endif
 
         edit (clewn)_threads
+        let w:pyclewn_window = 1
         exe l:split_cmd
         edit (clewn)_backtrace
+        let w:pyclewn_window = 1
         exe l:split_cmd
         edit (clewn)_breakpoints
+        let w:pyclewn_window = 1
     endif
 
     let &splitbelow = l:sb
