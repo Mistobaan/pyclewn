@@ -4,7 +4,7 @@ News
 Pyclewn 2.1
 -----------
 
-.. March 30, 2015
+.. March 31, 2015
 
 New features
 ^^^^^^^^^^^^
@@ -15,6 +15,9 @@ New features
 * The console and the Pyclewn buffers are loaded in windows of a dedicated tab
   page when the ``--window`` option is set to ``usetab``. See
   ``help pyclewn-usetab``.
+
+* The new command ``Cexitclewn`` closes the debugging session and removes the
+  Pyclewn buffers and their windows (issue #20).
 
 Changes
 ^^^^^^^

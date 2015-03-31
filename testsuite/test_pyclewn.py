@@ -117,6 +117,7 @@ class Pyclewn(ClewnTestCase):
             'Cdisable    *                    call s:nbcommand("disable", <f-args>)',
             'Cdumprepr   *                    call s:nbcommand("dumprepr", <f-args>)',
             'Cenable     *                    call s:nbcommand("enable", <f-args>)',
+            'Cexitclewn  0                    call s:exitclewn()',
             'Chelp       *                    call s:nbcommand("help", <f-args>)',
             'Cinterrupt  *                    call s:nbcommand("interrupt", <f-args>)',
             'Cloglevel   *          custom    call s:nbcommand("loglevel", <f-args>)',

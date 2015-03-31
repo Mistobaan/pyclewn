@@ -127,13 +127,10 @@ function s:start(args, pdb_attach)
     let l:tmpfile = tempname()
 
     " Remove the Console and the list buffers from the previous session.
-    if bufexists("(clewn)_console")
-        bwipeout (clewn)_console
-    endif
-    for l:b in ["Variables", "Breakpoints", "Backtrace", "Threads"]
-        let l:bufname = "(clewn)_" . tolower(l:b)
-        if bufexists(l:bufname)
-            exe "bwipeout " . l:bufname
+    for l:idx in range(bufnr('$'))
+        let l:bufno = l:idx + 1
+        if bufname(l:bufno) =~# "^(clewn)_"
+            exe l:bufno . "bwipeout"
         endif
     endfor
 

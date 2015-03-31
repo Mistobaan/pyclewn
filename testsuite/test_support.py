@@ -234,7 +234,7 @@ class ClewnTestCase(TestCase):
         """
 
         not_a_pyclewn_method = ['Cunmapkeys', 'Ccwindow', 'Cdefine',
-                                'Ccommands', 'Cdocument']
+                                'Ccommands', 'Cdocument', 'Cexitclewn']
         exclude = not_a_pyclewn_method + ['Csymcompletion']
         if self.debugger == 'pdb':
             exclude.extend(('Ccontinue', 'Cdetach'))

@@ -257,6 +257,19 @@ function s:unmapkeys()
     endfor
 endfunction
 
+" exitclewn function.
+function s:exitclewn()
+    nbclose
+
+    " Remove the Pyclewn buffers.
+    for l:idx in range(bufnr('$'))
+        let l:bufno = l:idx + 1
+        if bufname(l:bufno) =~# "^(clewn)_"
+            exe l:bufno . "bwipeout"
+        endif
+    endfor
+endfunction
+
 " The commands.
 %(commands)s
 

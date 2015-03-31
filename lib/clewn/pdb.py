@@ -670,7 +670,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
         _, cmd = args
         cmd = cmd.strip()
         allowed = list(PDB_CMDS.keys()) + ['mapkeys', 'unmapkeys', 'dumprepr',
-                                                                    'loglevel']
+                                           'loglevel', 'exitclewn']
         if not cmd:
             self.message("Available commands (typing in Vim ':C<CTRL-D>'"
                          " prints this same list):")
@@ -691,7 +691,7 @@ class Pdb(debugger.Debugger, pdb.Pdb):
             "With a command name as argument, print help about that command.")
         elif cmd in ('interrupt', 'detach', 'quit',
                      'mapkeys', 'unmapkeys', 'dumprepr',
-                     'loglevel', 'threadstack',):
+                     'loglevel', 'exitclewn', 'threadstack',):
             method = getattr(self, 'cmd_%s' % cmd, None)
             if method is not None and method.__doc__ is not None:
                 self.message(method.__doc__.split('\n')[0])

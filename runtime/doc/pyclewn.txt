@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 March 30
+*pyclewn.txt*                                   Last change: 2015 March 31
 
 
                             PYCLEWN USER MANUAL
@@ -140,7 +140,7 @@ To just start gdb with a command that does not have any effect: >
 To terminate pyclewn and the Vim netbeans interface, run the following
 command: >
 
-    :nbclose
+    :Cexitclewn
 
 To know if the netbeans interface is connected, run the following command: >
 
@@ -755,6 +755,9 @@ commands that are listed here:
     * Cdumprepr      print on the console pyclewn internal structures that
                      may be used for debugging pyclewn.
 
+    * Cexitclewn     close the debugging session and |bwipeout| the Pyclewn
+                     buffers
+
     *|Cfoldvar|      collapse/expand the members of a watched structure or
                      class instance.
 
@@ -1000,6 +1003,9 @@ that are listed here:
 
     * Cdumprepr      print on the console pyclewn internal structures that
                      may be used for debugging pyclewn
+
+    * Cexitclewn     close the debugging session and |bwipeout| the Pyclewn
+                     buffers
 
     * Cloglevel      print or set the log level dynamically from inside Vim
 

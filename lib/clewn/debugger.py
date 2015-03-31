@@ -162,9 +162,10 @@ class Debugger(object):
             'loglevel': misc.LOG_LEVELS,
             'mapkeys': (),
             'unmapkeys': (),
+            'exitclewn': (),
             'ballooneval': (),
         }
-        self.vim_implementation = ['unmapkeys']
+        self.vim_implementation = ['unmapkeys', 'exitclewn']
         self.pyclewn_cmds = self.cmds
         self.mapkeys = {}
         self.cmds[''] = []
@@ -583,7 +584,7 @@ class Debugger(object):
         substitute = {'pre': prefix}
         for cmd, completion in self._get_cmds().items():
             substitute['cmd'] = cmd
-            if cmd in ('mapkeys', 'unmapkeys'):
+            if cmd in ('mapkeys', 'unmapkeys', 'exitclewn'):
                 commands.append(
                     'command! -bar %(pre)s%(cmd)s call s:%(cmd)s()'
                     % substitute)
@@ -772,6 +773,14 @@ class Debugger(object):
 
     def cmd_unmapkeys(self, cmd, *args):
         """Unmap the pyclewn keys.
+
+        This is actually a Vim command and it does not involve pyclewn.
+
+        """
+        self.not_a_pyclewn_method(cmd)
+
+    def cmd_exitclewn(self, cmd, *args):
+        """Close the debugging session.
 
         This is actually a Vim command and it does not involve pyclewn.
 

@@ -1192,6 +1192,8 @@ class Gdb(ClewnTestCase):
             'sleep ${sleep_time}',
             'sleep ${sleep_time}',
             'tabnext',
+            'sleep ${sleep_time}',
+            'sleep ${sleep_time}',
             '1wincmd w',
             'redir! > ${test_out}',
             'echo bufname("%")',
