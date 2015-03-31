@@ -149,6 +149,8 @@ function s:create_windows(debugger, window)
         edit (clewn)_console
 
     else    " none
+        let &splitbelow = l:sb
+        let &splitright = l:spr
         return
     endif
 
