@@ -191,7 +191,7 @@ function s:goto_window(fname, lnum)
     for l:tabidx in range(tabpagenr('$'))
         let l:tabno = ((l:tabidx + l:curtab - 1) % tabpagenr('$')) + 1
         for l:bufno in tabpagebuflist(l:tabno)
-            if expand("#" . l:bufno . ":p") == a:fname
+            if expand("#" . l:bufno . ":p") == a:fname || expand("#" . l:bufno) == a:fname
                 if l:curtab != l:tabno
                     exe "tabnext " . l:tabno
                 endif

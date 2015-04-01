@@ -57,6 +57,8 @@ Bug fixes
 * Issue #22: Autoscroll the console when the ``--window`` option is set to
   ``none``.
 
+* Issue #24: Fix the problem that two ``Cdbgvar`` commands create two windows.
+
 Pyclewn 2.0.1
 -------------
 
