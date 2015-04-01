@@ -684,7 +684,21 @@ class Gdb(debugger.Debugger, Process):
                 self.lastcmd = cmd
 
             self.handle_strrecord(cmd)
-            cmd.handle_result(result)
+
+            # Process an error message.
+            errmsg = 'error,msg='
+            if (result.startswith(errmsg) and
+                    isinstance(cmd, (gdbmi.CliCommand, gdbmi.MiCommand))):
+                result = result[len(errmsg):]
+                matchobj = misc.re_quoted.match(result)
+                if matchobj:
+                    result = misc.unquote(matchobj.group(1))
+                # Do not repeat the log stream record for CliCommands.
+                if (not isinstance(cmd, gdbmi.CliCommand) or
+                        result + '\n' != cmd.stream_record):
+                    self.console_print('%s\n' % result)
+            else:
+                cmd.handle_result(result)
 
             self.process_oob()
 

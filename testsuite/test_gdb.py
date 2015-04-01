@@ -17,7 +17,7 @@ import string
 import time
 from unittest import TestCase, skipUnless, skipIf
 
-from clewn import gdb
+from clewn import gdb, gdbmi
 from .test_support import ClewnTestCase, TESTFN, TESTFN_FILE, TESTFN_OUT
 
 debuggee = 'file ${cwd}testsuite/foobar'
@@ -468,6 +468,7 @@ class Gdb(ClewnTestCase):
 
     def test_021(self):
         """Check varobj creation, folding and deletion"""
+        gdbmi.VarCreateCommand.varnum = 1
         cmd = [
             'Cfile testsuite/foobar',
             'Cbreak foo',
@@ -489,6 +490,7 @@ class Gdb(ClewnTestCase):
 
     def test_022(self):
         """Check varobj folding"""
+        gdbmi.VarCreateCommand.varnum = 1
         cmd = [
             'Cfile testsuite/foobar',
             'Cbreak foo',
@@ -513,6 +515,7 @@ class Gdb(ClewnTestCase):
 
     def test_023(self):
         """Check deleting the last varobj"""
+        gdbmi.VarCreateCommand.varnum = 1
         cmd = [
             'Cfile testsuite/foobar',
             'Cbreak foo',
@@ -537,6 +540,7 @@ class Gdb(ClewnTestCase):
 
     def test_024(self):
         """Check deleting the first varobj"""
+        gdbmi.VarCreateCommand.varnum = 1
         cmd = [
             'Cfile testsuite/foobar',
             'Cbreak foo',
@@ -560,6 +564,7 @@ class Gdb(ClewnTestCase):
 
     def test_025(self):
         """Check deleting a middle varobj"""
+        gdbmi.VarCreateCommand.varnum = 1
         cmd = [
             'Cfile testsuite/foobar',
             'Cbreak foo',
@@ -583,15 +588,15 @@ class Gdb(ClewnTestCase):
 
     def test_026(self):
         """Check varobj hiliting"""
+        gdbmi.VarCreateCommand.varnum = 1
         cmd = [
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Cbreak bar',
             'Crun',
+            'sleep ${sleep_time}',
             'Cstep',
             'Cdbgvar i',
-            'sleep ${sleep_time}',
-            'sleep ${sleep_time}',
             'sleep ${sleep_time}',
             'edit (clewn)_variables | 1,$$w!  ${test_out}',
             'Cstep',
@@ -615,6 +620,7 @@ class Gdb(ClewnTestCase):
 
     def test_027(self):
         """Check robustness against vim 'tabedit (clewn)_variables' bug"""
+        gdbmi.VarCreateCommand.varnum = 1
         cmd = [
             'Cfile testsuite/foobar',
             'Cbreak foo',
@@ -633,6 +639,7 @@ class Gdb(ClewnTestCase):
 
     def test_028(self):
         """Watched variables are updated when changed with the print command"""
+        gdbmi.VarCreateCommand.varnum = 1
         cmd = [
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
@@ -1277,6 +1284,27 @@ class Gdb(ClewnTestCase):
         self.cltest_redir(cmd, expected)
 
     def test_058(self):
+        """Check varobj creation failure (issue #21)"""
+        gdbmi.VarCreateCommand.varnum = 1
+        cmd = [
+            'Cfile testsuite/foobar',
+            'Cbreak foo',
+            'Cdbgvar dummy',
+            'buffer (clewn)_console | $$-1w!  ${test_out}',
+            'Crun',
+            'Cdbgvar map',
+            'Cdbgvar map',
+            'buffer (clewn)_variables | 1,$$w! >> ${test_out}',
+            'qa!',
+            ]
+        expected = (
+            '-var-create: unable to create variable object',
+            '[+] var1: (map_t) map ={=} {...}',
+            '[+] var2: (map_t) map ={*} {...}',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_059(self):
         """Test with a buffer loaded before a 'usetab' debugging session"""
         sys.argv[sys.argv.index('--cargs') + 1] += ' testsuite/foo.c'
         sys.argv.append('--window=usetab')

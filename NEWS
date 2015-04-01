@@ -59,6 +59,9 @@ Bug fixes
 
 * Issue #24: Fix the problem that two ``Cdbgvar`` commands create two windows.
 
+* Issue #21: The gdb error message is printed now after a failed ``Cdbgvar``
+  command.
+
 Pyclewn 2.0.1
 -------------
 

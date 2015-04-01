@@ -863,18 +863,8 @@ class CliCommand(Command):
         return self.send('-interpreter-exec console %s\n', misc.quote(cmd))
 
     def handle_result(self, line):
-        """Handle gdb/mi result, print an error message."""
-        errmsg = 'error,msg='
-        if line.startswith(errmsg):
-            line = line[len(errmsg):]
-            matchobj = misc.re_quoted.match(line)
-            if matchobj:
-                line = misc.unquote(matchobj.group(1))
-                # do not repeat the log stream record
-                if line + '\n' != self.stream_record:
-                    self.gdb.console_print('%s\n' % line)
-                return
-        info(line)
+        """Handle gdb/mi result."""
+        warning('CliCommand gdb/mi result: %s', line)
 
     def handle_strrecord(self, stream_record):
         """Process the stream records output by the command."""
@@ -958,13 +948,16 @@ class MiCommand(Command):
 class VarCreateCommand(MiCommand):
     """Create a variable object."""
 
+    varnum = 1
+
     def sendcmd(self):
         """Send the gdb command."""
-        return MiCommand.docmd(self, '-var-create - * %s\n',
-                                    misc.quote(self.varobj['exp']))
+        return MiCommand.docmd(self, '-var-create var%d * %s\n',
+                               self.varnum, misc.quote(self.varobj['exp']))
 
     def handle_result(self, line):
         """Process gdb/mi result."""
+        VarCreateCommand.varnum += 1
         parsed = misc.parse_keyval(re_varcreate, line)
         if VARCREATE_ATTRIBUTES.issubset(parsed):
             rootvarobj = self.gdb.info.varobj
