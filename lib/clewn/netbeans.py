@@ -934,7 +934,8 @@ class Netbeans(asyncio.Protocol, object):
             else:
                 lnum = int(matchobj.group('lnum'))
                 col = int(matchobj.group('col'))
-                if not buf.editport or not isinstance(buf.editport, Console):
+                if (not buf.editport or
+                        buf.editport is self.list_buffers['variables']):
                     self.last_buf = buf
                     self.last_buf.lnum = lnum
                     self.last_buf.col = col

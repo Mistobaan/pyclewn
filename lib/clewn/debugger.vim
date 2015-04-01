@@ -111,6 +111,9 @@ augroup clewn
     autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_thread()<CR>
     autocmd TabEnter * call s:tabpage_event()
     autocmd BufWinEnter * call s:restore_clewn_window(expand("<afile>"))
+    if "%(window)s" == "none"
+        autocmd BufWinEnter (clewn)_console normal G
+    endif
 augroup END
 
 function! s:restore_clewn_window(name)

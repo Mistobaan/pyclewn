@@ -4,7 +4,7 @@ News
 Pyclewn 2.1
 -----------
 
-.. March 31, 2015
+.. April 1st, 2015
 
 New features
 ^^^^^^^^^^^^
@@ -43,7 +43,7 @@ Bug fixes
 * Issue #14: tmux can be used now with the ``terminal`` option, e.g.
   ``--terminal=tmux,split-window``.
 
-* Issue #15: The clewn buffers are now emptied after the 'Cquit' command.
+* Issue #15: The clewn buffers are now emptied after the ``Cquit`` command.
 
 * Issue #18: Create the windows layout upon starting Pyclewn. The windows
   layout is still created upon the first command instead when Pyclewn is
@@ -53,6 +53,9 @@ Bug fixes
   the debugging session instead of using the current window.
 
 * Issue #17: Improve the window/buffer management of Pyclewn.
+
+* Issue #22: Autoscroll the console when the ``--window`` option is set to
+  ``none``.
 
 Pyclewn 2.0.1
 -------------
