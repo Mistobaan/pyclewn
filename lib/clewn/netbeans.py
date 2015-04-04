@@ -677,6 +677,9 @@ class Netbeans(asyncio.Protocol, object):
         for n in LIST_BUFFERS:
             self.list_buffers[n] = ClewnListBuffer('(clewn)_%s' % n, self)
 
+        # Resetting clewn_tabpage is required by the test suite.
+        ClewnBuffer.clewn_tabpage = True
+
     def set_debugger(self, debugger):
         """Notify of the current debugger."""
         self.debugger = debugger

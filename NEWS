@@ -4,7 +4,7 @@ News
 Pyclewn 2.1
 -----------
 
-.. April 1st, 2015
+.. April 3, 2015
 
 New features
 ^^^^^^^^^^^^
@@ -19,11 +19,17 @@ New features
 * The new command ``Cexitclewn`` closes the debugging session and removes the
   Pyclewn buffers and their windows (issue #20).
 
+* Two new key mappings are available in the breakpoints window. Use ``+`` to
+  toggle the breakpoint state between enable/disable, and use ``<C-K>`` to
+  delete the breakpoint.
+
+* The new vim.ping() function may be used to check whether an existing Python
+  process may be attached to.
+
 Changes
 ^^^^^^^
 
-* Add the new vim.ping() function to check whether an existing Python process
-  may be attached to.
+* Many improvements to the handling of the Pyclewn windows (issue #17).
 
 * No windows are created when the ``--window`` option is set to ``none``.
 
@@ -32,8 +38,6 @@ Bug fixes
 
 * Issue #6: Fix the crash in Pyclewn versions 2.0 and 2.0.1 when trying to
   attach to a remote gdb.
-
-* Retrieving the installation vimball does not require anymore setuptools.
 
 * Issue #12: Prevent Pyclewn from running with an obsolete version of its Vim
   run time files.
@@ -46,21 +50,17 @@ Bug fixes
 * Issue #15: The clewn buffers are now emptied after the ``Cquit`` command.
 
 * Issue #18: Create the windows layout upon starting Pyclewn. The windows
-  layout is still created upon the first command instead when Pyclewn is
+  layout is still created upon the first command instead, when Pyclewn is
   started with ``python -m clewn --window=usetab``.
 
 * Issue #19: Vim signs are placed now in the window of a buffer loaded before
   the debugging session instead of using the current window.
 
-* Issue #17: Improve the window/buffer management of Pyclewn.
-
 * Issue #22: Autoscroll the console when the ``--window`` option is set to
   ``none``.
 
-* Issue #24: Fix the problem that two ``Cdbgvar`` commands create two windows.
-
-* Issue #21: The gdb error message is printed now after a failed ``Cdbgvar``
-  command.
+* Issue #21: A gdb error message is printed now when the ``Cdbgvar`` command
+  fails.
 
 Pyclewn 2.0.1
 -------------

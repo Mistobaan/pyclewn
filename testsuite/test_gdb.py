@@ -1325,6 +1325,33 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
+    def test_060(self):
+        """Test the key mapping in the (clewn)_breakpoints window."""
+        cmd = [
+            'Cfile testsuite/foobar',
+            'Cbreak foo',
+            'Cbreak foo',
+            'Cbreak foo',
+            '2wincmd w',
+            '3',
+            'normal ',
+            'sleep ${sleep_time}',
+            '2wincmd w',
+            '3',
+            'normal +',
+            'sleep ${sleep_time}',
+            'edit (clewn)_breakpoints | %w!  ${test_out}',
+            'edit ${test_out}',
+            r'%s/\(.*\) <.*>$$/\1',
+            'write',
+            'qa!',
+            ]
+        expected = (
+            '1 breakpoint y 0 keep in foo at foo.c:30',
+            '3 breakpoint n 0 keep in foo at foo.c:30',
+            )
+        self.cltest_redir(cmd, expected)
+
 class PyclewnCommand(TestCase):
     """Test the ':Pyclewn' command."""
 

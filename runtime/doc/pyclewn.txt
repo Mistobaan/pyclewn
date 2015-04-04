@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 March 31
+*pyclewn.txt*                                   Last change: 2015 April 3
 
 
                             PYCLEWN USER MANUAL
@@ -568,22 +568,24 @@ normally called '.gdbinit'. See the gdb documentation.
 
 The clewn list buffers:
 -----------------------
-Three buffers are updated by pyclewn whenever the state of the debuggee
-changes. The buffers list the breakpoints, the backtrace and the threads. From
+Three buffers are updated by Pyclewn whenever the state of the debuggee
+changes. The buffers list the backtrace, the threads and the breakpoints. From
 a window loaded with one of these buffers and with the <CR> key or the mouse,
 one may:
-
-    * "(clewn)_breakpoints": jump to the corresponding source code line.
 
     * "(clewn)_backtrace": switch to the corresponding frame.
 
     * "(clewn)_threads": switch to the correponding thread.
 
-When the "--window" option is "top" (the default), pyclewn creates three
-windows at the first user command that creates a breakpoint or start the
-debuggee. The windows are then populated with their corresponding list buffers
-as soon as these buffers become available. See |pyclewn-windows| for a way to
-disable or customize this feature.
+    * "(clewn)_breakpoints": jump to the corresponding source code line.
+      The following keys are also mapped in this window:
+
+        +       toggle the breakpoint state between enable/disable
+        CTRL-K  delete the breakpoint
+
+Pyclewn creates those three windows upon starting except when the "--window"
+option is set to "none". See |pyclewn-windows| to customize the
+disposition of the windows.
 
 
                                                     *inferior_tty*

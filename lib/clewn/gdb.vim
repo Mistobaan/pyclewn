@@ -1,15 +1,63 @@
 " vi:set ts=8 sts=4 sw=4 et tw=80:
 " Pyclewn gdb commands and completion.
 
-function! <SID>goto_breakpoint()
+augroup clewn
+    autocmd BufWinEnter (clewn)_variables silent! setlocal syntax=clewn_variables
+    autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <CR> :exe "Cfoldvar " . line(".")<CR>
+    autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <2-Leftmouse> :exe "Cfoldvar " . line(".")<CR>
+
+    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <CR> :call <SID>goto_breakpoint()<CR>
+    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_breakpoint()<CR>
+    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> + :call <SID>toggle_breakpoint()<CR>
+    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <C-K> :call <SID>delete_breakpoint()<CR>
+
+    autocmd BufEnter (clewn)_backtrace nnoremap <buffer> <silent> <CR> :call <SID>goto_frame()<CR>
+    autocmd BufEnter (clewn)_backtrace nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_frame()<CR>
+
+    autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <CR> :call <SID>goto_thread()<CR>
+    autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_thread()<CR>
+augroup END
+
+function! s:parse_breakpoint_curline()
+    let l:rv = []
     let l:line = getline(".")
-    let l:regexp = '^\(.*\) at \(.\+\):\(\d\+\) <\(.\+\)>$'
+    let l:regexp = '^\(\d\+\)\s\+\S\+\s\+\([yn]\).* at \(.\+\):\(\d\+\) <\(.\+\)>$'
     let l:lnum = substitute(l:line, l:regexp , '\3', "")
     if l:line != l:lnum
-        let l:fname = substitute(l:line, l:regexp , '\4', "")
+        call add(l:rv, substitute(l:line, l:regexp , '\1', ""))
+        call add(l:rv, substitute(l:line, l:regexp , '\2', ""))
+        call add(l:rv, l:lnum)
+        call add(l:rv, substitute(l:line, l:regexp , '\4', ""))
+        call add(l:rv, substitute(l:line, l:regexp , '\5', ""))
+    endif
+    return l:rv
+endfunction
+
+function! <SID>goto_breakpoint()
+    let l:bp = s:parse_breakpoint_curline()
+    if len(l:bp)
+        let l:fname = l:bp[4]
         if filereadable(l:fname)
-            call pyclewn#buffers#GotoBreakpoint(l:fname, l:lnum)
+            call pyclewn#buffers#GotoBreakpoint(l:fname, l:bp[2])
         endif
+    endif
+endfunction
+
+function! <SID>toggle_breakpoint()
+    let l:bp = s:parse_breakpoint_curline()
+    if len(l:bp)
+        if l:bp[1] == "y"
+            exe "Cdisable " . l:bp[0]
+        else
+            exe "Cenable " . l:bp[0]
+        endif
+    endif
+endfunction
+
+function! <SID>delete_breakpoint()
+    let l:bp = s:parse_breakpoint_curline()
+    if len(l:bp)
+        exe "Cdelete " . l:bp[0]
     endif
 endfunction
 

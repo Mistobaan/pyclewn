@@ -100,15 +100,6 @@ augroup clewn
 
     autocmd BufWinEnter (clewn)_* silent! call s:bufwin_event(expand("<afile>"), "open")
     autocmd BufWinLeave (clewn)_* silent! call s:bufwin_event(expand("<afile>"), "close")
-    autocmd BufWinEnter (clewn)_variables silent! setlocal syntax=clewn_variables
-    autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <CR> :exe "Cfoldvar " . line(".")<CR>
-    autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <2-Leftmouse> :exe "Cfoldvar " . line(".")<CR>
-    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <CR> :call <SID>goto_breakpoint()<CR>
-    autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_breakpoint()<CR>
-    autocmd BufEnter (clewn)_backtrace nnoremap <buffer> <silent> <CR> :call <SID>goto_frame()<CR>
-    autocmd BufEnter (clewn)_backtrace nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_frame()<CR>
-    autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <CR> :call <SID>goto_thread()<CR>
-    autocmd BufEnter (clewn)_threads nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_thread()<CR>
     autocmd TabEnter * call s:tabpage_event()
     autocmd BufWinEnter * call s:restore_clewn_window(expand("<afile>"))
     if "%(window)s" == "none"
@@ -278,7 +269,6 @@ endfunction
 
 " The debugger specific part.
 %(debugger_specific)s
-
 
 " Create the windows layout.
 " The windows are created only at the first command instead of on startup, when
