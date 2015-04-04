@@ -27,14 +27,14 @@ A two steps installation.
 2) Install the Vim runtime files with a vimball.
 
    The vimball is part of the ``clewn`` package installed in the first step.
-   First create the ``pyclewn-2.0.1.vmb`` vimball in the current directory
+   First create the ``pyclewn-2.1.vmb`` vimball in the current directory
    with the command::
 
         python -c "import clewn; clewn.get_vimball()"
 
    Then source the vimball and install the Vim runtime files with::
 
-        vim -S pyclewn-2.0.1.vmb
+        vim -S pyclewn-2.1.vmb
 
    Type ``:quit`` to quit Vim after the vimball is installed.
 
@@ -57,7 +57,7 @@ required to install Python packages::
 
     pip install --user pyclewn
 
-The ``pyclewn-2.0.1.vmb`` vimball is a data file, part of the ``clewn``
+The ``pyclewn-2.1.vmb`` vimball is a data file, part of the ``clewn``
 package, and can be obtained at any time with::
 
     python -c "import clewn; clewn.get_vimball()"
@@ -82,8 +82,8 @@ Installing from source
 Get the tarball from PyPi_. Unpack the tarball, change directory to the
 distribution directory and run the setup script to install pyclewn::
 
-    tar xzf pyclewn-2.0.1.tar.gz
-    cd pyclewn-2.0.1
+    tar xzf pyclewn-2.1.tar.gz
+    cd pyclewn-2.1
     sudo python setup.py install
 
 To use Vim as a front-end to the pdb debugger, pyclewn requires that
@@ -99,7 +99,7 @@ required to install Python packages::
     python setup.py install --user
 
 The runtime files must also be installed as described in the first section.
-The ``pyclewn-2.0.1.vmb`` vimball can be found in the ``lib/clewn/runtime``
+The ``pyclewn-2.1.vmb`` vimball can be found in the ``lib/clewn/runtime``
 directory of the tarball.
 
 
@@ -112,24 +112,24 @@ Then clone pyclewn::
 
     hg clone https://xdegaye@bitbucket.org/xdegaye/pyclewn
 
-Build the source distribution ``dist/pyclewn-2.0.1.tar.gz`` from the root of
+Build the source distribution ``dist/pyclewn-2.1.tar.gz`` from the root of
 the workarea::
 
     python setup.py sdist
 
 And install it as root::
 
-    sudo pip install ---ignore-installed --find-links=dist pyclewn==2.0.1
+    sudo pip install ---ignore-installed --find-links=dist pyclewn==2.1
 
 Or install it locally using the user scheme::
 
-    pip install ---ignore-installed --user --find-links=dist pyclewn==2.0.1
+    pip install ---ignore-installed --user --find-links=dist pyclewn==2.1
 
 Finally the Vim run time files **must** be updated after pip has installed
 the new version::
 
     python -c "import clewn; clewn.get_vimball()"
-    vim -S pyclewn-2.0.1.vmb
+    vim -S pyclewn-2.1.vmb
 
 Once you have installed a development version, do not forget to use the
 ``--ignore-installed`` option of pip when upgrading later to the latest
