@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 import sys
 import os
 
-__version__ = '2.1'
+__version__ = '2.2'
 
 # Python 2.6 or older
 PY26 = (sys.version_info < (2, 7))
