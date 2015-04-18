@@ -76,11 +76,14 @@ RE_ANNO_1 = r'^[~@&]"\\032\\032([a-zA-Z]:|)[^:]+:[^:]+:[^:]+:[^:]+:[^:]+$'  \
             r'# annotation level 1'                                         \
             r'# ^Z^ZFILENAME:LINE:CHARACTER:MIDDLE:ADDR'                    \
             r'# ^Z^ZD:FILENAME:LINE:CHARACTER:MIDDLE:ADDR'
+RE_FINISH = r'(gdb-result-var|return-value)=%s'                 \
+            r'# return value after Cfinish' % misc.QUOTED_STRING
 
 # compile regexps
 re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_mirecord = re.compile(RE_MIRECORD, re.VERBOSE)
 re_anno_1 = re.compile(RE_ANNO_1, re.VERBOSE)
+re_finish = re.compile(RE_FINISH, re.VERBOSE)
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('gdb')
@@ -631,8 +634,14 @@ class Gdb(debugger.Debugger, Process):
                 self.stream_record.append(line)
             else:
                 warning('bad format in gdb/mi log: "%s"', line)
+        elif line.startswith('*stopped,reason="function-finished"'):
+            # Print the return value after the 'Cfinish' command.
+            rv = misc.parse_keyval(re_finish, line)
+            if rv:
+                self.console_print('Value returned is %(gdb-result-var)s ='
+                                   ' %(return-value)s\n' % rv)
         elif line[0] in '*+=':
-            # ignore ''async' records
+            # Ignore 'async' records.
             info(line[1:])
         else:
             matchobj = re_mirecord.match(line)

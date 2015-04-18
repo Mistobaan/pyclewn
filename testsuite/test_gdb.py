@@ -1326,7 +1326,7 @@ class Gdb(ClewnTestCase):
         self.cltest_redir(cmd, expected)
 
     def test_060(self):
-        """Test the key mapping in the (clewn)_breakpoints window."""
+        """Test the key mapping in the (clewn)_breakpoints window"""
         cmd = [
             'Cfile testsuite/foobar',
             'Cbreak foo',
@@ -1349,6 +1349,27 @@ class Gdb(ClewnTestCase):
         expected = (
             '1 breakpoint y 0 keep in foo at foo.c:30',
             '3 breakpoint n 0 keep in foo at foo.c:30',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_061(self):
+        """Print the return value when the inferior stops after 'finish'"""
+        cmd = [
+            'Cfile testsuite/foobar',
+            'Cbreak bar',
+            'Crun',
+            'Cfinish',
+            'Ccontinue',
+            'Cfinish',
+            'edit (clewn)_console | ?Starting program?,$$w! ${test_out}',
+            'edit ${test_out}',
+            r'%s/\(Value returned is \$$\d = \d\)\|.*/\1',
+            'write',
+            'qa!',
+            ]
+        expected = (
+            'Value returned is $$1 = 2',
+            'Value returned is $$2 = 4',
             )
         self.cltest_redir(cmd, expected)
 

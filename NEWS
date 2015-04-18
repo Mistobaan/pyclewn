@@ -1,6 +1,16 @@
 News
 ====
 
+Pyclewn 2.2
+-----------
+
+.. April 18, 2015
+
+Bug fixes
+^^^^^^^^^
+
+* Issue #25: Print the return value when the inferior stops after 'finish'.
+
 Pyclewn 2.1
 -----------
 
