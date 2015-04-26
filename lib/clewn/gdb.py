@@ -78,12 +78,15 @@ RE_ANNO_1 = r'^[~@&]"\\032\\032([a-zA-Z]:|)[^:]+:[^:]+:[^:]+:[^:]+:[^:]+$'  \
             r'# ^Z^ZD:FILENAME:LINE:CHARACTER:MIDDLE:ADDR'
 RE_FINISH = r'(gdb-result-var|return-value)=%s'                 \
             r'# return value after Cfinish' % misc.QUOTED_STRING
+RE_VIM_COMMAND = r'^[a-zA-Z0-9]+$'                              \
+                 r'# a valid Vim command name'
 
 # compile regexps
 re_completion = re.compile(RE_COMPLETION, re.VERBOSE)
 re_mirecord = re.compile(RE_MIRECORD, re.VERBOSE)
 re_anno_1 = re.compile(RE_ANNO_1, re.VERBOSE)
 re_finish = re.compile(RE_FINISH, re.VERBOSE)
+re_vim_command = re.compile(RE_VIM_COMMAND, re.VERBOSE)
 
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('gdb')
@@ -290,15 +293,20 @@ class GlobalSetup(misc.Singleton):
     def build_cmds(self):
         """Build the completion lists from gdb and build the GlobalSetup lists.
 
-        Build the following lists and dict:
-            cmds: all commands
-            gdb_cmds: gdb commands
+        Build the following lists and the 'cmds' dict:
+            cmds: dict
+                all the commands and the Vim (static) completion of their
+                argument
+            gdb_cmds: list
+                the gdb commands whose argument completion is (dynamically)
+                obtained from gdb, once gdb has been started
+
             illegal_cmds_prefix
             run_cmds_prefix
             illegal_setargs_prefix
-
         """
-        dash_cmds = []  # List of gdb commands including a '-'.
+        # List of gdb commands that cannot be made into a Vim command name.
+        invalid_vim_commands = []
         firstarg_complt = ''
 
         nocomplt_cmds = self.illegal_cmds + self.filename_complt
@@ -309,16 +317,17 @@ class GlobalSetup(misc.Singleton):
                                 if x.startswith('~"') and x.endswith(r'\n"')):
             if not cmd:
                 continue
-            else:
-                cmd = cmd.split()[0]
 
-            if cmd not in self.illegal_cmds and '-' not in cmd:
+            cmd = cmd.split()[0]
+            valid_vim_command = re.match(re_vim_command, cmd)
+
+            if cmd not in self.illegal_cmds and valid_vim_command:
                 self.gdb_cmds.append(cmd)
 
             if cmd in nocomplt_cmds:
                 continue
-            elif '-' in cmd:
-                dash_cmds.append(cmd)
+            elif not valid_vim_command:
+                invalid_vim_commands.append(cmd)
             else:
                 self.cmds[cmd] = []
                 firstarg_complt += 'complete %s \n' % cmd
@@ -343,8 +352,8 @@ class GlobalSetup(misc.Singleton):
         for cmd in self.filename_complt:
             self.cmds[cmd] = None
 
-        # Add commands including a '-' and that can't be made to a vim command.
-        self.cmds[''] = dash_cmds
+        # Add the gdb commands that can't be made into a vim command.
+        self.cmds[''] = invalid_vim_commands
 
         # Add pyclewn commands.
         for cmd, completion in self.pyclewn_cmds.items():

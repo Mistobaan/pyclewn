@@ -4,12 +4,15 @@ News
 Pyclewn 2.2
 -----------
 
-.. April 18, 2015
+.. April 26, 2015
 
 Bug fixes
 ^^^^^^^^^
 
 * Issue #25: Print the return value when the inferior stops after 'finish'.
+
+* Issue #26: Fix Pyclewn failure to start when gdb is configured with
+  ``enable-targets=all``.
 
 Pyclewn 2.1
 -----------
