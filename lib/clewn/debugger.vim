@@ -130,14 +130,11 @@ function! s:restore_clewn_window(name)
     endfor
 endfunction
 
-" Create the windows once.
-let s:windows_created = 0
-function! s:create_windows()
-    if s:windows_created
-        return
-    endif
-    let s:windows_created = 1
+" The Funcref dictionary of functions to be run only once.
+let s:runonce_dict = {}
 
+" Create the windows.
+function! s:runonce_dict.create_windows() dict
     if pyclewn#version#RuntimeVersion() != "%(runtime_version)s"
         nbclose
         let l:msg = "Error: the version of the Vim runtime files does "
@@ -152,14 +149,8 @@ function! s:create_windows()
 endfunction
 
 " Send fake fileOpened events for all the buffers existing at the start of the
-" netbeans session. This is done once.
-let s:fake_fileopened_evts = 0
-function! s:send_fake_fileopened_evts()
-    if s:fake_fileopened_evts
-        return
-    endif
-    let s:fake_fileopened_evts = 1
-
+" netbeans session.
+function! s:runonce_dict.send_fake_fileopened_evts() dict
     for l:idx in range(bufnr('$'))
         let l:name = bufname(l:idx + 1)
         if l:name != ""
@@ -175,9 +166,11 @@ function! s:nbcommand(...)
         return
     endif
 
-    " Send fake fileOpened events and create the windows layout, once.
-    call s:create_windows()
-    call s:send_fake_fileopened_evts()
+    " Run all the 'runonce_dict' functions using their Funcref.
+    for key in keys(s:runonce_dict)
+        call s:runonce_dict[key]()
+    endfor
+    let s:runonce_dict = {}
 
     " Allow '' as first arg: the 'C' command followed by a mandatory parameter
     if a:0 != 0
@@ -201,9 +194,11 @@ if ! %(noname_fix)s
             return
         endif
 
-        " Send fake fileOpened events and create the windows layout, once.
-        call s:create_windows()
-        call s:send_fake_fileopened_evts()
+        " Run all the 'runonce_dict' functions using their Funcref.
+        for key in keys(s:runonce_dict)
+            call s:runonce_dict[key]()
+        endfor
+        let s:runonce_dict = {}
 
         if bufname("%%") == ""
             let l:msg = "Cannot run a pyclewn command on the '[No Name]' buffer.\n"
@@ -276,9 +271,11 @@ endfunction
 " problem that the cursor is set in the clewn tab page at the first command in
 " that case.
 if has("netbeans_enabled") || ! %(usetab)s
-    call s:create_windows()
+    call s:runonce_dict.create_windows()
+    unlet s:runonce_dict.create_windows
     if has("netbeans_enabled")
-        call s:send_fake_fileopened_evts()
+        call s:runonce_dict.send_fake_fileopened_evts()
+        unlet s:runonce_dict.send_fake_fileopened_evts
     endif
 endif
 

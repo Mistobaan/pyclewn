@@ -198,17 +198,8 @@ function! s:GdbComplete(arglead, cmdline, curpos)
     endwhile
 endfunction
 
-autocmd clewn BufAdd (clewn)_* call s:init_gdb_completion()
-
-" Initialize full gdb completion only once, after the first debugging session
-" has been started.
-let s:gdb_completion_done = 0
-function s:init_gdb_completion()
-    if s:gdb_completion_done
-        return
-    endif
-    let s:gdb_completion_done = 1
-
+" Setup full gdb completion.
+function! s:runonce_dict.init_gdb_completion() dict
     %(commands)s
 endfunction
 

@@ -91,7 +91,7 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'Chelp * customlist     call s:nbcommand("help", <f-args>)',
+            'Chelp * custom     call s:nbcommand("help", <f-args>)',
             )
         self.cltest_redir(cmd, expected)
 
@@ -103,7 +103,7 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            'Cfile * customlist     call s:nbcommand("file", <f-args>)',
+            'Cfile * file     call s:nbcommand("file", <f-args>)',
             )
         self.cltest_redir(cmd, expected)
 

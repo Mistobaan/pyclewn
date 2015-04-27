@@ -4,7 +4,7 @@ News
 Pyclewn 2.2
 -----------
 
-.. April 26, 2015
+.. April 27, 2015
 
 Bug fixes
 ^^^^^^^^^
@@ -13,6 +13,10 @@ Bug fixes
 
 * Issue #26: Fix Pyclewn failure to start when gdb is configured with
   ``enable-targets=all``.
+
+* Issue #27: File name completion is now available before gdb has been
+  started. This fixes a regression introduced in 2.1 by the full gdb
+  completion feature.
 
 Pyclewn 2.1
 -----------
