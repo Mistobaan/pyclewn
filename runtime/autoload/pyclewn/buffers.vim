@@ -206,19 +206,21 @@ function s:goto_window(fname, lnum)
 
     " Search for a non clewn buffer window to split, starting with the current
     " tab page and possibly using a '(clewn)_empty' window.
-    let l:curtab = tabpagenr()
-    for l:tabidx in range(tabpagenr('$'))
-        let l:tabno = ((l:tabidx + l:curtab - 1) % tabpagenr('$')) + 1
-        for l:bufno in tabpagebuflist(l:tabno)
-            if bufname(l:bufno) !~# "^(clewn)_" || bufname(l:bufno) == "(clewn)_empty"
-                if l:curtab != l:tabno
-                    exe "tabnext " . l:tabno
+    try
+        for l:tabidx in range(tabpagenr('$'))
+            let l:tabno = ((l:tabidx + l:curtab - 1) % tabpagenr('$')) + 1
+            for l:bufno in tabpagebuflist(l:tabno)
+                if bufname(l:bufno) !~# "^(clewn)_" || bufname(l:bufno) == "(clewn)_empty"
+                    if l:curtab != l:tabno
+                        exe "tabnext " . l:tabno
+                    endif
+                    exe bufwinnr(l:bufno) . "wincmd w"
+                    throw "break"
                 endif
-                exe bufwinnr(l:bufno) . "wincmd w"
-                break
-            endif
+            endfor
         endfor
-    endfor
+    catch /break/
+    endtry
 
     " Split the window except if it is '(clewn)_empty'.
     let l:do_split = 1

@@ -989,7 +989,7 @@ class Gdb(ClewnTestCase):
         self.cltest_redir(cmd, expected_break_main)
 
     def test_046(self):
-        """Test the (clewn)_breakpoints list buffer."""
+        """Test the (clewn)_breakpoints list buffer"""
         cmd = [
             'Cfile testsuite/foobar',
             'Cbreak foo',
@@ -1015,7 +1015,7 @@ class Gdb(ClewnTestCase):
         self.cltest_redir(cmd, expected)
 
     def test_047(self):
-        """Test the (clewn)_backtrace list buffer."""
+        """Test the (clewn)_backtrace list buffer"""
         cmd = [
             'Cfile testsuite/foobar',
             'Cbreak nanosleep',
@@ -1036,12 +1036,12 @@ class Gdb(ClewnTestCase):
         self.cltest_redir(cmd, expected)
 
     def test_048(self):
-        """Test the <CR> map in (clewn)_backtrace."""
+        """Test the <CR> map in (clewn)_backtrace"""
         cmd = [
             'Cfile testsuite/foobar',
             'Cbreak nanosleep',
             'Crun',
-            'edit (clewn)_backtrace',
+            '3wincmd w',
             '2',
             'exe "normal \<CR>"',
             'sleep ${sleep_time}',
@@ -1055,7 +1055,7 @@ class Gdb(ClewnTestCase):
         self.cltest_redir(cmd, expected)
 
     def test_049(self):
-        """Test the (clewn)_threads list buffer."""
+        """Test the (clewn)_threads list buffer"""
         cmd = [
             'Cfile %s' % sys.executable,
             'Cset args testsuite/foo_thread.py',
@@ -1077,34 +1077,34 @@ class Gdb(ClewnTestCase):
         self.cltest_redir(cmd, expected)
 
     def test_050(self):
-        """Test the <CR> map in (clewn)_threads."""
+        """Test the <CR> map in (clewn)_threads"""
         cmd = [
             'Cfile %s' % sys.executable,
             'Cset args testsuite/foo_thread.py',
             'Cbreak sys_getrecursionlimit',
             'Crun',
-            'edit (clewn)_threads',
+            '4wincmd w',
             '3',
             'exe "normal \<CR>"',
             'sleep ${sleep_time}',
             'call Goto_buffer("(clewn)_threads")',
             'set noreadonly',
             r'%s/\(python\).*in \(\S\+\).*$$/\1 \2',
-            '2write! ${test_out}',
+            '3write! ${test_out}',
             'qa!',
             ]
         expected = (
-            '  1   python sys_getrecursionlimit',
+            '* 2   python do_futex_wait',
             )
         self.cltest_redir(cmd, expected)
 
     def test_051(self):
-        """Test the <CR> map in (clewn)_breakpoints."""
+        """Test the <CR> map in (clewn)_breakpoints"""
         cmd = [
             'Cfile testsuite/foobar',
             'Cbreak foo',
             'Cstart',
-            'edit (clewn)_breakpoints',
+            '2wincmd w',
             '2',
             'exe "normal \<CR>"',
             'sleep ${sleep_time}',
@@ -1118,7 +1118,7 @@ class Gdb(ClewnTestCase):
         self.cltest_redir(cmd, expected)
 
     def test_052(self):
-        """'Cbreak' as the first command, does highlight the breakpoint."""
+        """'Cbreak' as the first command, does highlight the breakpoint"""
         sys.argv.append('--args=testsuite/foobar')
         cmd = [
             'Cbreak foo',
@@ -1132,7 +1132,7 @@ class Gdb(ClewnTestCase):
         self.cltest_redir(cmd, expected)
 
     def test_053(self):
-        """Test the watchpoints in the (clewn)_breakpoints list buffer."""
+        """Test the watchpoints in the (clewn)_breakpoints list buffer"""
         cmd = [
             'Cfile testsuite/foobar',
             'Cbreak foo',
@@ -1373,6 +1373,29 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
+    def test_062(self):
+        """<CR> in (clewn)_breakpoints with multiple tab pages (issue 31)"""
+        cmd = [
+            'tabnew',
+            'tabnext',
+            'Cfile testsuite/foobar',
+            'Cbreak main',
+            'Cbreak foo',
+            '2wincmd w',
+            '2',
+            'exe "normal \<CR>"',
+            'sleep ${sleep_time}',
+            'redir! > ${test_out}',
+            'echo tabpagenr()',
+            'echo winnr()',
+            'qa!',
+            ]
+        expected = (
+            '1',
+            '5',
+            )
+        self.cltest_redir(cmd, expected)
+
 class PyclewnCommand(TestCase):
     """Test the ':Pyclewn' command."""
 
@@ -1400,7 +1423,7 @@ class PyclewnCommand(TestCase):
                 "\n\n...Expected:\n%s \n\n...Got:\n%s" % (expected, result))
 
     def test_scripting_01(self):
-        """With an empty buffer list."""
+        """With an empty buffer list"""
         cmd = [
             'source testsuite/foobar.vim',
             'call PyclewnScripting("Cstart")',
@@ -1417,7 +1440,7 @@ class PyclewnCommand(TestCase):
         self.clewn_test(cmd, expected)
 
     def test_scripting_02(self):
-        """With a non empty buffer list."""
+        """With a non empty buffer list"""
         cmd = [
             'edit MANIFEST.in',
             'source testsuite/foobar.vim',
@@ -1435,7 +1458,7 @@ class PyclewnCommand(TestCase):
         self.clewn_test(cmd, expected)
 
     def test_scripting_03(self):
-        """Two consecutive ':Pyclewn' commands."""
+        """Two consecutive ':Pyclewn' commands"""
         cmd = [
             'source testsuite/foobar.vim',
             'call PyclewnScripting("Cstart")',

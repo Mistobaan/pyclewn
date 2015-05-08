@@ -4,7 +4,7 @@ News
 Pyclewn 2.2
 -----------
 
-.. April 27, 2015
+.. May 8, 2015
 
 Bug fixes
 ^^^^^^^^^
@@ -17,6 +17,9 @@ Bug fixes
 * Issue #27: File name completion is now available before gdb has been
   started. This fixes a regression introduced in 2.1 by the full gdb
   completion feature.
+
+* Issue #31: Hitting <CR> in the breakpoints window now splits the first
+  window of the current tab loaded with a non-clewn buffer.
 
 Pyclewn 2.1
 -----------
