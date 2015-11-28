@@ -27,6 +27,8 @@ from lib.clewn import __version__, PY3, PY33, PY34
 with open('README') as f:
     long_description = f.read()
 
+cmdclass = {}
+
 if not PY34:
     import distutils
     from distutils.util import byte_compile as _byte_compile
@@ -44,6 +46,20 @@ if not PY34:
         return _byte_compile(files, *args, **kwds)
 
     distutils.util.byte_compile = byte_compile
+
+    # When the wheel package is present, pip builds a wheel and, for some
+    # reason, this results in the byte compilation being done with the
+    # compileall module instead of distutils.util. Make bdist_wheel fail in
+    # order to prevent that.
+    try:
+        import wheel.bdist_wheel
+    except ImportError:
+        pass
+    else:
+        class bdist_wheel(wheel.bdist_wheel.bdist_wheel):
+            def run(self):
+                pass
+        cmdclass['bdist_wheel'] = bdist_wheel
 
 def substitute_in_file(fname, mapping):
     with open(fname, 'r+') as f:
@@ -137,13 +153,15 @@ class Test(Command):
             sys.stdout.flush()
             test_support.run_suite(suite, self.detail, self.stop, self.pdb)
 
+cmdclass.update(sdist=sdist, test=Test)
+
 def main():
     requirements = ['pdb-clone']
     if not PY34:
         requirements.append('trollius')
 
     install_options = {
-        'cmdclass': {'sdist': sdist, 'test': Test},
+        'cmdclass': cmdclass,
         'packages': [str('clewn')],
         'package_dir':  {str(''): str('lib')},
         'package_data': {str('clewn'):

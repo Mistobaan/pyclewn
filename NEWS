@@ -4,7 +4,7 @@ News
 Pyclewn 2.2
 -----------
 
-.. November 27, 2015
+.. November 28, 2015
 
 Bug fixes
 ^^^^^^^^^
@@ -21,8 +21,7 @@ Bug fixes
 * Issue #31: Hitting <CR> in the breakpoints window now splits the first
   window of the current tab loaded with a non-clewn buffer.
 
-* Issue #31: Do not use wheel to install pyclewn on the Python 2.7 run by
-  virtualenv.
+* Issue #39: Prevent pip using wheel to install pyclewn on Python 2.7.
 
 Pyclewn 2.1
 -----------

@@ -52,15 +52,14 @@ Pip will also install ``pdb-clone``.
 Pip will also install ``trollius`` and its dependencies on Python 2.7 or on
 Python versions older than 3.4.
 
-On a virtual environment set up by virtualenv with Python 2.7, install pyclewn
-with the following command to prevent pip from using wheel::
-
-    pip install --no-binary pyclewn pyclewn
-
 Use a local installation when you do not have root privileges and those are
 required to install Python packages::
 
     pip install --user pyclewn
+
+Note that on Python 2.7, when the *wheel* package is installed (which is the
+case in a *virtualenv*), the "Failed to build pyclewn" message output by pip
+should be read instead "Failed to build pyclewn wheel" and must be ignored.
 
 The ``pyclewn-2.1.vmb`` vimball is a data file, part of the ``clewn``
 package, and can be obtained at any time with::
