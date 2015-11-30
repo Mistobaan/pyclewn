@@ -3,6 +3,7 @@ syntax: glob
 *.swp
 testsuite/foobar
 testsuite/overloaded
+testsuite/pretty-printing
 testsuite/function_template
 testsuite/function_template_sub/*.o
 logfile

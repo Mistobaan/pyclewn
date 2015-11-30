@@ -761,12 +761,11 @@ class Gdb(debugger.Debugger, Process):
                 self.oob = None
                 self.terminate_cmd()
 
-    def clicmd_notify(self, cmd, console=True, gdb=True):
+    def clicmd_notify(self, cmd='dummy', console=True, nop=False):
         """Send a cli command after having notified the OobCommands.
 
-        When 'console' is True, print 'cmd' on the console.
-        When 'gdb' is True, send the command to gdb, otherwise send
-        an empty command.
+        When 'console' is True, print 'cmd' on the console.  When 'nop' is True
+        send an empty command to trigger execution of the oob_list.
 
         """
         if console:
@@ -774,7 +773,7 @@ class Gdb(debugger.Debugger, Process):
         # notify each OobCommand instance
         for oob in self.oob_list:
             oob.notify(cmd)
-        if gdb:
+        if not nop:
             self.cli.sendcmd(cmd)
         else:
             gdbmi.CliCommandNoPrompt(self).sendcmd('')
@@ -955,9 +954,16 @@ class Gdb(debugger.Debugger, Process):
             name = args[0]
             (varobj, varlist) = self.info.varobj.leaf(name)
             if varobj is not None:
-                gdbmi.VarDeleteCommand(self, varobj).sendcmd()
-                return
-            self.console_print('"%s" not found.\n' % name)
+                rootvarobj = self.info.varobj
+                parent = rootvarobj.root[name.partition('.')[0]]
+                if '.' in name and parent['dynamic'] != '0':
+                    self.console_print('Cannot delete an element of a dynamic'
+                                       ' variable.\n')
+                else:
+                    gdbmi.VarDeleteCommand(self, varobj).sendcmd()
+                    return
+            else:
+                self.console_print('"%s" not found.\n' % name)
         self.print_prompt()
 
     def cmd_foldvar(self, cmd, args):
@@ -978,17 +984,21 @@ class Gdb(debugger.Debugger, Process):
                 varobj = rootvarobj.parents[lnum]
                 # collapse
                 if varobj['children']:
-                    for child in varobj['children'].values():
-                        self.oob_list.push(gdbmi.VarObjCmdDelete(self, child))
-                    # nop command used to trigger execution of the oob_list
-                    if not gdbmi.NumChildrenCommand(self, varobj).sendcmd():
-                        return
+                    parent = rootvarobj.root[varobj['name'].partition('.')[0]]
+                    if parent['dynamic'] != '0':
+                        errmsg = ('Cannot collapse a dynamic variable.')
+                    else:
+                        for child in varobj['children'].values():
+                            self.oob_list.push(gdbmi.VarObjCmdDelete(self, child))
+                        # nop command used to trigger execution of the oob_list
+                        self.clicmd_notify(console=False, nop=True)
                 # expand
                 else:
                     if not gdbmi.ListChildrenCommand(self, varobj).sendcmd():
                         return
                 self.foldlnum = lnum
-                return
+                if not errmsg:
+                    return
             else:
                 errmsg = 'Not a valid line number.'
         if errmsg:
@@ -1023,7 +1033,7 @@ class Gdb(debugger.Debugger, Process):
             self.console_print('Invalid argument.\n')
             self.print_prompt()
             return
-        self.clicmd_notify('%s %s\n' % (cmd, args), console=False, gdb=False)
+        self.clicmd_notify('%s %s\n' % (cmd, args), console=False, nop=True)
         self.gdb_busy = False
 
     def cmd_quit(self, *args):
@@ -1058,9 +1068,9 @@ class Gdb(debugger.Debugger, Process):
         if not self.gdb_busy and self.oob is None:
             if self.project:
                 self.clicmd_notify('project %s' % self.project,
-                                        console=False, gdb=False)
+                                        console=False, nop=True)
             else:
-                self.clicmd_notify('dummy', console=False, gdb=False)
+                self.clicmd_notify(console=False, nop=True)
         else:
             self.state = self.STATE_CLOSING
             self.close()

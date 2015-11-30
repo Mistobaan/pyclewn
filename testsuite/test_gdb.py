@@ -255,8 +255,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipUnless(gdb_v < [6, 4],
-                        'gdb version more recent than 6.4')
+    @skipUnless(gdb_v < [6, 4], 'gdb version more recent than 6.4')
     def test_010(self):
         """Checking result of oob commands"""
         cmd = [
@@ -276,8 +275,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipUnless(gdb_v < [7, 0],
-                        'gdb version more recent than 7.0')
+    @skipUnless(gdb_v < [7], 'gdb version more recent than 7.0')
     def test_011(self):
         """Checking result of oob commands"""
         cmd = [
@@ -301,8 +299,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
-    @skipUnless(gdb_v >= [7, 0],
-                        'gdb version less recent than 7.0')
+    @skipUnless(gdb_v >= [7], 'gdb version less recent than 7.0')
     def test_012(self):
         """Checking result of oob commands"""
         cmd = [
@@ -483,8 +480,8 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            "[-] var1: (map_t) map ={=} {...}",
-            "   *  var1.key: (int) key ={=} 1",
+            "[-] var1: (map_t) map ={=}{...}",
+            "   *  var1.key: (int) key ={=}1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -507,9 +504,9 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            "[+] var1: (map_t) map ={=} {...}",
-            "[-] var2: (map_t) map ={=} {...}",
-            "   *  var2.key  : (int   ) key   ={=} 1",
+            "[+] var1: (map_t) map ={=}{...}",
+            "[-] var2: (map_t) map ={=}{...}",
+            "   *  var2.key  : (int   ) key   ={=}1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -532,9 +529,9 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            "[+] var1: (map_t) map ={=} {...}",
-            "[-] var2: (map_t) map ={=} {...}",
-            "   *  var2.key  : (int   ) key   ={=} 1",
+            "[+] var1: (map_t) map ={=}{...}",
+            "[-] var2: (map_t) map ={=}{...}",
+            "   *  var2.key  : (int   ) key   ={=}1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -557,8 +554,8 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            "[-] var2: (map_t) map ={=} {...}",
-            "   *  var2.key  : (int   ) key   ={=} 1",
+            "[-] var2: (map_t) map ={=}{...}",
+            "   *  var2.key  : (int   ) key   ={=}1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -581,8 +578,8 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            "[+] var1: (map_t) map ={=} {...}",
-            "[+] var3: (map_t) map ={=} {...}",
+            "[+] var1: (map_t) map ={=}{...}",
+            "[+] var3: (map_t) map ={=}{...}",
             )
         self.cltest_redir(cmd, expected)
 
@@ -612,9 +609,9 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            " *  var1: (int) i ={*} 0",
-            " *  var1: (int) i ={*} 1",
-            " *  var1: (int) i ={-} 1",
+            " *  var1: (int) i ={*}0",
+            " *  var1: (int) i ={*}1",
+            " *  var1: (int) i ={-}1",
             )
         self.cltest_redir(cmd, expected)
 
@@ -633,7 +630,7 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            "[+] var1: (map_t) map ={=} {...}\n",
+            "[+] var1: (map_t) map ={=}{...}\n",
             )
         self.cltest_redir(cmd, expected)
 
@@ -651,7 +648,7 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            " *  var1: (int) len ={*} 555",
+            " *  var1: (int) len ={*}555",
             )
         self.cltest_redir(cmd, expected)
 
@@ -1300,8 +1297,8 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             '-var-create: unable to create variable object',
-            '[+] var1: (map_t) map ={=} {...}',
-            '[+] var2: (map_t) map ={*} {...}',
+            '[+] var1: (map_t) map ={=}{...}',
+            '[+] var2: (map_t) map ={*}{...}',
             )
         self.cltest_redir(cmd, expected)
 
@@ -1394,6 +1391,121 @@ class Gdb(ClewnTestCase):
         expected = (
             '1',
             '5',
+            )
+        self.cltest_redir(cmd, expected)
+
+    @skipUnless(gdb_v >= [7], 'gdb version less recent than 7.0')
+    def test_063(self):
+        """Check dynamic varobj creation and update"""
+        gdbmi.VarCreateCommand.varnum = 1
+        cmd = [
+            'Cfile testsuite/pretty-printing',
+            'Cstart',
+            'Cnext',
+            'Cnext',
+            'Cdbgvar nested',
+            'buffer (clewn)_variables | 1,$$w!  ${test_out}',
+            'Cnext',
+            'buffer (clewn)_variables | 1,$$w! >> ${test_out}',
+            'Cfoldvar 1',
+            'buffer (clewn)_variables | 1,$$w! >> ${test_out}',
+            'Cnext',
+            'buffer (clewn)_variables | 1,$$w! >> ${test_out}',
+            'Cnext',
+            'buffer (clewn)_variables | 1,$$w! >> ${test_out}',
+            'Cnext',
+            'Cnext',
+            'Cnext',
+            'buffer (clewn)_variables | 1,$$w! >> ${test_out}',
+            'qa!',
+            ]
+        expected = (
+            " *  var1: nested ={*}{...}",
+            "(+) var1: nested ={*}{...}",
+            "(-) var1: nested ={=}{...}",
+            "   *  var1.[0]: (int) [0] ={*}2",
+            "(-) var1: nested ={*}{...}",
+            "   *  var1.[0]: (int) [0] ={=}2",
+            "   *  var1.[1]: (int) [1] ={*}3",
+            "(-) var1: nested ={*}{...}",
+            "   *  var1.[0]: (int) [0] ={*}1",
+            "   *  var1.[1]: (int) [1] ={*}2",
+            "   *  var1.[2]: (int) [2] ={*}3",
+            "(-) var1: nested ={*}{...}",
+            "   *  var1.[0]: (int) [0] ={*}2",
+            "   *  var1.[1]: (int) [1] ={*}3",
+            )
+        self.cltest_redir(cmd, expected)
+
+    @skipUnless(gdb_v >= [7], 'gdb version less recent than 7.0')
+    def test_064(self):
+        """Check dynamic varobj and a nested container"""
+        gdbmi.VarCreateCommand.varnum = 1
+        cmd = [
+            'Cfile testsuite/pretty-printing',
+            'Cstart',
+            'Cnext',
+            'Cnext',
+            'Cnext',
+            'Cnext',
+            'Cnext',
+            'Cdbgvar v',
+            'buffer (clewn)_variables | 1,$$w!  ${test_out}',
+            'Cnext',
+            'buffer (clewn)_variables | 1,$$w! >> ${test_out}',
+            'Cfoldvar 1',
+            'buffer (clewn)_variables | 1,$$w! >> ${test_out}',
+            'Cnext',
+            'buffer (clewn)_variables | 1,$$w! >> ${test_out}',
+            'Cfoldvar 2',
+            'buffer (clewn)_variables | 1,$$w! >> ${test_out}',
+            'qa!',
+            ]
+        expected = (
+            " *  var1: v ={*}{...}",
+            "(+) var1: v ={*}{...}",
+            "(-) var1: v ={=}{...}",
+            "  (+) var1.[0]: [0] ={*}{...}",
+            "(-) var1: v ={*}{...}",
+            "  (+) var1.[0]: [0] ={=}{...}",
+            "  (+) var1.[1]: [1] ={*}{...}",
+            "(-) var1: v ={=}{...}",
+            "  (-) var1.[0]: [0] ={=}{...}",
+            "     *  var1.[0].[0]: (int) [0] ={*}1",
+            "     *  var1.[0].[1]: (int) [1] ={*}2",
+            "     *  var1.[0].[2]: (int) [2] ={*}3",
+            "  (+) var1.[1]: [1] ={=}{...}",
+            )
+        self.cltest_redir(cmd, expected)
+
+    @skipUnless(gdb_v >= [7], 'gdb version less recent than 7.0')
+    def test_065(self):
+        """Check dynamic varobj deletion and folding"""
+        gdbmi.VarCreateCommand.varnum = 1
+        cmd = [
+            'Cfile testsuite/pretty-printing',
+            'Cstart',
+            'Cnext',
+            'Cnext',
+            'Cnext',
+            'Cdbgvar nested',
+            'Cfoldvar 1',
+            'buffer (clewn)_variables | 1,$$w!  ${test_out}',
+            'Cfoldvar 1',
+            'buffer (clewn)_console | $$-1w! >> ${test_out}',
+            'Cdelvar var1.[0]',
+            'buffer (clewn)_console | $$-1w! >> ${test_out}',
+            'Cdbgvar nested',
+            'Cdelvar var1',
+            'buffer (clewn)_variables | 1,$$w! >> ${test_out}',
+            'qa!',
+            ]
+        expected = (
+            "(-) var1: nested ={=}{...}",
+            "   *  var1.[0]: (int) [0] ={*}2",
+            "Cannot collapse a dynamic variable.",
+            "Cannot delete an element of a dynamic variable.",
+            "(+) var2: nested ={=}{...}",
             )
         self.cltest_redir(cmd, expected)
 

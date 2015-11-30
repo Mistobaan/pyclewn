@@ -1,4 +1,4 @@
-*pyclewn.txt*                                   Last change: 2015 April 3
+*pyclewn.txt*                                   Last change: 2015 December 3
 
 
                             PYCLEWN USER MANUAL
@@ -1164,6 +1164,20 @@ and the children are not affected.
 Note: The setting of the format of a child watched variable is lost after
 folding one of its parents (because the child is actually not watched anymore
 by gdb after the folding).
+
+
+                                                    *pyclewn-dynamic-variable*
+A dynamic watched variable is displayed using a gdb pretty printer.  When the
+variable is a container (for example an STL container), the display uses round
+brackets instead of square brackets around the expansion marker "+" or "-".
+There are currently some limitations with using dynamic watched variables:
+
+    * Gdb does not update the elements of a nested container when the
+      container is dynamic, so it is not very useful to expand a nested
+      container.
+    * It is not possible to delete an element of a dynamic container,
+      one can only delete the whole container (gdb issue 19321).
+    * It is not possible to collapse a dynamic container (gdb issue 19321).
 
 
 Highlighting:

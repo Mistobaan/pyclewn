@@ -1,13 +1,16 @@
 News
 ====
 
-Pyclewn 2.2.1
--------------
+Pyclewn 2.3
+-----------
 
-.. November 28, 2015
+.. December 4, 2015
 
-Bug fixes
-^^^^^^^^^
+New feature
+^^^^^^^^^^^
+
+* A dynamic watch variable, for example an STL container, is now displayed
+  using the enabled gdb pretty printers.
 
 Pyclewn 2.2
 -----------

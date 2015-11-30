@@ -44,7 +44,8 @@ from . import PY3, text_type, misc
 # set the logging methods
 (critical, error, warning, info, debug) = misc.logmethods('mi')
 
-VAROBJ_FMT = '%%(name)-%ds: (%%(type)-%ds) %%(exp)-%ds %%(chged)s %%(value)s\n'
+VAROBJ_FMT = '%%(name)-%ds: (%%(type)-%ds) %%(exp)-%ds %%(chged)s%%(value)s\n'
+DYN_VAROBJ_FMT = '%%(name)-%ds: %%(exp)-%ds %%(chged)s%%(value)s\n'
 
 BREAKPOINT_CMDS = ()
 FILE_CMDS = ()
@@ -67,19 +68,13 @@ SOURCE_CMDS_EXTRA = ('break', 'tbreak', 'hbreak', 'thbreak', 'rbreak')
 PROJECT_CMDS = ('project',) + SOURCE_CMDS
 
 # gdb objects attributes.
-BREAKPOINT_ATTRIBUTES = {'number', 'type', 'disp', 'enabled', 'func', 'file',
-                         'line', 'times', 'original-location', 'what'}
-REQ_BREAKPOINT_ATTRIBUTES = {'number', 'type', 'enabled'}
 FILE_ATTRIBUTES = {'line', 'file', 'fullname'}
 FRAMECLI_ATTRIBUTES = {'level', 'func', 'file', 'line', }
 FRAME_ATTRIBUTES = {'level', 'func', 'file', 'fullname', 'line', 'from',  }
 REQ_FRAME_ATTRIBUTES = {'level', }
 THREADS_ATTRIBUTES = {'current', 'id', 'target-id', 'name', 'state', 'core', }
-SOURCES_ATTRIBUTES = {'file', 'fullname'}
-VARUPDATE_ATTRIBUTES = {'name', 'in_scope', 'value'}
-REQ_VARUPDATE_ATTRIBUTES = {'name', 'in_scope'}
-VARCREATE_ATTRIBUTES = {'name', 'numchild', 'type'}
-VARLISTCHILDREN_ATTRIBUTES = {'name', 'exp', 'numchild', 'value', 'type'}
+VARCREATE_ATTRIBUTES = {'name', 'numchild', 'type', 'dynamic', 'has_more'}
+REQ_VARCREATE_ATTRIBUTES = {'name', 'numchild', 'type'}
 VAREVALUATE_ATTRIBUTES = {'value'}
 
 def keyval_pattern(attributes, comment=''):
@@ -90,9 +85,6 @@ def keyval_pattern(attributes, comment=''):
 RE_EVALUATE = r'^done,value="(?P<value>.*)"$'                               \
               r'# result of -data-evaluate-expression'
 
-RE_DICT_LIST = r'{[^}]+}'                                                   \
-               r'# a gdb list'
-
 RE_VARCREATE = keyval_pattern(VARCREATE_ATTRIBUTES,
             'done,name="var1",numchild="0",type="int"')
 
@@ -102,14 +94,10 @@ RE_VARDELETE = r'^done,ndeleted="(?P<ndeleted>\d+)"$'                       \
 RE_SETFMTVAR = r'^done,format="\w+",value="(?P<value>.*)"$'                 \
                r'# done,format="binary",value="1111001000101110110001011110"'
 
-RE_VARLISTCHILDREN = keyval_pattern(VARLISTCHILDREN_ATTRIBUTES)
-
 RE_VAREVALUATE = keyval_pattern(VAREVALUATE_ATTRIBUTES, 'done,value="14"')
 
 RE_ARGS = r'\s*"(?P<args>.+)"\.'                                            \
              r'# "toto "begquot endquot" titi".'
-
-RE_BREAKPOINTS = keyval_pattern(BREAKPOINT_ATTRIBUTES, 'a breakpoint')
 
 RE_DIRECTORIES = r'(?P<path>[^' + os.pathsep + r'^\n]+)'                    \
                  r'# /path/to/foobar:$cdir:$cwd\n'
@@ -144,24 +132,14 @@ RE_PGMFILE = r'\s*"(?P<debuggee>[^"]+)"\.'                                  \
 
 RE_PWD = r'"(?P<cwd>[^"]+)"# "/home/xavier/src/pyclewn_wa/trunk/pyclewn"'
 
-RE_SOURCES = keyval_pattern(SOURCES_ATTRIBUTES,
-            'files=[{file="foobar.c",fullname="/home/xdg/foobar.c"},'
-            '{file="foo.c",fullname="/home/xdg/foo.c"}]')
-
-RE_VARUPDATE = keyval_pattern(VARUPDATE_ATTRIBUTES,
-            'changelist='
-            '[{name="var3.key",in_scope="true",type_changed="false"}]')
-
 # compile regexps
+re_evalkey = re.compile(r'([a-zA-Z0-9_-]+)=')
 re_evaluate = re.compile(RE_EVALUATE, re.VERBOSE)
-re_dict_list = re.compile(RE_DICT_LIST, re.VERBOSE)
 re_varcreate = re.compile(RE_VARCREATE, re.VERBOSE)
 re_vardelete = re.compile(RE_VARDELETE, re.VERBOSE)
 re_setfmtvar = re.compile(RE_SETFMTVAR, re.VERBOSE)
-re_varlistchildren = re.compile(RE_VARLISTCHILDREN, re.VERBOSE)
 re_varevaluate = re.compile(RE_VAREVALUATE, re.VERBOSE)
 re_args = re.compile(RE_ARGS, re.VERBOSE)
-re_breakpoints = re.compile(RE_BREAKPOINTS, re.VERBOSE)
 re_directories = re.compile(RE_DIRECTORIES, re.VERBOSE)
 re_file = re.compile(RE_FILE, re.VERBOSE)
 re_framecli = re.compile(RE_FRAMECLI, re.VERBOSE)
@@ -170,8 +148,6 @@ re_threads = re.compile(RE_THREADS)
 re_threads_attributes = re.compile(RE_THREADS_ATTRIBUTES)
 re_pgmfile = re.compile(RE_PGMFILE, re.VERBOSE)
 re_pwd = re.compile(RE_PWD, re.VERBOSE)
-re_sources = re.compile(RE_SOURCES, re.VERBOSE)
-re_varupdate = re.compile(RE_VARUPDATE, re.VERBOSE)
 
 def get_pathname(name, source):
     """Return a valid path name, matching name in the source dictionary."""
@@ -192,6 +168,26 @@ def fix_bp_attributes(bp):
                 bp['line'] = lno
             elif 'func' not in bp:
                 bp['func'] = oloc
+
+def eval_mi_result(line, eol_strip, re_remove):
+    if eol_strip:
+        idx = line.rfind(eol_strip)
+        if idx != -1:
+            if line[idx:] != eol_strip:
+                error('"%s" not at the end of "%s"', eol_strip, line)
+                return None
+            line = line[:idx]
+        else:
+            error('cannot find "%s" in "%s"', eol_strip, line)
+            return None
+    if re_remove:
+        line = re.sub(re_remove, '', line)
+
+    line = re.sub(re_evalkey, r'"\1":', line)
+    try:
+        return eval(line, {}, {})
+    except SyntaxError:
+        return None
 
 class VarObjList(OrderedDict):
     """A dictionary of {name:VarObj instance}."""
@@ -302,7 +298,8 @@ class VarObj(dict):
         self['value'] = ''
         self['chged'] = '={=}'
         self['in_scope'] = 'true'
-        self['numchild'] = 0
+        self['numchild'] = '0'
+        self['dynamic'] = '0'
         self['children'] = VarObjList()
         self.chged = True
         self.update(vardict)
@@ -310,6 +307,13 @@ class VarObj(dict):
     def collect(self, parents, lnum, stream, indent, tab):
         """Collect varobj data."""
         dirty = False
+        is_dyn = self['dynamic'] != '0'
+        # -var-update list new children as 'dynamic' and without 'has_more' to
+        # indicate that those children may have children.
+        has_children = ((is_dyn and ('has_more' not in self or
+                                     self['has_more'] != '0' or
+                                     self['children'])) or
+                        (not is_dyn and self['numchild'] != '0'))
 
         if self.chged:
             self['chged'] = '={*}'
@@ -321,18 +325,21 @@ class VarObj(dict):
             self['chged'] = '={=}'
 
         lnum[0] += 1
-        if self['numchild'] != '0':
+        if has_children:
             parents[lnum[0]] = self
             if self['children']:
-                fold = '[-] '
+                fold = '(-) ' if is_dyn else '[-] '
             else:
-                fold = '[+] '
+                fold = '(+) ' if is_dyn else '[+] '
         else:
             fold = ' *  '
-        format = VAROBJ_FMT % tab
+
+        if is_dyn:
+            format = DYN_VAROBJ_FMT % (tab[0], tab[2])
+        else:
+            format = VAROBJ_FMT % tab
         stream.write(' ' * indent + fold + format % self)
         if self['children']:
-            assert self['numchild'] != 0
             status = self['children'].collect(parents, lnum, stream, indent + 2)
             dirty = dirty or status
 
@@ -489,12 +496,14 @@ class Info(object):
         # Build the breakpoints dictionary.
         bp_dictionary = {}
         for bp in self.breakpoints:
-            if (('breakpoint' in bp['type']
+            # The secondary breakpoints of a multiple breakpoint do not have a
+            # type.
+            if ('type' in bp and (('breakpoint' in bp['type']
                     # Exclude 'throw' and 'catch 'catchpoints (they are typed by
                     # gdb as 'breakpoint' instead of 'catchpoint').
                     and not
                         ('what' in bp and 'exception' in bp['what'])) or
-                    'watchpoint' in bp['type']):
+                    'watchpoint' in bp['type'])):
                 bp_dictionary[int(bp['number'])] = bp
 
         nset = set(bp_dictionary.keys())
@@ -678,12 +687,34 @@ class Info(object):
         """Process a varobj changelist event."""
         for vardict in self.changelist:
             (varobj, varlist) = self.varobj.leaf(vardict['name'])
-            if varobj is not None:
-                varobj['in_scope'] = vardict['in_scope']
-                if 'value' in vardict and varobj['value'] != vardict['value']:
-                    varobj['value'] = vardict['value']
+            if varobj is None:
+                continue
+            varobj['in_scope'] = vardict['in_scope']
+            if 'value' in vardict and varobj['value'] != vardict['value']:
+                varobj['value'] = vardict['value']
+                varobj.chged = True
+
+            if 'has_more' in vardict:
+                if ('has_more' not in varobj or
+                        varobj['has_more'] != vardict['has_more']):
+                    varobj['has_more'] = vardict['has_more']
                     varobj.chged = True
-                    self.gdb.info.varobj.dirty = True
+
+            if 'new_num_children' in vardict:
+                new_num_children = int(vardict['new_num_children'])
+                new = new_num_children - len(varobj['children'])
+                if new > 0:
+                    if 'new_children' in vardict:
+                        for child in (VarObj(x) for x in
+                                      vardict['new_children']):
+                            varobj['children'][child['name']] = child
+                            varobj.chged = True
+                elif new < 0:
+                    for (i, name) in enumerate(varobj['children']):
+                        if i >= new_num_children:
+                            del varobj['children'][name]
+                            varobj.chged = True
+
         if self.changelist:
             self.varobj.dirty = True
             self.changelist = []
@@ -771,6 +802,7 @@ class OobList(object):
             Pwd(gdb),
             Sources(gdb),
             Breakpoints(gdb),   # After File and Sources.
+            EnablePrettyPrinting(gdb),
             Project(gdb),
             Quit(gdb),
         ]
@@ -963,7 +995,7 @@ class VarCreateCommand(MiCommand):
         """Process gdb/mi result."""
         VarCreateCommand.varnum += 1
         parsed = misc.parse_keyval(re_varcreate, line)
-        if VARCREATE_ATTRIBUTES.issubset(parsed):
+        if REQ_VARCREATE_ATTRIBUTES.issubset(parsed):
             rootvarobj = self.gdb.info.varobj
             varobj = self.varobj
             varobj.update(parsed)
@@ -1013,23 +1045,10 @@ class VarSetFormatCommand(MiCommand):
             self.gdb.console_print('%s = %s\n',
                         self.varobj['name'], matchobj.group('value'))
 
-class NumChildrenCommand(MiCommand):
-    """Get how many children this object has."""
-
-    def sendcmd(self):
-        """Send the gdb command."""
-        return MiCommand.docmd(self, '-var-info-num-children %s\n',
-                                                        self.varobj['name'])
-
-    def handle_result(self, line):
-        """Process gdb/mi result."""
-        # used as a nop command by the foldvar command
-        pass
-
-# 'type' and 'value' are not always present in -var-list-children output
-LIST_CHILDREN_KEYS = VARLISTCHILDREN_ATTRIBUTES.difference({'type', 'value'})
 class ListChildrenCommand(MiCommand):
     """Return a list of the object's children."""
+    prefix = 'children='
+    remove = re.compile('child=(?={)')
 
     def sendcmd(self):
         """Send the gdb command."""
@@ -1038,11 +1057,22 @@ class ListChildrenCommand(MiCommand):
 
     def handle_result(self, line):
         """Process gdb/mi result."""
-        varlist = [VarObj(x) for x in
-                        [misc.parse_keyval(re_varlistchildren, list_element)
-                            for list_element in re_dict_list.findall(line)]
-                if LIST_CHILDREN_KEYS.issubset(x)]
-        for varobj in varlist:
+        start = line.find(self.prefix)
+        if start == -1:
+            return
+        line = line[start + len(self.prefix):]
+        end = line.rfind(']')
+        if end == -1:
+            error('cannot find "]" in %s', line)
+            return
+        if end != len(line) - 1:
+            line = line[:end+1]
+        varlist = eval_mi_result(line, '', self.remove)
+        if not varlist:
+            if varlist is None:
+                error('failed to eval "%s"', line)
+            return
+        for varobj in (VarObj(x) for x in varlist):
             self.varobj['children'][varobj['name']] = varobj
         self.gdb.info.varobj.dirty = True
 
@@ -1248,16 +1278,12 @@ class OobGdbCommand(OobCommand, Command):
                 and hasattr(self.gdb.info, self.info_attribute)
         assert hasattr(self, 'prefix')                      \
                 and isinstance(self.prefix, text_type)
-        assert hasattr(self, 'regexp')                      \
-                and hasattr(self.regexp, 'findall')
         assert hasattr(self, 'gdblist')                     \
                 and isinstance(self.gdblist, bool)
         if hasattr(self, 'action'):
             assert hasattr(self.gdb.info, self.action)
         assert hasattr(self, 'trigger_list')                \
                 and isinstance(self.trigger_list, tuple)
-        assert hasattr(self, 'reqkeys')                     \
-                and isinstance(self.reqkeys, set)
         self.cmd = ''
         self.trigger = False
 
@@ -1301,7 +1327,7 @@ class OobGdbCommand(OobCommand, Command):
 
         """
         if self.prefix in data:
-            remain = data[data.index(self.prefix) + len(self.prefix):]
+            data = data[data.index(self.prefix) + len(self.prefix):]
         elif hasattr(self, 'ignore') and self.ignore in data:
             return
         else:
@@ -1315,22 +1341,24 @@ class OobGdbCommand(OobCommand, Command):
         #   * a list: self.gdblist is False and self.reqkeys empty
         if self.gdblist:
             # A list of dictionaries.
-            parsed = [x for x in
-                       [misc.parse_keyval(self.regexp, list_element)
-                        for list_element in re_dict_list.findall(remain)]
-                             if self.reqkeys.issubset(x)]
+            eol_strip = self.remain if hasattr(self, 'remain') else ''
+            remove = self.remove if hasattr(self, 'remove') else ''
+            parsed = eval_mi_result(data, eol_strip, remove)
         else:
             if self.reqkeys:
-                parsed = misc.parse_keyval(self.regexp, remain)
+                parsed = misc.parse_keyval(self.regexp, data)
                 if not self.reqkeys.issubset(parsed):
                     parsed = {}
             else:
-                parsed = self.regexp.findall(remain)
+                parsed = self.regexp.findall(data)
         if parsed:
             setattr(self.gdb.info, self.info_attribute, parsed)
         else:
-            if not hasattr(self, 'remain') or remain != self.remain:
-                debug('no match for "%s"', remain)
+            if self.gdblist:
+                if parsed is None:
+                    error('failed to eval "%s"', data)
+            elif not hasattr(self, 'remain') or data != self.remain:
+                error('no match for "%s"', data)
 
     def handle_result(self, result):
         """Process the result of the mi command."""
@@ -1374,10 +1402,9 @@ Breakpoints =   \
                 '__doc__': """Get the breakpoints list.""",
                 'gdb_cmd': '-break-list\n',
                 'info_attribute': 'breakpoints',
-                'prefix': 'body=[',
-                'remain': ']}',
-                'regexp': re_breakpoints,
-                'reqkeys': REQ_BREAKPOINT_ATTRIBUTES,
+                'prefix': 'body=',
+                'remain': '}',
+                'remove': re.compile('bkpt='),
                 'gdblist': True,
                 'action': 'update_breakpoints',
                 'trigger_list': BREAKPOINT_CMDS,
@@ -1446,11 +1473,9 @@ BackTrace=          \
                 '__doc__': """Get the backtrace information.""",
                 'gdb_cmd': '-stack-list-frames\n',
                 'info_attribute': 'backtrace',
-                'prefix': 'stack=[',
-                'remain': ']}',
+                'prefix': 'stack=',
+                'remove': re.compile('frame='),
                 'ignore': 'error,msg="No registers."',
-                'regexp': re_frame,
-                'reqkeys': REQ_FRAME_ATTRIBUTES,
                 'gdblist': True,
                 'trigger_list': FRAME_CMDS,
             })
@@ -1502,10 +1527,7 @@ Sources =       \
                 '__doc__': """Get the list of source files.""",
                 'gdb_cmd': '-file-list-exec-source-files\n',
                 'info_attribute': 'sources',
-                'prefix': 'done,',
-                'remain': 'files=[]',
-                'regexp': re_sources,
-                'reqkeys': SOURCES_ATTRIBUTES,
+                'prefix': 'done,files=',
                 'gdblist': True,
                 'trigger_list': SOURCE_CMDS + SOURCE_CMDS_EXTRA,
             })
@@ -1516,10 +1538,7 @@ VarUpdate =     \
                 '__doc__': """Update the variable and its children.""",
                 'gdb_cmd': '-var-update --all-values *\n',
                 'info_attribute': 'changelist',
-                'prefix': 'done,',
-                'remain': 'changelist=[]',
-                'regexp': re_varupdate,
-                'reqkeys': REQ_VARUPDATE_ATTRIBUTES,
+                'prefix': 'done,changelist=',
                 'gdblist': True,
                 'action': 'update_changelist',
                 'trigger_list': VARUPDATE_CMDS,
@@ -1627,4 +1646,26 @@ class Quit(OobCommand):
             self.gdb.close()
 
         return False
+
+class EnablePrettyPrinting(OobCommand, Command):
+    def __init__(self, gdb):
+        self.gdb = gdb
+        self.enable = True
+        if gdb.version < [7]:
+            self.enable = False
+
+    def notify(self, cmd):
+        "Ignore the notification."
+
+    def __call__(self):
+        if self.enable:
+            self.enable = False
+            return self.send('-enable-pretty-printing')
+        return False
+
+    def handle_result(self, result):
+        info('-enable-pretty-printing: %s', result)
+
+    def handle_strrecord(self, stream_record):
+        error(stream_record)
 
