@@ -76,7 +76,8 @@ FRAME_ATTRIBUTES = {'level', 'func', 'file', 'fullname', 'line', 'from',  }
 REQ_FRAME_ATTRIBUTES = {'level', }
 THREADS_ATTRIBUTES = {'current', 'id', 'target-id', 'name', 'state', 'core', }
 SOURCES_ATTRIBUTES = {'file', 'fullname'}
-VARUPDATE_ATTRIBUTES = {'name', 'in_scope'}
+VARUPDATE_ATTRIBUTES = {'name', 'in_scope', 'value'}
+REQ_VARUPDATE_ATTRIBUTES = {'name', 'in_scope'}
 VARCREATE_ATTRIBUTES = {'name', 'numchild', 'type'}
 VARLISTCHILDREN_ATTRIBUTES = {'name', 'exp', 'numchild', 'value', 'type'}
 VAREVALUATE_ATTRIBUTES = {'value'}
@@ -679,7 +680,10 @@ class Info(object):
             (varobj, varlist) = self.varobj.leaf(vardict['name'])
             if varobj is not None:
                 varobj['in_scope'] = vardict['in_scope']
-                self.gdb.oob_list.push(VarObjCmdEvaluate(self.gdb, varobj))
+                if 'value' in vardict and varobj['value'] != vardict['value']:
+                    varobj['value'] = vardict['value']
+                    varobj.chged = True
+                    self.gdb.info.varobj.dirty = True
         if self.changelist:
             self.varobj.dirty = True
             self.changelist = []
@@ -1510,12 +1514,12 @@ VarUpdate =     \
     type(str('VarUpdate'), (OobGdbCommand,),
             {
                 '__doc__': """Update the variable and its children.""",
-                'gdb_cmd': '-var-update *\n',
+                'gdb_cmd': '-var-update --all-values *\n',
                 'info_attribute': 'changelist',
                 'prefix': 'done,',
                 'remain': 'changelist=[]',
                 'regexp': re_varupdate,
-                'reqkeys': VARUPDATE_ATTRIBUTES,
+                'reqkeys': REQ_VARUPDATE_ATTRIBUTES,
                 'gdblist': True,
                 'action': 'update_changelist',
                 'trigger_list': VARUPDATE_CMDS,
