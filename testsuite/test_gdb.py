@@ -1143,6 +1143,7 @@ class Gdb(ClewnTestCase):
             'Crwatch -l len',
             'Cnext',
             'Cnext',
+            'Cnext',
             'Cdisable 5 6',
             'Cdelete 3',
             'edit (clewn)_breakpoints | %w!  ${test_out}',
