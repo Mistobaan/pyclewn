@@ -21,6 +21,9 @@ Bug fixes
 * Issue #42: The 'python' gdb command can also be used now as a multi-line
   command.
 
+* Issue #43: The 'shell' gdb command is an illegal command as already stated
+  in the documentation.
+
 Pyclewn 2.2
 -----------
 

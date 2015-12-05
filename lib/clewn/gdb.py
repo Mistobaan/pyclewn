@@ -238,7 +238,6 @@ class GlobalSetup(misc.Singleton):
         'source',
         'start',
         'tty',
-        'shell',
         ]
     illegal_cmds = [
         '-', '+', '<', '>', '!',
@@ -247,6 +246,7 @@ class GlobalSetup(misc.Singleton):
         'complete',
         'edit',
         'end',
+        'shell',
         # tui commands
         'layout',
         'focus',
