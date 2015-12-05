@@ -105,32 +105,46 @@ function! s:error(msg)
     echohl None
 endfunction
 
-function! s:source_commands(gdb_cmd, prompt)
+function! s:source_commands(gdb_cmd, prompt, extension)
     " input user commands
-    let l:prompt = a:prompt . ", one per line.\n"
+    let l:prompt = ""
+    if a:prompt != ""
+        let l:prompt .= a:prompt . ", one per line.\n"
+    endif
     let l:prompt .= "End with a line saying just 'end'.\n"
     let l:prompt .= "These commands are then sourced by the"
-    \               . " 'Csource' gdb command.\n"
+    \               . " 'source' gdb command.\n"
     let l:prompt .= ">"
 
     let l:lines = %(source_lines)s
-    let l:commands = [a:gdb_cmd]
+    let l:commands = []
     call inputsave()
     while 1
         let l:cmd = %(input_source)s
+        if substitute(l:cmd, " ", "", "g") == "end"
+            if a:extension != ".py" && len(l:commands)
+                let l:commands += [l:cmd]
+            endif
+            break
+        endif
         let l:commands += [l:cmd]
         echo "\n"
         let l:prompt = ">"
-        if substitute(l:cmd, " ", "", "g") == "end"
-            break
-        endif
     endwhile
     call inputrestore()
 
     " store them in a file and source the file
-    let l:tmpfile = tempname()
-    call writefile(commands, l:tmpfile)
-    exe "%(pre)ssource " . l:tmpfile
+    if len(l:commands)
+        if a:gdb_cmd != ""
+            call insert(l:commands, a:gdb_cmd)
+        endif
+        let l:tmpfile = tempname()
+        if a:extension != ""
+            let l:tmpfile .= a:extension
+        endif
+        call writefile(l:commands, l:tmpfile)
+        exe "%(pre)ssource " . l:tmpfile
+    endif
 endfunction
 
 function! s:define(...)
@@ -139,7 +153,7 @@ function! s:define(...)
         return
     endif
     call s:source_commands("define " . a:1,
-    \       "Type commands for definition of '" . a:1 . "'")
+    \       "Type commands for definition of '" . a:1 . "'", "")
 endfunction
 
 function! s:document(...)
@@ -148,7 +162,7 @@ function! s:document(...)
         return
     endif
     call s:source_commands("document " . a:1,
-    \       "Type documentation for '" . a:1 . "'")
+    \       "Type documentation for '" . a:1 . "'", "")
 endfunction
 
 function! s:commands(...)
@@ -165,12 +179,21 @@ function! s:commands(...)
     endfor
     let l:bplist = join(a:000)
     call s:source_commands("command " . l:bplist,
-    \       "Type commands for breakpoint(s) " . l:bplist . "")
+    \       "Type commands for breakpoint(s) " . l:bplist . "", "")
+endfunction
+
+function! s:python(...)
+    if a:0 != 0
+        exe "%(pre)s python ". join(a:000)
+        return
+    endif
+    call s:source_commands("", "", ".py")
 endfunction
 
 command! -bar -nargs=* %(pre)sdefine call s:define(<f-args>)
 command! -bar -nargs=* %(pre)sdocument call s:document(<f-args>)
 command! -bar -nargs=* %(pre)scommands call s:commands(<f-args>)
+command! -bar -nargs=* %(pre)spython call s:python(<f-args>)
 
 function! s:GdbComplete(arglead, cmdline, curpos)
     call writefile([], %(ack_tmpfile)s)

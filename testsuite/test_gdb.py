@@ -1527,6 +1527,26 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected, 'print len\nend\n')
 
+    def test_067(self):
+        """Test the 'python' command"""
+        cmd = [
+            'Cfile testsuite/foobar',
+            'Cpython',
+            'buffer (clewn)_console | $$-3,$$-1w! ${test_out}',
+            'C python',
+            'buffer (clewn)_console | $$-1w! >> ${test_out}',
+            'C python print(789)',
+            'buffer (clewn)_console | $$-1w! >> ${test_out}',
+            'qa!',
+            ]
+        expected = (
+            "123",
+            "456",
+            "Arguments are required when 'python' is used as a C parameter.",
+            "789",
+            )
+        self.cltest_redir(cmd, expected, 'print(123); print(456)\nend\n')
+
 class PyclewnCommand(TestCase):
     """Test the ':Pyclewn' command."""
 

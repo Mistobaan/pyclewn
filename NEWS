@@ -18,6 +18,9 @@ Bug fixes
 * Issue #41: Fix the 'define', 'commands' and 'document' gdb commands
   (regression).
 
+* Issue #42: The 'python' gdb command can also be used now as a multi-line
+  command.
+
 Pyclewn 2.2
 -----------
 

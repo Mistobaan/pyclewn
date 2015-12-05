@@ -255,6 +255,7 @@ class GlobalSetup(misc.Singleton):
         'tui',
         'update',
         'winheight',
+        'python-interactive',
         ]
     run_cmds = (
         'attach', 'detach', 'kill',
@@ -463,7 +464,8 @@ class Gdb(debugger.Debugger, Process):
             [
                 'define',
                 'document',
-                'commands'
+                'commands',
+                'python',
             ])
         self.mapkeys.update(MAPKEYS)
 
@@ -882,7 +884,7 @@ class Gdb(debugger.Debugger, Process):
         """Process any command whose cmd_xxx method does not exist."""
         assert cmd == self.curcmdline.split()[0]
         if any([cmd.startswith(x)
-                for x in self.globaal.illegal_cmds_prefix]):
+                for x in self.globaal.illegal_cmds_prefix if x != 'py']):
             self.console_print('Illegal command in pyclewn.\n')
             self.print_prompt()
             return
@@ -950,6 +952,15 @@ class Gdb(debugger.Debugger, Process):
     def cmd_document(self, cmd, *args):
         """Document a user-defined command."""
         self.not_a_pyclewn_method(cmd)
+
+    def cmd_python(self, cmd, args):
+        """Run when 'python' is invoked as a 'C' parameter."""
+        if not args:
+            self.console_print("Arguments are required when 'python' is used"
+                            " as a %s parameter.\n" % self.vim.options.prefix)
+            self.print_prompt()
+            return
+        self.default_cmd_processing(cmd, args)
 
     def cmd_dbgvar(self, cmd, args):
         """Add a variable to the debugger variable buffer."""
