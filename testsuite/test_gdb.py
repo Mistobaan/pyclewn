@@ -1509,6 +1509,24 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
+    def test_066(self):
+        """Test the 'define' command"""
+        cmd = [
+            'Cfile testsuite/foobar',
+            'Cstart',
+            'Cnext',
+            'Cnext',
+            'Cdefine foo',
+            'C foo',
+            'buffer (clewn)_console | $$-2,$$-1w! ${test_out}',
+            'qa!',
+            ]
+        expected = (
+            "(gdb) foo",
+            "$$1 = 14",
+            )
+        self.cltest_redir(cmd, expected, 'print len\nend\n')
+
 class PyclewnCommand(TestCase):
     """Test the ':Pyclewn' command."""
 

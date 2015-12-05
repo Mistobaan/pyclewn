@@ -321,7 +321,9 @@ class GlobalSetup(misc.Singleton):
             cmd = cmd.split()[0]
             valid_vim_command = re.match(re_vim_command, cmd)
 
-            if cmd not in self.illegal_cmds and valid_vim_command:
+            if (cmd not in self.illegal_cmds and
+                    cmd not in self.vim_implementation and
+                    valid_vim_command):
                 self.gdb_cmds.append(cmd)
 
             if cmd in nocomplt_cmds:
@@ -556,6 +558,17 @@ class Gdb(debugger.Debugger, Process):
                 'completion_timeout': COMPLETION_TIMEOUT,
                 'commands': '\n'.join(commands),
                      }
+
+        # The import must be done within the method to avoid a broken circular
+        # import at start up.
+        from testsuite.test_support import TESTFN_FILE
+        if self.vim.testrun:
+            substitute['source_lines'] = 'readfile("%s")' % (TESTFN_FILE + '1')
+            substitute['input_source'] = 'remove(l:lines, 0)'
+        else:
+            substitute['source_lines'] = '[]'
+            substitute['input_source'] = 'input(l:prompt)'
+
         return pkgutil.get_data(__name__, 'gdb.vim').decode() % substitute
 
     def start(self):

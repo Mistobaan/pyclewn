@@ -4,13 +4,19 @@ News
 Pyclewn 2.3
 -----------
 
-.. December 4, 2015
+.. December 5, 2015
 
 New feature
 ^^^^^^^^^^^
 
 * A dynamic watch variable, for example an STL container, is now displayed
   using the enabled gdb pretty printers.
+
+Bug fixes
+^^^^^^^^^
+
+* Issue #41: Fix the 'define', 'commands' and 'document' gdb commands
+  (regression).
 
 Pyclewn 2.2
 -----------

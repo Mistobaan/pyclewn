@@ -113,10 +113,11 @@ function! s:source_commands(gdb_cmd, prompt)
     \               . " 'Csource' gdb command.\n"
     let l:prompt .= ">"
 
+    let l:lines = %(source_lines)s
     let l:commands = [a:gdb_cmd]
     call inputsave()
     while 1
-        let l:cmd = input(l:prompt)
+        let l:cmd = %(input_source)s
         let l:commands += [l:cmd]
         echo "\n"
         let l:prompt = ">"
