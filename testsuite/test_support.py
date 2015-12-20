@@ -20,14 +20,11 @@ from unittest import TestCase, TestResult
 from unittest.result import failfast
 
 import clewn.vim
+from clewn import TESTFN, TESTFN_FILE
 
 LOGFILE = 'logfile'
 TESTRUN_SLEEP_TIME = 800
 SLOW_DOWN_TESTS = 40
-
-# filenames used for testing
-TESTFN = '@test'
-TESTFN_FILE = TESTFN + '_file_'
 TESTFN_OUT = TESTFN + '_out'
 
 # Wait for pyclewn to process all the previous commands.

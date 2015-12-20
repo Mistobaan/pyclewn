@@ -18,7 +18,7 @@ import pkgutil
 import collections
 from itertools import takewhile
 
-from . import ClewnError, gdbmi, misc, debugger
+from . import TESTFN_FILE, ClewnError, gdbmi, misc, debugger
 from .process import Process
 
 # On most other platforms the best timer is time.time()
@@ -561,9 +561,6 @@ class Gdb(debugger.Debugger, Process):
                 'commands': '\n'.join(commands),
                      }
 
-        # The import must be done within the method to avoid a broken circular
-        # import at start up.
-        from testsuite.test_support import TESTFN_FILE
         if self.vim.testrun:
             substitute['source_lines'] = 'readfile("%s")' % (TESTFN_FILE + '1')
             substitute['input_source'] = 'remove(l:lines, 0)'

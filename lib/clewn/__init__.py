@@ -14,6 +14,10 @@ import os
 
 __version__ = '2.3'
 
+# Filenames used for testing.
+TESTFN = '@test'
+TESTFN_FILE = TESTFN + '_file_'
+
 # Python 2.6 or older
 PY26 = (sys.version_info < (2, 7))
 
