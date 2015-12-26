@@ -60,6 +60,16 @@ def run_vim_cmds(commands):
 
     return output
 
+def existssymbol(executable, symbol):
+    try:
+        symbols = subprocess.check_output(['nm', executable],
+                                          stderr=subprocess.STDOUT)
+    except (subprocess.CalledProcessError, OSError):
+        return False
+    return symbol in symbols
+
+is_python_stripped = not existssymbol(sys.executable, b'sys_getrecursionlimit')
+
 class Gdb(ClewnTestCase):
     """Test the gdb debugger."""
 
@@ -1051,6 +1061,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
+    @skipIf(is_python_stripped, 'python is stripped')
     def test_049(self):
         """Test the (clewn)_threads list buffer"""
         cmd = [
@@ -1073,6 +1084,7 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected)
 
+    @skipIf(is_python_stripped, 'python is stripped')
     def test_050(self):
         """Test the <CR> map in (clewn)_threads"""
         cmd = [
