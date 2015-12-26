@@ -5,7 +5,6 @@
 
 extern void foo(char *ptr, int max);
 
-/* Add one comment line for gcc (GCC) 5.2.0 and gdb 7.10. */
 int main(int argc, char *argv[])
 {
     int len = strlen(HEADER);

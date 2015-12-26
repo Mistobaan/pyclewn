@@ -271,7 +271,7 @@ class Gdb(ClewnTestCase):
         cmd = [
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
             'Crun',
             'Cdumprepr',
             "edit (clewn)_console | $$ | ?'info'?,/'version'/w!  ${test_out}",
@@ -291,7 +291,7 @@ class Gdb(ClewnTestCase):
         cmd = [
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
             'Crun',
             'Cdumprepr',
             "edit (clewn)_console | $$ | ?'info'?,/'version'/w!  ${test_out}",
@@ -314,7 +314,7 @@ class Gdb(ClewnTestCase):
         """Checking result of oob commands"""
         cmd = [
             'Cfile testsuite/foobar',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
             'Crun',
             'Cdumprepr',
             "edit (clewn)_console | $$ | ?'info'?,/'version'/w!  ${test_out}",
@@ -337,7 +337,7 @@ class Gdb(ClewnTestCase):
         cmd = [
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
             'Crun',
             'redir! > ${test_out}',
             'sign place',
@@ -372,7 +372,7 @@ class Gdb(ClewnTestCase):
         cmd = [
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
             'Cdisable 1',
             'redir! > ${test_out}',
             'sign place',
@@ -389,7 +389,7 @@ class Gdb(ClewnTestCase):
         cmd = [
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
             'Cenable delete 1',
             'Crun',
             'Cstep',
@@ -423,8 +423,8 @@ class Gdb(ClewnTestCase):
         cmd = [
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
-            'Cbreak main',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
+            'Cbreak testsuite/foobar.c:10',
             'Cdelete 1',
             'redir! > ${test_out}',
             'sign place',
@@ -441,7 +441,7 @@ class Gdb(ClewnTestCase):
         cmd = [
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
             'Crun',
             'Cclear',
             'redir! > ${test_out}',
@@ -667,7 +667,7 @@ class Gdb(ClewnTestCase):
         cmd = [
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
             'Cbreak foo',
             'Crun',
             'Cprint foo(\\"toto\\", 1)',
@@ -717,7 +717,7 @@ class Gdb(ClewnTestCase):
         """Check the project command"""
         cmd = [
             'Cfile testsuite/foobar',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
             'Cbreak foo',
             'Cset args foo \\"1 2 3\\" bar',
             'Cproject ${test_out}',
@@ -739,7 +739,7 @@ class Gdb(ClewnTestCase):
             'Cbreak foo',
             'Cbreak foo',
             'Cbreak foo',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
             'Cproject ${test_out}',
             'qa!',
             ]
@@ -770,7 +770,7 @@ class Gdb(ClewnTestCase):
         self.cltest_redir(cmd, expected,
             'cd testsuite\n'
             'file foobar\n'
-            'break main\n'
+            'break foobar.c:10\n'
             'break foo\n'
             )
 
@@ -779,7 +779,7 @@ class Gdb(ClewnTestCase):
         self.setup_project_tests(TESTFN_OUT)
         cmd = [
             'Cfile testsuite/foobar',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
             'Cbreak foo',
             'Cset args foo \\"1 2 3\\" bar',
             'Cquit',
@@ -799,7 +799,7 @@ class Gdb(ClewnTestCase):
         self.setup_project_tests(TESTFN_OUT)
         cmd = [
             'Cfile testsuite/foobar',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
             'qa!',
             ]
         expected = (
@@ -874,8 +874,8 @@ class Gdb(ClewnTestCase):
             'Cbreak foo',
             'Cquit',
             'Cfile testsuite/foobar',
-            'Cbreak main',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
+            'Cbreak testsuite/foobar.c:10',
             'redir! > ${test_out}',
             'sign place',
             'qa!',
@@ -902,7 +902,7 @@ class Gdb(ClewnTestCase):
             'Cquit',
             'sleep ${sleep_time}',
             'Cfile testsuite/foobar',
-            'Cbreak main',
+            'Cbreak testsuite/foobar.c:10',
             'Cbreak foo',
             'redir! > ${test_out}',
             'sign place',
@@ -1181,7 +1181,7 @@ class Gdb(ClewnTestCase):
             'edit testsuite/foobar.c',
             'Cfile testsuite/foobar',
             'Ctarget remote :3456',
-            'Ctbreak main',
+            'Ctbreak testsuite/foobar.c:10',
             'Ccontinue',
             'redir! > ${test_out}',
             'sign place',
@@ -1589,7 +1589,7 @@ class PyclewnCommand(TestCase):
         """With an empty buffer list"""
         cmd = [
             'source testsuite/foobar.vim',
-            'call PyclewnScripting("Cstart")',
+            'call PyclewnScripting("Ctbreak testsuite/foobar.c:10 | Crun")',
             'while ! bufexists("testsuite/foobar.c")',
             '    sleep 100m',
             'endwhile',
@@ -1598,7 +1598,7 @@ class PyclewnCommand(TestCase):
             ]
         expected = (
             "Signs for ${cwd}testsuite/foobar.c:",
-            "line=10  id=1  name=1",
+            "line=10  id=2  name=1",
             )
         self.clewn_test(cmd, expected)
 
@@ -1607,7 +1607,7 @@ class PyclewnCommand(TestCase):
         cmd = [
             'edit MANIFEST.in',
             'source testsuite/foobar.vim',
-            'call PyclewnScripting("Cstart")',
+            'call PyclewnScripting("Ctbreak testsuite/foobar.c:10 | Crun")',
             'while ! bufexists("testsuite/foobar.c")',
             '    sleep 100m',
             'endwhile',
@@ -1616,7 +1616,7 @@ class PyclewnCommand(TestCase):
             ]
         expected = (
             "Signs for ${cwd}testsuite/foobar.c:",
-            "line=10  id=1  name=1",
+            "line=10  id=2  name=1",
             )
         self.clewn_test(cmd, expected)
 
