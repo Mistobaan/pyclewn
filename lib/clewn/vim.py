@@ -349,7 +349,7 @@ class Vim(object):
         info('sourcing the Vim script file: %s', self.f_script.name)
         args[:0] = [self.f_script.name]
         args[:0] = ['-S']
-        args[:0] = ['-nb:%s' % ':'.join(self.connection)]
+        args[:0] = ['-nb:%s' % ':'.join(map(str, self.connection))]
         args[:0] = [self.options.editor]
 
         # Uncomment next lines to run Valgrind on Vim.
@@ -375,7 +375,8 @@ class Vim(object):
             conn[2:] = conn[2:] or [connection_defaults[2]]
         conn[1] = conn[1] or connection_defaults[1]
         # getaddrinfo() rejects a unicode port number on python 2.7.
-        conn[1] = str(conn[1])
+        if isinstance(conn[1], str):
+            conn[1] = int(conn[1])
         self.connection = conn
 
         module = importlib.import_module('clewn.%s' % self.module)
@@ -544,8 +545,15 @@ class Vim(object):
                     '"%s" is an invalid window LOCATION, must be one of %s'
                     % (options.window, WINDOW_LOCATION))
 
-        if options.netbeans and len(options.netbeans.split(':')) > 3:
-            parser.error('too many netbeans connection parameters')
+        if options.netbeans:
+            connection = options.netbeans.split(':')
+            if len(connection) > 3:
+                parser.error('too many netbeans connection parameters')
+            if len(connection) >= 2:
+                try:
+                    port = int(connection[1])
+                except ValueError:
+                    parser.error('port (%s) must be an integer' % connection[1])
 
         # Set Netbeans class members.
         if location == 'none':
@@ -742,7 +750,7 @@ class Vim(object):
                              ' netbeans already connected', str(nb.addr))
                         nb.ready = True
                         nb.push('There is already an active pdb session at'
-                        ' (%s, %s), connection rejected.' %
+                        ' (%s, %d), connection rejected.' %
                         (self.connection[0], self.connection[1]))
                         nb.close()
                 else:
