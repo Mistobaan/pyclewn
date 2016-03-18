@@ -374,8 +374,7 @@ class Vim(object):
             conn[1:] = conn[1:] or [connection_defaults[1]]
             conn[2:] = conn[2:] or [connection_defaults[2]]
         conn[1] = conn[1] or connection_defaults[1]
-        # getaddrinfo() rejects a unicode port number on python 2.7.
-        if isinstance(conn[1], str):
+        if not isinstance(conn[1], int):
             conn[1] = int(conn[1])
         self.connection = conn
 
