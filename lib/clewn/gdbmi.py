@@ -122,8 +122,17 @@ RE_FRAME = keyval_pattern(FRAME_ATTRIBUTES)
 #     fullname="/home/xavier/src/python/cpython-hg-default/Python/sysmodule.c",
 #     line="726"}
 #   ,state="stopped",core="3"}],
+# {id="1",target-id="process 4165",name="a.out",
+#    frame={level="0",addr="0x0000000000402454",
+#      func="fmt::BasicCStringRef<char>::BasicCStringRef",
+#      args=[{name="this",value="0x7fffffffdf60"},
+#      {name="s",value="0x40fff0 \"[{:0>2}:{:0>2}:{:0>2}.{:0>6}]\""}],
+#      file="/home/dclaude/opt/cppformat/include/cppformat/format.h",
+#      fullname="/home/dclaude/opt/cppformat/include/cppformat/format.h",
+#      line="510"},
+#   state="stopped",core="3"}],
 # current-thread-id="1"]'
-RE_THREADS = '({[^{]+{[^}]*args=\[[^]]*\][^}]*}[^}]*})|current-thread-id="(\d+)"'
+RE_THREADS = '({.*})|current-thread-id="(\d+)"'
 
 RE_THREADS_ATTRIBUTES = keyval_pattern(THREADS_ATTRIBUTES)
 
@@ -649,28 +658,29 @@ class Info(object):
         for sthread, current in self.threads_list:
             if not sthread:
                 continue
-            sframe = ''
-            lthread = sthread[1:-1].split('frame={', 1)
-            if len(lthread) == 2:
-                remain = lthread[1].rsplit('}', 1)
-                sthread = lthread[0].strip(' ,') + remain[1]
-                sframe = remain[0]
-            else:
-                sthread = lthread[0]
-            thread = misc.parse_keyval(re_threads_attributes, sthread)
-            if 'current' not in thread:
-                thread['current'] = ' '
-            if sframe:
-                if self.gdb.version >= [6, 4]:
-                    frame = misc.parse_keyval(re_frame, sframe)
+            for sthread in misc.split_matches(sthread, ('{', '}')):
+                sframe = ''
+                lthread = sthread[1:-1].split('frame={', 1)
+                if len(lthread) == 2:
+                    remain = lthread[1].rsplit('}', 1)
+                    sthread = lthread[0].strip(' ,') + remain[1]
+                    sframe = remain[0]
                 else:
-                    frame = misc.parse_keyval(re_framecli, sframe)
-                thread['frame'] = LooseFrame(frame)
+                    sthread = lthread[0]
+                thread = misc.parse_keyval(re_threads_attributes, sthread)
+                if 'current' not in thread:
+                    thread['current'] = ' '
+                if sframe:
+                    if self.gdb.version >= [6, 4]:
+                        frame = misc.parse_keyval(re_frame, sframe)
+                    else:
+                        frame = misc.parse_keyval(re_framecli, sframe)
+                    thread['frame'] = LooseFrame(frame)
 
-            try:
-                threads[int(thread['id'])] = thread
-            except (ValueError, KeyError):
-                error('invalid thread id %s', thread)
+                try:
+                    threads[int(thread['id'])] = thread
+                except (ValueError, KeyError):
+                    error('invalid thread id %s', thread)
 
         if current is not None:
             try:

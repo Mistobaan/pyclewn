@@ -21,6 +21,7 @@ import atexit
 import pprint
 import itertools
 import io
+from collections import deque
 
 from . import text_type, ClewnError
 
@@ -326,6 +327,89 @@ class StderrHandler(logging.StreamHandler):
         self.flush()
         self.strbuf.close()
         logging.StreamHandler.close(self)
+
+def index_list(txt, sub, start, end):
+    """Return the list of indexes of 'sub' in 'txt'."""
+    l = len(txt)
+    indexes = deque()
+    while start != -1 and start < l:
+        start = txt.find(sub, start, end)
+        if start >= 0:
+            indexes.append(start)
+            start += 1
+    return indexes
+
+def match_closing(txt, matches, start=0, end=None):
+    """Match the first opening matches[0] with a closing matches[1].
+
+    >>> match_closing('bar{foo}', ('{', '}'))
+    (3, 7)
+    >>> match_closing('{foo{bar{}}}', ('{', '}'))
+    (0, 11)
+    >>> match_closing('{foo{bar', ('{', '}'))
+    Traceback (most recent call last):
+    ...
+    clewn.ClewnError: error: one of the substring is missing
+    >>> match_closing('{foo{bar}', ('{', '}'))
+    Traceback (most recent call last):
+    ...
+    clewn.ClewnError: error: '{' at 0 not matched with any '}'
+
+    """
+    opensub = index_list(txt, matches[0], start, end)
+    closesub = index_list(txt, matches[1], start, end)
+    if not opensub or not closesub:
+        raise ClewnError('error: one of the substring is missing')
+
+    start = opensub.popleft()
+    c = None
+    stack = deque()
+    while closesub:
+        if c is None:
+            c = closesub.popleft()
+        o = opensub.popleft() if opensub else None
+        if o and o < c:
+            stack.append(o)
+            continue
+
+        while stack:
+            stack.pop()
+            if not closesub:
+                break
+            c = closesub.popleft()
+            if o and o < c:
+                stack.append(o)
+                break
+        else:
+            return start, c
+    else:
+        raise ClewnError("error: '%s' at %d not matched with any '%s'"
+                         % (matches[0], start, matches[1]))
+
+def split_matches(txt, matches, start=0):
+    """Split 'txt' into matching matches[0] with matches[1] at the same level.
+
+    >>> txt = r'threads=[{id="1",frame={level="0",args=[{name="t",value="0x7f"},{name="s",value="0x40\"[{:0>2}:{:0>2}:{:0>2}.{:0>6}]\""}],line="5"},core="3"}],current-thread-id="1"'
+
+    >>> split_matches(txt, ('{', '}'))
+    ['{id="1",frame={level="0",args=[{name="t",value="0x7f"},{name="s",value="0x40"[{:0>2}:{:0>2}:{:0>2}.{:0>6}]""}],line="5"},core="3"}']
+
+    >>> split_matches(txt, ('{', '}'), 17)
+    ['{level="0",args=[{name="t",value="0x7f"},{name="s",value="0x40"[{:0>2}:{:0>2}:{:0>2}.{:0>6}]""}],line="5"}']
+
+    >>> split_matches(txt, ('{', '}'), 74)
+    ['{:0>2}', '{:0>2}', '{:0>2}', '{:0>6}']
+
+    """
+    matchlist = []
+    while True:
+        try:
+            start, end = match_closing(txt, matches, start)
+        except ClewnError:
+            break
+        matchlist.append(txt[start:end+1])
+        start = end + 1
+    return matchlist
 
 def _test():
     """Run the doctests."""

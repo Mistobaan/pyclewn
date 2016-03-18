@@ -4,7 +4,7 @@ News
 Pyclewn 2.3
 -----------
 
-.. December 5, 2015
+.. March 18, 2016
 
 New feature
 ^^^^^^^^^^^
@@ -23,6 +23,13 @@ Bug fixes
 
 * Issue #43: The 'shell' gdb command is an illegal command as already stated
   in the documentation.
+
+* Fix the following exception upon starting with python3.6:
+  ``in create_server: sock.bind(sa): TypeError: an integer is required (got
+  type str)``.
+
+* Issue #46: Fix an exception caused by the incorrect parsing of the output of
+  the ``-thread-info`` gdb/mi command.
 
 Pyclewn 2.2
 -----------
