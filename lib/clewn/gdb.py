@@ -662,8 +662,12 @@ class Gdb(debugger.Debugger, Process):
                 self.console_print('Value returned is %(gdb-result-var)s ='
                                    ' %(return-value)s\n' % rv)
         elif line[0] in '*+=':
-            # Ignore 'async' records.
+            # An 'async' record.
             info(line[1:])
+            # Notify the Sources oob command that a library is being loaded.
+            if line.startswith('=library-loaded'):
+                sources_oobcmd = self.oob_list.get_oobcmd(gdbmi.Sources)
+                sources_oobcmd.notify(None, force=True)
         else:
             matchobj = re_mirecord.match(line)
             # a gdb/mi result or out of band record

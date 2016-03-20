@@ -57,15 +57,9 @@ DIRECTORY_CMDS = (
     'directory',
     'source')
 
-SOURCE_CMDS = (
-    'r', 'start',
-    'file', 'exec-file', 'core-file', 'symbol-file', 'add-symbol-file',
-    'source')
-
-# Need to know the list of sources to build the breakpoint full pathname.
-SOURCE_CMDS_EXTRA = ('break', 'tbreak', 'hbreak', 'thbreak', 'rbreak')
-
-PROJECT_CMDS = ('project',) + SOURCE_CMDS
+SOURCE_CMDS = ('file', 'exec-file', 'core-file', 'symbol-file',
+               'add-symbol-file')
+PROJECT_CMDS = ('project', 'r', 'start', 'source') + SOURCE_CMDS
 
 # gdb objects attributes.
 FILE_ATTRIBUTES = {'line', 'file', 'fullname'}
@@ -420,6 +414,7 @@ class Info(object):
         self.debuggee = []
         self.directories = ['$cdir', '$cwd']
         self.file = {}
+        self._file = {}
         self.frame = {}
         self.prev_frame = {}
         self.frame_prefix = ''
@@ -433,6 +428,14 @@ class Info(object):
         self.changelist = []
         # _root_varobj is only used for pretty printing with Cdumprepr
         self._root_varobj = self.varobj.root
+
+    def update_file(self, cmd=''):
+        # Notify the Sources oob command that a file has been loaded. This
+        # happens when the file pathname is on gdb command line after --args.
+        if not self.file:
+            sources_oobcmd = self.gdb.oob_list.get_oobcmd(Sources)
+            sources_oobcmd.notify(None, force=True)
+        self.file = self._file
 
     def get_fullpath(self, name):
         """Get the full path name for the file named 'name' and return it.
@@ -820,6 +823,11 @@ class OobList(object):
                                             or gdb.version >= cmd.version_min]
         self.static_list = [cmd for cmd in cmdlist if not hasattr(cmd,
                             'version_max') or gdb.version <= cmd.version_max]
+
+    def get_oobcmd(self, clazz):
+        for cmd in self.static_list:
+            if isinstance(cmd, clazz):
+                return cmd
 
     def __iter__(self):
         """Return an iterator over the list of OobCommand objects."""
@@ -1302,7 +1310,7 @@ class OobGdbCommand(OobCommand, Command):
         self.trigger_prefix = {misc.smallpref_inlist(x, keys)
                                                 for x in self.trigger_list}
 
-    def notify(self, cmd):
+    def notify(self, cmd, force=False):
         """Notify of the cmd being processed.
 
         The OobGdbCommand is run when the trigger_list is empty, or when a
@@ -1310,8 +1318,8 @@ class OobGdbCommand(OobCommand, Command):
 
         """
         self.cmd = cmd
-        if not self.trigger_list or     \
-                    any([cmd.startswith(x) for x in self.trigger_prefix]):
+        if (force or not self.trigger_list or
+                    any([cmd.startswith(x) for x in self.trigger_prefix])):
             self.trigger = True
 
     def __call__(self):
@@ -1339,11 +1347,11 @@ class OobGdbCommand(OobCommand, Command):
         if self.prefix in data:
             data = data[data.index(self.prefix) + len(self.prefix):]
         elif hasattr(self, 'ignore') and self.ignore in data:
-            return
+            return False
         else:
             debug('bad prefix in oob parsing of "%s",'
                     ' requested prefix: "%s"', data.strip(), self.prefix)
-            return
+            return False
 
         # Parse as a Python:
         #   * list of dict: self.gdblist is True
@@ -1370,10 +1378,11 @@ class OobGdbCommand(OobCommand, Command):
             elif not hasattr(self, 'remain') or data != self.remain:
                 error('no match for "%s"', data)
 
+        return True
+
     def handle_result(self, result):
         """Process the result of the mi command."""
-        if self.mi:
-            self.parse(result)
+        if self.mi and self.parse(result):
             # call the gdb.info method
             if hasattr(self, 'action'):
                 try:
@@ -1438,11 +1447,13 @@ File =          \
             {
                 '__doc__': """Get the source file.""",
                 'gdb_cmd': '-file-list-exec-source-file\n',
-                'info_attribute': 'file',
+                'info_attribute': '_file',
                 'prefix': 'done,',
+                'ignore': 'error,msg="No symbol table is loaded.',
                 'regexp': re_file,
                 'reqkeys': FILE_ATTRIBUTES,
                 'gdblist': False,
+                'action': 'update_file',
                 'trigger_list': FILE_CMDS,
             })
 
@@ -1539,7 +1550,7 @@ Sources =       \
                 'info_attribute': 'sources',
                 'prefix': 'done,files=',
                 'gdblist': True,
-                'trigger_list': SOURCE_CMDS + SOURCE_CMDS_EXTRA,
+                'trigger_list': SOURCE_CMDS,
             })
 
 VarUpdate =     \

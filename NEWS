@@ -4,7 +4,7 @@ News
 Pyclewn 2.3
 -----------
 
-.. March 18, 2016
+.. March 19, 2016
 
 New feature
 ^^^^^^^^^^^
@@ -30,6 +30,12 @@ Bug fixes
 
 * Issue #46: Fix an exception caused by the incorrect parsing of the output of
   the ``-thread-info`` gdb/mi command.
+
+* Issue #47: Loading the list of source file names may be very slow for large
+  libraries with debugging symbols. Only load the list of source file names
+  upon running a ``file``-like gdb command or when a library is being loaded.
+  Previously, this list was instead loaded on ``file``-like and ``break``-like
+  gdb commands.
 
 Pyclewn 2.2
 -----------
