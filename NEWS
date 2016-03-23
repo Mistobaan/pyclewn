@@ -4,7 +4,7 @@ News
 Pyclewn 2.3
 -----------
 
-.. March 19, 2016
+.. March 23, 2016
 
 New feature
 ^^^^^^^^^^^
@@ -36,6 +36,9 @@ Bug fixes
   upon running a ``file``-like gdb command or when a library is being loaded.
   Previously, this list was instead loaded on ``file``-like and ``break``-like
   gdb commands.
+
+* Issue #48: Fix a vim keymap error when the command prefix has been set to
+  another value that the default ``C``.
 
 Pyclewn 2.2
 -----------

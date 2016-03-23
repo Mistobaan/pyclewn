@@ -1559,6 +1559,28 @@ class Gdb(ClewnTestCase):
             )
         self.cltest_redir(cmd, expected, 'print(123); print(456)\nend\n')
 
+    def test_068(self):
+        """Test the <CR> map in (clewn)_backtrace with the 'G' prefix"""
+        sys.argv.append('--prefix=G')
+        cmd = [
+            'Gfile testsuite/foobar',
+            'Gbreak nanosleep',
+            'Grun',
+            'sleep ${sleep_time}',
+            'sleep ${sleep_time}',
+            '3wincmd w',
+            '2',
+            'exe "normal \<CR>"',
+            'sleep ${sleep_time}',
+            'redir! > ${test_out}',
+            'echo bufwinnr("${cwd}testsuite/foo.c") != -1',
+            'qa!',
+            ]
+        expected = (
+            '1',
+            )
+        self.cltest_redir(cmd, expected)
+
 class PyclewnCommand(TestCase):
     """Test the ':Pyclewn' command."""
 

@@ -3,8 +3,8 @@
 
 augroup clewn
     autocmd BufWinEnter (clewn)_variables silent! setlocal syntax=clewn_variables
-    autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <CR> :exe "Cfoldvar " . line(".")<CR>
-    autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <2-Leftmouse> :exe "Cfoldvar " . line(".")<CR>
+    autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <CR> :exe "%(pre)sfoldvar " . line(".")<CR>
+    autocmd BufEnter (clewn)_variables nnoremap <buffer> <silent> <2-Leftmouse> :exe "%(pre)sfoldvar " . line(".")<CR>
 
     autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <CR> :call <SID>goto_breakpoint()<CR>
     autocmd BufEnter (clewn)_breakpoints nnoremap <buffer> <silent> <2-Leftmouse> :call <SID>goto_breakpoint()<CR>
@@ -47,9 +47,9 @@ function! <SID>toggle_breakpoint()
     let l:bp = s:parse_breakpoint_curline()
     if len(l:bp)
         if l:bp[1] == "y"
-            exe "Cdisable " . l:bp[0]
+            exe "%(pre)sdisable " . l:bp[0]
         else
-            exe "Cenable " . l:bp[0]
+            exe "%(pre)senable " . l:bp[0]
         endif
     endif
 endfunction
@@ -57,7 +57,7 @@ endfunction
 function! <SID>delete_breakpoint()
     let l:bp = s:parse_breakpoint_curline()
     if len(l:bp)
-        exe "Cdelete " . l:bp[0]
+        exe "%(pre)sdelete " . l:bp[0]
     endif
 endfunction
 
@@ -71,7 +71,7 @@ function! <SID>goto_frame()
         if l:line != l:fname && filereadable(l:fname)
             call pyclewn#buffers#GotoFrame(l:fname)
         endif
-        exe "Cframe " . l:id
+        exe "%(pre)sframe " . l:id
     endif
 endfunction
 
@@ -91,7 +91,7 @@ function! <SID>goto_thread()
             let l:nr = l:nr + 1
         endwhile
 
-        exe "Cthread " . l:thread
+        exe "%(pre)sthread " . l:thread
     endif
 endfunction
 
