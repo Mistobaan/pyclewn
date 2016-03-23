@@ -321,10 +321,10 @@ class Gdb(ClewnTestCase):
             'qa!',
             ]
         expected = (
-            "'file': {'file': 'foobar.c',",
+            "'file': {'file': '${cwd}testsuite/foobar.c',",
             "         'fullname': '${cwd}testsuite/foobar.c',",
             "         'line': '10'},",
-            "'frame': {'file': 'foobar.c',",
+            "'frame': {'file': '${cwd}testsuite/foobar.c',",
             "          'fullname': '${cwd}testsuite/foobar.c',",
             "          'func': 'main',",
             "          'level': '0',",
@@ -1036,9 +1036,9 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             '  #0   in nanosleep',
-            '* #1   in msleep at foo.c',
-            '  #2   in foo at foo.c',
-            '  #3   in main at foobar.c',
+            '* #1   in msleep at foo.c:23',
+            '  #2   in foo at foo.c:37',
+            '  #3   in main at foobar.c:60',
             )
         self.cltest_redir(cmd, expected)
 
@@ -1578,6 +1578,34 @@ class Gdb(ClewnTestCase):
             ]
         expected = (
             '1',
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_069(self):
+        """Test the (clewn)_breakpoints list buffer with conditions"""
+        cmd = [
+            'Cfile testsuite/foobar',
+            'Cbreak bar if *pnum != 1',
+            'Crun',
+            'Cignore 1 2',
+            'edit (clewn)_breakpoints | %w!  ${test_out}',
+            'Ccontinue',
+            'Cbreak foo',
+            'edit (clewn)_breakpoints | %w!  >> ${test_out}',
+            'edit ${test_out}',
+            r'%s/\(.*\) <.*>$$/\1',
+            'write',
+            'qa!',
+            ]
+        expected = (
+            '1    breakpoint      y   1     keep   in bar at bar.c:5',
+            '       stop only if *pnum != 1',
+            '       ignore next 2 hits',
+            'Num  Type            Enb Hit   Disp   What',
+            '1    breakpoint      y   4     keep   in bar at bar.c:5',
+            '       stop only if *pnum != 1',
+            '2    breakpoint      y   0     keep   in foo at foo.c:30',
+
             )
         self.cltest_redir(cmd, expected)
 

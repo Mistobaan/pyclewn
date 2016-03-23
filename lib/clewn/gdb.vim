@@ -21,14 +21,13 @@ augroup END
 function! s:parse_breakpoint_curline()
     let l:rv = []
     let l:line = getline(".")
-    let l:regexp = '^\(\d\+\)\s\+\S\+\s\+\([yn]\).* at \(.\+\):\(\d\+\) <\(.\+\)>$'
+    let l:regexp = '^\(\d\+\)\s\+\S\+\s\+\([yn]\).* at .\+:\(\d\+\) <\(.\+\)>$'
     let l:lnum = substitute(l:line, l:regexp , '\3', "")
     if l:line != l:lnum
         call add(l:rv, substitute(l:line, l:regexp , '\1', ""))
         call add(l:rv, substitute(l:line, l:regexp , '\2', ""))
         call add(l:rv, l:lnum)
         call add(l:rv, substitute(l:line, l:regexp , '\4', ""))
-        call add(l:rv, substitute(l:line, l:regexp , '\5', ""))
     endif
     return l:rv
 endfunction
@@ -36,7 +35,7 @@ endfunction
 function! <SID>goto_breakpoint()
     let l:bp = s:parse_breakpoint_curline()
     if len(l:bp)
-        let l:fname = l:bp[4]
+        let l:fname = l:bp[3]
         if filereadable(l:fname)
             call pyclewn#buffers#GotoBreakpoint(l:fname, l:bp[2])
         endif

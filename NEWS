@@ -12,6 +12,13 @@ New feature
 * A dynamic watch variable, for example an STL container, is now displayed
   using the enabled gdb pretty printers.
 
+Changes
+^^^^^^^
+
+* Line numbers are included in the backtrace window, except at the top level
+  frame (to avoid screen blinks when stepping). Breakpoint conditions are
+  listed in the breakpoint window.
+
 Bug fixes
 ^^^^^^^^^
 
@@ -39,6 +46,9 @@ Bug fixes
 
 * Issue #48: Fix a vim keymap error when the command prefix has been set to
   another value that the default ``C``.
+
+* Issue #50: The breakpoint and backtrace windows always print now the source
+  file basename followed by the absolute pathname in angle brackets.
 
 Pyclewn 2.2
 -----------

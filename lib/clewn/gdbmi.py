@@ -491,11 +491,19 @@ class Info(object):
                 if 'line' in bp and 'file' in bp:
                     lnum = bp['line']
                     fname = bp['file']
-                    line += ' at %s:%s' % (fname, lnum)
+                    line += ' at %s:%s' % (os.path.basename(fname), lnum)
                     pathname = self.get_fullpath(fname)
                     if pathname is not None:
                         line += ' <%s>' % pathname
             lines.append(line)
+            cond = bp['cond'] if 'cond' in bp else ''
+            if cond:
+                lines.append('%-6s stop only if %s' % (' ', cond))
+            ignore = bp['ignore'] if 'ignore' in bp else ''
+            if ignore:
+                pl = 's' if ignore != '1' else ''
+                ignore = ignore + ' ' if ignore != '1' else ''
+                lines.append('%-6s ignore next %shit%s' % (' ', ignore, pl))
 
         if lines:
             lines.insert(0, 'Num  Type            Enb Hit   Disp   What')
@@ -535,6 +543,14 @@ class Info(object):
                     self.gdb.update_bp(num, not enabled)
             if bp['times'] != old_bp['times']:
                 self.bp_dirty = True
+            cond = bp['cond'] if 'cond' in bp else ''
+            old_cond = old_bp['cond'] if 'cond' in old_bp else ''
+            if cond != old_cond:
+                self.bp_dirty = True
+            ignore = bp['ignore'] if 'ignore' in bp else ''
+            old_ignore = old_bp['ignore'] if 'ignore' in old_bp else ''
+            if ignore != old_ignore:
+                self.bp_dirty = True
 
         # Delete signs for non-existent breakpoints.
         for num in (oldset - nset):
@@ -573,10 +589,14 @@ class Info(object):
                 line += ' in %s' % f['func']
             elif 'from' in f:
                 line += ' from %s' % f['from']
-            # Do not display the line number to avoid screen blinks.
             if 'file' in f:
+                lnum = f['line']
                 fname = f['file']
-                line += ' at %s' % fname
+                if curlevel == '0':
+                    # Do not display the line number to avoid screen blinks.
+                    line += ' at %s' % os.path.basename(fname)
+                else:
+                    line += ' at %s:%s' % (os.path.basename(fname), lnum)
                 pathname = self.get_fullpath(fname)
                 if pathname is not None:
                     line += ' <%s>' % pathname

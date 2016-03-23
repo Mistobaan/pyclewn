@@ -2,12 +2,12 @@ CC = gcc
 CFLAGS = -Wall -g $(PLATFORM)
 CPPFLAGS = -Wall -g $(PLATFORM)
 
-all: foobar overloaded function_template pretty-printing
-foobar: foobar.c foo.c bar.c
+all: $(CURDIR)/foobar overloaded function_template pretty-printing
+$(CURDIR)/foobar: $(CURDIR)/foobar.c $(CURDIR)/foo.c $(CURDIR)/bar.c
 overloaded: overloaded.cc
 pretty-printing: pretty-printing.cc
 function_template: function_template.cpp
 	$(CXX) $(CPPFLAGS) $^ function_template_sub/localmax.o -o $@
 
 clean:
-	@rm -f foobar overloaded function_template
+	@rm -f foobar overloaded function_template pretty-printing
