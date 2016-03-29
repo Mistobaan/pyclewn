@@ -24,7 +24,7 @@ void msleep(int msec)
 #endif
 }
 
-void foo(char *ptr, int max)
+void foo(char *ptr, int max, int sleep)
 {
     map_t map;
     int count = 0;
@@ -34,7 +34,7 @@ void foo(char *ptr, int max)
 	map.key = count + 1;
 	count = bar(&(map.key), map.value + 1);
 	printf("count: %d\n", count);
-	msleep(100);
+	msleep(sleep);
     } while (max < 0 || count < max);
 }
 

@@ -670,7 +670,7 @@ class Gdb(ClewnTestCase):
             'Cbreak testsuite/foobar.c:10',
             'Cbreak foo',
             'Crun',
-            'Cprint foo(\\"toto\\", 1)',
+            'Cprint foo(\\"toto\\", 1, 100)',
             'Ccontinue',
             'redir! > ${test_out}',
             'sign place',
@@ -1038,7 +1038,7 @@ class Gdb(ClewnTestCase):
             '  #0   in nanosleep',
             '* #1   in msleep at foo.c:23',
             '  #2   in foo at foo.c:37',
-            '  #3   in main at foobar.c:60',
+            '  #3   in main at foobar.c:62',
             )
         self.cltest_redir(cmd, expected)
 
@@ -1606,6 +1606,25 @@ class Gdb(ClewnTestCase):
             '       stop only if *pnum != 1',
             '2    breakpoint      y   0     keep   in foo at foo.c:30',
 
+            )
+        self.cltest_redir(cmd, expected)
+
+    def test_070(self):
+        """The line marker is present after an asynchronous continue"""
+        self.setup_gdb_args('--args testsuite/foobar 100 200')
+        cmd = [
+            'Cbreak bar',
+            'Crun',
+            'C continue&',
+            'sleep ${sleep_time}',
+            'redir! > ${test_out}',
+            'sign place',
+            'qa!',
+            ]
+        expected = (
+            'Signs for ${cwd}testsuite/bar.c:',
+            'line=5  id=1  name=3',
+            'line=5  id=2  name=1',
             )
         self.cltest_redir(cmd, expected)
 

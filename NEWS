@@ -4,13 +4,15 @@ News
 Pyclewn 2.3
 -----------
 
-.. March 23, 2016
+.. March 29, 2016
 
 New feature
 ^^^^^^^^^^^
 
 * A dynamic watch variable, for example an STL container, is now displayed
   using the enabled gdb pretty printers.
+
+* Support `gdb background execution`_.
 
 Changes
 ^^^^^^^
@@ -46,6 +48,9 @@ Bug fixes
 
 * Issue #48: Fix a vim keymap error when the command prefix has been set to
   another value that the default ``C``.
+
+* Issue #49: The line marker is not missing now after a gdb background
+  ``continue&`` command.
 
 * Issue #50: The breakpoint and backtrace windows always print now the source
   file basename followed by the absolute pathname in angle brackets.
@@ -731,5 +736,6 @@ Initial release.
 .. _reStructuredText: http://docutils.sf.net/rst.html
 .. _pdb-clone: http://code.google.com/p/pdb-clone/
 .. _pdb: http://docs.python.org/3/library/pdb.html
+.. _gdb background execution: https://sourceware.org/gdb/current/onlinedocs/gdb/Background-Execution.html
 .. vim:filetype=rst:tw=78:ts=8:et:
 

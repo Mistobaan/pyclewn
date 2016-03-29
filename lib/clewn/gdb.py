@@ -486,8 +486,10 @@ class Gdb(debugger.Debugger, Process):
         self.cli = gdbmi.CliCommand(self)
         self.gdb_busy = True
         self.oob = None
+        self.oob_cnt = 0
         self.stream_record = []
         self.lastcmd = ''
+        self.unhandled_stopped_evt = False
         self.doprompt = False
         self.token = ''
         self.curcmdline = ''
@@ -655,12 +657,6 @@ class Gdb(debugger.Debugger, Process):
                 self.stream_record.append(line)
             else:
                 warning('bad format in gdb/mi log: "%s"', line)
-        elif line.startswith('*stopped,reason="function-finished"'):
-            # Print the return value after the 'Cfinish' command.
-            rv = misc.parse_keyval(re_finish, line)
-            if rv:
-                self.console_print('Value returned is %(gdb-result-var)s ='
-                                   ' %(return-value)s\n' % rv)
         elif line[0] in '*+=':
             # An 'async' record.
             info(line[1:])
@@ -668,6 +664,23 @@ class Gdb(debugger.Debugger, Process):
             if line.startswith('=library-loaded'):
                 sources_oobcmd = self.oob_list.get_oobcmd(gdbmi.Sources)
                 sources_oobcmd.notify(None, force=True)
+            elif line.startswith('*running,'):
+                self.doprompt = False
+                self.info.hide_frame()
+            elif line.startswith('*stopped,'):
+                if self.oob is None:
+                    self.clicmd_notify('', console=False)
+                elif self.oob_cnt > 1:
+                    self.unhandled_stopped_evt = True
+                else:
+                    self.doprompt = True
+
+                # Print the return value after the 'Cfinish' command.
+                if line.startswith('*stopped,reason="function-finished"'):
+                    rv = misc.parse_keyval(re_finish, line)
+                    if rv:
+                        self.console_print('Value returned is '
+                            '%(gdb-result-var)s = %(return-value)s\n' % rv)
         else:
             matchobj = re_mirecord.match(line)
             # a gdb/mi result or out of band record
@@ -753,6 +766,7 @@ class Gdb(debugger.Debugger, Process):
             # prepare the next sequence of oob commands
             self.time = _timer()
             self.oob = self.oob_list.iterator()
+            self.oob_cnt = 0
             if len(self.results):
                 if self.state != self.STATE_QUITTING:
                     # may occur on quitting with the debuggee still running
@@ -772,10 +786,14 @@ class Gdb(debugger.Debugger, Process):
                 # loop over oob commands that don't send anything
                 while True:
                     if next(self.oob)():
+                        self.oob_cnt += 1
                         break
             except StopIteration:
                 self.oob = None
                 self.terminate_cmd()
+                if self.unhandled_stopped_evt:
+                    self.unhandled_stopped_evt = False
+                    self.clicmd_notify('', console=False)
 
     def clicmd_notify(self, cmd='dummy', console=True, nop=False):
         """Send a cli command after having notified the OobCommands.
@@ -897,13 +915,6 @@ class Gdb(debugger.Debugger, Process):
                 self.console_print('Illegal argument in pyclewn.\n')
                 self.print_prompt()
                 return
-
-        # Turn off the frame sign after a run command.
-        if any([cmd.startswith(x)
-                    for x in self.globaal.run_cmds_prefix])     \
-                or any([cmd == x
-                    for x in ('d', 'r', 'c', 's', 'n', 'u', 'j')]):
-            self.info.hide_frame()
 
         if self.firstcmdline is None:
             self.firstcmdline = self.curcmdline
