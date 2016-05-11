@@ -873,6 +873,7 @@ class Gdb(ClewnTestCase):
             'Cbreak main',
             'Cbreak foo',
             'Cquit',
+            'sleep ${sleep_time}',
             'Cfile testsuite/foobar',
             'Cbreak testsuite/foobar.c:10',
             'Cbreak testsuite/foobar.c:10',
