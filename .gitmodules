@@ -1,0 +1,6 @@
+[submodule "pdb-clone"]
+	path = pdb-clone
+	url = https://github.com/Mistobaan/pdb-clone
+[submodule "trollius"]
+	path = trollius
+	url = git@github.com:Mistobaan/trollius.git

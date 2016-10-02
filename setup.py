@@ -24,7 +24,7 @@ except ImportError:
 
 from lib.clewn import __version__, PY3, PY33, PY34
 
-with open('README') as f:
+with open('README.md') as f:
     long_description = f.read()
 
 cmdclass = {}
@@ -82,8 +82,8 @@ class sdist(_sdist):
         import build_vimball
 
         # Create the runtime_version.py module.
-        version = __version__ + '.' + subprocess.check_output(
-                    ['hg',  'id',  '-i'], universal_newlines=True)
+        version = "2.3" #__version__ + '.' + subprocess.check_output(
+                    #['g',  'id',  '-i'], universal_newlines=True)
         with open('lib/clewn/runtime_version.py', 'w') as f:
             f.write('version = "%s"' % version.rstrip('+\n'))
 

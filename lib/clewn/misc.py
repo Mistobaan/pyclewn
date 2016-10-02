@@ -14,7 +14,11 @@ import sys
 import os
 import fcntl
 import re
-import asyncio
+try:
+    import asyncio
+except ImportError:
+    import trollius as asyncio
+    from ._from import _from
 import tempfile
 import logging
 import atexit
@@ -203,7 +207,7 @@ def cancel_after_first_completed(tasks, interrupted_cb, loop=None):
     @asyncio.coroutine
     def _cancel_after_first_completed(tasks):
         while tasks:
-            done, pending = yield from(asyncio.wait(tasks,
+            done, pending = yield _from(asyncio.wait(tasks,
                                 return_when=asyncio.FIRST_COMPLETED,
                                 loop=loop))
             for task in done:

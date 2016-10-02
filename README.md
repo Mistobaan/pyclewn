@@ -1,7 +1,35 @@
+# README
+
+[PyCLEWN](http://pyclewn.sourceforge.net/)
+
 A Vim_ front-end to the gdb_ and pdb_ debuggers. The debugger output is
 redirected to a Vim window, the console. The debugger commands are mapped to
 Vim user-defined commands and completion is available on Vim command line.
 
+```
+git submodule update --init --recursive
+cd pdb-clone
+python setup.py install
+cd ..
+python setup.py sdist
+pip install --find-links=dist pyclewn==2.3
+python -c "import clewn; clewn.get_vimball()"
+vim -S pyclewn-2.3.vmb
+```
+
+Pyclewn currently supports the following debuggers:
+
+- gdb:      version 7.1 and above, pyclewn uses the gdb MI interface.
+- pdb:      the Python debugger.
+
+# Quickstart
+
+to debug "foobar foobar_arg" with gdb, run the commmand:
+```
+    :Pyclewn gdb --args foobar foobar_arg
+```
+
+# Instalation
 Install Pyclewn with pip_ and extract a vimball from the installed Python
 package, then install the Vim runtime files with the vimball. See install_.
 

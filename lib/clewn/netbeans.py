@@ -16,7 +16,11 @@ except ImportError:
 import sys
 import time
 import os
-import asyncio
+try:
+    import asyncio
+except ImportError:
+    import trollius as asyncio
+    from ._from import _from
 import logging
 import re
 import socket

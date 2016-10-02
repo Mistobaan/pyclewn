@@ -13,7 +13,11 @@ import sys
 import errno
 import os
 import pty
-import asyncio
+try:
+    import asyncio
+except ImportError:
+    import trollius as asyncio
+    from ._from import _from
 import termios
 import stat
 import array
@@ -65,11 +69,11 @@ class Channel(object):
         try:
             f_in = os.fdopen(self.fdin, 'r')
             f_out = os.fdopen(self.fdout, 'w')
-            yield from(self.loop.connect_read_pipe(
+            yield _from(self.loop.connect_read_pipe(
                                             lambda: self.reader_proto, f_in))
 
             if self.fdout_isfifo or self.fdout_istty:
-                transport, protocol = yield from(self.loop.connect_write_pipe(
+                transport, protocol = yield _from(self.loop.connect_write_pipe(
                                             lambda: self.writer_proto, f_out))
                 writer = asyncio.StreamWriter(
                                 transport, protocol, self.reader, self.loop)
@@ -82,7 +86,7 @@ class Channel(object):
 
             while True:
                 try:
-                    chunk = yield from(self.reader.read(BUFFER_SIZE))
+                    chunk = yield _from(self.reader.read(BUFFER_SIZE))
                 except OSError as e:
                     # The read() syscall returns -1 when the slave side of the
                     # pty is closed.
@@ -95,7 +99,7 @@ class Channel(object):
                     break
                 if self.fdout_isfifo or self.fdout_istty:
                     writer.write(chunk)
-                    yield from(writer.drain())
+                    yield _from(writer.drain())
                 else:
                     os.write(self.fdout, chunk)
         except asyncio.CancelledError:

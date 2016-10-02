@@ -11,7 +11,12 @@ from __future__ import unicode_literals
 
 import os
 import sys
-import asyncio
+try:
+    import asyncio
+except ImportError:
+    import trollius as asyncio
+    from ._from import _from
+
 import socket
 import functools
 import importlib
@@ -660,13 +665,13 @@ class Vim(object):
     def run(self):
         protocol_factory = functools.partial(netbeans.Netbeans,
                                              self.signal, self.connection[2])
-        self.nbserver = yield from(self.loop.create_server(protocol_factory,
+        self.nbserver = yield _from(self.loop.create_server(protocol_factory,
                                                            self.connection[0],
                                                            self.connection[1]))
         timeout = self.loop.call_later(CONNECTION_TIMEOUT, connection_timeout)
 
         while True:
-            event = yield from(self.events.get())
+            event = yield _from(self.events.get())
             if timeout:
                 timeout.cancel()
                 timeout = None
@@ -720,13 +725,13 @@ class Vim(object):
         """Run the pdb clewn thread."""
         protocol_factory = functools.partial(netbeans.Netbeans,
                                              self.signal, self.connection[2])
-        self.nbserver = yield from(self.loop.create_server(protocol_factory,
+        self.nbserver = yield _from(self.loop.create_server(protocol_factory,
                                                            self.connection[0],
                                                            self.connection[1]))
         clewn_thread_ready.set()
 
         while True:
-            event = yield from(self.events.get())
+            event = yield _from(self.events.get())
             if isinstance(event, netbeans.Netbeans):
                 if event is self.netbeans:
                     if not self.netbeans.connected:
